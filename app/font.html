@@ -1,0 +1,332 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title></title>
+<style type="text/css">
+html,body{}
+.hide{display:none;}
+.ui-main{
+	position:relative;
+	border:1px solid #CCC;
+	width:1000px;
+	height:400px;
+}
+.ui-main img{
+	position:absolute;
+	top:0;
+	left:0;
+	z-index:1;
+}
+.ui-canvas{
+	border:1px solid #CCC;
+}
+.font-item{
+	position:absolute;
+	min-width:150px;
+	min-height:50px;
+	padding-right:10px;
+	top:50px;
+	left:20%;
+}
+</style>	
+</head>
+<body onpasted="pasteBitmap(event);">
+
+<div class="lf">
+
+<select class="foreach-item" id="fontSize_txt" data-attr="font-size"></select>
+<script type="text/javascript">
+(function(){
+	var htm = [];
+	for(var i = 8; i < 200; i ++){
+		htm.push('<option value="' + i + 'px"' + (i == 50 ? ' selected' : '') + '>' + i + '</option>');
+	}
+	document.getElementById('fontSize_txt').innerHTML = htm.join('\n');
+})();
+</script>
+
+字体：<select class="foreach-item" id="fontFamily_txt" data-attr="font-family">
+		<option value="宋体">宋体</option>
+		<option value="'微软雅黑'">微软雅黑</option>
+		<option value="'华文细黑'">华文细黑</option>
+		<option value="黑体">黑体</option>
+		<option value="Arial">Arial</option>
+		<option value="Tahoma">Tahoma</option>
+		<option value="Segoe">Segoe</option>
+		<option value="Georgia">Georgia</option>
+		<option value="Cambria">Cambria</option>
+		<option value="Calibri">Calibri</option>
+		<option value="Helvetica">Helvetica</option>
+		<option value="Times">Times</option>
+		<option value="'Times New Roman'">Times New Roman</option>
+		<option value="serif">serif</option>
+		<option value="Gulim">Gulim</option>
+		<option value="'Microsoft JHengHei'">Microsoft JHengHei</option>
+		<option value="'Microsofy Yahei'">Microsofy Yahei</option>
+		<option value="'SegoeLightRegular'">SegoeLightRegular</option>
+		<option value="'Lucida Grande'">Lucida Grande</option>
+		<option value="PMingLiU">PMingLiU</option>
+		<option value="mingliu" selected="selected">mingliu</option>
+		<option value="'ＭＳ Ｐゴシック'">ＭＳ Ｐゴシック</option>
+		<option value="'Trebuchet MS'">Trebuchet MS</option>
+		<option value="'Constantia'">Constantia</option>
+	</select>
+	
+	<input class="foreach-item color" value="#5E1596" id="vfontColor" data-attr="color" />
+粗细：
+	<select class="foreach-item" id="vftweight" data-attr="font-weight"><option value="normal">normal</option><option value="bold">bold</option><option value="600">600</option><option value="700">700</option><option value="800">800</option><option value="900">900</option><option value="lighter">lighter</option><option value="bolder">bolder</option><option value="100">100</option><option value="200">200</option><option value="300">300</option><option value="400">400</option><option value="500">500</option></select>
+			
+	<input type="button" value="添加文字" class="add-text" /> 
+
+<div class="ui-main" contenteditable="true" id="main_panel"></div>
+调整效果到满意后，在下图上使用鼠标右键可以保存该图片喔 ^^*
+<canvas class="ui-canvas" id="main_canvas" width="1000" height="400"></canvas>
+
+<img id="main_img" />
+
+</div>
+
+<script src="http://ajax.aspnetcdn.com/ajax/jquery/jquery-1.4.4.min.js" type="text/javascript"></script>
+<script src="jscolor/jscolor.js" charset="utf-8"></script>
+<script type="text/javascript">
+//document.execCommand("enableObjectResizing", false, false);
+//controlselect	resizestart
+
+~function(){
+	function rgbToHex(rgb) {
+		rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+		function hex(x) {
+			return ("0" + parseInt(x).toString(16)).slice(-2);
+		}
+		return rgb= "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]); 
+	}
+	var viky = {
+		item : null,
+		main : document.getElementById('main_panel'),
+		items : $('.foreach-item'),
+		canvas : document.getElementById("main_canvas"),
+		ctx : null,
+		getStyles : function (){
+			var csstxt = [];
+			viky.items.each(function(i, el){
+				var _att = el.getAttribute('data-attr');
+				var _val = el.value;
+				csstxt.push(_att + ':' + _val);
+			})
+			return csstxt.join(';');
+		},
+		getCanvasFontStyle : function(o){
+			var csstxt = [];
+			if(o){
+				csstxt = o.attr('data-font').split(' ');
+			}else{
+				var ftsize = $('.foreach-item[data-attr="font-size"]').val();
+				var ftface = $('.foreach-item[data-attr="font-family"]').val();
+				var ftweight = $('.foreach-item[data-attr="font-weight"]').val();
+				csstxt.push(ftweight, ftsize, ftface);
+			}
+			return csstxt.join(' ');
+		},
+		getFontColor : function(o){
+			if(o){
+				return o.attr('data-color');
+			}else{
+				return $('.foreach-item[data-attr="color"]').val();
+			}
+		},
+		updateDataVal : function(obj){
+			var v = [];
+			var o = $(obj);
+				v.push(o.css('font-weight'));
+				v.push(o.css('font-size'));
+				v.push(o.css('font-family'));
+				o.attr('data-font', v.join(' '));
+				o.attr('data-color', o.css('color'));
+		},
+		bind : function(){
+			$('.add-text').click(function(e){
+				$('<div tabindex="-1" class="font-item" contentEditable="true" style="position:absolute;z-index:2;left:20%;'+ viky.getStyles() +'">文字</div>').appendTo(viky.main);
+				var obj = $('.font-item')[0];
+				document.execCommand('2D-Position', false, true);
+				//document.execCommand('RemoveFormat', false, true);
+				//document.execCommand('LiveResize', false, true);
+				//obj.focus();
+				//viky.fireEvent(obj,'click');
+				//viky.fireEvent(obj,'mousedown');
+			});
+			$('.font-item', viky.main).live('mousewheel', function(e){
+				viky.changeFontSize(this, e);
+				e.preventDefault();
+			})
+			$('.font-item').live('keydown', function(e){
+				this.style.outline = 'none';
+				this.style.minWidth = 'auto';
+				if(e.keyCode == 8 || e.keyCode == 46){
+					if(this.innerHTML.length <= 1){
+						e.preventDefault();
+						this.innerHTML = '';
+						this.style.outline = '2px dashed #CCC';
+						this.style.minWidth = '150px';
+						e.preventDefault();
+					}
+				}
+			})
+			$('.font-item', viky.main).live('DOMMouseScroll', function(e){
+				viky.changeFontSize(this, e);
+				e.preventDefault();
+			})
+			$('.font-item', viky.main).live('DOMAttrModified', function(e){
+				viky.item = e.target;
+				viky.updateItems(viky.item);
+				viky.updateDataVal(viky.item);
+				viky.previewFont();
+				//viky.updateItem();
+			});
+			viky.items.change(function(e){
+				viky.changeEvent();
+			})
+			viky.items.bind('input', function(e){
+				viky.changeEvent();
+			})
+			/* $(viky.main).bind('keyup', function(e){
+				var imgs = $('img', this);
+				$(this).css('background', 'url(' + imgs.attr('src') + ') 0 0 no-repeat');
+				$('img', this).addClass('hide');
+			}) */
+		},
+		fireEvent:function(el, eventName){
+			var e = document.createEvent('HTMLEvents');
+				e.initEvent(eventName, false, false);
+				el.dispatchEvent(e);
+		},
+		changeEvent : function(){
+			var sel = viky.getSelection();
+			if(sel.toString() == ''){
+				viky.updateItem();
+				viky.updateCanvas();
+				viky.updateDataVal(viky.item);
+			}else{
+				var an = sel.focusNode;	//anchorNode
+					if(an){
+						var anp = an.parentNode;
+						if(anp.className == 'font-item'){
+							viky.execFormat(sel.toString(), anp);
+						}else if(anp.className == 'font-item-word'){
+							viky.reformatSelection(anp);
+							viky.item = anp;
+						}else{
+						
+						}
+					}
+			}
+			
+		},
+		updateItem : function(){
+			if(viky.item){
+				viky.item.style.cssText += viky.getStyles();
+			}
+		},
+		updateItems : function(item){
+			var it = $(item);
+			var font = it.attr('data-font');
+			if(font){
+				var arr = font.split(' ');
+				$('.foreach-item[data-attr="font-size"]').val(arr[1]);
+				$('.foreach-item[data-attr="font-family"]').val(arr[2]);
+				$('.foreach-item[data-attr="font-weight"]').val(arr[0]);
+				$('.foreach-item[data-attr="color"]').val(rgbToHex(it.attr('data-color')));
+				$('.foreach-item[data-attr="color"]').css('background-color', it.attr('data-color'));
+			}
+		},
+		execFormat : function(txtnode, pn){
+			document.execCommand('ForeColor', false, 'red');
+			
+			var sel = viky.getSelection();
+			var fn = sel.focusNode;
+			var pe = fn.parentNode;	
+				pe.className = 'font-item-word';
+				pe.style.cssText += viky.getStyles();
+				viky.item = pe;
+			/*
+				document.execCommand('FontSize', false, parseInt($('.foreach-item[data-attr="font-size"]').val(),10));
+				document.execCommand('ForeColor', false, $('.foreach-item[data-attr="color"]').val());
+				document.execCommand('ForeName', false, $('.foreach-item[data-attr="font-family"]').val());
+			*/
+		},
+		reformatSelection : function(pn){
+			pn.style.cssText += viky.getStyles();
+		},
+		updateCanvas : function(){
+			var arr = $('.font-item', viky.main);
+			viky.ctx.clearRect(0, 0, viky.canvas.width , viky.canvas.height);
+			//viky.previewFont();
+			/*
+			return;
+			arr.each(function(i, el){
+				var obj, offset;
+				obj = $(el);
+				offset = obj.offset();
+				viky.drawBitmap(obj.text(), viky.getCanvasFontStyle(obj), offset.left, offset.top, viky.getFontColor(obj));
+			});
+			*/
+		},
+		wheelData : function(e){
+			var delta = 0;
+				delta = e.wheelDelta ? (e.wheelDelta / 120) : (- e.detail / 3);
+			return delta;
+		},
+		changeFontSize : function(obj, e){
+			var me = obj;
+			var val = parseInt(me.style.fontSize);
+			var optval = (val + viky.wheelData(e)) + 'px';
+				me.style.fontSize = optval;
+				$('.foreach-item[data-attr="font-size"]').val(optval);
+		},
+		previewFont : function(){
+			var canvas = viky.canvas;
+			var ctx = viky.ctx;
+			var data = '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="400">' +
+						 '<foreignObject width="100%" height="100%">' +
+						   '<body xmlns="http://www.w3.org/1999/xhtml"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%;">' +
+								viky.main.innerHTML + 
+						   '</div></body>' +
+						 '</foreignObject>' +
+					   '</svg>';
+			var DOMURL = self.URL || self.webkitURL || self;
+			var img = new Image();
+			var svg = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
+			var url = DOMURL.createObjectURL(svg);
+			img.onload = function() {
+				viky.ctx.clearRect(0, 0, viky.canvas.width , viky.canvas.height);
+				ctx.drawImage(img, 0, 0);
+				DOMURL.revokeObjectURL(url);
+			};
+			img.src = url;
+		},
+		getSelection : function(){
+			if(document.getSelection){
+				return document.getSelection();
+			}
+			return null;
+		},
+		init : function(){
+			this.bind();
+			this.canvas.width = document.documentElement.clientWidth - 20;
+			this.main.style.width = (document.documentElement.clientWidth - 20) + 'px';
+			this.ctx = this.canvas.getContext("2d");
+			$('body').bind('paste',function(e){
+				var eo = e.target;
+				if(eo.id == 'main_panel'){
+					//e.preventDefault();
+				}
+			});
+		}
+	}
+	viky.init();
+
+}();
+
+</script>
+</body>
+</html>

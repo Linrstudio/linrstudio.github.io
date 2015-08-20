@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Markdown for Word</title>
+<script src="../js/Markdown.Converter.js"></script>
+<style>
+html,body{
+}
+.ui-cols{
+
+}
+.ui-cols .ui-col{
+	float:left;
+	width:50%;
+}
+.ui-input{
+	border:1px solid #CCC;
+}
+.ui-markdown .ui-input{
+	height:650px;
+	width:100%;
+	overflow-y:auto;
+}
+.ui-markdown div.ui-input{
+	padding:2px 0;
+	padding:1px 0\9;
+} 
+</style>
+</head>
+<body>
+<div class="ui-cols ui-cols-2 ui-markdown">
+	<div class="ui-col">
+		<div class="ui-input" id="src" contentEditable="true"></div>
+	</div>
+	<div class="ui-col">
+		<textarea class="ui-input" id="result"></textarea>
+	</div>
+</div>
+<div class="ui-markdown-opt">
+	<label>
+		<input type="checkbox" name="" id="word_fmt_chk" checked="checked" />
+		自动识别 Word 格式
+	</label>
+</div>
+<script>
+function g(s){
+	return document.getElementById(s);
+}
+function q(s, p){
+	return (p || document).querySelectorAll(s);
+}
+
+function walkTag(arr, fn){
+	for(var i = 0, j = arr.length, cur; i < j; ++ i){
+		
+		cur = arr[i];
+		fn && fn(cur);
+		
+	}
+}
+function trim(str){
+	if(str.trim){
+		return str.trim();
+	}
+	return str;
+}
+function getTagName(el){
+	return el.tagName.toLowerCase();
+}
+function formatWord(obj){
+	if(obj){
+		var rmels = [];
+		var alls = q('*', obj);
+			walkTag(alls, function(cur, txt){
+				
+				cur.removeAttribute('style');
+				cur.removeAttribute('class');
+				
+				if(getTagName(cur) == 'font'){
+					cur.removeAttribute('face');
+					rmels.push(cur);
+				}
+				if(getTagName(cur) == 'p'){
+					if(cur.getAttribute('align') == 'left'){
+						cur.removeAttribute('align');
+					}
+				}
+				if(getTagName(cur) == 'span'){
+					cur.removeAttribute('lang');
+					rmels.push(cur);
+				}
+			})
+			rmels.reverse();
+			walkTag(rmels, function(cur, txt){
+				txt = cur.innerHTML;
+				cur.outerHTML = txt;
+			});	
+
+		for(var i = 1, hns; i < 7; i ++){
+			var hns = q('h' + i, obj);
+			walkTag(hns, function(cur, txt, str){
+				txt = cur.innerText;
+				var tmp = [];
+				tmp.length = i + 1;
+				str = tmp.join('#');
+				if(txt!= '' && txt.indexOf(str + ' ') == -1){
+					cur.innerText = str + ' ' + txt;
+				}
+			})
+		}
+		var ps = q('*', obj);
+			walkTag(ps, function(cur, txt){
+				txt = cur.outerHTML;
+				cur.outerHTML = txt.replace(/<p/, '<pre').replace(/<\/p>/, '</pre>');
+			})
+		var bs = q('b', obj);
+			walkTag(bs, function(cur, txt){
+				txt = cur.innerText;
+				if(txt != '' && txt.indexOf('**') == -1){
+					cur.innerText = '**' + txt + '**';
+				}
+			})
+			
+		var bs = q('a', obj);
+			walkTag(bs, function(cur, txt){
+				txt = cur.innerHTML;
+				cur.innerHTML = '[' + txt + '](' + cur.href + ')';
+			})
+		
+		var els = q('*', obj);
+			walkTag(els, function(cur, txt){
+				txt = cur.innerText;
+				var reg = /^(\s)?[0-9.．]+/g;
+				if(reg.test(txt)){
+					var match0 = txt.match(reg)[0];
+					var lastLetter = match0.slice(match0.length-1);
+					var noempty = trim(match0);
+					cur.innerText = txt.replace(noempty, '0. ' + noempty);
+					
+				}
+			})
+	}
+}
+function markdownToHTML(obj){
+	var converter = new Markdown.Converter();
+		return converter.makeHtml(obj.innerText);
+}
+g('src').onkeypress = function(ev){
+	if(window.ActiveXObject && event.keyCode == 13){
+		var txtobj = document.selection.createRange()
+		txtobj.text == '' ?txtobj.text = '\n' : (document.selection.clear()) & (txtobj.text = '\n');
+		document.selection.createRange().select()
+		return false
+	}
+}
+g('src').onkeyup = function(){
+	g('result').value = markdownToHTML(this);
+}
+g('src').onpaste = function(){
+	var me = this;
+	setTimeout(function(){if(g('word_fmt_chk').checked){
+		formatWord(me);
+		}
+	}, 1000);
+}
+</script>
+</body>
+</html>
