@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title></title>
+<style>
+/* todo 
+
+
+ 超出长度省略
+
+ */
+html{overflow-y:scroll;}
+img{-ms-interpolation-mode:bicubic}
+section,article,aside,header,footer,nav,figure{display:block}
+body,h1,h2,h3,h4,h5,h6,p,blockquote,dl,dt,dd,ul,ol,li,pre,form,fieldset,legend,button,input,textarea,th,td,figure{margin:0;padding:0}
+body,button,input,select,textarea{font:12px/1.5 arial}
+h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-size:100%}
+address,cite,dfn,em,var{font-style:normal}
+code,kbd,pre,samp{font-family:courier new,courier,monospace}
+small{font-size:12px}
+ul,ol{list-style:none}
+a{text-decoration:none}
+a:hover{text-decoration:underline}
+sup{vertical-align:text-top}
+sub{vertical-align:text-bottom}
+legend{color:#000}
+fieldset,img{border:0}
+table{border-collapse:collapse;border-spacing:0}
+input::-moz-focus-inner,button::-moz-focus-inner{border:0;padding:0;outline:0}
+::-webkit-file-upload-button{cursor:pointer;}
+.clear{*zoom:1}
+.clear:after{content:'\20';display:block;clear:both;height:0}
+.hide{display:none;}
+
+.app{padding:10px;font-family:"微软雅黑", Tahoma, "HelveticaNeue", "Helvetica Neue", Helvetica, Arial;}
+h3{font-size:20px;font-weight:300;padding-bottom:10px;}
+
+.ui-line{
+	border-bottom:1px solid #CCC;
+}
+
+.ui-form-item{
+	padding-left:100px;
+	margin-bottom:10px;
+	color:#666;
+}
+.ui-label{
+	font-size:14px;
+	color:#333;
+}
+.ui-input{
+	height:18px;
+	padding:2px;
+}
+.ui-input[type="button"]{
+	height:auto;
+	padding:3px 10px;
+	background:#86d993;
+	border:none;
+	font-size:14px;
+	color:#FFF;
+	text-shadow:0px 1px 0px rgba(0,0,0,0.4);
+	cursor:pointer;
+}
+.ui-form-item label *,
+.ui-radio{vertical-align:middle;}
+.ui-form .ui-label{
+	margin-left:-100px;
+	width:100px;
+	text-align:right;
+	display:inline-block;
+}
+.app .ui-line,
+.app .ui-form{
+	margin-bottom:20px;
+}
+.ui-link-button{
+	padding:4px 8px;
+	border:1px solid #DDD;
+}
+.ui-link-button:hover{text-decoration:none;border-color:#BBB;}
+.ui-form-group{
+	margin:10px 0;
+	padding:5px 0;
+	border:1px solid #D1D1D1;
+}
+
+.result-panel{
+	position:fixed;
+	_position:absolute;
+	top:0;
+	right:0;
+	width:500px;
+	border:1px solid #EEE;
+	background:#FFF;
+	box-shadow:1px 1px 3px #CCC;
+}
+.css-panel,.html-panel{
+	padding:6px;
+}
+.ui-input-code{
+	width:100%;
+	border:1px solid #EEE;
+}
+</style>
+
+<script src="http://imgcache.qq.com/club/qqdisk/web/js/jquery-1.6.4.js"></script>
+<!-- <script src="http://ajax.aspnetcdn.com/ajax/jquery/jquery-1.4.4.min.js"></script> -->
+</head>
+<body>
+
+<div class="app">
+
+	<div class="app-inner" id="mod_ui_btn">
+	
+		<h3>图标文字：</h3>
+		<div class="ui-form">
+			<div class="ui-form-item fn-each-tag">
+				<label class="ui-label">元素：</label>
+				<label for=""><input class="ui-radio" type="radio" value="i" name="icon_tag_rd" checked="checked"> &lt;i&gt;</label>
+				<label for=""><input class="ui-radio" type="radio" value="s" name="icon_tag_rd"> &lt;s&gt;</label>
+				<label for=""><input class="ui-radio" type="radio" value="b" name="icon_tag_rd"> &lt;b&gt;</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="after" name="icon_tag_rd"> ::after</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="before" name="icon_tag_rd"> ::before</label>
+			
+			</div>
+			<div class="ui-form-item fn-each-size">
+				<label class="ui-label">图标大小：</label>
+				<label for=""><input class="ui-radio" type="radio" value="16" name="icon_size_rd" checked="checked"> 16 x 16</label>
+				<label for=""><input class="ui-radio" type="radio" value="24" name="icon_size_rd"> 24 x 24</label>
+				<label for=""><input class="ui-radio" type="radio" value="48" name="icon_size_rd"> 48 x 48</label>
+				<label for=""><input class="ui-radio fn-size-user" type="radio" value="0" name="icon_size_rd"> 自定义</label>
+				<input class="ui-input fn-size-user-txt hide" type="text" value="50">
+			</div>
+			<div class="ui-form-item fn-each-type">
+				<label class="ui-label">图标定位：</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="display:inline-block;" value="static" name="icon_type_rd" checked="checked"> inline-block</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="position:absolute;top:50%;left:0;" value="absolute" name="icon_type_rd"> position</label>
+			</div>
+			<div class="ui-form-item fn-each-type">
+				<label class="ui-label">容器高度：</label>
+				<input class="ui-input fn-height" type="text" value="">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-height">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-height">-</a>
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">文案：</label>
+				<input class="ui-input fn-text" type="text" value="图标文案">
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">其他：</label>
+				<label for=""><input class="ui-radio fn-get-btn" type="checkbox" value=""> 生成按钮</label>
+				<label for=""><input class="ui-radio fn-get-darr" type="checkbox" value=""> 文字右侧小三角</label>
+			</div>
+			
+			<div class="ui-btn-setting hide">
+				<div class="ui-form-item fn-each-btn-tag">
+					<label class="ui-label">按钮元素：</label>
+					<label for=""><input class="ui-radio" type="radio" value="a" name="btn_tag_rd" checked="checked"> &lt;a&gt;</label>
+					<label for=""><input class="ui-radio" type="radio" value="span" name="btn_tag_rd"> &lt;span&gt;</label>
+					<label for=""><input class="ui-radio" type="radio" value="div" name="btn_tag_rd"> &lt;div&gt;</label>
+				
+				</div>
+			</div>
+			
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe src="" frameborder="0" class="iframe"></iframe>
+			</div>
+		</div>
+
+		<script>
+		$(function(){
+			var me = $('#mod_ui_btn');
+			var el = {
+				cssclass : 'ui-tips',
+				parentTag : 'div',
+				tag : 'i',
+				isButton : function(){
+					var _getBtn = $('.fn-get-btn:checked', me);
+					return _getBtn.length == 1;
+				},
+				isDarr : function(){
+					var _getArr = $('.fn-get-darr:checked', me);
+					return _getArr.length == 1;
+				},
+				getIconClass : function(){
+					return this.isDarr() ? 'ui-darr' : 'ui-icon';
+				},
+				getCssClass :function(){
+					return this.isButton() ? 'ui-button' : 'ui-tips';
+				},
+				getTag : function(){
+					return $('.fn-each-tag .ui-radio:checked', me).val();
+				},
+				getHeight : function(){
+					return $('.fn-height', me).val();
+				},
+				getParentTag : function(){
+					return this.isButton() ? $('.fn-each-btn-tag .ui-radio:checked', me).val() : 'div';
+				},
+				getHTML : function(){
+					var _tag = this.getTag();
+					var _parentTag = this.getParentTag();
+					var _parentCssClass = this.getCssClass();
+					var _txt = $('.fn-text', me).val();
+					
+					var _node = '<' + _tag + ' class="' + this.getIconClass() + '">' + '</' +  _tag + '>\n\t';
+					if(_tag == 'after' || _tag == 'before'){
+						_node = '';
+					}
+					return this.isDarr() ? '<' + _parentTag + ' class="' + _parentCssClass + '">\n\t' + '<span class="ui-text">' + _txt + _node + '</span>\n</' + _parentTag + '>' : '<' + _parentTag + ' class="' + _parentCssClass + '">\n\t' + _node + '<span class="ui-text">' + _txt + '</span>\n</' + _parentTag + '>';
+				},
+				tuneVal : function(obj, index){
+					var _id = $(obj).attr('data-id');
+					var _txt = $('.' + _id, me);
+					var _val = _txt.val();
+					if(_val != ''){
+						var _tmp = parseInt(_val, 10);
+						_txt.val((_tmp += index) + 'px');
+					}
+					
+				},
+				getCSS : function(){
+					var _isBtn = this.isButton();
+					var _tag = this.getTag();
+					var _parentCssClass = this.getCssClass();
+					var _rule = '';
+					var _size = $('.fn-each-size .ui-radio:checked', me).val();
+					var _type = $('.fn-each-type .ui-radio:checked', me).val();
+					var _height = this.getHeight().replace('px', '');
+					var _selector = '.' + _parentCssClass + ' .' + this.getIconClass();
+					var _att = '';
+					
+						if(_tag == 'after' || _tag == 'before'){
+							_selector = '.' + _parentCssClass + ':' + _tag;
+							_att = "content:'\\20';\n\t";
+						}
+					
+					if(_height != ''){
+						if(_height > 18){
+						
+
+							var total = Number(_height) - 19;
+							var half = parseInt(total / 2, 10);
+
+							_rule += '.' + _parentCssClass + '{' + 
+'	height:19px;\n' +
+'	line-height:19px;\n' +							
+'	padding:' + half + 'px 0 ' + (half + 1) + 'px;\n' +
+'	padding:' + (half + 1) + 'px 0 ' + half + 'px\\0;\n' +
+'	*padding:' + (half - 1) + 'px 0 ' + (half + 2) + 'px;\n' +
+'	_padding:' + (half + 1) + 'px 0 ' + half + 'px;\n' +
+'	_font-family:simsun;\n' + 
+'	_font-size:13px;\n' + 
+'}\n'
+							
+						}
+					}
+					
+					var _pos = _type == 'absolute';
+					
+					if(_isBtn){
+						_rule += '.ui-button,\n.ui-button .ui-text{\n\
+	border:none;\n\
+	cursor:pointer;\n\
+	text-decoration:none;\n\
+	outline:none;\n\
+	*border:0;\n\
+}\n\
+.ui-button{\n\
+	display:-moz-inline-box;\n\
+	display:inline-block;\n\
+	*display:inline;\n\
+	vertical-align:middle;\n\
+	line-height:100%;\n\
+	text-align:left;\n\
+	font-size:12px;\n\
+	*zoom:1;\n\
+}\n\
+.ui-button .ui-text{\n\
+	*overflow:visible;\n\
+}\n\
+.ui-button span.ui-text{\n\
+	display:block;\n\
+	float:left;\n\
+}\n\
+.ui-button:hover{\n\
+	text-decoration:none;\n\
+}\n';
+					}
+					
+						if(_pos){
+							_rule += '.' + _parentCssClass + '{\n\tposition:relative;\n\tpadding-left:' + _size + 'px;\n}\n';
+						}
+						_rule += _selector + '{\n\t' + _att;
+					
+					var _css = this.isDarr() ? 'position:relative;\n\ttop:-1px;\n\tborder-style:solid dashed dashed;\n\tborder-color:transparent;\n\tborder-top-color:#c0c0c0;\n\tdisplay:-moz-inline-box;\n\tdisplay:inline-block;\n\tfont-size:0;\n\theight:0;\n\tline-height:0;\n\twidth:0;\n\tborder-width:3px 3px 0;\n\tpadding-top:1px;\n\tleft:4px;' : 'width:' + _size + 'px;\n\theight:' + _size + 'px;\n\tbackground:#CCC url()  no-repeat;'
+					
+					var _typecss = $('.fn-each-type .ui-radio:checked', me).attr('data-csstext');
+						_rule += this.isDarr() ? '' : _typecss;
+						if(_pos){
+							_rule += 'margin-top:-' + (_size / 2) + 'px;\n\t'
+						}
+						_rule += _css + ((_pos) ?  '' : '\tvertical-align:middle;\n') + '}\n';
+
+					return _rule;
+				}
+			}
+			$('.fn-plus', me).click(function(e){
+				el.tuneVal(this, !e.shiftKey ? 1 : 5);
+				e.preventDefault();
+				e.stopPropagation();
+			})
+			$('.fn-reduce', me).live('click', function(e){
+				el.tuneVal(this, !e.shiftKey ? -1 : -5);
+				e.preventDefault();
+				e.stopPropagation();
+			})
+			
+			$('.fn-size-user', me).change(function(){
+				var _txt = $('.fn-size-user-txt', me);
+				if(this.checked){
+					_txt.show();
+					$(this).val(_txt.val());
+				}
+			})
+			
+			$('.fn-ok', me).click(function(e){
+				var _demo = $('.iframe', me)[0];
+				preview(_demo,el.getCSS(), el.getHTML());
+			})
+			$('.fn-get-btn', me).click(function(e){
+				$('.ui-btn-setting').removeClass('hide');
+			})
+			
+		})
+		</script>	
+		
+	</div>	
+
+	<div class="ui-line"></div>
+
+	<div class="app-inner" id="mod_ui_nav_list">
+		<h3>list生成器：</h3>
+		<div class="ui-form">
+			
+			<div class="ui-form-item">
+				<label class="ui-label">选择器：</label>
+				<input class="ui-input fn-selector" type="text" value="ui-nav">
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">文案：</label>
+				<input class="ui-input fn-tag-list-text" type="text" value="" size="60">
+				<select class="fn-tag-list-split" id="">
+					<option value=" ">
+					<option value=",">,
+					<option value="-">-
+				</select>
+			</div>
+			
+			<div class="ui-form-item fn-each-tag-list">
+				<label class="ui-label">标签：</label>
+				<label for=""><input name="nav_list_tag" class="ui-radio fn-box-mask" type="radio" value="li>a" checked=""> li>a</label>
+				<label for=""><input name="nav_list_tag" class="ui-radio fn-box-close" type="radio" value="li>a>span"> li>a>span</label>
+				<label for=""><input name="nav_list_tag" class="ui-radio fn-box-close" type="radio" value="li>i+span"> li>i+span</label>
+				<label for=""><input name="nav_list_tag" class="ui-radio fn-box-close" type="radio" value="li>i+span:after"> li>i+span:after</label>
+			</div>
+			
+			
+			<div class="ui-form-item">
+				<label class="ui-label">方向：</label>
+				<label for=""><input name="nav_list_dir" class="ui-radio fn-nav-dir-hr" type="radio" value="" checked=""> 水平</label>
+				<label for=""><input name="nav_list_dir" class="ui-radio fn-nav-dir-vt" type="radio" value=""> 垂直</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe src="" frameborder="0" class="iframe"></iframe>
+			</div>			
+		</div>
+<script>
+$(function(){
+	var me = $('#mod_ui_nav_list');
+	var el = {
+		cssclass : 'ui-tips',
+		parentTag : 'div',
+		tag : 'i',
+		getSelector : function(){
+			return $('.fn-selector', me).val();
+		},
+		getSplit : function(){
+			return $('.fn-tag-list-split', me).val();
+		},
+		getTag : function(){
+			return $('.fn-each-tag-list .ui-radio:checked', me).val();
+		},
+		getDir : function(e){
+			return $('.fn-nav-dir-vt:checked', me).length == 1 ? '' : '\tfloat:left;';
+		},
+		getHTML : function(){
+			var _arrHTML = [];
+			var _selector = this.getSelector();
+			var _split = this.getSplit();	
+			var _val = $('.fn-tag-list-text', me).val();
+			var _tmp = _val.split(_split);
+			var _tag = this.getTag();
+			_arrHTML.push('<ul class="' + _selector + '">');
+			for(var i = 0, j = _tmp.length, _cur; i < j; i ++){
+				_cur = _tmp[i];
+				if(_cur != ''){
+					if(_tag == 'li>a'){
+						_arrHTML.push('\t<li class="ui-item"><a href="#">' + _cur + '</a></li>');
+					}else if(_tag == 'li>a>span'){
+						_arrHTML.push('\t<li class="ui-item"><a href="#"><span class="ui-text">' + _cur + '</span></a></li>');
+					}else if(_tag == 'li>i+span' || _tag == 'li>i+span:after'){
+						_arrHTML.push('\t<li class="ui-item"><i class="ui-icon"></i><span class="ui-text">' + _cur + '</span></li>');
+					}else{
+						
+					}
+				}
+			}
+			_arrHTML.push('</ul>');
+			return _arrHTML.join('\n');
+		},
+		getCSS : function(){
+			var _pre = '';
+			var _selector = this.getSelector();
+			var _tag = this.getTag();
+			var _dir = this.getDir();
+			_pre += '.' + _selector + '{}\n'
+			_pre += '.' + _selector + ' .ui-item{\n'
+			_pre += _dir;
+			_pre += '\n}\n';
+			
+			if(_tag == 'li>a'){
+				_pre += '.' + _selector + ' a{\n}\n';
+			}else if(_tag == 'li>a>span'){
+				_pre += '.' + _selector + ' a{\n}\n';
+				_pre += '.' + _selector + ' .ui-text{\n}\n';
+			}else if(_tag == 'li>i+span'){
+				_pre += '.' + _selector + ' .ui-icon{\n}\n';
+				_pre += '.' + _selector + ' .ui-text{\n}\n';
+			}else if(_tag == 'li>i+span:after'){
+				_pre += '.' + _selector + ' .ui-icon{\n}\n';
+				_pre += '.' + _selector + ' .ui-text:after{\n}\n';
+			}
+			
+			
+			return _pre;
+		}
+	};
+	$('.fn-ok', me).click(function(e){
+		var _demo = $('.iframe', me)[0];
+		preview(_demo,el.getCSS(), el.getHTML());
+	})
+});
+
+</script>
+	</div>
+
+
+	<div class="ui-line"></div>
+
+	<div class="app-inner" id="mod_ui_layout_gen">
+		<h3>布局生成器：</h3>
+		<div class="ui-form">
+
+			
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe src="" frameborder="0" class="iframe"></iframe>
+			</div>			
+		</div>
+<script>
+$(function(){
+	var me = $('#mod_ui_layout_gen');
+	var el = {
+		cssclass : 'ui-tips',
+		parentTag : 'div',
+		tag : 'i',
+		getSplit : function(){
+			return $('.fn-tag-list-split', me).val();
+		},
+		getTag : function(){
+			return $('.fn-each-tag-list .ui-radio:checked', me).val();
+		},
+		getDir : function(e){
+			return $('.fn-nav-dir-vt:checked', me).length == 1 ? '' : '\tfloat:left;';
+		},
+		getHTML : function(){
+			
+			var _arrHTML = [];
+			var _split = this.getSplit();	
+			var _val = $('.fn-tag-list-text', me).val();
+			var _tmp = _val.split(_split);
+			var _tag = this.getTag();
+			_arrHTML.push('<ul>');
+			for(var i = 0, j = _tmp.length, _cur; i < j; i ++){
+				_cur = _tmp[i];
+				if(_cur != ''){
+					if(_tag == 'li>a'){
+						_arrHTML.push('\t<li class="ui-item"><a href="#">' + _cur + '</a></li>');
+					}else{
+						_arrHTML.push('\t<li class="ui-item"><a href="#"><span>' + _cur + '</span></a></li>');
+					}
+				}
+			}
+			_arrHTML.push('</ul>');
+			return _arrHTML.join('\n');
+		},
+		getCSS : function(){
+			var _pre = '';
+			var _tag = this.getTag();
+			var _dir = this.getDir();
+			_pre += '.ui-nav{}\n'
+			_pre += '.ui-nav .ui-item{\n'
+			_pre += _dir;
+			_pre += '\n}';
+			
+			return _pre;
+		}
+	};
+	$('.fn-ok', me).click(function(e){
+		var _demo = $('.iframe', me)[0];
+		preview(_demo,el.getCSS(), el.getHTML());
+	})
+});
+
+</script>
+	</div>
+
+	<div class="ui-line"></div>
+
+	<div class="app-inner" id="mod_ui_gallery">
+		<h3>gallery生成：</h3>
+		<div class="ui-form">
+		
+			<div class="ui-form-item fn-each-layout">
+				<label class="ui-label">布局：</label>
+				<label for=""><input class="ui-radio" type="radio" value="float:left;" name="gallery_layout_rd" checked="checked"> float</label>
+				<label for=""><input class="ui-radio" type="radio" value="display:inline-block;" name="gallery_layout_rd"> inline-block</label>
+				<label for=""><input class="ui-radio" type="radio" value="display:block;" name="gallery_layout_rd"> block</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">个数：</label>
+				<input class="ui-input fn-text fn-gallery-sum" type="text" value="5">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-gallery-sum">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-gallery-sum">-</a>
+			</div>
+			
+			<div class="ui-form-item fn-each-tag">
+				<label class="ui-label">item 标签：</label>
+				<label for=""><input class="ui-radio" type="radio" value="div" name="gallery_tag_rd" checked="checked"> div</label>
+				<label for=""><input class="ui-radio" type="radio" value="li" name="gallery_tag_rd"> li</label>
+				<label for=""><input class="ui-radio" type="radio" value="h1+p" name="gallery_tag_rd"> h1+p</label>
+				<label for=""><input class="ui-radio" type="radio" value="i+p" name="gallery_tag_rd"> i+p</label>
+				<label for=""><input class="ui-radio" type="radio" value="a>i+span" name="gallery_tag_rd"> a>i+span</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">其他：</label>
+				<label for=""><input class="ui-radio fn-gallery-title" type="checkbox" value=""> 添加标题</label>
+				<label for=""><input class="ui-radio fn-gallery-desc" type="checkbox" value=""> 添加描述</label>
+				<label for=""><input class="ui-radio fn-gallery-action" type="checkbox" value=""> 添加操作</label>
+			</div>
+
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe src="" frameborder="0" class="iframe"></iframe>
+			</div>			
+		</div>
+<script>
+$(function(){
+	var me = $('#mod_ui_gallery');
+	var el = {
+		cssclass : 'ui-tips',
+		parentTag : 'div',
+		tag : 'i',
+		getSplit : function(){
+			return $('.fn-tag-list-split', me).val();
+		},
+		getTag : function(){
+			return $('.fn-each-tag input:checked', me).val();
+		},
+		isChecked : function(selector){
+			var el = $(selector + ':checked', me);
+			return el.length != 0;
+		},
+		tuneVal : function(obj, index){
+			var _id = $(obj).attr('data-id');
+			var _txt = $('.' + _id, me);
+			var _val = _txt.val();
+			if(_val != ''){
+				var _tmp = parseInt(_val, 10);
+				_txt.val((_tmp += index));
+			}
+			
+		},
+		getHTML : function(){
+			
+			var _arrHTML = [];
+				
+			var _len = $('.fn-gallery-sum', me).val();
+			var _tag = this.getTag();
+			var _isTitle = this.isChecked('.fn-gallery-title');
+			var _isDesc = this.isChecked('.fn-gallery-desc');
+			var _isAction = this.isChecked('.fn-gallery-action');
+			
+			_arrHTML.push(_tag == 'li' ? '<ul class="ui-gallery">' : '<div class="ui-gallery">');
+			for(var i = 0, j = _len, _cur; i < j; i ++){
+				_arrHTML.push('\t<' + _tag + ' class="ui-item"><a href="#"><img src="http://placehold.it/140x100" /></a>' + (_isTitle ? '<h3 class="ui-title">title</h3>' : '') + (_isDesc ? '<p class="ui-text">desc</p>' : '')  + (_isAction ? '<div class="ui-action"><a href="">preview</a></div>' : '') + '</' + _tag + '>');
+			}
+			_arrHTML.push(_tag == 'li' ? '</ul>' : '</div>');
+			return _arrHTML.join('\n');
+		},
+		getCSS : function(){
+			var _pre = '';
+			var _tag = this.getTag();
+			var _isTitle = this.isChecked('.fn-gallery-title');
+			var _isDesc = this.isChecked('.fn-gallery-desc');
+			var _isAction = this.isChecked('.fn-gallery-action');
+			
+			var _layout = $('.fn-each-layout input:checked', me).val();
+			
+			_pre += '.ui-gallery{}\n';
+			_pre += '.ui-gallery .ui-item{\n';
+			
+			_pre += '\t' + _layout;
+			
+			
+			_pre += '\n}';
+			
+			return _pre;
+		}
+	};
+	
+	$('.fn-plus', me).click(function(e){
+		el.tuneVal(this, !e.shiftKey ? 1 : 5);
+		e.preventDefault();
+		e.stopPropagation();
+	})
+	$('.fn-reduce', me).live('click', function(e){
+		el.tuneVal(this, !e.shiftKey ? -1 : -5);
+		e.preventDefault();
+		e.stopPropagation();
+	})
+	
+	$('.fn-ok', me).click(function(e){
+		var _demo = $('.iframe', me)[0];
+		preview(_demo,el.getCSS(), el.getHTML());
+	})
+});
+
+</script>
+	</div>
+	
+	
+	<div class="ui-line"></div>
+
+	<div class="app-inner" id="mod_ui_xbox">
+		<h3>浮层：</h3>
+		<div class="ui-form">
+
+			<div class="ui-form-item">
+				<label class="ui-label">选择器：</label>
+				<input class="ui-input" type="text" value="">
+			</div>
+			
+			<div class="ui-form-item fn-each-pos">
+				<label class="ui-label">定位：</label>
+				<label for=""><input class="ui-radio" type="radio" value="absolute" name="box_pos_rd" checked="checked"> absolute</label>
+				<label for=""><input class="ui-radio" type="radio" value="fixed" name="box_pos_rd"> fixed</label>
+				<label for=""><input class="ui-radio" type="radio" value="relative" name="box_pos_rd"> relative</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">背景色：</label>
+				<input class="ui-input" type="color" value="#FFF">
+			</div>
+			
+			<div class="ui-form-item fn-each-arr">
+				<label class="ui-label">添加箭头：</label>
+				<label for=""><input class="ui-radio fn-arr" type="radio" name="box_arr_rd" value="" checked=""> 无</label>
+				<label for=""><input class="ui-radio fn-arr" type="radio" name="box_arr_rd" value="tarr"> 上箭头</label>
+				<label for=""><input class="ui-radio fn-arr" type="radio" name="box_arr_rd" value="barr"> 下箭头</label>
+				<label for=""><input class="ui-radio fn-arr" type="radio" name="box_arr_rd" value="larr"> 左箭头</label>
+				<label for=""><input class="ui-radio fn-arr" type="radio" name="box_arr_rd" value="rarr"> 右箭头</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">其他：</label>
+				<label for=""><input class="ui-radio fn-box-mask" type="checkbox" value=""> 添加 mask 层</label>
+				<label for=""><input class="ui-radio fn-box-close" type="checkbox" value=""> 添加 关闭</label>
+				<label for=""><input class="ui-radio fn-box-header" type="checkbox" value=""> 添加 header</label>
+				<label for=""><input class="ui-radio fn-box-footer" type="checkbox" value=""> 添加 footer</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe src="" frameborder="0" class="iframe"></iframe>
+			</div>			
+		</div>
+<script>
+$(function(){
+	var me = $('#mod_ui_xbox');
+	var el = {
+		cssclass : 'ui-tips',
+		parentTag : 'div',
+		tag : 'i',
+		getPos : function(){
+			return $('.fn-each-pos .ui-radio:checked', me).val();
+		},
+		getArr : function(){
+			return $('.fn-each-arr .ui-radio:checked', me).val();
+		},
+		needMask : function(e){
+			return $('.fn-box-mask:checked', me).length == 1;
+		},
+		needClose : function(){
+			return $('.fn-box-close:checked', me).length == 1;
+		},
+		needHeader : function(){
+			return $('.fn-box-header:checked', me).length == 1;
+		},
+		needFooter : function(){
+			return $('.fn-box-footer:checked', me).length == 1;
+		},
+		getHTML : function(){
+			var _mask = this.needMask() ? '<div class="ui-mask"></div>\n' : '';
+			var _close = this.needClose() ? '\t<a class="ui-xbox-close" href="#!/close/">&times;</a>' : '';
+			var _header = this.needHeader() ? '\n\t<div class="ui-xbox-header"><span class="title">Title</span></div>\n' : '';
+			var _footer = this.needFooter() ? '\n\t<div class="ui-xbox-footer"><div class="ui-btns"><button class="ui-btn ui-btn-ok">OK</button><button class="ui-btn ui-btn-cancel">Cancel</button></div></div>\n' : '';
+			
+			var _arr = this.getArr();
+			var _arrHTML = _arr != '' ? '\t<i class="ui-' + _arr + '"></i><i class="ui-' + _arr + ' ui-' + _arr + '-mask"></i>\n' : '';
+			return _mask + '<div class="ui-xbox">\n\t' + _header + '\t<div class="ui-xbox-inner" style="width:200px;height:90px;">xxxxxxxxxxxxxxxxxxx</div>' + _footer + '\n' + _arrHTML + _close + '\n</div>\n';
+		},
+		getCSS : function(){
+			var _mask = '';
+			var _close = '', _header = '', _footer = '';
+			var _arr = this.getArr();
+			var _pre = '';
+			if(this.needClose()){
+				_close = '\
+.ui-xbox-close{\n\
+	position:absolute;\n\
+	right:0;\n\
+	top:0;\n\
+	width:32px;\n\
+	height:32px;\n\
+	font:600 14px/32px Tahoma;\n\
+	text-align:center;\n\
+	color:#B5AE3E;\n\
+	text-decoration:none;\n\
+}';
+			}
+			if(this.needHeader()){
+				_header = '\
+.ui-xbox-header{\n\
+}\n';
+			}	
+			if(this.needFooter()){
+				_footer = '\
+.ui-xbox-footer{\n\
+}\n';
+			}
+			
+			if(_arr != ''){
+				var _borderColor = '';
+				var _borderMaskColor = '';
+				var _borderStyle = '';
+				var _pos = '';
+				var _maskPos = '';
+				if(_arr == 'tarr'){
+					_borderColor = 'transparent transparent #CCC transparent';
+					_borderMaskColor = 'transparent transparent #FFF transparent';
+					_borderStyle = 'dashed dashed solid dashed';
+					_pos = 'left:25px;\n\ttop:-12px;';
+					_maskPos = 'top:-11px;';
+				}else if(_arr == 'barr'){
+					_borderColor = '#CCC transparent transparent transparent';
+					_borderMaskColor = '#FFF transparent transparent transparent';
+					_borderStyle = 'solid dashed dashed dashed';
+					_pos = 'left:25px;\n\tbottom:-11px;';
+					_maskPos = 'bottom:-10px;';
+				}else if(_arr == 'larr'){
+					_borderColor = 'transparent #CCC transparent transparent';
+					_borderMaskColor = 'transparent #FFF transparent transparent';
+					_borderStyle = 'dashed solid dashed dashed';
+					_pos = 'left:-12px;\n\ttop:15px;\n';
+					_maskPos = 'left:-11px;';
+				}else if(_arr == 'rarr'){
+					_borderColor = 'transparent transparent transparent #CCC';
+					_borderMaskColor = 'transparent transparent transparent #FFF';
+					_borderStyle = 'dashed dashed dashed solid';
+					_pos = 'right:-11px;\n\ttop:15px;\n';
+					_maskPos = 'right:-10px;';
+				}
+				_pre = '\
+.ui-xbox .ui-' + _arr + '{\
+	position:absolute;\n\
+	' + _pos + '\n\
+	width:0;height:0;overflow:hidden;\n\
+	font-size:0;\n\
+	display:inline-block;\n\
+	border-width:6px;\n\
+	border-color:' + _borderColor + ';\n\tborder-style:' + _borderStyle + ';\n\
+}\n\
+.ui-xbox .ui-' + _arr + '-mask{\n\
+	' + _maskPos + '\n\
+	border-color:' + _borderMaskColor + ';\n\
+}\n';
+			}
+			
+			if(this.needMask()){
+				_mask = '\
+.ui-mask{\n\
+	position:fixed;\n\
+	_position:absolute;\n\
+	left:0;\n\
+	top:0;\n\
+	z-index:9;\n\
+	width:100%;\n\
+	height:100%;\n\
+	background-color:#000;\n\
+	opacity:.65;\n\
+	filter:alpha(opacity=65);\n\
+}\n';				
+			}	
+		
+			return _mask + '.ui-xbox{\n\
+	position:' + this.getPos() + ';\n\
+	left:15px;\n\
+	top:15px;\n\
+	z-index:10;\n\
+	background:#CCC;\n\
+	color:#000;\n\
+}\n\
+.ui-xbox-inner{\n\
+	position:relative;\n\
+	top:-1px;\n\
+	left:-1px;\n\
+	height:100%;\n\
+	padding:10px 15px;\n\
+	border:1px solid #CCC;\n\
+	background:#FFF;\n\
+	_display:inline;\n\
+	zoom:1;\n\
+}\n' + _pre + _close + _header + _footer;
+		}
+	};
+	$('.fn-ok', me).click(function(e){
+		var _demo = $('.iframe', me)[0];
+		preview(_demo,el.getCSS(), el.getHTML());
+	})
+});
+
+</script>
+	</div>
+
+<div class="ui-line"></div>
+
+<div class="app-inner"  id="mod_ui_quota">
+	<h3>进度条：</h3>
+	<div class="ui-form">
+		<div class="ui-form-item fn-each-tag">
+			<label class="ui-label">标签：</label>
+			<label for=""><input class="ui-radio" type="radio" value="div" name="quota_tag_rd" checked="checked"> div</label>
+			<label for=""><input class="ui-radio" type="radio" value="span" name="quota_tag_rd"> span</label>
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">背景色：</label>
+			<input class="ui-input fn-bg-text" type="color" value="#FFF">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">Slider色：</label>
+			<input class="ui-input fn-fg-text" type="color" value="#F00">
+		</div>
+		
+
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_quota');
+		var el = {
+			getCSS : function(e){
+				var _tag = this.getTag();
+				var _pre = '';
+				var _bg = $('.fn-bg-text', me).val();
+				var _fg = $('.fn-fg-text', me).val();
+				if(_tag == 'div'){
+			
+_pre = '.ui-quota{\n\
+	width:136px;\n\
+	padding:1px;\n\
+	border:1px solid #d2d2d2;\n\
+	background:' + _bg + ';\n\
+}\n\
+.ui-quota-bar{\n\
+	height:10px;\n\
+	font-size:0;\n\
+	background:' + _fg + ';\n\
+}\n';
+
+				}else{
+				
+_pre = '.ui-quota{\n\
+	display:inline-block;\n\
+	width:136px;\n\
+	padding:1px;\n\
+	border:1px solid #d2d2d2;\n\
+	background:' + _bg + ';\n\
+	*display:inline;\n\
+	*zoom:1;\n\
+	*text-align:left;\n\
+}\n\
+.ui-quota-bar{\n\
+	display:block;\n\
+	height:10px;\n\
+	font-size:0;\n\
+	background:' + _fg + ';\n\
+}\n';
+					
+				}
+				return _pre;
+			},
+			getTag : function(){
+				return $('.fn-each-tag .ui-radio:checked', me).val();
+			},
+			getHTML : function(e){
+				var _tag = this.getTag();
+				
+				return '<' + _tag + ' class="ui-quota">\n\t' +
+						'<' + _tag + ' class="ui-quota-bar" style="width:40%;"></' + _tag + '>\n' + 
+						'</' + _tag + '>';
+			}
+		};
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+
+	
+	})
+	</script>
+</div>
+
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_txt_img">
+	<h3>图片文字</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">CssClass：</label>
+			<input class="ui-input fn-css-class" type="text" value="xxx">
+		</div>
+
+		<div class="ui-form-item fn-each-ptag">
+			<label class="ui-label">父标签：</label>
+			<label for=""><input class="ui-radio" type="radio" value="span" name="txt_img_ptag_rd" checked="checked"> span</label>
+			<label for=""><input class="ui-radio" type="radio" value="div" name="txt_img_ptag_rd"> div</label>
+		</div>
+		<div class="ui-form-item fn-each-tag">
+			<label class="ui-label">标签：</label>
+			<label for=""><input class="ui-radio" type="radio" value="s" name="txt_img_tag_rd" checked="checked"> s</label>
+			<label for=""><input class="ui-radio" type="radio" value="i" name="txt_img_tag_rd"> i</label>
+			<label for=""><input class="ui-radio" type="radio" value="span" name="txt_img_tag_rd"> span</label>
+			<label for=""><input class="ui-radio" type="radio" value="before" name="txt_img_tag_rd"> ::before</label>
+			<label for=""><input class="ui-radio" type="radio" value="after" name="txt_img_tag_rd"> ::after</label>
+		</div>
+		<div class="ui-form-item fn-each-size">
+			<label class="ui-label">图标大小：</label>
+			<label for=""><input class="ui-radio" type="radio" value="16" name="icon_size_rd2" checked="checked"> 16 x 16</label>
+			<label for=""><input class="ui-radio" type="radio" value="24" name="icon_size_rd2"> 24 x 24</label>
+			<label for=""><input class="ui-radio" type="radio" value="48" name="icon_size_rd2"> 48 x 48</label>
+			<label for=""><input class="ui-radio fn-size-user" type="radio" value="0" name="icon_size_rd2"> 自定义</label>
+			<input class="ui-input fn-size-user-txt hide" type="text" value="50">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">文字：</label>
+			<input class="ui-input fn-text" type="text" value="文案文案">
+		</div>
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_txt_img');
+		var el = {
+			getCSS : function(e){
+				var _tag = this.getTag();
+				var _ptag = this.getPTag();
+				var _size = $('.fn-each-size .ui-radio:checked', me).val();
+				var _pre = '';
+				var _bg = $('.fn-bg-text', me).val();
+				var _fg = $('.fn-fg-text', me).val();
+				var _inline = _ptag == 'span' ? '\n\tdisplay:inline-block;\n' : '';
+				if(_tag != 'before' && _tag != 'after'){
+			
+_pre = '.ui-xxx{\n\
+	position:relative;\n' + _inline + 
+'	width:' + _size + 'px;\n\
+	height:' + _size + 'px;\n\
+	line-height:' + _size + 'px;\n\
+	overflow:hidden;\n\
+	border:1px solid #d2d2d2;\n\
+}\n\
+.ui-xxx ' + _tag + '{\n\
+	position:absolute;\n\
+	left:0;\n\
+	top:0;\n\
+	width:100%;\n\
+	height:100%;\n\
+	background:url() 0 0 no-repeat;\n\
+}\n';
+
+				}else{
+				
+_pre = '.ui-xxx{\n\
+	position:relative;\n' + _inline + 
+'	width:' + _size + 'px;\n\
+	height:' + _size + 'px;\n\
+	line-height:' + _size + 'px;\n\
+	overflow:hidden;\n\
+	border:1px solid #d2d2d2;\n\
+}\n\
+.ui-xxx:' + _tag + '{\n\
+	content:\'\\20\';\n\
+	position:absolute;\n\
+	left:0;\n\
+	top:0;\n\
+	width:100%;\n\
+	height:100%;\n\
+	background:url() 0 0 no-repeat;\n\
+}\n';
+					
+				}
+				return _pre;
+			},
+			getTag : function(){
+				return $('.fn-each-tag .ui-radio:checked', me).val();
+			},
+			getPTag : function(){
+				return $('.fn-each-ptag .ui-radio:checked', me).val();
+			},
+			getHTML : function(e){
+				var _ptag = this.getPTag();
+				var _tag = this.getTag();
+				var _txt = $('.fn-text', me).val();
+				return '<' + _ptag + ' class="ui-xxx">\n\t' +
+						'<span class="ui-text">' + _txt + '</span>' + ((_tag != 'before' && _tag != 'after') ? '<' + _tag + ' class="ui-img"></' + _tag + '>' : '')  + '\n' + 
+						'</' + _ptag + '>';
+			}
+		};
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		$('.fn-size-user', me).change(function(){
+			var _txt = $('.fn-size-user-txt', me);
+			if(this.checked){
+				_txt.show();
+				$(this).val(_txt.val());
+			}
+		})
+
+	
+	})
+	</script>
+</div>
+
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_input">
+	<h3>复合输入框</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">CssClass：</label>
+			<input class="ui-input fn-css-class" type="text" value="xxx">
+		</div>
+
+		<div class="ui-form-item fn-each-tag">
+			<label class="ui-label">父标签：</label>
+			<label for=""><input class="ui-radio" type="radio" value="span" name="txt_img_ptag_rd" checked="checked"> span</label>
+			<label for=""><input class="ui-radio" type="radio" value="div" name="txt_img_ptag_rd"> div</label>
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">默认文案：</label>
+			<input class="ui-input fn-text" type="text" value="默认文案">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">其他：</label>
+			<label for=""><input class="ui-radio fn-go-btn" type="checkbox" value=""> 添加搜索</label>
+			<label for=""><input class="ui-radio fn-del-btn" type="checkbox" value=""> 添加重置</label>
+		</div>
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>			
+	</div>
+	
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_input');
+		var el = {
+			getCSS : function(e){
+				var _cssclass = this.getCssClass();
+				var _tag = this.getTag();
+				var _size = $('.fn-each-size .ui-radio:checked', me).val();
+				var _inline = _tag == 'div' ? '\n\t*display:inline;\n\t*zoom:1;\n' : '';
+				var _pre = '';
+
+				
+_pre = '.' + _cssclass + '{\n\
+	position:relative;\n\
+	display:inline-block;\n\
+	width:200px;\n\
+	height:28px;\n\
+	overflow:hidden;\n\
+	border:1px solid #D2D2D2;\n\
+	background:#FFF;\n' + _inline +
+'\n}\n\
+.' + _cssclass + ' .ui-input{\n\
+	margin:2px 0 0 10px;\n\
+	width:100%;\n\
+	height:24px;\n\
+	*line-height:24px;\n\
+	border:none;\n\
+	background:none;\n\
+	color:#4c4c4c;\n\
+}\n\
+.' + _cssclass + ' .ui-placeholder{\n\
+	position:absolute;\n\
+	left:10px;\n\
+	top:3px;\n\
+	width:208px;\n\
+	height:24px;\n\
+	line-height:24px;\n\
+	color:#b2b2b2;\n\
+	_top:2px;\n\
+}\n\
+.' + _cssclass + ' .ui-button{\n\
+	position:absolute;\n\
+	right:3px;\n\
+	top:3px;\n\
+	width:22px;\n\
+	height:22px;\n\
+	line-height:22px;\n\
+	background:#bfbfbf;\n\
+	border:none;\n\
+	cursor:pointer;\n\
+}\n\
+.' + _cssclass + ' .ui-reset{\n\
+	font:600 16px/10px Tahoma;\n\
+	color:#FFF;\n\
+}\n';
+					
+				return _pre;
+			},
+			getCssClass : function(e){
+				return $('.fn-css-class', me).val();
+			},
+			getTag : function(){
+				return $('.fn-each-tag .ui-radio:checked', me).val();
+			},
+			getHTML : function(e){
+				var _cssclass = this.getCssClass();
+				var _tag = this.getTag();
+				var _gobtn = $('.fn-go-btn:checked', me).length == 1;
+				var _delbtn = $('.fn-del-btn:checked', me).length == 1;
+				var _txt = $('.fn-text', me).val();
+				return '<' + _tag + ' class="' + _cssclass + '">\n' +
+						'\t<label class="ui-placeholder" for="">' + _txt + '</label>\n'+
+						'\t<input class="ui-input" value="" />\n' + 
+						((_gobtn) ? '\t<input type="button" class="ui-button" />\n' : '') + 
+						((_delbtn) ? '\t<input type="reset" class="ui-button ui-reset" />\n' : '') + 
+						
+						'</' + _tag + '>';
+			}
+		};
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		$('.fn-size-user', me).change(function(){
+			var _txt = $('.fn-size-user-txt', me);
+			if(this.checked){
+				_txt.show();
+				$(this).val(_txt.val());
+			}
+		})
+
+	
+	})
+	</script>
+	
+</div>
+
+<div class="ui-line"></div>
+
+
+<div class="app-inner" id="mod_ui_title_text">
+	<h3>标题文字</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">选择器：</label>
+			<input class="ui-input fn-selector" type="text" value="xxx" placeholder="ui-title-text">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">标题：</label>
+			<input class="ui-input fn-title" type="text" value="标题文字" placeholder="">
+		</div>
+
+		<div class="ui-form-item">
+			<label class="ui-label">内容</label>
+			<input class="ui-input fn-text" type="text" value="介绍文字" placeholder="">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">标题字体：</label>
+			<input class="ui-input fn-title-font-size" type="text" value="16px" placeholder="">
+			
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-title-font-size">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-title-font-size">-</a>
+			
+			<input class="ui-radio fn-title-font-weight" type="checkbox" value="" checked="checked" id="fn_title_text_font_weight">
+			<label for="fn_title_text_font_weight">加粗</label>
+			
+			<input class="ui-radio fn-title-font-family-yahei" type="checkbox" value="" checked="checked" id="fn_title_text_font_family_msyahei">
+			<label for="fn_title_text_font_family_msyahei">微软雅黑</label>
+			
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">标题颜色：</label>
+			<input class="ui-input fn-title-color" type="color" value="#000" placeholder="">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">正文字体：</label>
+			<input class="ui-input fn-text-font-size" type="text" value="12px" placeholder="">
+			
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-text-font-size">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-text-font-size">-</a>
+			
+			<input class="ui-radio fn-text-font-weight" type="checkbox" value="" id="fn_title_text_font_weight2">
+			<label for="fn_title_text_font_weight2">加粗</label>
+			
+			<input class="ui-radio fn-text-font-family-yahei" type="checkbox" value="" checked="checked" id="fn_title_text_font_family_msyahei2">
+			<label for="fn_title_text_font_family_msyahei2">微软雅黑</label>
+			
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">正文颜色：</label>
+			<input class="ui-input fn-text-color" type="color" value="#666" placeholder="">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">其他：</label>
+			<input class="ui-radio fn-title-right-text-check" type="checkbox" value="" id="fn_title_right_text">
+			<label for="fn_title_right_text">标题右侧文字</label>
+		</div>
+		
+		<div class="ui-title-right-setting hide">
+			<div class="ui-form-item fn-each-btn-tag">
+				<label class="ui-label">元素：</label>
+				<label for=""><input class="ui-radio" type="radio" value="a" name="title_text_tag_rd" checked="checked"> &lt;a&gt;</label>
+				<label for=""><input class="ui-radio" type="radio" value="span" name="title_text_tag_rd"> &lt;span&gt;</label>
+				
+			</div>
+			
+			<div class="ui-form-item fn-each-pos">
+				<label class="ui-label">位置：</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="static" name="title_text_pos_rd" checked="checked"> static</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="float:left;" name="title_text_pos_rd" checked="checked"> static:left</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="float:right;" value="float" name="title_text_pos_rd" checked="checked"> float:right</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="position:absolute;right:0;top:0;" value="absolute" name="title_text_pos_rd"> position</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">内容</label>
+				<input class="ui-input fn-title-right-text" type="text" value="文字" placeholder="">
+			</div>
+			
+		</div>
+		
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>
+		
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_title_text');
+		var el = {
+			getDefaultVal : function(selector){
+				var el = $(selector, me);
+				var val = el.val();
+				return val != '' ? val : el.attr('placeholder');
+			},
+			getSelector : function(){
+				return this.getDefaultVal('.fn-selector');
+			},
+			isChecked : function(selector){
+				var el = $(selector + ':checked', me);
+				return el.length != 0;
+			},
+			getPos : function(attr){
+				var _pos_el = $('.fn-each-pos .ui-radio:checked', me);
+					return !attr ? _pos_el.val() : _pos_el.attr(attr);
+			},
+			getCSS : function(e){
+			
+				var _pre = '', _selector = '.' + this.getSelector() + ' ', _titles = '', _title_right_text_pos = '';
+				var _has_title_right_text = this.isChecked('.fn-title-right-text-check');
+				if(_has_title_right_text){
+				
+					_title_right_text_pos = '\n' + _selector + '.ui-title-right{\n\t' + this.getPos('data-csstext') + '\n}\n';
+					
+					_titles = '\n' + _selector + '.ui-titles{\n\tposition:relative;\n}\n';
+					
+					if(this.getPos() == 'static'){
+						_title_right_text_pos = '\n' + _selector + '.ui-title {\n\tdisplay:inline-block;*display:inline;*zoom:1;\n}\n';
+					}
+					if(this.getPos() == 'float:left;'){
+						_title_right_text_pos = '\n' + _selector + '.ui-titles{overflow:hidden;}\n.ui-title {\n\tfloat:left;\n}\n';
+					}
+				}
+				
+				_pre += _titles;
+			
+				// title
+				_pre += '\n' + _selector + '.ui-title {';
+				
+				var _title_font_size = this.getDefaultVal('.fn-title-font-size');
+				var _title_color = this.getDefaultVal('.fn-title-color');
+				var _is_title_bolder = this.isChecked('.fn-title-font-weight:checked');
+				var _is_title_yahei = this.isChecked('.fn-title-font-family-yahei:checked');
+				
+				var _title_font_weight = _is_title_bolder ? '600' : '400';
+				var _title_font_face = _is_title_yahei ? ' "\\5FAE\\8F6F\\96C5\\9ED1"' : '';
+				
+				if(_title_font_face != ''){
+					_pre += 'font:' + _title_font_weight + ' ' + _title_font_size + _title_font_face + ';';
+				}else{
+					_pre += 'font-size:' + _title_font_size + ';';
+					_pre += 'font-weight:' + _title_font_weight + ';';
+				}
+				
+				_pre += 'color:' + _title_color + ';';
+				
+				_pre += '}';
+				
+				// text
+				
+				_pre += '\n' + _selector + '.ui-text {';
+				
+				var _text_font_size = this.getDefaultVal('.fn-text-font-size');
+				var _text_color = this.getDefaultVal('.fn-text-color');
+				var _is_text_bolder = this.isChecked('.fn-text-font-weight:checked');
+				var _is_text_yahei = this.isChecked('.fn-text-font-family-yahei:checked');
+				
+				var _text_font_weight = _is_text_bolder ? '600' : '400';
+				var _text_font_face = _is_text_yahei ? ' "\\5FAE\\8F6F\\96C5\\9ED1"' : '';
+				
+				if(_text_font_face != ''){
+					_pre += 'font:' + _text_font_weight + ' ' + _text_font_size + _text_font_face + ';';
+				}else{
+					_pre += 'font-size:' + _text_font_size + ';';
+					_pre += 'font-weight:' + _text_font_weight + ';';
+				}
+				
+				_pre += 'color:' + _text_color + ';';
+				
+				_pre += '}';
+				
+				
+				_pre += _title_right_text_pos;
+				
+				return _pre;
+			},
+			tuneVal : function(obj, index){
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + 'px');
+				}
+				
+			},
+			getHTML : function(e){
+			
+				var _has_title_right_text = this.isChecked('.fn-title-right-text-check');
+				var _title_right_text = '', _title_hi_start = '', _title_hi_end = '';
+				var _title_right_pos_start = '', _title_right_pos_end = '';
+					if(_has_title_right_text){
+						_title_hi_start = '<div class="ui-titles">';
+						_title_hi_end = '</div>';
+						var _tag = $('.fn-each-btn-tag .ui-radio:checked', me).val();
+						_title_right_text = '<' + _tag + ' class="ui-title-right">' + this.getDefaultVal('.fn-title-right-text') + '</' + _tag + '>';
+					}
+					
+					if(this.getPos() == 'float'){
+						_title_right_pos_start = _title_right_text;
+					}else{
+						_title_right_pos_end = _title_right_text;
+					}
+			
+			
+				return '<div class="' + this.getSelector() + '">\n\t' + _title_hi_start + _title_right_pos_start + '<h3 class="ui-title">' + this.getDefaultVal('.fn-title', me) + '</h3>' + _title_right_pos_end + _title_hi_end + '\n\t<div class="ui-text">' + this.getDefaultVal('.fn-text', me) + '</div> \n</div>';
+			}
+		};
+		$('.fn-plus', me).click(function(e){
+			el.tuneVal(this, !e.shiftKey ? 1 : 5);
+			e.preventDefault();
+			e.stopPropagation();
+		})
+		$('.fn-reduce', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? -1 : -5);
+			e.preventDefault();
+			e.stopPropagation();
+		})
+		$('.fn-title-right-text-check').click(function(e){
+			if(this.checked){
+				$('.ui-title-right-setting', me).show();
+			}else{
+				$('.ui-title-right-setting', me).hide();
+			}
+		});
+		
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+	})
+	</script>
+</div>
+
+<div class="ui-line"></div>
+
+
+<div class="app-inner" id="mod_ui_key_val">
+	<h3>键/值</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">选择器：</label>
+			<input class="ui-input fn-selector" type="text" value="ui-list-kv" placeholder="ui-title-text">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">标题宽度：</label>
+			<input class="ui-input fn-sync fn-key-width" data-connect=".fn-val-width" type="text" value="20%" placeholder="">
+			
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-key-width">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-key-width">-</a>
+			
+			<label class="fn-keyval-auto-lbl hide" for="fn_key_val_val_width_auto">
+			<input class="ui-radio fn-keyval-auto" type="checkbox" value="" checked="checked" id="fn_key_val_val_width_auto">
+			值自适应</label>
+			
+			<label class="fn-keyval-auto-lbl hide" for="fn_key_val_-margin">
+			<input class="ui-radio fn-keyval--margin" type="checkbox" value="" id="fn_key_val_-margin">
+			负margin</label>
+			
+			
+		</div>
+
+		<div class="ui-form-item">
+			<label class="ui-label">值宽度：</label>
+			<input class="ui-input fn-sync fn-val-width" data-connect=".fn-key-width" type="text" value="80%" placeholder="">
+		</div>
+		
+		<div class="ui-title-right-setting hide">
+			<div class="ui-form-item fn-each-btn-tag">
+				<label class="ui-label">元素：</label>
+				<label for=""><input class="ui-radio" type="radio" value="a" name="title_text_tag_rd" checked="checked"> &lt;a&gt;</label>
+				<label for=""><input class="ui-radio" type="radio" value="span" name="title_text_tag_rd"> &lt;span&gt;</label>
+				
+			</div>
+			
+			<div class="ui-form-item fn-each-pos">
+				<label class="ui-label">位置：</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="static" name="title_text_pos_rd" checked="checked"> static</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="" value="float:left;" name="title_text_pos_rd" checked="checked"> static:left</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="float:right;" value="float" name="title_text_pos_rd" checked="checked"> float:right</label>
+				<label for=""><input class="ui-radio" type="radio" data-csstext="position:absolute;right:0;top:0;" value="absolute" name="title_text_pos_rd"> position</label>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">内容</label>
+				<input class="ui-input fn-title-right-text" type="text" value="文字" placeholder="">
+			</div>
+			
+		</div>
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>
+		
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_key_val');
+		var el = {
+			getDefaultVal : function(selector){
+				var el = $(selector, me);
+				var val = el.val();
+				return val != '' ? val : el.attr('placeholder');
+			},
+			getSelector : function(){
+				return this.getDefaultVal('.fn-selector');
+			},
+			isChecked : function(selector){
+				var el = $(selector + ':checked', me);
+				return el.length != 0;
+			},
+			isLess1 : function(){
+				var _val = $('.fn-key-width', me).val();
+				return _val.indexOf('%') > -1;
+			},
+			getCSS : function(e){
+				
+				var _key_width = this.getDefaultVal('.fn-key-width'),
+					_val_width = this.getDefaultVal('.fn-val-width');
+					
+					
+				var _marginChecked = this.isChecked('.fn-keyval--margin');
+				
+				var _selector = this.getSelector();
+				var _pre = '';
+				
+				_pre += '\n.' + _selector + ' {\n\t' +
+				
+				'display:inline-block;line-height:2.2;' +
+				
+				'}' +
+				
+				
+				'.' + _selector + ' .ui-title{' + 
+				
+				'float:left;\n\twidth:' + _key_width + ';\n\ttext-align:right;\n\t' + 
+				
+					(_marginChecked ? 'margin-right:-' + _key_width + ';\n\t' : 'margin:0;\n\t') +
+				
+				'}\n' + 
+				
+				'.' + _selector + ' .ui-text{' + 
+				
+					(this.isLess1() ? 'float:left;' : '') + 
+					'\n\twidth:' + _val_width + ';\n\ttext-align:left;\n\t' + 
+					(_marginChecked ? 'margin-left:' + _key_width + ';\n\t' : 'margin:0;\n\t') +
+					'color:#666;\n' + 
+				
+				'}\n';
+				
+				return _pre;
+			},
+			tuneVal : function(obj, index){
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + (_val.indexOf('%') > 0 ? '%' : 'px'));
+				}
+			},
+			syncVal : function(obj){
+				var _me = $(obj);
+				var _val = _me.val();
+				var _conn = $(_me.attr('data-connect'), me);
+				if(_val.indexOf('%') > -1){
+					_val = parseInt(_val, 10) / 100;
+					if(_val < 1){
+						_conn.val(((1 - _val) * 100) + '%');
+					}
+				}else{
+					$('.fn-keyval-auto-lbl', me).show();
+					$('.fn-val-width', me).val('');
+				}
+			},
+			getHTML : function(e){
+			
+				var _selector = this.getSelector();
+			
+				return '<dl class="' + _selector + '">\n\t' +
+					'<dt class="ui-title">姓名：</dt>' + '\n\t<dd class="ui-text">小小</dd>'+
+					'<dt class="ui-title">性别：</dt>' + '\n\t<dd class="ui-text">女</dd>'+
+					'<dt class="ui-title">年龄：</dt>' + '\n\t<dd class="ui-text">25</dd>'+
+					'<dt class="ui-title">学历：</dt>' + '\n\t<dd class="ui-text">大学本科</dd>'+
+					'<dt class="ui-title">出生年月：</dt>' + '\n\t<dd class="ui-text">1986/12/01</dd>'+
+				' \n</dl>';
+			}
+		};
+		$('.fn-plus', me).click(function(e){
+			el.tuneVal(this, !e.shiftKey ? 1 : 5);
+			e.preventDefault();
+		})
+		$('.fn-reduce', me).click(function(e){
+			el.tuneVal(this, !e.shiftKey ? -1 : -5);
+			e.preventDefault();
+			e.stopPropagation();
+		})
+		
+		$('.fn-plus', me).click(function(){el.syncVal($('.fn-key-width', me)[0]);});
+		$('.fn-reduce', me).click(function(){el.syncVal($('.fn-key-width', me)[0]);})
+		
+		$('.fn-sync', me).keyup(function(){el.syncVal(this);});
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+	})
+	</script>
+</div>
+
+<div class="ui-line"></div>
+
+
+<div class="app-inner" id="mod_ui_flex">
+	<h3>Flex</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">栏数：</label>
+			<input class="ui-input fn-cols-num" type="text" value="3">
+		</div>
+
+		<div class="ui-form-item">
+			<label class="ui-label">margin：</label>
+			<input class="ui-input fn-margin-text" type="text" value="0 20px 0 0">
+		</div>
+		<div class="ui-form-item fn-each-align">
+			<label class="ui-label">对齐：</label>
+			<label for=""><input class="ui-radio" type="radio" value="center" name="flex_align_rd" checked="checked"> center</label>
+			<label for=""><input class="ui-radio" type="radio" value="left" name="flex_align_rd"> left</label>
+			<label for=""><input class="ui-radio" type="radio" value="right" name="flex_align_rd"> right</label>
+		</div>
+		<div class="ui-form-item fn-each-flex">
+			<label class="ui-label">其他：</label>
+			<label for=""><input class="ui-radio" type="radio" name="flex_col_rd" value="1"> 等分</label>
+			<label for=""><input class="ui-radio" type="radio" name="flex_col_rd" value="" checked=""> 自适应</label>
+			<label for=""><input class="ui-radio fn-flex-custom" type="radio" name="flex_col_rd" value=""> 自定义</label>
+			<input class="ui-input hide fn-flex-text" type="text" value="1 2 3">
+		</div>
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_flex');
+		var el = {
+			isFlex1 : function(){
+				return $('.fn-each-flex .ui-radio:checked', me).val() == '1';
+			},
+			getFlex : function(index){
+				var _flex = '';
+				var _arr;
+				var _bool = $('.fn-flex-custom:checked', me).length == 1;
+				if(!_bool){
+					_flex = '1';
+				}else{
+					_arr = $('.fn-flex-text', me).val().split(' ');
+					_flex = _arr[index];
+				}
+				return '-ms-flex:' + _flex + ';\n\t-moz-flex:' + _flex + ';\n\t-webkit-flex:' + _flex + ';';;
+			},
+			getCSS : function(e){
+				var _cols = this.getCols();
+				
+				var _flexCSSText = [];
+				if(!this.isFlex1()){
+					for(var i = 0; i < _cols; i ++){
+						_flexCSSText.push('.ui-flex-col:nth-child(' + (i + 1) + '){\n\t' + this.getFlex(i) + '\n}\n');
+					}
+				}
+				var _margin = $('.fn-margin-text', me).val();
+				var _pre = '\
+.ui-flex{\n\
+	display:-ms-flexbox;\n\
+	display:-moz-flexbox;\n\
+	display:-webkit-flex;\n\
+	border:1px solid #CCC;\n\
+}\n\
+.ui-flex-col{\n\
+	display:-ms-flexbox;\n\
+	display:-moz-flex;\n\
+	display:-webkit-flex;\n\
+	' + ((this.isFlex1()) ? '-ms-flex:1;\n\t-moz-flex:1;\n\t-webkit-flex:1;' : '' ) + ((_margin != '' ? '\n\tmargin:' + _margin + ';\n\tbox-sizing:border-box;\n\t-moz-box-sizing:border-box;\n' : '')) + '\
+	border:1px solid #EEE;\n\
+}\n\
+' + 
+_flexCSSText.join('\n');
+				return _pre;
+			},
+			getCols : function(){
+				return $('.fn-cols-num', me).val();
+			},
+			getHTML : function(e){
+				var _cols = this.getCols();
+				var _html = '';
+				for(var i = 0; i < _cols; i ++){
+					_html += '<div class="ui-flex-col">cols</div>'
+				}
+				
+				return '<div class="ui-flex">\n\t' +
+						_html + 
+						'</div>';
+			}
+		};
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		$('.fn-flex-custom', me).change(function(){
+			var _txt = $('.fn-flex-text', me);
+			if(this.checked){
+				_txt.show();
+				$(this).val(_txt.val());
+			}else{
+				_txt.hide();
+			}
+		})
+		
+		$('.fn-size-user', me).change(function(){
+			var _txt = $('.fn-flex-text', me);
+			if(this.checked){
+				_txt.show();
+				$(this).val(_txt.val());
+			}
+		})
+
+	
+	})
+	</script>
+</div>
+
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_gradient">
+	<h3>渐变生成器</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">从：</label>
+			<input class="ui-input fn-color" type="color" value="#FFF" title="#F00 0%">
+		</div>
+
+		<div class="ui-form-item fn-repeat-item">
+			<label class="ui-label">到：</label>
+			<input class="ui-input fn-color" type="color" value="#F36" title="#F00 100%">
+			<a class="fn-add" href="#!/add/">+添加</a>
+		</div>
+		
+		<div class="fn-more"></div>
+		
+		<div class="ui-form-item fn-each-align">
+			<label class="ui-label">方向：</label>
+			<label for=""><input class="ui-radio" type="radio" value="top" name="flex_align_rd" checked="checked"> top</label>
+			<label for=""><input class="ui-radio" type="radio" value="left" name="flex_align_rd"> left</label>
+		</div>
+		
+		<div class="ui-form-item fn-each-other">
+			<label class="ui-label">其他：</label>
+			<label for=""><input class="ui-radio fn-border" type="checkbox" value="border" data-type="border"> 描边</label>
+			<label for=""><input class="ui-radio fn-outline" type="checkbox" value="border" data-type="outline"> 外描边</label>
+			<label for=""><input class="ui-radio fn-shadow" type="checkbox" value="shadow" data-type="box-shadow"> 阴影</label>
+			<label for=""><input class="ui-radio fn-text-shadow" type="checkbox" value="shadow" data-type="text-shadow"> 文字阴影</label>
+		</div>
+		
+		<div class="ui-form-group fn-border-generator hide" data-type="border">
+			
+			<div class="ui-form-item">
+				<label class="ui-label">粗细：</label>
+				<input class="ui-input fn-border-width" type="text" value="1px">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-border-width">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-border-width">-</a>
+			</div>
+			
+			<div class="ui-form-item">
+				<label class="ui-label">颜色：</label>
+				<input class="ui-input fn-border-color" type="color" value="#F00">
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">类型：</label>
+				<select class="fn-border-style" name="" id="">
+					<option value="solid">solid</option>
+					<option value="dashed">dashed</option>
+					<option value="dotted">dotted</option>
+				</select>
+			</div>
+			<div class="ui-form-item fn-border-radius">
+				<label class="ui-label">圆角：</label>
+				<input class="ui-input fn-border-radius" type="text" value="5px">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-border-radius">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-border-radius">-</a>
+			</div>
+		</div>
+		
+		<div class="ui-form-group fn-shadow-generator fn-realtime hide" data-type="box-shadow">
+			
+			<div class="ui-form-item">
+				<label class="ui-label">粗细：</label>
+				<input class="ui-input fn-shadow-width" type="text" value="1px">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-shadow-width">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-shadow-width">-</a>
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">偏离X：</label>
+				<input class="ui-input fn-shadow-distancex" type="text" value="1px">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-shadow-distancex">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-shadow-distancex">-</a>
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">偏离Y：</label>
+				<input class="ui-input fn-shadow-distancey" type="text" value="1px">
+				<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-shadow-distancey">+</a>
+				<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-shadow-distancey">-</a>
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">颜色：</label>
+				<input class="ui-input fn-shadow-color" type="color" value="#FF0">
+			</div>
+			<div class="ui-form-item">
+				<label class="ui-label">类型：</label>
+				<label for=""><input class="ui-radio fn-shadow-type" type="radio" value="" name="shadow_type_rd" checked="checked"> 外阴影</label>
+				<label for=""><input class="ui-radio fn-shadow-type" type="radio" value="inset" name="shadow_type_rd"> 内阴影</label>
+			</div>
+			<div class="ui-form-item hide">
+				<label class="ui-label">代码：</label>
+				<textarea></textarea>
+			</div>
+		</div>
+		
+		<div class="ui-form-other">
+			
+		</div>
+		
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_gradient');
+		var el = {
+			colors : function(){
+				return $('.fn-color', me);
+			},
+			getAllCSS : {
+				'border' : function(prefix){
+					var _width = $('.fn-border-generator[data-type="' + prefix + '"] .fn-border-width', me).val();
+					var _style = $('.fn-border-generator[data-type="' + prefix + '"] .fn-border-style', me).val();
+					var _color = $('.fn-border-generator[data-type="' + prefix + '"] .fn-border-color', me).val();
+					var _radius = $('.fn-border-generator[data-type="' + prefix + '"] .fn-border-radius', me).val();
+					
+					return prefix + ':' + _width + ' ' + _style + ' ' + _color + ';\n\t' + 'border-radius:' + _radius + ';';
+				
+				},
+				'shadow' : function(prefix){
+					
+					var _width = $('.fn-shadow-width', me).val();
+					var _distancex = $('.fn-shadow-distancex', me).val();
+					var _distancey = $('.fn-shadow-distancey', me).val();
+					var _color = $('.fn-shadow-color', me).val();
+					var _type = $('.fn-shadow-type:checked', me).val();
+					
+					return prefix + ':' + ((_type != '') ? _type + ' ' : '') + _distancex + ' ' + _distancey + ' ' + _width + ' ' + _color + ';';
+				}
+			},
+			getAllColors : function(){
+				var str = [];
+				var arr = this.colors();
+				
+					arr.each(function(i, el){
+						var txt = $(el).val();
+						txt != '' && str.push(txt);
+					})
+				
+				return str.join(', ');
+			},
+			getBorderCSS : function(){
+				var _width = $('.fn-border-width', me).val();
+				var _style = $('.fn-border-style', me).val();
+				var _color = $('.fn-border-color', me).val();
+				var _radius = $('.fn-border-radius', me).val();
+				
+				return 'border:' + _width + ' ' + _style + ' ' + _color + ';\n\t' + 'border-radius:' + _radius + ';';
+			},
+			getCSS : function(e){
+				var _other = [];
+				var _align = $('.fn-each-align .ui-radio:checked', me).val();
+				var _dir = _align == 'top' ? '' : 'to right, ';
+				var _ieatt = '';
+				if(_align != 'top'){ _ieatt = ',GradientType=1';}
+				var _colors = this.colors();
+				var _cssText = [];
+				var _basic = this.getAllColors();
+				var _fromcolor = _colors[0].value;
+				var _tocolor = _colors[_colors.length - 1].value;
+				var _bgcolor = 'background-color:' + _fromcolor + ';';
+				var _webkit = 'background-image:-webkit-linear-gradient(' + _dir + _basic + ');';
+				var _moz = 'background-image:-moz-linear-gradient(' + _dir + _basic + ');';
+				var _opera = 'background-image:-o-linear-gradient(' + _dir + _basic + ');';
+				var _standard = 'background-image:linear-gradient(' + _dir + _basic + ');';
+				var _ie6 = 'filter:progid:DXImageTransform.Microsoft.gradient(startColorStr=\'' + _fromcolor + '\', EndColorStr=\'' + _tocolor + '\'' + _ieatt + ');\n\t*zoom:1;';
+				
+				_cssText.push(_bgcolor, _opera, _moz, _webkit, _standard, _ie6);
+				
+				$('.fn-each-other .ui-radio:checked', me).each(function(i, eo){
+					_other.push(el.getAllCSS[eo.value]($(eo).attr('data-type')));
+				})
+				
+				var _pre = '.bg{\n\t';
+					_pre += _cssText.join('\n\t') + _other.join('\n') + '\n}';
+				return _pre;
+			},
+			tuneVal : function(obj, index){
+				var _type = $(obj).parents('.ui-form-group').attr('data-type');
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.ui-form-group[data-type="' + _type + '"] .' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + 'px');
+				}
+				
+			},
+			getHTML : function(e){
+				
+				return '<div class="bg" style="height:60px;width:280px;text-align:center;line-height:60px;" contenteditable="true">文案文案文案</div>';
+			}
+		};
+		
+
+		$('.fn-plus', me).live('click', function(e){
+			el.tuneVal(this, 1);
+		})
+		$('.fn-reduce', me).live('click', function(e){
+			el.tuneVal(this, -1);
+		})
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+		$('.fn-add', me).click(function(e){
+			var _src = $('.fn-repeat-item', me);
+			var _new = $('.fn-more', me).append(_src.clone(false));
+				$('.ui-form-item', _new).removeClass('fn-repeat-item');
+			var _del = $('.fn-add', _new).html('- 删除');
+				_del.click(function(){
+					$(this).parent('.ui-form-item').remove();
+				});
+		})
+		
+		$('.fn-outline', me).click(function(){
+			if(!$('.ui-form-other .fn-border-generator', me)[0]){
+				var _src = $('.fn-border-generator', me);
+				var _new = $('.ui-form-other', me).append(_src.clone(false).attr('data-type', 'outline'));
+				var _del = $('.fn-border-radius', _new).remove();
+			}
+		})
+		
+		$('.fn-each-other .ui-radio', me).click(function(e){
+			var _val = this.value;
+			var _eo = $('.fn-' + _val + '-generator[data-type="' + $(this).attr('data-type') + '"]', me);
+			if(this.checked){
+				_eo.removeClass('hide');
+			}else{
+				_eo.addClass('hide');
+			}
+		})
+		
+		$('.fn-realtime input', me).change(function(e){
+			console.log('change');
+		})
+		
+		
+	})
+	</script>
+</div>
+
+<!-- header -->
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_header">
+	<h3>header生成器</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">选择器：</label>
+			<input class="ui-input fn-selector" type="text" value="header">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">宽度：</label>
+			<input class="ui-input fn-width" type="text" value="360px">
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-width">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-width">-</a>
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">Logo：</label>
+			<input class="ui-input fn-logo" type="text" value="">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">Logo替换文案：</label>
+			<input class="ui-input fn-logo-txt" type="text" value="">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">其他：</label>
+			<label for=""><input class="ui-radio fn-right-layer" type="checkbox" value=""> 添加居右定位浮层</label>
+		</div>
+
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe" width="600"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_header');
+		var el = {
+			getSelector : function(){
+				return $('.fn-selector', me).val();
+			},
+			isChecked : function(selector){
+				var el = $(selector + ':checked', me);
+				return el.length != 0;
+			},
+			getCSS : function(e){
+				var _selector = this.getSelector();
+				var _cssselector = '.' + _selector;
+				var _width = $('.fn-width', me).val();
+				
+				var _right = this.isChecked('.fn-right-layer');
+				
+				var _pre = _cssselector + '{position:relative;width:' + _width + ';margin:0 auto;*zoom:1;}\n';
+					_pre += _cssselector + ' .logo{position:relative;display:inline-block;width:110px;height:50px;*display:inline;*zoom:1;}\n';
+					_pre += _cssselector + ' .logo s{position:absolute;display:block;width:100%;height:100%;left:0;top:0;background:url() 0 0 no-repeat;}\n';
+					
+					if(_right){
+						_pre += _cssselector + ' .right{position:absolute;right:0;top:0;}\n';;
+					}
+					
+					_pre += '\n\n\/* 以下样式仅用于调试 *\/\n';
+					_pre += _cssselector + '{background:#CCC;}\n';
+					_pre += '.logo{background:#EEE;}\n';
+				return _pre; 
+			},
+			tuneVal : function(obj, index){
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + (_val.indexOf('%') > 0 ? '%' : 'px'));
+				}
+			},
+			getHTML : function(e){
+				var _selector = this.getSelector();
+				var _bgimg = $('.fn-bgimg', me).val();
+				var _logotxt = $('.fn-logo-txt', me).val();
+				var _right = this.isChecked('.fn-right-layer');
+				
+				var _pre = '<div class="' + _selector + '">\n\
+	<h1 class="logo">\n\
+		<a class="" href="#!/">' + _logotxt + '<s></s></a>\n\
+	</h1>\n\
+	' + (this.isChecked('.fn-right-layer') ? '<div class="right">right</div>' : '') + '\n\
+</div>\n';
+				return _pre;
+			}
+		};
+		
+
+		$('.fn-plus', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? 1 : 5);
+			e.preventDefault();
+		})
+		$('.fn-reduce', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? -1 : -5);
+			e.preventDefault();
+		})
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+	})
+	</script>
+</div>
+
+
+<!-- promote -->
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_promote">
+	<h3>宽屏页面生成器</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<label class="ui-label">选择器：</label>
+			<input class="ui-input fn-selector" type="text" value="ui-promote">
+		</div>
+		<div class="ui-form-item hide">
+			<label class="ui-label">max-width：</label>
+			<input class="ui-input fn-max-width" type="text" value="300px">
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-max-width">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-max-width">-</a>
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">min-width：</label>
+			<input class="ui-input fn-min-width" type="text" value="200px">
+			<a class="ui-link-button fn-plus" href="#!/plus/" data-id="fn-min-width">+</a>
+			<a class="ui-link-button fn-reduce" href="#!/reduce/" data-id="fn-min-width">-</a>
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">背景图片：</label>
+			<input class="ui-input fn-bgimg" type="text" value="http://host/dir/filename-$.png">
+		</div>
+		<div class="ui-form-item">
+			<label class="ui-label">内容：</label>
+			<input class="ui-input fn-content" type="color" value="">
+		</div>
+		
+		<div class="ui-form-item">
+			<label class="ui-label">其他：</label>
+			<label for=""><input class="ui-radio fn-right-layer" type="checkbox" value=""> 添加居右定位浮层</label>
+		</div>
+
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe" width="600"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_promote');
+		var el = {
+			getSelector : function(){
+				return $('.fn-selector', me).val();
+			},
+			isChecked : function(selector){
+				var el = $(selector + ':checked', me);
+				return el.length != 0;
+			},
+			getCSS : function(e){
+				var _selector = this.getSelector();
+				var _cssselector = '.' + _selector;
+				var _maxwidth = $('.fn-max-width', me).val();
+				var _minwidth = $('.fn-min-width', me).val();
+				var _margin = ((parseInt(_maxwidth, 10) - parseInt(_minwidth,10)) / 2) + 'px';
+				
+				var _right = this.isChecked('.fn-right-layer');
+				
+				var _pre = _cssselector + '{\n\tposition:relative;min-width:' + _minwidth + ';margin:0 auto;*zoom:1;_width:' + _minwidth + ';}\n';
+					_pre += _cssselector + ' .inner{\n\tposition:relative;margin:0 auto;zoom:1;}\n';	//width:' + _maxwidth + ';margin-left:-' + _margin + ';_margin:0 -' + _margin + ';text-align:center;
+					_pre += _cssselector + ' .inner .bg{display:block;margin:0 auto;}\n';
+					_pre += _cssselector + ' .cnt{\n\tposition:absolute;top:0;left:0;z-index:1;width:100%;height:100%;}\n';
+					
+					if(_right){
+						_pre += _cssselector + ' .right{\nposition:absolute;right:0;top:0;}\n';;
+					}
+					
+					_pre += '\n\n\/* 以下样式仅用于调试 *\/\n';
+					_pre += _cssselector + '{background:#CCC;}\n';
+					_pre += 'body{background:#F1F1F1;}\n';
+					_pre += _cssselector + ' .inner .bg{background:#333;opacity:.2}\n';
+				return _pre;
+			},
+			tuneVal : function(obj, index){
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + (_val.indexOf('%') > 0 ? '%' : 'px'));
+				}
+			},
+			getHTML : function(e){
+				var _selector = this.getSelector();
+				var _bgimg = $('.fn-bgimg', me).val();
+				var _cnt = $('.fn-content', me).val();
+				var _right = this.isChecked('.fn-right-layer');
+				
+				var _pre = '<div class="' + _selector + '">\n\
+	<div class="inner">\n\
+		<i class="bg" style="background-image:url(' + _bgimg + ');height:50px;"></i>\n\
+		<i class="bg" style="background-image:url(' + _bgimg + ');height:50px;"></i>\n\
+		<i class="bg" style="background-image:url(' + _bgimg + ');height:50px;"></i>\n\
+	</div>\n\
+	<div class="cnt">\n\
+	' + (this.isChecked('.fn-right-layer') ? '<div class="right">right</div>' : '') + '\
+	' + _cnt + '\n\
+	</div>\n\
+</div>\n';
+				return _pre;
+			}
+		};
+		
+
+		$('.fn-plus', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? 1 : 5);
+			e.preventDefault();
+		})
+		$('.fn-reduce', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? -1 : -5);
+			e.preventDefault();
+		})
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+	})
+	</script>
+</div>
+
+
+<!-- promote -->
+<div class="ui-line"></div>
+
+<div class="app-inner" id="mod_ui_file">
+	<h3>自定义File生成器</h3>
+	<div class="ui-form">
+		<div class="ui-form-item">
+			<input class="ui-input fn-ok" type="button" value="生成">
+		</div>
+		<div class="ui-form-item demo">
+			<iframe src="" frameborder="0" class="iframe" width="600"></iframe>
+		</div>			
+	</div>
+	<script>
+	$(function(e){
+		var me = $('#mod_ui_file');
+		var el = {
+			getSelector : function(){
+				return $('.fn-selector', me).val();
+			},
+			isChecked : function(selector){
+				var el = $(selector + ':checked', me);
+				return el.length != 0;
+			},
+			getCSS : function(e){
+				var _selector = this.getSelector();
+				var _cssselector = '.' + _selector;
+				
+				var _pre = '.ui-upload {\n\
+	padding: 10px 30px;\n\
+	border-image: none;\n\
+	font-size: 14px;\n\
+	font-weight: 600;\n\
+	display: inline-block;\n\
+	position: relative;\n\
+}\n\
+.ui-upload-text {\n\
+	padding: 10px 0px;\n\
+}\n\
+.ui-upload-hack, .ui-upload-inner object, .ui-upload-inner embed, .ui-upload-inner .ui-file {\n\
+	left: 0px;\n\
+	top: 0px;\n\
+	width: 100%;\n\
+	height: 100%;\n\
+	position: absolute;\n\
+	opacity: 0;\n\
+}\n\
+.ui-upload-inner {\n\
+	height: 28px;\n\
+	text-align: right;\n\
+	overflow: hidden;\n\
+}\n\
+.ui-upload .ui-upload-inner {\n\
+	height: 100%;\n\
+}\n\
+.ui-upload-inner .ui-file {\n\
+	font-size: 21px;\n\
+	cursor: pointer;\n\
+}\n\n\n\/* 以下样式仅用于调试 *\/\n\
+.ui-upload{border:1px solid #D1D1D1;}';
+				return _pre;
+			},
+			tuneVal : function(obj, index){
+				var _id = $(obj).attr('data-id');
+				var _txt = $('.' + _id, me);
+				var _val = _txt.val();
+				if(_val != ''){
+					var _tmp = parseInt(_val, 10);
+					_txt.val((_tmp += index) + (_val.indexOf('%') > 0 ? '%' : 'px'));
+				}
+			},
+			getHTML : function(e){
+				var _selector = this.getSelector();
+				var _bgimg = $('.fn-bgimg', me).val();
+				var _cnt = $('.fn-content', me).val();
+				var _right = this.isChecked('.fn-right-layer');
+				
+				var _pre = '<span class="ui-upload"><span class="ui-upload-text">选择文件...</span><span class="ui-upload-inner"><input name="file" class="ui-file" id="file" type="file"></span></span>';
+				return _pre;
+			}
+		};
+		
+
+		$('.fn-plus', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? 1 : 5);
+			e.preventDefault();
+		})
+		$('.fn-reduce', me).live('click', function(e){
+			el.tuneVal(this, !e.shiftKey ? -1 : -5);
+			e.preventDefault();
+		})
+		
+		$('.fn-ok', me).click(function(e){
+			var _demo = $('.iframe', me)[0];
+			preview(_demo,el.getCSS(), el.getHTML());
+		})
+		
+	})
+	</script>
+</div>
+
+
+<div class="result-panel">
+
+	<div class="css-panel">
+		<textarea class="ui-input-code" id="css_code" cols="30" rows="10"></textarea>
+	</div>
+	<div class="html-panel">
+		<textarea class="ui-input-code" id="html_code" cols="30" rows="10"></textarea>
+	</div>
+</div>
+
+<script>
+function preview(ele, css, htm){
+	var _doc = ele.contentDocument;
+		_doc.open();
+		_doc.write('<!DOCTYPE html>\n\
+<html>\n\
+<head>\n\
+<meta charset="UTF-8">\n\
+<meta http-equiv="X-UA-Compatible" content="IE=edge">\n\
+<title></title>\n\
+<style>\n\
+*{font-size:12px;margin:0;padding:0;list-style:none;}\n\
+body{line-height:1.5;}\n\n\
+' + css + '\
+\n</style>\n\
+</head>\n\
+<body>\n\
+' + htm + '\
+\n</body>\n\
+</html>');
+
+$('#css_code').val(css);
+$('#html_code').val(htm);
+
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title></title>
+<script src="js/jquery-1.8.3.js"></script>
+<script src="js/jquery-ui-1.9.2.custom.js"></script>
+<link rel="stylesheet" href="css/ui-lightness/jquery-ui-1.9.2.custom.min.css">
+
+<style>
+html{background:#FFF;-webkit-text-size-adjust:100%;text-rendering:optimizelegibility;}
+body,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,textarea,p,th,td,hr,button,article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{margin:0;padding:0}
+article,aside,details,footer,header,hgroup,menu,nav,section{display:block}
+audio,canvas,video{display:inline-block;*display:inline;*zoom:1}
+body,button,input,select,textarea{font:500 14px/1.8 "Source Han Sans CN",Arial,SimSun,sans-serif}
+table{border-collapse:collapse;border-spacing:0}
+th{text-align:inherit}
+fieldset,img{border:0}
+img{-ms-interpolation-mode:bicubic}
+iframe{display:block}
+del{text-decoration:line-through}
+address,caption,cite,code,dfn,em,th,var{font-style:normal;font-weight:400}
+ul,ol{list-style:none}
+caption,th{text-align:left}
+q:before,q:after{content:''}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:text-top\9}
+:root sub,:root sup{vertical-align:baseline}
+sup{top:-0.8em}
+sub{bottom:-0.3em}
+ins,a{text-decoration:none}
+mark{background:#fffdd1}
+code{border:1px dashed #eee;color:#e74c3c;padding:0 3px}
+pre,code{font-family:Inconslata,Consolas,Courier,Courier New,monospace;white-space:pre-wrap;word-wrap:break-word}
+pre{background:#f9f9f9;padding:10px 15px;line-height:1.36;color:#555;text-shadow:1px 1px 1px #fff}
+small{font-size:12px;color:#888}
+button,input{*width:auto;*overflow:visible;line-height:22px}
+
+/* Fix Safari-M */
+input[type="checkbox"]	{ -webkit-appearance: checkbox;}
+input[type="radio"]		{ -webkit-appearance: radio;}
+
+html,body,.onepage,.screen{height:100%;}
+body{font-family:"\5FAE\8F6F\96C5\9ED1", Tahoma, "HelveticaNeue", "Helvetica Neue", Helvetica, Arial;
+	-webkit-font-smoothing:subpixel-antialiased;
+	-webkit-text-size-adjust:100%;
+}
+
+.text-hide{font:0/0 a;}
+
+.hide{width:0;height:0;overflow:hidden;}
+.hh-hide{display:none!important;}
+
+.toolbar{margin-bottom:20px;}
+.painter{position:relative;width:100%;min-height:800px;border-top:1px solid #CCC;}
+.draggable{position:absolute;left:0;top:0;width:200px;height:200px; border: 1px dotted #000 }
+
+.hh-clipboard-helper{position:absolute;top:0;left:0;display:block;width:0;height:0;overflow:hidden;}
+.hh-menu{position:absolute;min-width:80px;border:1px solid #CCC;background:#FFF;}
+.hh-menu .hh-item{display:block;padding:2px 5px;}
+.hh-menu .hh-item:hover{background:#EEE;}
+.hh-menu .split{border-bottom:1px solid #CCC;}
+
+.layer{position:absolute;right:0;top:0;min-width:200px;background:#FFF;border:1px solid #CCC;}
+.layer .hh-item{position:relative;display:block;border-bottom:1px solid #CCC;}
+.layer .hh-item:hover{background:#EEE;}
+.hh-eyes,.hh-fx{
+	display:block;
+	width:32px;
+	height:32px;
+	position:absolute;
+	top:50%;
+	margin-top:-16px;
+	background:#CCC;
+}
+.layer .hh-text{padding:0 50px;}
+.hh-eyes{
+	left:10px;
+}
+.hh-eyes[hide="false"]{
+	background:#F00;
+}
+.hh-fx{right:10px;}
+</style>
+</head>
+<body>
+<div class="toolbar" id="toolbar">
+	<button data-act="add">添加元素</button>
+	<button data-act="at2x">@2x</button>
+	<button data-act="setbg" id="setbg_btn">设置背景</button>
+</div>
+<div class="painter" id="painter"></div>
+
+<div class="layer" id="layer"></div>
+
+<div class="hh-menu hh-hide" id="contextmenu">
+	<a href="#" class="hh-item" data-act="copy">复制</a>
+	<a href="#" class="hh-item" data-act="del">删除</a>
+	<span class="hh-item split"></span>
+	<a href="#" class="hh-item" data-act="backward">置于底层</a>
+	<a href="#" class="hh-item" data-act="prev">上移一层</a>
+	<a href="#" class="hh-item" data-act="next">下移一层</a>
+	<a href="#" class="hh-item" data-act="forward">置于顶层</a>
+	<span class="hh-item split"></span>
+</div>
+
+<script>
+$(window).load(function(){
+	var helper = {
+		painter: null,
+		layer: null,
+		contextmenu: null,
+		index: 0,
+		current: null,
+		newitem: null,
+		base64: null,
+		isRight: false,
+		ls: {	//本地存储
+			setItem: function(att, val){ //设置本地存储
+				if(window.localStorage){
+					try{
+						localStorage.setItem('hh/' + att, val);
+					}catch(e){
+						localStorage.clear(); // 超出限额后，清空历史 todo
+						localStorage.setItem('hh/' + att, val);
+					}
+				}
+			},
+			getItem: function(att){
+				return window.localStorage ? localStorage.getItem('hh/' + att) : false;
+			},
+			clear: function(){window.localStorage ? localStorage.clear() : false;}
+		},
+		easy: function(o){
+			var me = this;
+			o.resizable({autoHide: true, ghost: true, grid: [ 20, 10 ]}).draggable({
+				addClasses: false, 
+				which: 3, 
+				whichCallback: function(){
+					console.log('context');
+					me.isRight = true;
+				},
+				mouseDown: function(e){
+					var eo = $(e.target);
+					if(eo.hasClass('hh-tpl')){
+						me.current = eo;
+					}else{
+						me.current = eo.parent();
+					}
+					if(me.isRight){
+						me.current.attr('data-csstext', me.current.attr('style'))
+					}
+				},
+				mouseMove: function(){
+					if(me.isRight){
+						
+					}
+				},
+				mouseUp: function(){
+					if(me.isRight){
+						var cssText = me.current.attr('data-csstext'), 
+							newItem = me.current.clone();
+							newItem.attr({'id': 'draggable_' + me.index, 'data-id': me.index, 'tabIndex': me.index}).removeClass('ui-resizable ui-draggable-dragging ui-resizable-autohide');
+							newItem.find('.ui-resizable-handle').remove();
+						cssText ? me.current.attr('style', cssText) : me.current.removeAttr('style');
+						me.isRight = false;
+						me.newitem = newItem;
+					}
+					me.store();
+				}
+			});
+			return o;
+		},
+		store: function(e){
+			this.painter.find('.ui-resizable-handle').remove();
+			this.ls.setItem('items', this.painter.removeClass('ui-resizable ui-draggable-dragging ui-resizable-autohide').html());
+			this.ls.setItem('layers', this.layer.html());
+		},
+		add2layer: function(el, opt){
+			el = el || $('<div class="hh-item" id="layer_item_' + this.index + '" data-id="' + this.index + '"><i data-act="hide" class="hh-eyes"></i><span class="hh-text hh-editable"></span><i class="hh-fx"></i></div>');
+			if(opt){
+				el.find('.hh-text').text(opt.tag + ' ' + this.index);
+			}
+			this.layer.append(el);
+		},
+		add: function(el){
+			el = el ? el.appendTo(this.painter) : $('<div class="hh-tpl draggable" id="draggable_' + this.index + '" data-id="' + this.index + '" tabIndex="' + this.index + '"><div class="hh-text">text</div></div>').appendTo('#painter');
+
+			this.easy(el);
+			this.add2layer(null, {tag: 'div'});
+			this.index ++;
+		},
+		at2x: function(){
+			this.painter.css('background-size', '50% 50%');
+		},
+		setbg: function(){
+			var el = $('#clipboard_helper').get(0);
+			if(!el){
+				el = document.createElement('div');
+				el.id = 'clipboard_helper';
+				el.tabIndex = '-1';
+				el.contentEditable = true;
+				el.className = 'hh-clipboard-helper';
+				document.body.appendChild(el);
+			}
+			el.innerHTML = '';
+			el.focus();
+			document.execCommand('paste', false, false);
+			var img = $('img', el);
+			this.setBase64(img.attr('src'));
+			this.base64 = img.attr('src');
+			this.ls.setItem('base64', this.base64);
+			el.innerHTML = '';
+		},
+		setBase64: function(src){
+			this.painter.css('background', 'url(' + src + ') 0 0 no-repeat');
+		},
+		nodeContextmenu: {
+			copy: function(e){
+				this.current = this.newitem;
+				this.add(this.newitem);
+				this.nodeContextmenu.hide(this);
+			},
+			del: function(){
+				var id = this.current.data('id');
+				this.layer.find('.hh-item[data-id="' + id + '"]').remove();
+				this.current.remove();
+				this.current = null;
+				this.nodeContextmenu.hide(this);
+			},
+			forward: function(){
+			},
+			backward: function(){
+			},
+			hide: function(context){
+				context.contextmenu.addClass('hh-hide');
+			}
+		},
+		bind: function(){
+			var me = this;
+			$("#toolbar").click(function(e){
+				var target = e.target, 
+					current = $(target), 
+					act = current.data('act'), 
+					fn;
+				if(act){
+					fn = me[act];
+					fn && fn.call(me);
+				}
+			});
+			
+			this.painter.on('contextmenu', function(e){
+				me.contextmenu.css({
+					left: e.pageX,
+					top: e.pageY
+				}).removeClass('hh-hide');
+				e.preventDefault();
+			})
+			
+			this.contextmenu.click(function(e){
+				var target = e.target, current = $(target), act = current.data('act'), fn;
+					if(act){
+						fn = me.nodeContextmenu[act];
+						fn && fn.call(me);
+					}
+				e.preventDefault();
+			})
+			
+			this.layer.dblclick(function(e){
+				var target = e.target, current = $(target);
+				if(current.hasClass('hh-editable')){
+					current.attr('contentEditable', true);
+				}
+			})
+			
+			this.layer.click(function(e){
+				var target = e.target, current = $(target), act = current.data('act'), fn;
+				if(act){
+					if(act == 'hide'){
+						var id = current.parent().data('id'), 
+							item = $('#draggable_' + id),
+							hasHidden = item.hasClass('hh-hide');
+							item.toggleClass('hh-hide', !hasHidden);
+							current.attr('hide', hasHidden);
+					}
+				}
+			})
+			
+			this.layer.sortable({
+				stop : function(event, ui){
+					me.store();
+				}
+			});
+		},
+		loadLocalstorage: function(){
+			var	me = this,
+				base64 = this.ls.getItem('base64'),
+				items = this.ls.getItem('items'),
+				layers = this.ls.getItem('layers');
+				if(base64){
+					this.setBase64(base64);
+				}
+				if(items){
+					this.painter.html(items);
+					this.painter.removeClass('ui-resizable ui-resizable-autohide');
+					var hhitems = this.painter.find('.hh-tpl');
+						hhitems.each(function(i, el){
+							me.easy($(el))
+						})
+				}
+				if(layers){
+					this.layer.html(layers);
+				}
+		},
+		init: function(){
+			this.painter = $('#painter');
+			this.layer = $('#layer');
+			this.contextmenu = $('#contextmenu');
+			this.loadLocalstorage();
+			this.bind();
+		}
+	};
+	helper.init();
+	window.helper = helper;
+}); 
+</script>
+</body>
+</html>
+
