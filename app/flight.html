@@ -6,10 +6,15 @@
 <meta name="viewport" id="viewport" content="width=device-width,initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style type="text/css">
 html,body{padding:0;margin:0;width:100%;}
+ul,li{padding:0;margin:0;list-style:none;}
 .ui-form{padding:20px;}
 .ui-form .ui-item{margin-bottom:10px;}
-.sites .item{width:100%;height:600px;margin-bottom:20px;}
+.sites .item{max-width:640px;height:600px;margin-bottom:20px;}
 .sites .item iframe{width:100%;height:100%;}
+
+.nav{overflow:hidden;}
+.nav .item{float:left;margin-right:10px;}
+.nav .item a{display:block;padding:5px 10px;border:1px solid #CCC;text-decoration:none;}
 </style>
 </head>
 <body>
@@ -29,15 +34,31 @@ html,body{padding:0;margin:0;width:100%;}
 	<div class="ui-item">
 		<input type="button" value="搜索" id="okBtn" />
 	</div>
+	<div class="ui-item">
+		<ul class="nav" id="nav">
+			<li class="item"></li>
+		</ul>
+	</div>
 </div>
 
-<div class="sites">
-	<div class="item"><iframe src="http://m.ctrip.com/html5/" frameborder="0"></iframe></div>
-	<div class="item"><iframe src="http://m.tuniu.com/" frameborder="0"></iframe></div>
-	<div class="item"><iframe src="http://touch.qunar.com/" frameborder="0"></iframe></div>
-	<div class="item"><iframe src="http://h5.m.taobao.com/trip/home/index.html" frameborder="0"></iframe></div>
-	<div class="item"><iframe src="http://m.ly.com/" frameborder="0"></iframe></div>
-<div class="item"><iframe src="http://m.elong.com/" frameborder="0"></iframe></div>
+<div class="sites" id="sites">
+	<div class="item" id="ctrip"><iframe src="http://m.ctrip.com/html5/" frameborder="0" title="携程"></iframe></div>
+	<div class="item" id="tuniu"><iframe src="http://m.tuniu.com/" frameborder="0" title="途牛"></iframe></div>
+	<div class="item" id="qunar"><iframe src="http://touch.qunar.com/" frameborder="0" title="去哪儿"></iframe></div>
+	<div class="item" id="taobao"><iframe src="http://h5.m.taobao.com/trip/home/index.html" frameborder="0" title="阿里去啊"></iframe></div>
+	<div class="item" id="ly"><iframe src="http://m.ly.com/" frameborder="0" title="同程旅行"></iframe></div>
+	<div class="item" id="elong"><iframe src="http://m.elong.com/" frameborder="0" title="艺龙"></iframe></div>
 </div>
+<script src="http://imgcache.qq.com/club/qqdisk/web/js/jquery-1.6.4.js"></script>
+<script>
+(function($){
+	var items = $('#sites iframe'), html = [];
+		items.each(function(){
+			html.push('<li class="item"><a href="#' + this.parentNode.id + '">' + this.title + '</a></li>');
+		})
+		$('#nav').html(html.join('\n'));
+	
+})(jQuery);
+</script>
 </body>
 </html>
