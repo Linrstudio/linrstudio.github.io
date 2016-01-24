@@ -16,11 +16,12 @@
 <div id="intro">
 	请使用 Microsoft Edge 浏览器，添加此链接 <a href="javascript:var a =  encodeURIComponent(location.href);location = 'http://linrstudio.github.io/app/miaotu.html#' + a;">描图</a> 到收藏夹
 	<br>
-	URL:
+	或在此输入 URL:
 	<input type="text" id="url" />
+	透明度：
+	<input type="range" id="rng" min="0" max="1" step="0.1" title="透明度设置" value="0.5" style="display:none;" />
 	<input type="button" value="ok" id="ok" />
 </div>
-<input type="range" id="rng" min="0" max="1" step="0.1" title="透明度设置" value="0.5" style="display:none;" />
 <iframe frameborder="0" id="ifr" style="display:none;"></iframe>
 <script>
 (function(){
@@ -41,6 +42,11 @@
 	go.onclick = function(e){
 		setIframe(encodeURIComponent(document.getElementById('url').value));
 		e.preventDefault();
+	}
+	var rng = document.getElementById('rng');
+	rng.onchange = function(e){
+		var ifr = document.getElementById('ifr');
+		ifr.style.opacity = this.value;
 	}
 })()
 </script>    
