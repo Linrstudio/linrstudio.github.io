@@ -10,11 +10,13 @@
         html,body{padding:0;margin:0;}
         html,body,iframe{height:100%;width:100%;}
 		iframe{opacity:.5;}
-		#intro{padding:10px;background:rgba(255,255,255,.7);}
+		#intro{position:absolute;left:0;top:0;width:100%;background:rgba(255,255,255,.7);}
+		#intro .inner{padding:10px;}
     </style>
 </head>
 <body>
 <div id="intro">
+	<div class="inner">
 	请使用 Microsoft Edge 浏览器，添加此链接 <a href="javascript:var a =  encodeURIComponent(location.href);location = 'http://linrstudio.github.io/app/miaotu.html#' + a;">描图</a> 到收藏夹
 	<br>
 	或在此输入 URL:
@@ -22,14 +24,16 @@
 	透明度：
 	<input type="range" id="rng" min="0" max="1" step="0.1" title="透明度设置" value="0.5" />
 	<input type="button" value="ok" id="ok" />
+	</div>
 </div>
 <iframe frameborder="0" id="ifr" src="http://www.bing.com/"></iframe>
 <script>
 (function(){
 	function setIframe(src){
-		var ifr = document.getElementById('ifr');
-		ifr.src = decodeURIComponent(src);
-		
+		if(src){
+			var ifr = document.getElementById('ifr');
+				ifr.src = decodeURIComponent(src);
+		}
 		var intro = document.getElementById('intro');
 		intro.style.display = 'none';
 	}
@@ -37,7 +41,6 @@
 	if(hash){
 		setIframe(hash);
 	}
-	
 	var go = document.getElementById('ok');
 	go.onclick = function(e){
 		setIframe(encodeURIComponent(document.getElementById('url').value));
