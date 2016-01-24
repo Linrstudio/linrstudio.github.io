@@ -54,10 +54,10 @@
 	var hash = location.hash.slice(1);
 	if(hash){
 		setIframe(hash);
-		var opa = ls.getItem('opacity');
-		if(opa){
-			ifr.style.opacity = this.value;
-		}
+	}
+	var opa = ls.getItem('opacity');
+	if(opa){
+		ifr.style.opacity = this.value;
 	}
 	var go = document.getElementById('ok');
 	go.onclick = function(e){
