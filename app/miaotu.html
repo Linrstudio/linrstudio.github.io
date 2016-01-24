@@ -9,8 +9,9 @@
         html{overflow:hidden;}
         html,body{padding:0;margin:0;}
         html,body,iframe{height:100%;width:100%;}
-		iframe{opacity:.3;}
+		iframe{}
 		#intro{padding:10px;}
+		#mask{position:absolute;left:0;bottom:0;width:100%;height:100%;background:#FFF;pointer-events:none;z-index:99999;opacity:.3;}
     </style>
 </head>
 <body>
@@ -25,7 +26,9 @@
 	<input type="button" value="ok" id="ok" />
 	</div>
 </div>
+<div id="mask"></div>
 <iframe frameborder="0" id="ifr" src="http://www.bing.com/"></iframe>
+
 <script>
 (function(){
 	function setIframe(src){
@@ -36,7 +39,8 @@
 		var intro = document.getElementById('intro');
 		intro.style.display = 'none';
 	}
-	var ifr = document.getElementById('ifr');
+	var ifr = document.getElementById('ifr'),
+		mask = document.getElementById('mask');
 	var ls = {	//本地存储
 			setItem: function(att, val){ //设置本地存储
 				try{
@@ -57,7 +61,7 @@
 	}
 	var opa = ls.getItem('opacity');
 	if(opa){
-		ifr.style.opacity = opa;
+		mask.style.opacity = opa;
 	}
 	var go = document.getElementById('ok');
 	go.onclick = function(e){
@@ -66,12 +70,12 @@
 	}
 	var rng = document.getElementById('rng');
 	rng.onchange = function(e){
-		ifr.style.opacity = this.value;
+		mask.style.opacity = this.value;
 		ls.setItem('opacity', this.value);
 	}
 })()
 </script>    
-<script>
+<script type="text/html">
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
