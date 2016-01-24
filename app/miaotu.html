@@ -10,6 +10,7 @@
         html,body{padding:0;margin:0;}
         html,body,iframe{height:100%;width:100%;}
 		iframe{opacity:.5;}
+		#intro{padding:10px;background:rgba(255,255,255,.7);}
     </style>
 </head>
 <body>
@@ -22,13 +23,12 @@
 	<input type="range" id="rng" min="0" max="1" step="0.1" title="透明度设置" value="0.5" />
 	<input type="button" value="ok" id="ok" />
 </div>
-<iframe frameborder="0" id="ifr" style="display:none;" src="http://www.bing.com/"></iframe>
+<iframe frameborder="0" id="ifr" src="http://www.bing.com/"></iframe>
 <script>
 (function(){
 	function setIframe(src){
 		var ifr = document.getElementById('ifr');
 		ifr.src = decodeURIComponent(src);
-		ifr.style.display = 'block';
 		
 		var intro = document.getElementById('intro');
 		intro.style.display = 'none';
