@@ -36,9 +36,28 @@
 		var intro = document.getElementById('intro');
 		intro.style.display = 'none';
 	}
+	var ifr = document.getElementById('ifr');
+	var ls = {	//本地存储
+			setItem: function(att, val){ //设置本地存储
+				try{
+					localStorage.setItem('linrstudio/' + att, val);
+				}catch(e){
+					localStorage.clear(); // 超出限额后，清空历史 todo
+					localStorage.setItem('linrstudio/' + att, val);
+				}
+			},
+			getItem: function(att){
+				return localStorage.getItem('linrstudio/' + att);
+			},
+			clear: function(){localStorage.clear();}
+		};
 	var hash = location.hash.slice(1);
 	if(hash){
 		setIframe(hash);
+		var opa = ls.getItem('opacity');
+		if(opa){
+			ifr.style.opacity = this.value;
+		}
 	}
 	var go = document.getElementById('ok');
 	go.onclick = function(e){
@@ -47,8 +66,8 @@
 	}
 	var rng = document.getElementById('rng');
 	rng.onchange = function(e){
-		var ifr = document.getElementById('ifr');
 		ifr.style.opacity = this.value;
+		ls.setItem('opacity', this.value);
 	}
 })()
 </script>    
