@@ -1,0 +1,647 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>字符处理</title>
+<style type="text/css">
+/*<![CDATA[*/
+html,body{height:96.5%;_overflow-x:hidden;}
+body{font-size:12px;}
+.w{overflow:hidden;background:#fff;height:100%}
+body.l-s-c{background: #535353;padding:3px;height:100%;margin:0;}
+.l-s-c .w{border: 1px #464646 solid;overflow: hidden;}
+.l-s-c .tt{background:#bbbfc7;padding:4px 0;text-indent:10px;}
+.l-s-c .tt a{color:#fff;}
+.l-s-c .l{border-right: 1px #898989 solid;}
+.l-s-c .-p{border-top: 1px #898989 dotted;}
+.l {overflow: hidden;}
+.-p {padding: 15px 0;margin: 15px 0 0 0;}
+h2.tt{text-indent:10px;font:700 14px/20px '微软雅黑';}
+.l-s-c a{text-decoration:none;}
+.l-s-c input.txt,.l-s-c textarea.txt{border:1px #fff solid;}
+.l-s-c input.txt:focus,.l-s-c input.txt:hover,.l-s-c textarea.txt:focus,.l-s-c textarea.txt:hover{border:1px #FFBD69 solid;}
+.l-s-c input.btn{border:1px #8D8D8D solid;outline:1px #CDD0D5 solid;background:#BEC3C9;}
+.l-s-c input.btn:hover{border:1px #ffbd69 solid;outline:1px #cdd0d5 solid;background:#ffe498;}
+.l-s-c input.smart{font-size:8px;}
+.dis{display:block;}.undis{display:none;}.fr{float:right;}
+
+ol{
+	margin:0;padding:0;
+}
+.paramlist li{
+	float:left;
+	list-style:none;
+}
+
+body.l-s-c{background:#535353;padding:3px;height:100%;margin:0;}
+.l-s-c input.txt,.l-s-c textarea.txt{border:1px #fff solid;}
+.l-s-c input.txt:focus,.l-s-c input.txt:hover,.l-s-c textarea.txt:focus,.l-s-c textarea.txt:hover{border:1px #FFBD69 solid;}
+.l-s-c input.btn{border:1px #8D8D8D solid;outline:1px #CDD0D5 solid;background:#BEC3C9;}
+.l-s-c input.btn:hover{border:1px #ffbd69 solid;outline:1px #cdd0d5 solid;background:#ffe498;}
+
+.normal .ctr{
+	padding:15px;
+}
+.w100{
+	width:100%;
+}
+
+.popmenu{
+	cursor:pointer;
+	outline:1px #CDD0D5 solid;
+
+}
+.popmenu .btn{
+	outline:none;
+}
+.popmenu b{
+	height:18px;
+	vertical-align:top;
+	text-indent:0;
+	border:1px #8D8D8D solid;
+	background:#BEC3C9;
+	display:inline-block;
+	font-size:8px;
+	line-height:18px;
+	outline:none;
+}
+.popmenu b:hover{
+	border:1px #ffbd69 solid;
+	background:#ffe498;
+}
+
+.menu-nor{
+	background:#C8CCD1;
+	padding-left:4px;
+	border:1px #C9CDD3 solid;
+	width:96px;
+	position:absolute;
+	top:24px;
+	*top:26px;
+	right:30px;
+}
+.menu-nor a{
+	display:block;
+	text-indent:4px;
+	line-height:25px;
+	color:#000;
+	text-decoration:none;
+}
+.menu-nor a:link,.menu-nor a:visited{
+	background:#fff;
+}
+.menu-nor a:hover{
+	background:#ffbd69;
+	color:#fff;
+}
+
+.insetTablePane{
+	background:#fff;
+	top:30px;
+	left:100px;
+	position:absolute;
+	z-index:1000;
+	overflow:hidden;
+	border:3px #8D8D8D solid;
+	outline:1px #535353 solid;
+}
+.insetTablePane td{
+	width:20px;
+	height:20px;
+	border:1px solid #ccc;
+	background:#fff;
+}
+.insetTablePane td.selected{
+	background:#D2E9FF;
+	border:1px #6f8ead solid;
+}
+.insetTablePane td.thSelected{
+	background:#ffd8d8;
+	border:1px #ea4821 solid;
+}
+
+/*]]>*/
+</style>
+</head>
+
+<body class="l-s-c">
+<div class="w">
+	<div class="tt">
+		<div class="paramlist">
+			<ol id="paramOl">
+				<li><label for="spaceChrTxt">间隔符：<input type="text" id="spaceChrTxt" value="\ " class="txt" size="1" /></label></li>
+				<li><label for="param0">开始值$1：<input type="text" id="param1" class="txt" size="6" value="" /></label></li>
+			</ol>
+			<input type="button" id="addParamBtn" value=" + " class="btn" />
+			
+			<input type="button" id="mergeParamBtn" value=" 生成环绕字符 " class="btn" />
+		</div>
+	</div>
+	
+	<div class="tt">
+		<div class="">
+			<input type="button" id="swapStringBtn" value=" 左右调换 " class="btn" />
+			<input type="button" id="joinStringBtn" value=" 合并字符 " class="btn" />
+			<span class="popmenu"><input type="button" id="selfAdptnBtn" value=" 自适应背景 " class="btn" /><b id="selfAdptnB">▼</b></span>
+			<input type="button" id="addTableBtn" value=" 添加表格 " class="btn" />
+		</div>
+	</div>
+	
+	<div class="tt">
+		<div class="">
+			查找：<textarea id="findstrTxt">[0-9]+</textarea>
+			替换：<textarea id="replacestrTxt">\n</textarea>
+			<input type="button" id="replaceAllBtn" value=" 全部替换 " class="btn" />
+		</div>
+	</div>
+	
+	<div class="tt">
+		<div class="">
+			从<input type="text" id="formChrTxt" value="0" class="txt" size="1" />
+			到 <input type="text" id="toChrTxt" value="5" class="txt" size="1" />
+			<input type="button" id="selectSectionTxt" value="选中文本" class="btn" title="可以是字符" />
+		</div>
+	</div>
+
+
+
+	<div id="workspacePane" class="normal">
+		<div class="ctr">
+			<h4>源：</h4>
+			<textarea id="templateTxt" class="w100" rows="6"></textarea>
+			<h4>结果：</h4>
+			<textarea id="resultTxt" class="w100" rows="6"></textarea>
+		</div>
+	</div>
+</div>
+<div id="selfAdptnMenu" class="menu-nor" title="环绕标记" style="visibility:hidden;">
+	<a href="#" id="selfAdpSpanA">span环绕</a>
+	<a href="#" id="selfAdpEmA">em环绕</a>
+</div>
+
+<div class="undis" id="insetTablePane">
+	<span class="fr"><a href="#" id="insetTableCloseA">x</a>&nbsp;</span>
+	<label for="insTabTheadChk"><input type="checkbox" id="insTabTheadChk" title="包含 thead 标记" />Thead</label>
+	<label for="insTabTfootChk"><input type="checkbox" id="insTabTfootChk" value="包含 tfoot 标记" />Tfoot</label>
+	<input type="button" id="insTabThBtn" value=" 选取th " class="btn" title="点击后，再去选择th单元格，一次只添加一个单元格" />
+	<input type="button" id="setClass2tdBtn" value=" 指定class " class="btn" title="逗号隔开" />
+	<input type="text" id="setClass2tdTxt" value="" class="undis" size="25" title="逗号隔开，与下面选择列数一一对应" />
+	<input type="button" id="getTblhtmlBtn" value=" 生成代码 " class="btn" />
+	<table id="insetTableTbl">
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+	</table>
+	<div id=""><span id="rowCellNumSpan"></span></div>
+</div>
+
+
+<script type="text/javascript">
+//<![CDATA[
+function getRealTop(o){var t=o.offsetTop;while(o=o.offsetParent)t+=o.offsetTop;return(t);}
+function getRealLeft(o){var t=o.offsetLeft;while(o=o.offsetParent)t+=o.offsetLeft;return(t);}
+
+
+
+var g=function(obj){return document.getElementById(obj);};
+g('addParamBtn').onclick=function()
+{
+	addParamTxt(g('spaceChrTxt').value);
+}
+g('mergeParamBtn').onclick=function()
+{
+	g('resultTxt').value=mergeParam(g('spaceChrTxt').value);
+}
+g('swapStringBtn').onclick=function()
+{
+	g('resultTxt').value=swapString(g('templateTxt').value,g('spaceChrTxt').value);
+}
+g('joinStringBtn').onclick=function()
+{
+	var _=g('resultTxt').value;
+	g('resultTxt').value=joinLineString(g('templateTxt').value,_);
+}
+g('selfAdptnBtn').onclick=function()
+{
+	var _=g('templateTxt').value;
+	g('resultTxt').value=selfAdptn(g('templateTxt').value);
+}
+g('selfAdptnB').onclick=function()
+{
+	g('selfAdptnMenu').style.visibility='visible';
+	g('selfAdptnMenu').style.left=getRealLeft(this.parentNode)+'px';
+	g('selfAdptnMenu').style.top=getRealTop(this.parentNode)+5+'px';
+}
+g('selfAdpSpanA').onclick=function(){
+	var _=g('templateTxt').value;
+	g('resultTxt').value=selfAdptn(g('templateTxt').value,'span');
+	g('selfAdptnMenu').style.visibility='hidden';
+}
+g('selfAdpEmA').onclick=function(){
+	var _=g('templateTxt').value;
+	g('resultTxt').value=selfAdptn(g('templateTxt').value,'em');
+	g('selfAdptnMenu').style.visibility='hidden';
+}
+
+g('replaceAllBtn').onclick=function()
+{
+	g('resultTxt').value=findReplaceViaReg(g('findstrTxt').value,g('templateTxt').value,g('replacestrTxt').value);
+}
+g('selectSectionTxt').onclick=function()
+{
+	g('resultTxt').value=selectSectionTxt(g('templateTxt').value,g('formChrTxt').value,g('toChrTxt').value);
+	g('resultTxt').select();
+}
+var isMouseDown2TablePane=false;
+var isTh2InsTab=false;
+g('insetTableTbl').onclick=function(e)
+{	var ef = window.event||e;
+	var eo = ef.srcElement||ef.target;
+
+	isMouseDown2TablePane=!isMouseDown2TablePane;
+	if(isTh2InsTab)
+	{
+		if(eo.tagName.toLowerCase()=='td')
+		{
+			var tc=eo.className;
+			eo.className=(eo.className.indexOf('thSelected')==-1)?'thSelected'+' '+tc:tc.replace(/thSelected/gi,'');
+		}
+	}
+
+}
+g('addTableBtn').onclick=function()
+{
+	g('insetTablePane').className='insetTablePane';
+}
+g('insetTablePane').onmouseover=function(e)
+{
+	if(!isMouseDown2TablePane)return;
+	var ef = window.event||e;
+	var eo = ef.srcElement||ef.target;
+	
+	if(eo.tagName.toLowerCase()=='td')
+	{	
+		setTdSelected(eo.parentElement.parentElement,eo.parentElement.rowIndex,eo.cellIndex,'selected');
+	}
+}
+function setTdSelected(eo,x,y,cls){
+	for(var i=0;i<x+1;i++)
+	{
+		for(var j=0;j<y+1;j++)
+		{
+			eo.rows[i].cells[j].className=cls;
+		}
+	}
+	g('rowCellNumSpan').innerHTML=(x+1)+' x '+(y+1)+' 表格'+((g('insTabTheadChk').checked)?' 含thead':'')+' '+((g('insTabTfootChk').checked)?' 含tfoot':'')+' <a href="#" id="redrawTabA">重新绘制</a>';
+	g('redrawTabA').onclick=function()
+	{
+		resetTdCls();
+		return false;
+	}
+
+}
+g('insTabThBtn').onclick=function()
+{
+	g('insetTablePane').onmouseover=null;
+	isTh2InsTab=!isTh2InsTab;
+}
+g('setClass2tdBtn').onclick=function()
+{
+	g('setClass2tdTxt').className='txt';
+	g('setClass2tdTxt').focus();
+}
+g('getTblhtmlBtn').onclick=function()
+{
+	var tbl=g('insetTableTbl');
+	var _=[];
+		_.push('<table>');
+	for(var i=0;i<tbl.rows.length-1;i++)
+	{
+		(i==0 && g('insTabTheadChk').checked)?_.push('\r\n<thead>'):'';
+		(i==1 && g('insTabTheadChk').checked)?_.push('\r\n<tbody>'):'';
+		(i==tbl.rows.length-2 && g('insTabTfootChk').checked && tbl.rows.length>2)?_.push('\r\n<tfoot>'):'';
+		_.push('\r\n\t<tr>');
+
+		for(var j=0;j<tbl.rows[i].cells.length-1;j++)
+		{
+			var tc=tbl.rows[i].cells[j].className;
+			if(tc!='')
+			{
+				(tc.indexOf('thSelected')!=-1)?_.push('\r\n\t\t<th'+getTdClsName(j)+'></th>'):_.push('\r\n\t\t<td'+getTdClsName(j)+'></td>');
+			}
+		}
+		_.push('\r\n\t</tr>');
+		(i==0 && g('insTabTheadChk').checked)?_.push('\r\n</thead>'):'';
+		(i==tbl.rows.length-3 && g('insTabTheadChk').checked)?_.push('\r\n</tbody>'):'';
+		(i==tbl.rows.length-2 && g('insTabTfootChk').checked && tbl.rows.length>2)?_.push('\r\n</tfoot>'):'';
+	}
+	_.push('\r\n</table>');
+	g('resultTxt').value=_.join('');
+	g('insetTablePane').className='undis';
+	function getTdClsName(idx)
+	{
+		var clsArr=g('setClass2tdTxt').value.split(',');
+		if(clsArr.length<2)return '';
+		try{
+			return (typeof(clsArr[idx]!='undefined'))?' class="'+clsArr[idx]+'"':'';
+		}
+		catch(e)
+		{
+			return '';
+		}
+	}
+}
+g('insetTableCloseA').onclick=function()
+{
+	g('insetTablePane').className='undis';
+	return false;	
+}
+function resetTdCls()
+{
+	var tdArr = g('insetTableTbl').getElementsByTagName('*')
+	for(var i=0,j=tdArr.length;i<j;i++){
+		if(tdArr[i].className!='')tdArr[i].className='';
+	}
+	isMouseDown2TablePane=false;
+}
+function selfAdptn(str,srd)
+{
+	var txt='';
+	var l1=str.split('\n');
+	var txtlyrtxt = str;
+		txtlyrtxt = txtlyrtxt.replace (/　/gi, ' ');
+		var tmpstr=[],tmp2str=[];
+		tmp2str.push('<ul>\r\n');
+		if(txtlyrtxt!='')
+		{
+				var txtarr=txtlyrtxt.split('\r');
+				var txtarrLen=txtarr.length;
+				
+				if(txtarrLen==1)
+				{
+					txtarr=txtlyrtxt.split(' ');
+					txtarrLen=txtarr.length;
+					for(var i=0,j=txtarrLen;i<j;++i)
+					{
+						txt=formatStr(txtarr[i],srd);
+						if(txt!='')tmpstr.push('<a href="#">'+txt+'</a>\r\n');
+						if(txt!='')tmp2str.push('\t<li><a href="#">'+txt+'</a></li>\r\n');
+					}
+				}
+				else
+				{
+					for(var i=0,j=txtarrLen;i<j;++i)
+					{
+						txt=formatStr(txtarr[i],srd);
+						if(txt!='')tmpstr.push('<a href="#">'+txt+'</a>\r\n');
+						if(txt!='')tmp2str.push('\t<li><a href="#">'+txt+'</a></li>\r\n');
+					}
+				}
+				return tmpstr.join('')+'\r\n'+tmp2str.join('')+'</ul>';
+		}
+		function formatStr(_,__)
+		{
+			var rlt = _.replace(/(\r|\n)?/gi,'')
+			_ = (__)?'<'+__+'>'+rlt+'</'+__+'>':rlt;
+			return _;
+		}
+}
+function joinLineString(txt,txt2)
+{
+	var l1=txt.split('\n');
+	var _=[];
+	var l2=txt2.split('\n');
+	if(l1.length>l2.length)
+	{
+		for(var i=0,j=l1.length;i<j;i++)
+		{
+			_.push(l1[i]+((typeof l2[i]!='undefined')?l2[i]:'')+'\n');
+		}
+	}
+	else
+	{
+		for(var i=0,j=l2.length;i<j;i++)
+		{
+			_.push(((typeof l1[i]!='undefined')?l1[i]:'')+l2[i]+'\n');
+		}
+	}
+	return _.join('');
+}
+
+function selectSectionTxt(txt,frm,toC)
+{
+	var lineArr=txt.split('\n');
+	var _=[];
+	for(var i=0,j=lineArr.length;i<j;++i)
+	{
+		if(isNaN(toC))
+		{
+			(isNaN(frm))?_.push(lineArr[i].substring(lineArr[i].indexOf(frm),lineArr[i].indexOf(toC))+'\n'):_.push(lineArr[i].substring(frm,lineArr[i].indexOf(toC))+'\n')
+		}
+		else
+		{
+			(isNaN(frm))?_.push(lineArr[i].substring(lineArr[i].indexOf(frm),toC)+'\n'):_.push(lineArr[i].substring(frm,toC)+'\n');
+		}
+	}
+	return _.join('');
+}
+
+function addParamOneTxt()
+{
+	var lens=g('paramOl').childNodes.length;
+	var li=document.createElement('li');
+		li.innerHTML='<label for="param'+lens+'">固定值$'+lens+'：<input type="text" id="param'+lens+'" class="txt" size="6" value="" /></label>';
+	g('paramOl').appendChild(li);
+}
+
+function addParamTxt(str)
+{
+	var reg=new RegExp(str);
+	var sepArr = g('templateTxt').value.split('\n')[0].split(reg);
+	for(var i=0,j=sepArr.length;i<j;i++)
+	{
+		if(sepArr[i]!='')addParamOneTxt();
+	};
+}
+function mergeParam(str)
+{
+	var colsArr = g('templateTxt').value.split('\n');
+	var reg=new RegExp(str);
+	var _str=[];
+	for(var i=0,j=colsArr.length;i<j;i++)
+	{
+		if(colsArr[i]!='')
+		{
+			var rowsArr = colsArr[i].split(reg);
+			for(var k=0,l=rowsArr.length;k<l;++k)
+			{
+				if(rowsArr[k]!='')_str.push(g('param'+(k+1)).value+rowsArr[k].replace(/\r/gi,''));
+			}
+			_str.push(g('param'+(k+1)).value+'\n');
+		}
+	};
+	return _str.join('');
+}
+function swapString(src,spc)
+{
+	var colsArr = src.split('\n');
+	var reg=new RegExp(spc);
+	var _str=[];
+	for(var i=0,j=colsArr.length;i<j;i++)
+	{
+		if(colsArr[i]!='')
+		{
+			var rowsArr = colsArr[i].split(reg);
+			_str.push(rowsArr[1].replace(/\r/gi,'')+spc+rowsArr[0]+'\n');
+		}
+	};
+	return _str.join('');
+
+}
+function findReplaceViaReg(re,src,pl)
+{
+	//recoverMatch(pl);
+	src = src.replace(/\\/gi,"\\\\");
+	var reg=new RegExp(re,'gi');
+	result=reg.exec(src);
+	//alert(result instanceof Array);
+	//alert(result[1]);
+	//return src.replace(reg,pl);
+	return src.replace('/'+re+'/gi',"\"$1\"");
+}
+function processRegP($1)
+{
+	alert($1);
+	
+	return eval(g('replacestrTxt').value);
+}
+function recoverMatch(str)
+{
+	var arr = str.split("\\");
+	for(var i=0,j=arr.length;i<j;++i)
+	{
+		if(arr[i]!='')
+		{
+			var str = arr[i].substring(0,1);
+			if(!isNaN(str))
+			{
+				
+			}
+		}
+	}
+}
+//]]>
+</script>
+
+
+</body>
+
+</html>
