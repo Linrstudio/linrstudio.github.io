@@ -1,0 +1,128 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSS 数值批量微调</title>
+<style type="text/css">
+.label{display:block;margin-top:20px;}
+[data-key]{width:50px;}
+textarea{margin-bottom:20px;}
+</style>
+</head>
+<body>
+<h2>CSS 数值批量微调</h2>
+<div>
+<label for="src" class="label">原始：</label>
+<textarea id="src" cols="90" rows="10">
+</textarea>
+<div class="ctrl" id="ctrl">
+	<label for="">width:</label>
+	<input type="text" value="" data-key="width" title="您可以输入10 或 -10 来批量计算样式值；" />
+
+	<label for="">height:</label>
+	<input type="text" value="" data-key="height" />
+
+	<label for="">top:</label>
+	<input type="text" value="" data-key="top" />
+
+	<label for="">left:</label>
+	<input type="text" value="" data-key="left" />
+	
+	<label for="">bottom:</label>
+	<input type="text" value="" data-key="bottom" />
+	
+	<label for="">right:</label>
+	<input type="text" value="" data-key="right" />
+	<br>
+	<label for="">background-position:</label>
+	<input type="text" value="" data-key="background\-position" data-ex="true" id="background_position_txt" />
+	<br>
+	<input type="button" value="ok" id="ok" />
+</div>
+
+<!-- 
+width:20px;height:30px;top:50px;bottom:80px;left:99px;right:40px;
+width: 20px;height: 30px;top: 50px;bottom: 80px;left: 99px;right: 40px;
+width:20px; height:30px; top:50px; bottom:80px; left:99px; right:40px ;
+width:20px;height:30px;top:50px;bottom:80px/* 100px */;left:99px;right:40px;
+width:20px;height:30px;top:50px;bottom:80px/*100px*/;left:99px;right:40px;
+width:20px;height:30px;top:50px;bottom:80px /*100px*/;left:99px;right:40px;
+width:20px;height:30px;top:50px;bottom:80px; /*100px*/left:99px;right:40px;
+width:20px;height:30px;top:50px;bottom:80px;/*100px*/ left:99px;right:40px;
+width:20px;height:30px;top:50px;bottom:80px;/*100px*/ left:99px;right:40px 
+
+background-position:33px 0;
+background-position: 33px 0px;
+background-position: 33px 0px ;
+background-position: -33px -10px;
+background-position: -33px -10px ;
+background-position: -33px 50%;
+background-position: -100% 50%;
+background-position: 100% 50%;
+-->
+</div>
+<div>
+<label for="dist" class="label">结果：</label>
+<textarea id="dist" cols="90" rows="10"></textarea>
+</div>
+<script>
+NodeList.prototype.forEach=Array.prototype.forEach;
+function g(id){
+	return document.getElementById(id);
+}
+function process(val, key, fn){
+	//var str = "(" + key + "\\:)\\s*([-0-9]+)(?:px)\\s*;?";
+	var str = "(" + key + "\\:)\\s*([-0-9]+)(px)\\s*;?";
+	var reg = new RegExp(str, 'gi');
+	
+	return val.replace(reg, function(matches, key, val, unit, v){
+		//console.dir(arguments);
+		return fn(matches, key, val, unit);
+	})
+}
+
+function processBackgroudPosition(val){
+	var reg = /(background\-position\:)\s*([-0-9]+)(?:px)?\s+([-0-9]+)(?:px)?\s*;?/gi;
+	var arr = g('background_position_txt').value.split(' ');
+	return val.replace(reg, function(match, bp, x, y){
+		console.log(arguments);
+		var _x = parseInt(x, 10) + parseInt(arr[0], 10);
+		var _y = parseInt(y, 10) + parseInt(arr[1], 10);
+		return bp + _x + (_x === 0 ? " " : "px ") + _y + (_y === 0 ? ";" : "px;"); 
+	})
+}
+function walk(){
+	var eles = g('ctrl').querySelectorAll('[data-key]');
+	var src = g('src').value;
+	eles.forEach(function(el, i){
+		var key = el.getAttribute('data-key'),
+			ex = el.getAttribute('data-ex');
+		console.log(key);
+		if(key && el.value){
+			if(!ex){
+				src = process(src, key, function(m, key, val, unit){
+						return key + (Number(val) + Number(el.value)) + unit + ';';
+					});
+			}else{
+				src = processBackgroudPosition(src);
+			}
+			g('dist').value = src;
+		}
+	})
+}
+g('ok').onclick = function(e){
+	walk();
+}
+</script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-72792545-1', 'auto');
+  ga('send', 'pageview');
+</script>
+</body>
+</html>
