@@ -342,6 +342,7 @@ TheShodo.Shodo.Write.LoadingPanel.show = function () {
     if (!this.loadingPanel)
         this.initialize();
     this.loadingPanel.show();
+	this.loadingPanel.close();//todo
 }
 
 TheShodo.Shodo.Write.LoadingPanel.close = function () {

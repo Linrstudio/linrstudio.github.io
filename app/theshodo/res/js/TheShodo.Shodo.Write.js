@@ -161,7 +161,7 @@ TheShodo.Shodo.Write.playIntro = function () {
         //.bind('ended', function(e) { $('#write-tools').fadeIn(); })
         .fadeIn()
         .bind('timeupdate', function(e) {
-            if ($(this).prop('currentTime') > TheShodo.Shodo.Write.videoFadeOutTiming) {
+            //if ($(this).prop('currentTime') > TheShodo.Shodo.Write.videoFadeOutTiming) {
                 $(this).unbind('timeupdate', arguments.callee);
                 
                 $('body .content').unbind('click', blocker);
@@ -170,7 +170,7 @@ TheShodo.Shodo.Write.playIntro = function () {
                 Kazari.SessionStorage.setItem('TheShodo.Shodo.Write.skipIntro', true);
                 // prepare
                 TheShodo.Shodo.Write.initialize();
-            }
+            //}
         })
         .get(0)
     ;
