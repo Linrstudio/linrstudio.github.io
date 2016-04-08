@@ -111,9 +111,9 @@ jQuery.cookie = function (key, value, options) {
 		useCookie : true // check for a cookie.
 	},
 		discStyles = {
-			toast: '<div class="toast" id="pinning-discoverability"><div class="pinning-content"><img src="{{logoPath}}" alt="{{dragAlt}}" class="msPinSite" /><div class="pinning-main-text">{{message}}</div><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div></div></div>',
-			pushUp: '<div class="push-up" id="pinning-discoverability"><div class="pinning-content"><div class="pinning-bg"><img src="{{logoPath}}" class="msPinSite" alt="{{dragAlt}}" /></div><div class="pinning-desc">{{message}}</div></div><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div>',
-			topHat: '<div class="top-hat" id="pinning-discoverability"><div class="pinning-alignment"><div class="pinning-content"><img src="{{logoPath}}" class="msPinSite" alt="{{dragAlt}}" /><span class="pinning-desc">{{message}}</span><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div></div></div>'
+			toast: '<div class="toast" id="pinning-discoverability"><div class="pinning-content"><div class="pinning-main-text">{{message}}</div><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div></div></div>',
+			pushUp: '<div class="push-up" id="pinning-discoverability"><div class="pinning-content"><div class="pinning-bg"></div><div class="pinning-desc">{{message}}</div></div><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div>',
+			topHat: '<div class="top-hat" id="pinning-discoverability"><div class="pinning-alignment"><div class="pinning-content"><span class="pinning-desc">{{message}}</span><a href="#close" class="pinning-hide" title="{{closeTitle}}">close</a></div></div></div>'
 		};
 
 	function hideBanner(event) {
