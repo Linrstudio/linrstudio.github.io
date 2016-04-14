@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>qTranslate and qTranslate-X 插件内容提取</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+.ui-textarea{
+    width:80%;
+    height:200px;
+}
+.item{margin-bottom:10px;}
+label{display: block;margin-bottom:10px;}
+</style>    
+</head>
+<body>
+<div class="form">   
+    <div class="item">
+        <input type="file" id="file" value="">
+    </div> 
+    <div class="item">
+        <label for="src">源代码：</label>
+        <textarea class="ui-textarea" id="src"></textarea>
+    </div>
+    <div class="item">
+        <label for="result">处理后：</label>
+        <textarea class="ui-textarea" id="result"></textarea>
+    </div>
+    <div class="item">
+        <label for="json">JSON：</label>
+        <textarea class="ui-textarea" id="json"></textarea>
+    </div>
+    <div class="item">
+        <label for="src">前  缀：</label>
+        <input type="text" id="tpl">
+    </div>
+    <div class="item">
+        <input type="button" value="OK" id="ok">
+    </div>
+</div>
+
+<script>
+((doc) => {
+    
+    let src = doc.getElementById('src'), 
+        btn = doc.getElementById('ok'),
+        result = doc.getElementById('result'),
+        json = doc.getElementById('json'),
+        file = doc.getElementById('file'),
+        tpl = doc.getElementById('tpl');
+       
+    function go(){
+        let val = src.value;
+        
+        let arr = {zh: [], en: [], hk: []};
+        let arr2 = {zh: [], en: [], hk: []};
+        
+        let i = 0;
+        
+        if(val){
+            
+            let reg = /\<\!\-\-\:(zh|en|hk|tc)\-\-\>(.*?)<\!\-\-\:\-\-\>/g,
+                regGreed = /\<\?php \_e\((\"|\')\<\!\-\-\:(zh|en|hk|tc)\-\-\>(.*)<\!\-\-\:\-\-\>(\"|\')\)\;\?\>/g;
+            
+            result.value = val.replace(reg, function($1, $2, $3){
+                let key = `${tpl.value}_${arr[$2].length}`;
+                    arr[$2].push(`'${key}' : '${$3}',`);
+                return $1;
+            })
+            
+            result.value = val.replace(regGreed, function($1, $2, $3){
+                let key = `<%- _('${tpl.value}_${arr2[$3].length}') %>`;
+                arr2[$3].push('');
+                return key;
+            })
+            
+            json.value = `/* ${tpl.value} */\n${arr.zh.join('\n')}\n\n/* ${tpl.value} */\n${arr.en.join('\n')}\n\n/* ${tpl.value} */\n${arr.hk.join('\n')}\n\n`;
+        }
+    }  
+    
+    btn.onclick = e => {
+        go(e);
+    };
+    
+    file.onchange = function(e){
+      let files = this.files,
+          file = files[0];
+          
+      var fr = new FileReader();
+      fr.onload = (file => {
+            return function(e) {
+                src.value = this.result;
+                tpl.value = file.name.replace('.html', '').replace('m-', 'm_');
+            };
+        })(file);
+        
+        fr.readAsText(file);
+    };
+    
+})(document);
+</script>
+</body>
+</html>
