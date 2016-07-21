@@ -235,7 +235,11 @@ html,body{}
 				$('.foreach-item[data-attr="font-size"]').val(arr[1]);
 				$('.foreach-item[data-attr="font-family"]').val(arr[2]);
 				$('.foreach-item[data-attr="font-weight"]').val(arr[0]);
-				$('.foreach-item[data-attr="color"]').val(rgbToHex(it.attr('data-color')));
+				var color = it.attr('data-color');
+				if(!color){
+					color = it.css('color');
+				}
+				$('.foreach-item[data-attr="color"]').val(rgbToHex(color));
 				$('.foreach-item[data-attr="color"]').css('background-color', it.attr('data-color'));
 			}
 		},
