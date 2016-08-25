@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>通用Flex布局生成器</title>
+<style>
+body, h1, h2, h3, h4, h5, h6,  p, blockquote,dl, dt, dd, ul, ol, li,pre,form, fieldset, legend, button, input, textarea,th, td, figure {margin:0;padding:0}
+body,button, input, select, textarea {font: 12px/1.5 arial;}
+h1, h2, h3, h4, h5, h6,button, input, select, textarea { font-size: 100%; }
+address, cite, dfn, em, var { font-style: normal; }
+code, kbd, pre, samp { font-family: courier new, courier, monospace; }
+small { font-size: 12px; }
+ul, ol { list-style: none; }
+a { text-decoration: none;}
+a:hover { text-decoration: underline; }
+sup { vertical-align: text-top; }
+sub { vertical-align: text-bottom; }
+legend { color: #000; }
+fieldset, img { border: 0; }
+table { border-collapse: collapse; border-spacing: 0; }
+.group,.clear {*zoom:1;}
+.group:after,.clear:after {content:'\20';display:block;clear:both;height:0;}
+body .hide{display:none;}
+/*
+ * jQuery UI Resizable 1.8.15
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Resizable#theming
+ */
+.ui-resizable { position: relative;}
+.ui-resizable-handle { position: absolute;font-size: 0.1px;z-index: 99999; display: block; }
+.ui-resizable-disabled .ui-resizable-handle, .ui-resizable-autohide .ui-resizable-handle { display: none; }
+.ui-resizable-n { cursor: n-resize; height: 7px; width: 100%; top: -5px; left: 0; }
+.ui-resizable-s { cursor: s-resize; height: 7px; width: 100%; bottom: -5px; left: 0; }
+.ui-resizable-e { cursor: e-resize; width: 7px; right: -5px; top: 0; height: 100%; }
+.ui-resizable-w { cursor: w-resize; width: 7px; left: -5px; top: 0; height: 100%; }
+.ui-resizable-se { cursor: se-resize; width: 12px; height: 12px; right: 1px; bottom: 1px; }
+.ui-resizable-sw { cursor: sw-resize; width: 9px; height: 9px; left: -5px; bottom: -5px; }
+.ui-resizable-nw { cursor: nw-resize; width: 9px; height: 9px; left: -5px; top: -5px; }
+.ui-resizable-ne { cursor: ne-resize; width: 9px; height: 9px; right: -5px; top: -5px;}
+
+/* 自定义原子CSS */
+.left{float:left;}
+.right{float:right;}/* 配置面板 */
+.panel{border:1px solid #808080;border-radius:2px;position:absolute;
+        box-shadow:3px 3px 0 rgba(128,128,128,0.2);background-color:#F2F2F2;}
+        .panel-hd{background: #ffffff; /* Old browsers */
+background: -moz-linear-gradient(top, #ffffff 0%, #dddddd 100%); /* FF3.6+ */
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ffffff), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
+background: -webkit-linear-gradient(top, #ffffff 0%,#dddddd 100%); /* Chrome10+,Safari5.1+ */
+background: -o-linear-gradient(top, #ffffff 0%,#dddddd 100%); /* Opera11.10+ */
+background: -ms-linear-gradient(top, #ffffff 0%,#dddddd 100%); /* IE10+ */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#dddddd',GradientType=0 ); /* IE6-9 */
+background: linear-gradient(top, #ffffff 0%,#dddddd 100%); /* W3C */
+        height:24px;
+        line-height:24px;
+        text-align:center;
+            border-bottom:1px solid #cccccc;
+        }
+        .panel-bd{padding:10px;color:#333;}
+        .panel-hd h2{text-shadow:1px 1px 0 #fff;color:#000;}
+
+        .option-panel-layout{
+            width:900px;
+            top:450px;
+            left:400px;
+        }
+        .option-panel-page{
+            position:static;
+            border-width:0 0 1px 0;
+        }
+        .option-panel-page fieldset{display:inline-block;margin-right:10px;}
+        .option-panel-layout fieldset{margin-bottom:10px;}
+        .panel legend{text-shadow:1px 1px 0 #fff;color:#333;padding-bottom:5px;}
+        .panel select{min-width:60px;}
+        .panel button{padding:3px 5px;}
+        .panel input{width:40px;}
+        .panel-code{width:560px;left:50%;margin-left:-200px;top:250px;}
+        .panel-code textarea{width:100%;height:360px;margin-bottom:10px;font-family:'Courier New';background-color:#002B36;border:1px solid #ddd;color:#4A8800;font-size:14px;}
+        .fm-item{padding-bottom:10px;}
+
+        .child-col-width-list label{display:inline-block;margin-bottom:5px;text-shadow:1px 1px 0 #fff;}
+        .child-col-width-list input{margin-left:5px;}
+
+        /* 布局示例样式 */
+        .layout-page{margin:0 auto;background:#efefef;/*min-height:200px;padding-bottom:100px;*/text-align:center;font:40px/1 "微软雅黑";color:#333;
+        margin-top:20px;border-top:2px solid #fff;
+        }
+        .layout{/*min-height:100px;*/margin-bottom:10px;text-align:center;font-size:smaller;}
+        .layout-group:after{content:'\20';display:block;clear:both;height:0;}
+        .layout-group{*zoom:1;*margin-bottom:10px;}
+    .layout-selected{outline:2px solid #39f;}
+        #doc .layout-selected{*background-color:#39f;}
+        #doc.layout-selected{*border:2px solid #39f;}
+        .layout-page input{display:block;background:transparent;text-align:center;width:100%;border:none;line-height:1;color:#333;padding:3px 0 5px 0;font-family:'Courier New';font-size:12px;}
+        .layout input:focus,.layout-page input:focus {outline: 0}
+        .layout{background:rgb(179,217,255);background:rgba(179,217,255,0.6);}
+        .layout .layout{background:#B3EFAA;background:rgba(179,239,170,0.6);}
+        .layout .layout .layout{background:#333;background:rgba(51,51,51, 0.6);}
+        .layout .layout .layout input{color:#fff;}
+        .layout .layout .layout .layout{background:#000;background:rgba(0,0,0, 0.6);}
+        .layout .layout .layout .layout .layout{background-color:#FBC5D8;background:rgba(251,197,216,0.5)}
+
+        .layout-hidename input{visibility:hidden;}
+        
+        .layout-group{
+            display: -webkit-box;
+            display: -webkit-flex;
+            display: -ms-flexbox;
+            display: flex;
+        }
+
+.panel-bd{
+    display: flex;
+}        
+.fm-item>label{
+    font:300 16px '微软雅黑';
+}        
+
+.fm-item>ul[data-css]>li{
+    display:inline-block;
+    padding: 3px 5px;
+    border:1px solid #333;
+    background: #e1e1e1;
+    cursor: pointer;
+}       
+</style>
+</head>
+<body>
+<div class="panel option-panel-page" id="option-page">
+    <div class="panel-bd group">
+        <div class="left">
+            <select data-change="setWidth" id="docWidth">
+                <option value="950px" selected="selected">页面宽度</option>
+                <option value="950px">950px</option>
+                <option value="985px">985px</option>
+                <option value="990px">990px</option>
+                <option value="1190px">1190px</option>
+                <option value="1225px">1225px</option>
+                <option value="100%">100%</option>
+                <option value="auto">auto</option>
+                <option value="input">自定义</option>
+            </select>
+            <input type="text" id="doc-width-input" style="display:none" data-input="customPageWidth">
+            <select data-change="setGrid" id="docGrid">
+                <option value="0" selected="selected">栅格规格</option>
+                <option value="40x24-10">950=40x24-10</option>
+                <option value="40x25-15">985=40x25-15</option>
+                <option value="40x25-10">990=40x25-10</option>
+                <option value="40x30-10">1190=40x30-10</option>
+                <option value="40x31-15">1225=40x31-15</option>
+                <option value="1x1-0">无缝设计</option>
+            </select>
+        <div class="hide">
+            <select disabled>
+                <option value="doc" selected="selected">float布局</option>
+                <option value="doc">伪绝对定位布局</option>
+            </select>
+        </div>
+            <button type="button" data-act="hideAllLayerName">隐藏布局class名</button>
+            <button type="button" data-act="getDom" data-toggle="#dialog-code,#option-layout">获取DOM结构</button>
+            <button type="button" data-act="getCSSText" data-toggle="#dialog-code,#option-layout">获取CSS代码</button>
+            <input type="text" title="设置布局组className" id="layout-group-class" style="width:80px" value="layout-group" >
+			
+        </div>
+		<div class="right" id="button-col-group">
+            <button type="button" data-act="insertCol">插入一列(I)</button>
+            <button type="button" data-act="removeCol">删除(D)</button>
+            <button type="button" data-act="moveColLeft">左移(H)</button>
+            <button type="button" data-act="moveColRight">右移(L)</button>
+            <button type="button" data-act="moveColUp">组上移(K)</button>
+            <button type="button" data-act="moveColDown">组下移(J)</button>
+        </div>
+    </div>
+</div>
+<div id="doc" class="layout-page"><input type="text" value="layout-page"></div>
+<div class="panel option-panel-layout hide" id="option-layout" draggable>
+    <div class="panel-bd">
+        <div class="fm-group">
+            <div class="fm-item">
+                插入一行：
+                <button type="button" class="" data-act="addCol" data-arg="1">1列(A)</button>
+                <button type="button" class="" data-act="addCol" data-arg="2">2列</button>
+                <button type="button" class="" data-act="addCol" data-arg="3">3列</button>
+                <button type="button" class="" data-act="addCol" data-arg="4">4列</button>
+            </div>
+            <div class="fm-item" id="col-width-option">
+                设置宽度：<input type="text" data-input="setColWidth" id="colWidth" />
+                或 
+				<button type="button" data-act="setWidthAuto">自适应(W)</button>
+                <button type="button" data-act="removeFlex">删除 flex</button>
+                <button type="button" data-act="removeAllFlex">删除 全部 flex</button>
+				
+            </div>
+			
+            <div class="fm-item">
+                设置高度：<input type="text" data-input="setColHeight" id="colHeight" />
+            </div>
+            
+            <div class="fm-item">
+                <label for="">order</label>
+                <ul data-css="order" data-for="item">
+                    <li>0</li>
+                    <li>1</li>
+                    <li>2</li>
+                    <li>3</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                <label for="">flex-grow</label> 
+                <ul data-css="flex-grow" data-for="item">
+                    <li>0</li>
+                    <li>1</li>
+                    <li>2</li>
+                    <li>3</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                <label for="">align-self</label> 
+                <ul data-css="align-self" data-for="item">
+                    <li>auto</li>
+                    <li>flex-start</li>
+                    <li>flex-end</li>
+                    <li>center</li>
+                    <li>baseline</li>
+                    <li>stretch</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                <label for="">vertical-align</label> 
+                <ul data-css="vertical-align" data-for="item">
+                    <li>middle</li>
+                    <li>top</li>
+                    <li>bottom</li>
+                    <li>baseline</li>
+                    <li>sub</li>
+                    <li>super</li>
+                    <li>text-top</li>
+                    <li>text-bottom</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                <label for="">padding-bottom</label>
+				<input type="text" data-input="setPadding" placeholder="请输入长x宽，如 800x600" />
+                <ul data-css="padding-bottom" data-for="item">
+                    <li>50%</li>
+                    <li>20%</li>
+                    <li>30%</li>
+                    <li>40%</li>
+                    <li>60%</li>
+                    <li>80%</li>
+                    <li>10%</li>
+                    <li id="padding_percent"></li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                <label for="">display</label>
+                <ul data-css="display" data-for="item">
+                    <li>flex</li>
+                    <li>inline-flex</li>
+                    <li>table</li>
+                    <li>table-cell</li>
+                    <li>block</li>
+                    <li>inline-block</li>
+                    <li>inline</li>
+                </ul>
+            </div>
+			
+        </div>
+        <div class="fm-group">
+            <div class="fm-item">
+                <label for="">display</label>
+                <ul data-css="display">
+                    <li>flex</li>
+                    <li>inline-flex</li>
+                    <li>table</li>
+                    <li>table-cell</li>
+                    <li>block</li>
+                    <li>inline-block</li>
+                    <li>inline</li>
+                </ul>
+            </div>
+            <div class="fm-item">   
+                <label for="">flex-direction</label>
+                <ul data-css="flex-direction">
+                    <li>row</li>
+                    <li>row-reverse</li>
+                    <li>column</li>
+                    <li>column-reverse</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                
+                <label for="">flex-wrap</label>
+                <ul data-css="flex-wrap">
+                    <li>nowrap</li>
+                    <li>wrap</li>
+                    <li>wrap-reverse</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                
+                <label for="">justify-content</label>
+                <ul data-css="justify-content">
+                    <li>flex-start</li>
+                    <li>flex-end</li>
+                    <li>center</li>
+                    <li>space-between</li>
+                    <li>space-around</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                
+                <label for="">align-items</label>
+                <ul data-css="align-items">
+                    <li>flex-start</li>
+                    <li>flex-end</li>
+                    <li>center</li>
+                    <li>baseline</li>
+                    <li>stretch</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+            <div class="fm-item">
+                
+                <label for="">align-content</label>
+                <ul data-css="align-content">
+                    <li>flex-start</li>
+                    <li>flex-end</li>
+                    <li>center</li>
+                    <li>space-between</li>
+                    <li>space-around</li>
+                    <li>stretch</li>
+                    <li data-arg="del">&times;</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<br />
+
+<img src="https://segmentfault.com/image?src=https://gitcafe-image.b0.upaiyun.com/6ede88a1cf23b986dc12ee2d0f2bda9d.jpg&objectId=1190000002490633" alt="" />
+
+<pre>
+这两个属性其实是双胞胎，grow 表示在 item 总宽度比容器小的时候，
+为了让 item 填满容器，每个 item 增加的宽度。
+假设有三个 basis 为 100px 的 item。
+我们从左到右给予 grow 值分别为 3、2、1，那么当 flex 作用之后，
+最左边的 item 实际增加的宽度是多少？
+从图中可以算到增加的宽度是 90px，
+于是最后最左边 item 的宽度是 190px。
+</pre>
+
+<img src="https://segmentfault.com/image?src=https://gitcafe-image.b0.upaiyun.com/e59fb75de66ba49cbb0ed6f1abb59e8f.jpg&objectId=1190000002490633" alt="" />
+
+<pre>
+我们刚才提到 grow 跟 shrink 其实是双胞胎，其实他们真的很像，
+shrink 表示在 item 总宽度比容器大的时候，为了让 item 填满容器，
+每个 item 减少的宽度。但是计算的公式却是不一样的。为什么？
+因为当你在加的时候无所谓，但是在减的时候，如果只计算赋予的 shrink 值，
+那么很有可能最后减少的宽度比 basis 大，于是 item 的宽度就变成负值。
+那我们该怎么修正？把 basis 当成参数计算进去，
+这样就能保证减少的宽度永远小于 basis。所以我们可以得到修正后的公式，
+一样以最左边为例子，最后计算出来减少 60px，于是 item 就变成 140px。
+以上脑子不好使，没关系，实际上最常用的只是 flex: 1。
+</pre>
+
+<div class="bg-fullscreen-layer"></div>
+<div class="panel panel-code hide" id="dialog-code" draggable resizable>
+    <div class="panel-hd"><h2 id="dialog-code-title">DOM结构</h2></div>
+    <div class="panel-bd">
+        <div>
+		    <textarea></textarea>
+        </div>
+        <div>
+            <button type="button" id="button-copy">复制</button> 
+            <button type="button" data-toggle="#dialog-code,#option-layout" id="button-close">关闭</button>
+        </div>
+    </div>
+</div>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+<script src="http://yekai.net/demo/js/htmlformat.js"></script>
+<script src="http://yekai.net/demo/js/layout-css-generator-jqueryui.js"></script>
+<script>
+/**
+ * toFixed 方法的改进 by lovebing at 2013/06/26
+ * @param {int} n
+ * @returns {Number.prototype.toFixed}
+ */
+Number.prototype.toFixed = function(n) {
+    if (n > 20 || n < 0) {
+        throw new RangeError('toFixed() digits argument must be between 0 and 20');
+    }
+ 
+    var number = this;
+     
+    if (isNaN(number) || number >= Math.pow(10, 21)) {
+        return number.toString();
+    }
+    if (typeof(n) == 'undefined' || n == 0) {
+        return (Math.round(number)).toString();
+    }
+ 
+    var result = number.toString();
+    var arr = result.split('.');
+ 
+    // 整数的情况
+    if (arr.length < 2) {
+        result += '.';
+        for (var i = 0; i < n; i++) {
+            result += '0';
+        }
+        return result;
+    }
+ 
+    var integer = arr[0];
+    var decimal = arr[1];
+    if (decimal.length == n) {
+        return result;
+    }
+    if (decimal.length < n) {
+        for (var i = 0; i < n - decimal.length; i++) {
+            result += '0';
+        }
+        return result;
+    }
+    result = integer + '.' + decimal.substr(0, n);
+ 
+    var last = decimal.substr(n, 1);
+ 
+    // 四舍五入，转换为整数再处理，避免浮点数精度的损失
+    if (parseInt(last) >= 5) {
+        var x = Math.pow(10, n);
+        result = Math.round((parseFloat(result) * x + 1)) / x;
+        result = result.toFixed(n);
+    }
+    return result;
+ 
+}
+//全局布局对象
+var options = {
+    page: document.querySelector('#doc'),
+    defaultWidth: '950px',
+    defaultGrid: '0',
+	selection : '',
+    gap: 0,
+	classLayout: 'layout',
+	classSelectedLayout: 'layout-selected',
+    classLayoutGroup: 'layout-group',
+    cssRuleList:{},
+    classLayoutPattern: /^layout-\d+((-\d+)?|b)$/,
+	isPlugin : false //是否作为插件形式
+};
+
+var Action = {
+    setCSS: function(key, val, dataFor){
+        var el = dataFor != 'item' ? $(options.selection).parent() : $(options.selection);
+        if(val != 'del'){
+            el.css(key, val);
+        }else{
+            this.removeRule(el.get(0), key);
+        }
+    },
+    removeRule: function(el, key){
+        el.style.removeProperty(key);
+    },
+    setFlex: function(el, num){
+        if(num != null){
+            return el ? el.css({
+                'flex' :num
+            }) : 'flex:' + num + ';';
+        }else{
+            el[0].style.removeProperty('flex');
+        }
+    },
+    removeFlex : function(){
+        layoutGenerator.removeFlex();
+    },
+	removeAllFlex: function(){
+        layoutGenerator.removeAllFlex();
+	},
+    addCol: function(arg){
+        layoutGenerator.appendLayout(arg);
+    },
+    setWidthAuto: function(){   //修改布局宽度：智能填充
+        layoutGenerator.setLayoutWidth('auto');
+    },
+    removeCol: function(){
+        if(window.confirm("确认删除该布局区域么？")){
+            layoutGenerator.delLayout();
+        }
+    },
+    moveColDown: function(){
+        $(options.selection).parent().insertAfter($(options.selection).parent().next('.' + options.classLayoutGroup))
+    },
+    insertCol: function(){ //新增子布局列数
+        layoutGenerator.insertLayout();
+    },
+    moveColLeft: function(){
+        $(options.selection).insertBefore($(options.selection).prev());
+        layoutGenerator.freshGutter();
+    }, 
+    moveColRight: function(){
+        $(options.selection).insertAfter($(options.selection).next());
+        layoutGenerator.freshGutter();
+    },
+    moveColUp: function(){
+        $(options.selection).parent().insertBefore($(options.selection).parent().prev('.' + options.classLayoutGroup))
+    },
+    hideAllLayerName: function(){
+        $(options.page).toggleClass('layout-hidename');
+        this.innerHTML = this.innerHTML.indexOf('隐藏')>-1 ? '显示布局class名': '隐藏布局class名'
+    },
+    getDom: function(){
+        $('#dialog-code-title').html('DOM结构');
+        $('#dialog-code textarea').val(layoutGenerator.getLayoutDom());
+        $('#dialog-code').show();
+        $('#option-layout').hide();
+    },
+    getCSSText: function(){
+        $('#dialog-code-title').html('CSS代码');
+        $('#dialog-code textarea').val(layoutGenerator.getLayoutCss());
+        $('#dialog-code').show();
+        $('#option-layout').hide();
+    },
+    customPageWidth: function(e){
+        layoutGenerator.setPageWidth($(this).val());
+    },
+    setColWidth: function(e, arg){
+		var me = $(this), 
+			val = me.val(),
+			src = parseInt(val, 10);
+        if(e.which === 40){me.val(src - 1)}
+        if(e.which === 38){me.val(src + 1)}
+        layoutGenerator.setLayoutWidth(val);
+    },
+    setColHeight: function(e, arg){
+        var me = $(this), 
+			val = me.val(),
+			src = parseInt(val, 10);
+        if(e.which === 40){me.val(src - 1)}
+        if(e.which === 38){me.val(src + 1)}
+        layoutGenerator.setLayoutHeight(val);
+    },
+    setPadding: function(e){
+        var me = $(this), val = me.val().trim().replace(/\s/g, '');
+		if(val.indexOf('x') > 0){
+			var arr = val.split('x');
+			if(arr[1] != ''){
+				var per = Number(arr[1]) / Number(arr[0]) * 100;
+				
+				var arr2 = (per + '').split('.');
+				if(arr2.length > 1){
+					per1 = arr1[1];
+					if(per1.length > 0){
+						var tmp = per.split('.')[1].replace(/0/g, '');
+						$('#padding_percent').text(tmp != '' ? per.toFixed(3) : per + '%');
+					}else{
+						$('#padding_percent').text(per + '%');
+					}
+				}else{
+					$('#padding_percent').text(per + '%');
+				}
+			}else{
+			
+			}
+		}
+    },
+    setWidth: function(e, arg){
+        debugger;
+        var width = $(this).val();
+        if(width === "input"){
+            $("#doc-width-input").show();
+        }else{
+            this.id !== "doc-width-input" && $("#doc-width-input").hide();
+            layoutGenerator.setPageWidth(width);
+        }
+    },
+    setGrid: function(e){
+        var grid = this.value || e,
+            result = grid.match(/(\d+)x(\d+)-(\d+)/);
+        if(result){
+           var image = 'img/grid' + result[1] + '_' +result[3] + '.png';
+           options.gap = parseInt(result[3]);
+           layoutGenerator.setGridBackground(image);
+           layoutGenerator.freshGutter();
+        }
+    }
+};
+
+$('[data-css]').each(function(i, el){
+    $('li', el).click(function(e){
+        var me = $(this),
+            ul = me.parents('ul'),
+            dataFor = me.data('for') || ul.data('for'),
+            act = me.data('act') || ul.data('act'), 
+            arg = me.data('arg') || me.text();
+        Action.setCSS(act, arg, dataFor);
+        
+    })
+})
+$('[data-toggle]').click(function(e){
+    var me = $(this), toggle = me.data('toggle');
+    var group = toggle.split(',');
+    $(group).each(function(){
+        var item = this.split('>');
+        $(item[0]).toggleClass(item[1] || 'hide');
+    })
+    e.preventDefault();
+});
+$('body').click(function(e){
+    var me = $(e.target),
+        act = me.data('act'), 
+        arg = me.data('arg');
+    act && Action[act] && Action[act].call(this, arg); 
+})
+$('[data-input]').bind('input', function(e){
+    var me = $(this), 
+    input = me.data('input'),
+    arg = me.data('arg') || this;
+    input && Action[input] && Action[input].call(this, e, arg);
+})
+$('[data-change]').bind('change', function(e){
+    var me = $(this), 
+        change = me.data('change'),
+        arg = me.data('arg') || this;
+        change && Action[change] && Action[change].call(this, e, arg);
+})
+
+$('[draggable]').draggable({ cursor: 'move' });
+$('[resizable]').resizable({ handles: 'e' });
+
+//设置浮出面板位置
+function setPropPanelPostion(left,top){
+    $('#option-layout').animate({left:left,top:top},300);
+    // todo 如果超出范围
+}
+//绑定选择布局
+$("#doc").click(function(e){
+	var target = e.target;
+	while(target !== this && !$(target).hasClass(options.classLayout)){
+		target = target.parentNode;
+	}
+    if(target.id === 'doc'){
+        $('#button-col-group button').attr('disabled',true);
+    }else{
+        $('#button-col-group button').each(function(n,el){
+            el.removeAttribute('disabled');// removeAttr IE7 bug
+        });
+    }
+	//选中最近的父级layout布局
+    layoutGenerator.setSelectedLayout(target);
+    $('#option-layout').removeClass('hide');
+
+    var position = $(target).offset();
+    setPropPanelPostion(position.left,position.top + target.offsetHeight);
+    $("#colWidth").val(layoutGenerator.getLayout().width);
+    $("#colHeight").val(layoutGenerator.getLayout().height);
+});
+
+//布局对象
+var layoutGenerator = (function layoutGenerator(opt){
+	
+    return {
+        //设置页面宽度
+        setPageWidth : function(width){
+            var result = width.match(/^\d+(px|%)?$/i);
+            if(result){
+                options.page.style.width = result[1] ? width : result[0] +"px";
+            }else{
+                options.page.style.width = 'auto';
+            }
+        },
+        //设置栅格背景
+        setGridBackground: function(src){
+            options.page.style.backgroundImage = "url("+ src +")";
+        },
+        //插入一行
+        appendLayout:function(n){
+            //_appendLayout(n);
+            var layoutWidth = [],
+                totalWidth = parseInt($(options.selection).css("width"), 10),
+                equalWidth = Math.floor((totalWidth - (n-1) * options.gap)/n),
+                html = "";
+            for(var i=0 ; i<n-1 ; i++){
+                layoutWidth.push(equalWidth);
+            }
+            //最后一列采取精确计算差值
+            layoutWidth.push(totalWidth - (equalWidth + options.gap)*(n-1));
+            html += '<div class="'+options.classLayoutGroup+'">';
+            for(var j=0, html2='',suffix='';j<n;j++){
+                //已生成的布局个数，默认class名
+                if(j + 1 < n){
+                    //html2 = 'margin-right:' + options.gap +'px;';
+                    suffix = '-' + options.gap;
+                }else{
+                    html2 = '';
+                    suffix = n == 1 ? 'b' : '';
+                }
+                var flex = Action.setFlex(null, 1);
+                html += '<div class="'+ options.classLayout +'" data-width="'+ layoutWidth[j] + '" style="' + flex + html2 +'"><input data-custom="0" value="'+ options.classLayout +'-'+ j +'"></div>';
+            }
+            html += '</div>';
+            $(options.selection).append(html);
+            
+        },
+        //插入一列
+        insertLayout:function(){
+            //_insertLayout();
+            
+            var width = options.selection.offsetWidth - options.gap,aWidth = [];
+                aWidth.push(Math.floor(width/2));
+                aWidth.push(width - aWidth[0]);
+            $(options.selection).css('width',aWidth[0]);
+            var flex = Action.setFlex(null, 1);
+            $(options.selection).after('<div class="'+ options.classLayout +'" data-width="'+ aWidth[1] +'" style="' + flex + '"><input data-custom="0" value="'+ options.classLayout +'-'+ $(options.selection).parent().children().length +'"></div>');
+            this.freshGutter();
+        },
+        //删除布局
+        delLayout:function(){
+            var prev = $(options.selection).prev(),
+                next = $(options.selection).next();
+            if(prev.length === 0 && next.length === 0){
+                $(options.selection).parent().remove();
+            }else{
+                $(options.selection).remove();
+            }
+            this.freshGutter();
+        },
+        //设置布局块的宽度
+        setLayoutWidth : function(width){
+            if(width === 'auto'){
+                var group = $(options.selection.parentNode),
+                    totalWidth = options.selection.parentNode.offsetWidth,
+                    tmpWidth = 0;
+                for(var i=0, child = group.children(),len = child.length;i<len;i++){
+                    if(child[i] === options.selection) continue;
+                    tmpWidth += child[i].offsetWidth;
+                }
+
+                width = totalWidth - tmpWidth-options.gap*(len-1);
+            }
+            $(options.selection).css('width', width);
+        },
+		setLayoutHeight: function(height){
+			var tmp = 0, 
+                totalHeight = 0;
+            if(height === 'auto'){
+                var group = $(options.selection.parentNode),
+                    totalHeight = options.selection.parentNode.offsetHeight,
+                    tmp = 0;
+                for(var i=0, child = group.children(),len = child.length;i<len;i++){
+                    if(child[i] === options.selection) continue;
+                    tmp += child[i].offsetWidth;
+                }
+                height = totalHeight - tmp - options.gap * (len-1);
+            }
+            $(options.selection).css('height', height);
+            
+		},
+        removeFlex: function(){
+            Action.setFlex($(options.selection), null);
+        },
+        removeAllFlex: function(){
+            var group = $(options.selection).parent().find('.layout');
+            group.each(function(i, el){
+                Action.removeRule(el, 'flex');
+            })  
+        },
+        //获取当前选中的layout对象
+        getLayout: function(){
+            return {
+                width: options.selection.offsetWidth,
+				height: options.selection.offsetHeight,
+                'name': $("input:first",options.selection).val()
+            }
+        },
+        freshGutter : function(){//刷新gutter值
+            $('.' + options.classLayoutGroup +' .' + options.classLayout).each(function(n, el){
+                var cur = $(el);
+                if(cur.next().length == 0){
+                    Action.removeRule(el, 'margin-right');
+                }else{
+                    options.gap != 0 ? cur.css("margin-right", options.gap) : Action.removeRule(el);
+                }
+            });
+        },refreshLayoutClass : function (el){ //自动更新布局className
+            if(!el) return;
+            var curClass = $.trim($($(el).children('input')[0]).val());
+            if(options.classLayoutPattern.test(curClass) || curClass == ''){
+                var prev = $(el).prev(),
+                    next = $(el).next(),
+                    width = el.offsetWidth;
+                if(prev.length === 0 && next.length === 0){
+                    $($(el).children('input')[0]).val(options.classLayout + '-' + width + 'b');
+                }else if(next.length === 0){
+                    $($(el).children('input')[0]).val(options.classLayout + '-' + width);
+                }else{
+                    $($(el).children('input')[0]).val(options.classLayout + '-' + width + '-' + options.gap);
+                }
+
+            }
+
+        },
+        //设置当前被选中的布局块
+        setSelectedLayout : function(el){
+            if(el === options.selection || (!$(el).hasClass(options.classLayout) && el !== options.page)) return ;
+            if(options.selection !== ''){
+                $(options.selection).removeClass(options.classSelectedLayout);
+                //this.refreshLayoutClass(options.selection);
+            }
+	        $(el).addClass(options.classSelectedLayout);
+	        options.selection = el;
+            $(el).focus();
+
+        },
+        getLayoutTree: function(){
+            var cssList = [];
+                
+            function getLayoutList(layoutGroup){
+                var arr=[],childname = '';
+                for(var i =0,childrenLayout = $(layoutGroup).children('.' + options.classLayout),len = childrenLayout.length; i< len ;i++){
+                    childname = $($(childrenLayout[i]).children('input')[0]).val();
+                    var group = $(childrenLayout[i]).children('.'+options.classLayoutGroup);
+                    if(group.length > 0){
+                        var ar = [];
+                        for(var j=0;j<group.length;j++){
+                            ar.push(getLayoutList(group[j]));
+                        }
+                        arr.push({layoutname:childname,width:$(childrenLayout[i]).css("width"),grouplist:ar});
+                    }else{
+                        arr.push({layoutname:childname,width:$(childrenLayout[i]).css("width")});
+                    }
+                }
+                return arr;
+            } 
+            $(options.page).children('.'+options.classLayoutGroup).each(function(index,el){
+                cssList.push(getLayoutList(el));
+            });
+            
+            var tree = {};
+                tree[$(options.page).children('input').val()] = cssList;
+            return tree;
+        },
+        //获取DOM结构
+        getLayoutDom : function(isPlugin){
+			var domTree = this.getLayoutTree(),html = '',pagename = $(options.page).children('input').val();
+			options.classLayoutGroup = $('#layout-group-class').val();
+			//拼装DOM结构
+			function getDom(arr){
+				var html = [];
+				//空数组直接返回
+				if(arr.length === 0){return '';}
+				if($.isArray(arr)){
+					if($.isArray(arr[0])){
+						for(var i=0;i<arr.length;i++){
+							html.push(getDom(arr[i])); 
+						}
+					}else{
+						if(arr.length > 1){
+								html.push('<div class="' + options.classLayoutGroup +'">\n')
+						}
+						for(var i=0;i<arr.length;i++){
+							html.push(getDom(arr[i])); 
+						}
+						
+						if(arr.length > 1){
+								html.push('</div>\n');
+						}
+					}
+				}else{
+
+					html.push('<div '+ (isPlugin ? 'data-container="1"': '') + 'class="' + arr.layoutname + '">');
+					if(arr.grouplist){
+						html.push(getDom(arr.grouplist))
+					}
+					html.push('</div>\n');
+				}
+				return html.join("");
+			}
+			html = '<div class="' + pagename + '">\n' + getDom(domTree[pagename]) + '</div>';
+			//增加HTML format
+			return style_html(html,1,'\t',80);	
+        },
+        //获取CSS代码
+        getLayoutCss : function(){
+            var cssCode = [];
+            options.cssRuleList = {};
+            //装入group样式
+            cssCode.push('.'+ options.classLayoutGroup +':after {content:"\\20";display:block;clear:both;height:0;}\n.'+ options.classLayoutGroup + '{*zoom:1;}');
+            //检测CSS是否重复、命名合法
+            $('input',options.page).each(function(index,el){
+                var ruleName = $.trim($(el).val()),
+                    ruleStyle = $(el.parentNode).attr("style");
+                //有兄弟节点的时候才保存样式，否则单行无须保存
+                if($(el.parentNode).prev().length > 0 || $(el.parentNode).next().length > 0 ){
+                    //如果存在同名的className
+                    if(options.cssRuleList[ruleName]){
+                        if(options.cssRuleList[ruleName] !== ruleStyle){
+                            layoutGenerator.setSelectedLayout(el.parentNode);
+                            cssCode.push('Error:布局中存在两个或两个以上不一致的 '+ ruleName + ' 声明，请修改！');
+                        }
+                    }
+                    options.cssRuleList[ruleName] = index !== 0 ? ruleStyle : 'margin: 0 auto; width: '+ $(options.page).css("width");
+                }
+            });
+            for(var i in options.cssRuleList){
+                cssCode.push(['.',i,'{',options.cssRuleList[i],'}'].join(""));
+            }
+            return cssCode.join('\n');
+        },
+        //修改布局块样式名
+        modiLayoutClass: function(){
+            //$(options.selection)
+        }
+    }
+})();
+
+//绑定键盘快捷
+$(document).keydown(function(event){
+    var key = event.which;
+	//输入框中的按键忽略掉
+	if(event.target.tagName === 'INPUT'){
+		event.stopPropagation();
+		return ;
+	}
+	//console.log(key)
+    if(options.selection){
+        if(options.selection !== options.page){
+            //删除当前选择布局 delete d
+            if((key === 46 || key === 68) && window.confirm("确认删除该布局区域么？")){
+                layoutGenerator.delLayout();
+            }
+            //左,选择左布局
+            if(key === 37){
+                layoutGenerator.setSelectedLayout($(options.selection).prev());
+            }
+            //右，选择右布局
+            if(key === 39){
+                layoutGenerator.setSelectedLayout($(options.selection).next());
+            }
+            //上，选择兄弟层级
+            if(key === 38){
+                layoutGenerator.setSelectedLayout($('.layout:first',$(options.selection).parent().prev()));
+            }
+            if(key === 40){
+                layoutGenerator.setSelectedLayout($('.layout:first',$(options.selection).parent().next()));
+            }
+			//左移 h
+			if(key === 72){
+				$(options.selection).insertBefore($(options.selection).prev());
+				layoutGenerator.freshGutter();
+			}
+			//右移 l
+			if(key === 76){
+				$(options.selection).insertAfter($(options.selection).next());
+				layoutGenerator.freshGutter();
+			}
+			//上移 j
+			if(key === 75){
+				$(options.selection).parent().insertBefore($(options.selection).parent().prev('.' + options.classLayoutGroup))
+			}
+			//下移 k
+			if(key === 74){
+				$(options.selection).parent().insertAfter($(options.selection).parent().next('.' + options.classLayoutGroup))
+			}
+			//自动调整宽度 w
+			if(key === 87){
+				layoutGenerator.setLayoutWidth('auto');
+			}
+            if(key === 73){
+				layoutGenerator.insertLayout();
+			}
+        }
+    }
+});
+
+//初始化绑定
+//初始化执行页面属性面板
+layoutGenerator.setPageWidth(options.defaultWidth);
+Action.setGrid(options.defaultGrid);
+// ##1
+
+/*
+##1
+    //保存布局信息至父窗口
+    if(window.opener){
+		options.isPlugin = true;
+        $('#button-dom').hide();
+        $('#button-css').hide();
+        $('#button-save').click(function(){
+            var htmlText = layoutGenerator.getLayoutDom(options.isPlugin),
+                cssText = layoutGenerator.getLayoutCss();
+            window.opener && window.opener.fillLayout(htmlText,cssText);
+            alert('布局信息保存成功!');
+        });
+        $('#button-save').show();
+    }
+*/
+</script>
+<!-- https://segmentfault.com/a/1190000002490633 -->
+</body>
+</html>
