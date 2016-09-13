@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Document</title>
+<style>html{color:#000;background:#fff;-webkit-text-size-adjust:100%;text-rendering:optimizelegibility;-ms-overflow-style:-ms-autohiding-scrollbar;}
+body,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,textarea,p,th,td,hr,button,article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{margin:0;padding:0}
+article,aside,details,footer,header,hgroup,menu,nav,section{display:block}
+audio,canvas,video{display:inline-block;*display:inline;*zoom:1}
+body,button,input,select,textarea{font:500 14px/1.8 'Hiragino Sans GB',Arial,SimSun,'WenQuanYi Micro Hei',sans-serif}
+table{border-collapse:collapse;border-spacing:0}
+th{text-align:inherit}
+fieldset,img{border:0}
+img{-ms-interpolation-mode:bicubic}
+iframe{display:block}
+del{text-decoration:line-through}
+address,caption,cite,code,dfn,em,th,var{font-style:normal;font-weight:400}
+ul,ol{list-style:none}
+caption,th{text-align:left}
+q:before,q:after{content:''}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:text-top\9}
+:root sub,:root sup{vertical-align:baseline}
+sup{top:-0.8em}
+sub{bottom:-0.3em}
+ins,a{text-decoration:none}
+mark{background:#fffdd1}
+code{border:1px dashed #eee;color:#e74c3c;padding:0 3px}
+pre,code{font-family:Inconslata,Consolas,Courier,Courier New,monospace;white-space:pre-wrap;word-wrap:break-word}
+pre{background:#f9f9f9;padding:10px 15px;line-height:1.36;color:#555;text-shadow:1px 1px 1px #fff}
+small{font-size:12px;color:#888}
+button,input{*width:auto;*overflow:visible;line-height:22px}
+
+/* Fix Safari-M */
+input[type="checkbox"]	{ -webkit-appearance: checkbox; }
+input[type="radio"]		{ -webkit-appearance: radio; }
+
+body{
+	font-family:"\5FAE\8F6F\96C5\9ED1", Tahoma, "HelveticaNeue", "Helvetica Neue", Helvetica, Arial;
+	-webkit-font-smoothing:subpixel-antialiased;
+	-webkit-text-size-adjust:100%;
+	min-width:1110px;
+}
+.text-hide{font:0/0 a;color:transparent;text-shadow:none;background-color:transparent;border:0}
+.hide{display:none;}
+.fade{transition: all .3s ease;opacity:0;display:block;visibility:hidden;}
+.fade-in{opacity:1;visibility:visible;height:auto;}
+
+a{color:#000;-webkit-transition:color .3s ease-in;transition:color .3s ease-in;}
+a:hover{opacity:.5;}
+.clearfix:before,.clearfix:after,
+.container:before,.container:after,
+.main:before,.main:after,
+.ui-col3:before,.ui-col3:after,
+.ui-col4:before,.ui-col4:after,
+.ui-col2:before,.ui-col2:after,
+.row:before,.row:after{content:'';display:table}
+.clearfix:after,.container:after,.main:after,.ui-col3:after,.ui-col2:after,.row:after, .ui-col4:after{clear:both}
+.clearfix,.container,.main,.ui-col3,.ui-col2,.row, .ui-col4{*zoom:1}
+.clear{clear:both}
+
+.ui-col{float:left;*display:inline;}
+.ui-col3 .ui-col{width:33.33%;}
+.ui-col2 .ui-col{width:50%;}
+.ui-col4 .ui-col{width:25%;}
+.small{font-size:16px;color:#aaa;}
+
+.br-pc{display:block;}
+.br-mobile{display:inline;}
+
+::-moz-selection{background:#ddd;color:#000;text-shadow:none;}
+::selection{background:#ddd;color:#000;text-shadow:none;}
+textarea{
+    width:33vw;
+    height:50vh;
+}
+.hide{
+    display:none;
+}
+.editable{
+    -webkit-user-modify: read-write-plaintext-only;
+    user-modify: read-write-plaintext-only;
+}
+.ui-form{
+    padding:20px;
+}
+.locales{}
+.locales .editable{display:inline-block;}
+.locales .key-item,
+.locales .val-item{}
+
+.hide-keys .key-item,
+.hide-vals .flag-item,
+.hide-vals .val-item{display:none;}
+
+.ui-mask{
+	position:fixed;
+	_position:absolute;
+	left:0;
+	top:0;
+	z-index:9;
+	width:100%;
+	height:100%;
+	background-color:#000;
+	opacity:.65;
+	filter:alpha(opacity=65);
+}
+.ui-xbox{
+	position:absolute;
+	left:15px;
+	top:15px;
+	z-index:10;
+	background:#CCC;
+	color:#000;
+}
+.ui-xbox-inner{
+	position:relative;
+	top:-1px;
+	left:-1px;
+	height:100%;
+	padding:10px 15px;
+	border:1px solid #CCC;
+	background:#FFF;
+	_display:inline;
+	zoom:1;
+}
+.ui-xbox-close{
+	position:absolute;
+	right:0;
+	top:0;
+	width:32px;
+	height:32px;
+	font:600 14px/32px Tahoma;
+	text-align:center;
+	color:#B5AE3E;
+	text-decoration:none;
+}.ui-xbox-header{
+}
+.ui-xbox-footer{
+}
+
+.results{}
+.results .ui-textarea{
+    width:100%;
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+    <button class="ui-btn" type="button" data-act="toggleClass" data-args="body>hide-vals">隐藏内容</button>
+    <button class="ui-btn" type="button" data-act="toggleClass" data-args="#new_lang_box">新增语言</button>
+
+    <button class="ui-btn" type="button" data-act="verifyJSON">获取代码</button>
+</div>
+
+<div class="ui-xbox hide" id="new_lang_box">
+	
+	<div class="ui-xbox-header">
+        <span class="title">新增语言</span>
+    </div>
+	<div class="ui-xbox-inner">
+        <input type="url" class="ui-input" id="new_lang_name">
+    </div>
+	<div class="ui-xbox-footer">
+        <div class="ui-btns">
+            <button class="ui-btn ui-btn-ok" data-act="addLang" data-args="#new_lang_name">OK</button>
+            <button class="ui-btn ui-btn-cancel" data-act="toggleClass" data-args="#new_lang_box">Cancel</button>
+        </div>
+    </div>
+	<a class="ui-xbox-close" data-act="toggleClass" data-args="#new_lang_box" href="#!/close/">&times;</a>
+</div>
+
+<div class="ui-form">
+    <div class="ui-item">
+        <input type="file" id="file">
+    </div>
+    <div class="ui-item hide">
+        <textarea id="txt"></textarea>
+    </div>
+
+    <div class="ui-tab-cnt" id="locales_tabcnt"></div>
+
+</div>
+
+<div id="results" class="results">
+
+</div>
+
+
+<script>
+'use strict';
+function Reader(selector, callback){
+    this.file = document.querySelector(selector);
+    this.callback = callback || function(e){};
+    this.bindEvent();
+}
+Reader.prototype = {
+    constructor: Reader,
+    bindEvent: function(){
+        var me = this;
+        me.file.addEventListener('change', function(){
+            let files = this.files,
+                file = files[0];
+            if(!file)return;
+            var fr = new FileReader();
+            fr.onload = (function(file){
+                return me.callback.bind(file);
+            })(file);
+
+            fr.readAsText(file);
+        });
+    }
+};
+function tagName(el){
+    return el.tagName.toLowerCase();
+}
+function addItem(key, val){
+    let li = document.createElement('li');
+        li.dataset.key = key;
+        li.dataset.val = val;
+        li.innerHTML = `<div class="editable key-item" contenteditable="plaintext-only">${key}</div> <span class="flag-item">:</span> <div class="editable val-item" contenteditable="plaintext-only">${val}</div>`;
+    return li;
+}
+function renderJS(val){
+    let js = document.createElement('script');
+    js.innerHTML = 'window.locale = ' + val.replace("'use strict';", '').replace('export default ', '');
+    document.body.appendChild(js);
+    return window.locale;
+}
+function renderRows(locale){
+    let frag = document.createDocumentFragment();
+    for(let p in locale){
+        frag.appendChild(addItem(p, locale[p]));
+    }
+    return frag;
+}
+function renderLocale(lang){
+    let id = `${lang}_detail`;
+    let node = document.getElementById(id);
+    if(!node){
+        node = document.createElement('div');
+            node.className = 'ui-tab-inner';
+            node.innerHTML = `
+                <details class="ui-tab">
+                    <summary>${lang}</summary>
+                    <ul class="locales" id="${id}_cnt" data-lang="${lang}">
+
+                    </ul>
+                </details>
+            `;
+        node.id = id;
+    }
+    return node;
+}
+function stringify(el){
+    let keys = el.querySelectorAll('.key-item'),
+        vals = el.querySelectorAll('.val-item');
+    //keys.forEach(function(el, i){
+    var html = Array.from(keys).reduce(function(prev, current, index, arr){
+        let txt = current.innerHTML,
+            val = vals[index].innerHTML.replace(/'/g, '&amp;#39;');
+        return `${prev}\n'${txt}': '${val}',`;
+    }, '')
+    return html;
+}
+
+function verifyJSON(parentEl){
+    let results = document.getElementById('results');
+    let all = Array.from(parentEl.querySelectorAll('.locales'));
+    results.innerHTML = '';
+    all.forEach(function(locale){
+        let title = locale.dataset.lang,
+            content = stringify(locale);
+        let htm = `<details><summary><h3 class="ui-title">${title}</h3></summary><textarea class="ui-textarea">{${content}\n}</textarea></details>`;
+        let div = document.createElement('div');
+            div.innerHTML = htm;
+        results.appendChild(div);
+    })
+}
+
+let locales = document.getElementById('locales_tabcnt');
+new Reader('#file', function(e) {
+    let val = e.target.result;
+    var tmp = this.name.split('.');
+        tmp.pop();
+    let filename = tmp.join('.');
+    if(val){
+        document.querySelector('#txt').value = val;
+
+        var p1 = Promise.resolve(val);
+            p1
+            .then(renderJS)
+            .then(renderRows)
+            .then(function(node){
+                let panel = renderLocale(filename);
+                let cnt = panel.querySelector('.locales');
+                    if(cnt){
+                        cnt.appendChild(node);
+                    }
+                    locales.appendChild(panel);
+            });
+    }
+});
+var Actions = {
+    toggleClass: function(args){
+        args = args.split('>');
+        let selector = args[0],
+            cssclass = args[1] || 'hide';
+        let nodes = document.querySelectorAll(selector);
+        Array.from(nodes).every(node => {
+            node.classList.toggle(cssclass);
+        })
+    },
+    addLang: function(selector){
+        let txt = document.querySelector(selector);
+        let tabinner = document.querySelector('.ui-tab-inner');
+        if(txt && tabinner){
+            let lang = txt.value;
+            let panel = tabinner.cloneNode(true);
+            panel.id = `${lang}_detail`;
+            let ul = panel.querySelector('.locales');
+            if(ul){
+                ul.id = `${lang}_detail_cnt`;
+                ul.dataset.lang = lang;
+            }
+            let summary = panel.querySelector('summary');
+            if(summary){
+                summary.textContent = lang;
+            }
+            let vals = panel.querySelectorAll('.val-item');
+            Array.from(vals).map(item => {
+                item.dataset.val = '';
+                item.innerHTML = '';
+            });
+            locales.appendChild(panel);
+            Actions.toggleClass('#new_lang_box');
+        }
+    },
+    verifyJSON: function(){
+        verifyJSON(locales);
+    }
+};
+document.body.addEventListener('click', function(e){
+    let eo = e.target, {act, args} = eo.dataset;
+    let fn = act ? Actions[act] : null;
+    fn && fn.call(eo, args);
+}, false)
+
+locales.addEventListener('keydown', function(e){
+    let me = this;
+    let eo = e.target;
+    let ul = eo;
+    while(!ul.classList.contains('locales')){
+        ul = ul.parentElement;
+    }
+    if(e.keyCode == 13 && tagName(ul) == 'ul'){
+        e.preventDefault();
+        let next = eo.parentElement.nextSibling;
+        let all = Array.from(me.querySelectorAll('.locales'));
+        //console.log('next: ', next);
+        
+        if(next){
+            if(tagName(next) == 'li'){
+
+                // 存储下一个节点的 index
+                let nextIndex = Array.from(next.parentNode.children).indexOf(next);
+
+                all.forEach(function(locale, i){
+                    let relative = locale.children[nextIndex];
+                    locale.insertBefore(addItem('NEWKEY', 'NEWVAL'), relative);
+                })
+            }
+        }else{
+            all.forEach(function(locale, i){
+                locale.appendChild(addItem('NEWKEY', 'NEWVAL'));
+            })
+        }
+    }
+}, false)
+
+</script>
+</body>
+</html>
