@@ -386,8 +386,8 @@ locales.addEventListener('keydown', function(e){
 
 }, false)
 
-function duplicateKey(key){
-    let keys = document.querySelectorAll(`.locales [data-key="${key}"]`);
+function duplicateKey(parentNode, key){
+    let keys = parentNode.querySelectorAll(`[data-key="${key}"]`);
     return keys.length > 1;
 }
 function asyncKeyItem(parentNode, ul, eo){
@@ -407,7 +407,7 @@ function asyncKeyItem(parentNode, ul, eo){
                 }
                 ds.key = val;
         })
-        if(duplicateKey(val)){
+        if(duplicateKey(ul, val)){
             eo.classList.add('duplicated');
             eo.focus();
         }
@@ -424,7 +424,7 @@ locales.addEventListener('keyup', function(e){
         clearTimeout(me.timer);
         me.timer = setTimeout(function(){
             asyncKeyItem(me, ul, eo);
-        }, 1300);
+        }, 600);
     }
 
 }, false);
