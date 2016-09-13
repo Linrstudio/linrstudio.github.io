@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Document</title>
+<title>多语言 JSON 配置</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>html{color:#000;background:#fff;-webkit-text-size-adjust:100%;text-rendering:optimizelegibility;-ms-overflow-style:-ms-autohiding-scrollbar;}
 body,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,textarea,p,th,td,hr,button,article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{margin:0;padding:0}
 article,aside,details,footer,header,hgroup,menu,nav,section{display:block}
@@ -91,6 +92,8 @@ textarea{
 .hide-keys .key-item,
 .hide-vals .flag-item,
 .hide-vals .val-item{display:none;}
+
+.duplicated{background:red;color:#FFF;}
 
 .ui-mask{
 	position:fixed;
@@ -263,7 +266,7 @@ function stringify(el){
     return html;
 }
 
-function verifyJSON(parentEl){
+function getJSON(parentEl){
     let results = document.getElementById('results');
     let all = Array.from(parentEl.querySelectorAll('.locales'));
     results.innerHTML = '';
@@ -275,6 +278,14 @@ function verifyJSON(parentEl){
             div.innerHTML = htm;
         results.appendChild(div);
     })
+}
+
+function getLocales(eo){
+    let ul = eo;
+    while(!ul.classList.contains('locales')){
+        ul = ul.parentElement;
+    }
+    return ul;
 }
 
 let locales = document.getElementById('locales_tabcnt');
@@ -336,7 +347,7 @@ var Actions = {
         }
     },
     verifyJSON: function(){
-        verifyJSON(locales);
+        getJSON(locales);
     }
 };
 document.body.addEventListener('click', function(e){
@@ -346,17 +357,14 @@ document.body.addEventListener('click', function(e){
 }, false)
 
 locales.addEventListener('keydown', function(e){
-    let me = this;
-    let eo = e.target;
-    let ul = eo;
-    while(!ul.classList.contains('locales')){
-        ul = ul.parentElement;
-    }
+    let me = this,
+        eo = e.target;
+    let ul = getLocales(eo);
+    
     if(e.keyCode == 13 && tagName(ul) == 'ul'){
         e.preventDefault();
         let next = eo.parentElement.nextSibling;
         let all = Array.from(me.querySelectorAll('.locales'));
-        //console.log('next: ', next);
         
         if(next){
             if(tagName(next) == 'li'){
@@ -375,7 +383,51 @@ locales.addEventListener('keydown', function(e){
             })
         }
     }
+
 }, false)
+
+function duplicateKey(key){
+    let keys = document.querySelectorAll(`.locales [data-key="${key}"]`);
+    return keys.length > 1;
+}
+function asyncKeyItem(parentNode, ul, eo){
+    let currentIndex = Array.from(ul.children).indexOf(eo.parentElement);
+    if(currentIndex > -1){
+        let val = eo.textContent;
+        Array.from(parentNode.querySelectorAll('.locales')).forEach(function(locale, i){
+            
+            let find = locale.children[currentIndex];
+            let keyItem = find.querySelector('.key-item');
+                if(locale != ul){
+                    keyItem.textContent = val;
+                }
+                let ds = keyItem.parentElement.dataset;
+                if(!ds.oldkey){
+                    ds.oldkey = ds.key;
+                }
+                ds.key = val;
+        })
+        if(duplicateKey(val)){
+            eo.classList.add('duplicated');
+            eo.focus();
+        }
+    }
+}
+
+locales.addEventListener('keyup', function(e){
+    let me = this,
+        eo = e.target;
+    let ul = getLocales(eo);
+
+    if(tagName(ul) == 'ul' && eo.classList.contains('key-item')){
+        eo.classList.remove('duplicated');    
+        clearTimeout(me.timer);
+        me.timer = setTimeout(function(){
+            asyncKeyItem(me, ul, eo);
+        }, 1300);
+    }
+
+}, false);
 
 </script>
 </body>
