@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta content="width=device-width" name="viewport">   
+<title>输入 SVG 字体 URL，下载每个字符 SVG</title>
+<style>
+.ui-form,.preview{
+	margin-bottom:20px;
+}
+svg{cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="ui-form">
+	<input type="url" id="url" value="http://at.alicdn.com/t/rwuhqm0bqyrv0a4i.svg#NotoSansHans-DemiLight#bole.svg" >
+	<input type="button" id="ok" value="加载">
+</div>
+
+<a style="display:none" id="download" download>下载<a>
+<div class="preview" id="result">
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
+<script>
+(function($){
+	var tpl = `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 -120 1048 1048">
+	  <defs>
+		<style>
+		  .cls-1 { 
+			fill: #1e7dff; 
+			fill-rule: evenodd; 
+			opacity: 0.8; 
+		}
+		</style>
+	  </defs>
+	  {{glyphs}}
+	</svg></a>`;
+	function loadSVG(url){  
+		$.ajax({
+			url: url || 'http://at.alicdn.com/t/rwuhqm0bqyrv0a4i.svg#NotoSansHans-DemiLight#bole.svg',
+			success: function(glyphs){
+				var html = [];
+				glyphs = glyphs.substring(glyphs.indexOf('<glyph'));
+				glyphs = glyphs.substring(0, glyphs.indexOf('</font>'));
+				glyphs = glyphs.replace(/<glyph/gi, '<path class="cls-1"');
+				glyphs.split('<').forEach(function(glyph, i){
+					glyph && html.push(tpl.replace('{{glyphs}}', '<' + glyph));
+				});
+				
+				$('#result').html(html.join('\n'));
+			}
+		})
+	}
+	$('#result').click(function(e){
+		var eo = e.target;
+		if(eo.tagName.toLowerCase() == 'svg'){
+			$('#download').attr({
+				'download': eo.querySelector('path').getAttribute('unicode') + '.svg',
+				'href': 'data:text/svg,' + eo.outerHTML.replace(/\r|\n/g, '')
+			});
+			$('#download').trigger('click');
+			//var evt = document.createEvent("HTMLEvents");evt.initEvent("click", false, false);a.dispatchEvent(evt);
+		}	
+	});
+	$('#ok').click(function(e){
+		var val = $('#url').val();
+		if(val && val.startsWith('http')){
+			loadSVG(val);
+		}	
+	});
+})(window.jQuery || window.Zepto);
+</script>
+</body>
+</html>
