@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-    <title>flv.js demo</title>
-
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>flv 播放</title>
     <style>
         .mainContainer {
             display: block;
@@ -44,51 +44,56 @@
 <body>
     
     <div class="mainContainer">
-        <input name="urlinput" class="urlInput" type="text" value="http://127.0.0.1/flv/7182741.json"/>
+        <input name="urlinput" class="urlInput" type="text" value="" placeholder="请输入 flv 地址"/>
         <video name="videoElement" class="centeredVideo" controls autoplay width="1024" height="576">
             Your browser is too old which doesn't support HTML5 video.
         </video>
         <br>
         <div class="controls">
-            <button onclick="flv_load()">Load</button>
-            <button onclick="flv_start()">Start</button>
-            <button onclick="flv_pause()">Pause</button>
-            <button onclick="flv_destroy()">Destroy</button>
+            <button onclick="flv_load()">加载</button>
+            <button onclick="flv_start()">播放</button>
+            <button onclick="flv_pause()">暂停</button>
+            <button onclick="flv_destroy()">回收</button>
             <input style="width:100px" type="text" name="seekpoint"/>
-            <button onclick="flv_seekto()">SeekTo</button>
+            <button onclick="flv_seekto()">跳转</button>
+			
+			<a href="m3u8.html" style="font-size:14px;color:#444;text-decoration: none;">m3u8播放器</a>
         </div>
+		
     </div>
 
-    <script src="http://cdn.bootcss.com/flv.js/1.1.0/flv.min.js"></script>
+    <!-- script src="http://cdn.bootcss.com/flv.js/1.1.0/flv.min.js"></script-->
+    <script src="flv.min.js"></script>
     
     <script>
+		var player;
         function flv_load() {
             console.log('isSupported: ' + flvjs.isSupported());
             var urlinput = document.getElementsByName('urlinput')[0];
 
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', urlinput.value, true);
-            xhr.onload = function (e) {
-                var mediaDataSource = JSON.parse(xhr.response);
-
-                var element = document.getElementsByName('videoElement')[0];
-                if (typeof player !== "undefined") {
-                    if (player != null) {
-                        player.unload();
-                        player.detachMediaElement();
-                        player.destroy();
-                        player = null;
-                    }
-                }
-                player = flvjs.createPlayer(mediaDataSource, {
-                    enableWorker: false,
-                    lazyLoadMaxDuration: 3 * 60,
-                    seekType: 'range',
-                });
-                player.attachMediaElement(element);
-                player.load();
-            }
-            xhr.send();
+			var cfg = {
+				"type": "flv",
+				"isLive": true,
+				"url": urlinput.value
+			};
+	
+			var element = document.getElementsByName('videoElement')[0];
+			if (typeof player !== "undefined") {
+				if (player != null) {
+					player.unload();
+					player.detachMediaElement();
+					player.destroy();
+					player = null;
+				}
+			}
+			player = flvjs.createPlayer(cfg, {
+				enableWorker: false,
+				lazyLoadMaxDuration: 3 * 60,
+				seekType: 'range',
+			});
+			player.attachMediaElement(element);
+			player.load();
+ 
         }
 
         function flv_start() {
@@ -129,7 +134,7 @@
         urlInputBox.value = url;
         
         document.addEventListener('DOMContentLoaded', function () {
-            flv_load();
+            //flv_load();
         });
     </script>
     
