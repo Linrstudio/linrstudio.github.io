@@ -6,7 +6,7 @@
                     {
                         "type": "view", 
                         "name": "水电煤", 
-                        "url": "https://jiaofei.alipay.com/fare/ebppChargeEntering.htm", 
+                        "url": "https://jiaofei.alipay.com/fare/ebppChargeEntering.htm"
                     }
                 ]
             }, 
