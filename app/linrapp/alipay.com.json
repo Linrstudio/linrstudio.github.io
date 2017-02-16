@@ -5,15 +5,65 @@
                 "sub_button": [
                     {
                         "type": "view", 
-                        "name": "水电煤", 
+                        "name": "水电煤费", 
                         "url": "https://jiaofei.alipay.com/fare/ebppChargeEntering.htm"
+                    },{
+                        "type": "view", 
+                        "name": "手机充值", 
+                        "url": "https://ebppprod.alipay.com/recharge/recharge.htm"
+                    },{
+                        "type": "view", 
+                        "name": "还信用卡", 
+                        "url": "https://ccrprod.alipay.com/ccr/repayNew.htm"
+                    },{
+                        "type": "view", 
+                        "name": "固话宽带", 
+                        "url": "https://jiaofei.alipay.com/guhua.htm"
+                    },{
+                        "type": "view", 
+                        "name": "有线电视", 
+                        "url": "https://jiaofei.alipay.com/fare/ebppChargeEntering.htm?chargeType=catv"
+                    },{
+                        "type": "view", 
+                        "name": "挂号预约", 
+                        "url": "http://app.alipay.com/home/appGateway.htm?appId=1000000113"
                     }
                 ]
             }, 
             {
-                "name": "我的支付宝", 
-                "type": "view", 
-                "url": "https://my.alipay.com/"
+                "name": "我的", 
+                "sub_button": [
+                 {
+                      "type": "view", 
+                      "name": "交易记录", 
+                      "url": "https://consumeprod.alipay.com/record/standard.htm"
+                 },
+                 {
+                      "type": "view", 
+                      "name": "支付宝转账", 
+                      "url": "https://shenghuo.alipay.com/send/payment/fill.htm?_tosheet=true&_pdType=afcabecbafgggffdhjch"
+                 },
+                 {
+                      "type": "view", 
+                      "name": "转账到银行", 
+                      "url": "https://shenghuo.alipay.com/transfercore/fill.htm?_tosheet=true&_pdType=afcabecbcahiibffiiih"
+                 },
+                 {
+                      "type": "view", 
+                      "name": "我的二维码", 
+                      "url": "https://qr.alipay.com/paipai/personal.htm"
+                 },
+                 {
+                      "type": "view", 
+                      "name": "账户设置", 
+                      "url": "https://custweb.alipay.com/account/index.htm"
+                 },
+                 {
+                      "type": "view", 
+                      "name": "我的支付宝", 
+                      "url": "https://my.alipay.com/"
+                 }
+                ]
             }
         ]
     }
