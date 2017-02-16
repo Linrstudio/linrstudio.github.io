@@ -1,0 +1,12 @@
+{
+        "button": [
+        {
+		      "type": "view", 
+		      "name": "我的行程", 
+          "url": "https://common.diditaxi.com.cn/webapp/pages/travel"
+        },{
+         "type": "view", 
+         "name": "兑换码", 
+         "url": "https://c.xiaojukeji.com/static/code/index.html"
+        }]
+}
