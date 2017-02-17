@@ -1,0 +1,24 @@
+{
+        "button": [{
+		      "type": "view", 
+		      "name": "输车牌", 
+          "url": "http://common.ofo.so/newdist/?Journey&~pressed=true"
+        },
+        {
+		      "type": "view", 
+		      "name": "行程", 
+          "url": "http://common.ofo.so/newdist/?MeineReise"
+        },{
+         "type": "view", 
+         "name": "兑换码", 
+         "url": "https://c.xiaojukeji.com/static/code/index.html"
+        },{
+         "type": "view", 
+         "name": "钱包", 
+         "url": "http://common.ofo.so/newdist/?Wallet"
+        },{
+         "type": "view", 
+         "name": "活动", 
+         "url": "http://common.ofo.so/newdist/?Campaigns"
+        }]
+}
