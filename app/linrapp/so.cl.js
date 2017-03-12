@@ -9,17 +9,31 @@ function LinrPadLeft(str) {
   var pad = '00'; return pad.substring(0, pad.length - str.length) + str; 
 };
 function LinrRenderAll(id) {
-var el = document.createElement('div');
-for (var i = 0; i < 25; ++i) {
-var $eo = $('#' + id);
-var w = $eo.width(), h = $eo.height();
-var img = new Image;
-img.src = 'http://cdn3.so.cl/handlers/thumbnail?h=' + h + '&w='+ w + '&url=http%3A%2F%2Fwww.so.cl%2FFusion%2FPublic%2FBlink%2FBlinkFile(\'' + id + '\'%2C\'preview-' + LinrPadLeft(i + '') + '.jpg\')&key=' + LinrGetToken('http://www.so.cl/Fusion/Public/Blink/BlinkFile(\'' + id + '\',\'preview-' + LinrPadLeft(i + '') + '.jpg\')');
-el.appendChild(img); 
-document.body.appendChild(el);};
+  var srcs = [];
+  var $eo = $('#' + id);
+  var w = $eo.width(), 
+      h = $eo.height();
+  var el = document.createElement('div');
+      el.id = 'LinrAppSoClBlinks';
+  for (var i = 0; i < 25; ++i) {
+    var index = LinrPadLeft(i + ''),
+        token = LinrGetToken('http://www.so.cl/Fusion/Public/Blink/BlinkFile(\'' + id + '\',\'preview-' + index + '.jpg\')'),
+        img = new Image;
+        img.src = 'http://cdn3.so.cl/handlers/thumbnail?h=' + h + '&w='+ w + '&url=http%3A%2F%2Fwww.so.cl%2FFusion%2FPublic%2FBlink%2FBlinkFile(\'' + id + '\'%2C\'preview-' + index + '.jpg\')&key=' + token;
+        el.appendChild(img);
+        srcs.push(h + '|' + w + '|' + index + '|' + token);
+  };
+  document.body.appendChild(el);
+  return srcs;
 };
 var title = document.querySelector('.stacks-tile.post-core.post-tile.posttype-moment'); 
 if (title) {
   var id = title.dataset.id;
-  LinrRenderAll(id);
+  if（id){
+    var srcs = LinrRenderAll(id);
+    console.log('srcs', srcs);
+    if(srcs.length){
+      location.href='linrappx://slideshow/' + srcs.join('`');
+    }
+  }
 };
