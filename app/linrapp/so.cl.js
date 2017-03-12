@@ -21,7 +21,7 @@ function LinrRenderAll(id) {
         img = new Image;
         img.src = 'http://cdn3.so.cl/handlers/thumbnail?h=' + h + '&w='+ w + '&url=http%3A%2F%2Fwww.so.cl%2FFusion%2FPublic%2FBlink%2FBlinkFile(\'' + id + '\'%2C\'preview-' + index + '.jpg\')&key=' + token;
         el.appendChild(img);
-        srcs.push(h + '|' + w + '|' + index + '|' + token);
+        srcs.push(h + '|' + w + '|' + id + '|' + index + '|' + token);
   };
   document.body.appendChild(el);
   return srcs;
