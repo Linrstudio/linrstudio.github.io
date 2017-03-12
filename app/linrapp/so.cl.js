@@ -1,6 +1,6 @@
 function LinrXCode(n, t) { 
   for (var r = 0, u, i = 0; i < n.length; i++){u = n.charCodeAt(i),r += u & 255,r += u >> 8 & 255;};
-  return r % t
+  return r % t;
 };
 function LinrGetToken(n) {
   var r = localStorage['thumbnailKeys']; var i = JSON.parse(r.substr(2)); var u = LinrXCode(n, i.thumbnailKeys.length); return i.thumbnailKeys[u];
@@ -29,7 +29,7 @@ function LinrRenderAll(id) {
 var title = document.querySelector('.stacks-tile.post-core.post-tile.posttype-moment'); 
 if (title) {
   var id = title.dataset.id;
-  if（id){
+  if(id){
     var srcs = LinrRenderAll(id);
     console.log('srcs', srcs);
     if(srcs.length){
