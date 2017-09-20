@@ -22,7 +22,7 @@
                     var html = [];
                     for (var i = 49; i > -2; i--) {
                         var src = 'images/cg/' + i + '.jpg';
-                        html.push('<li class="item"><a href="' + src + '" target="_blank"><img src="' + src + '" /></a></li>');
+                        html.push('<li class="item"><a href="' + src + '" target="_blank"><img class="lazy" data-src="' + src + '" /></a></li>');
                     }
                     document.getElementById('gallery').innerHTML = html.join('\n');
                 };
@@ -30,6 +30,13 @@
             </script>
         </div>
     </div>
+    <script src="js/zepto.v1.1.4.x.js"></script>
+    <script src="js/zepto-lazy-load.v1.8.6.js"></script>
+    <script>
+    (function($){
+        $('.lazy').lazyload({threshold : 450, effect : false, skip_above: false});
+    })(window.Zepto)
+    </script>
 </body>
 
 </html>
