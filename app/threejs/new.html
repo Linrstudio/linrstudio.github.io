@@ -351,7 +351,6 @@ ImageParticles.prototype.setParticles = function(){
         
 };
 ImageParticles.prototype.show = function(){
-    debugger
     if (!this.ready)
         return void (this.pending = "show");
     var t = "Power4.easeInOut"
@@ -422,11 +421,13 @@ var clock = new THREE.Clock();
 
 var face;
 
-init();
-
 var controls;
 
 var scene;
+
+var camera2 = {};
+
+init();
 
 function init() {
 
@@ -436,7 +437,6 @@ function init() {
     scene = new THREE.Scene;
     scene.name = '3166 container';
 
-    var camera2 = {};
     camera2.amplitude = .6,
     camera2.duration = 1.5,
     camera2.ease = "Power2.easeInOut",
@@ -500,15 +500,15 @@ function render(a) {
 
     face.update();
     
-	renderer.render(scene, camera);
+	renderer.render(scene, camera2.object);
 };
 function onWindowResize() {
 
     windowHalfX = window.innerWidth / 2;
     windowHalfY = window.innerHeight / 2;
 
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    camera2.object.aspect = window.innerWidth / window.innerHeight;
+    camera2.object.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
 
