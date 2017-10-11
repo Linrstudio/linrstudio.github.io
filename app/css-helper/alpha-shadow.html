@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title></title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta content="width=device-width" name="viewport" />
+<link rel="stylesheet" href="css/css-helper.css">
+<script src="js/lib.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+	<div class="app-inner app-aplha-shadow" id="mod_ui_aplha_shadow">
+	
+		<h3>透明层叠：</h3>
+		<div class="ui-form">
+            <div class="ui-form-item">
+                <label class="ui-label">Selector：</label>
+                <input class="ui-input fn-selector" type="text" value="alpha-shadow">
+            </div>
+
+            <div class="ui-form-item">
+                <label class="ui-label">BgColor：</label>
+                <input class="ui-input fn-background-color" type="color" value="#FFFFFF">
+            </div>
+            
+            <div class="ui-form-item">
+                <label class="ui-label">Width：</label>
+                <input class="ui-input fn-width" type="text" value="301px">
+                <a class="ui-link-button fn-plus" data-id="fn-width">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-width">-</a>
+            </div>
+
+            <div class="ui-form-item">
+                <label class="ui-label">Height：</label>
+                <input class="ui-input fn-height" type="text" value="148px">
+                <a class="ui-link-button fn-plus" data-id="fn-height">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-height">-</a>
+            </div>
+            
+            <div class="ui-form-item">
+                <label class="ui-label">Top：</label>
+                <input class="ui-input fn-top" type="text" value="60px">
+                <a class="ui-link-button fn-plus" data-id="fn-top">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-top">-</a>
+            </div>
+            
+            <div class="ui-form-item">
+                <label class="ui-label">Left：</label>
+                <input class="ui-input fn-left" type="text" value="60px">
+                <a class="ui-link-button fn-plus" data-id="fn-left">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-left">-</a>
+            </div>
+
+            <div class="ui-form-item" title="设置有间隔时，此值失效">
+                <label class="ui-label">Bottom：</label>
+                <input class="ui-input fn-top2" type="text" value="190px">
+                <a class="ui-link-button fn-plus" data-id="fn-top2">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-top2">-</a>
+            </div>
+            
+            <div class="ui-form-item" title="设置有间隔时，此值失效">
+                <label class="ui-label">Right：</label>
+                <input class="ui-input fn-left2" type="text" value="150px">
+                <a class="ui-link-button fn-plus" data-id="fn-left2">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-left2">-</a>
+            </div>
+
+            <div class="ui-form-item">
+                <label class="ui-label">元素个数：</label>
+                <input class="ui-input fn-size" type="text" value="4">
+            </div>
+
+            <div class="ui-form-item">
+                <label class="ui-label">X间隔：</label>
+                <input class="ui-input fn-dist-x" type="text" value="10">
+                <a class="ui-link-button fn-plus" data-id="fn-dist-x">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-dist-x">-</a>
+            </div>
+            <div class="ui-form-item">
+                <label class="ui-label">Y间隔：</label>
+                <input class="ui-input fn-dist-y" type="text" value="10">
+                <a class="ui-link-button fn-plus" data-id="fn-dist-y">+</a>
+                <a class="ui-link-button fn-reduce" data-id="fn-dist-y">-</a>
+            </div>
+
+			<div class="ui-form-item fn-each-tag">
+				<label class="ui-label">元素：</label>
+				<label><input class="ui-radio" type="radio" value="i" name="icon_tag_rd" checked="checked"> &lt;i&gt;</label>
+				<label><input class="ui-radio" type="radio" value="span" name="icon_tag_rd"> &lt;span&gt;</label>
+				<label><input class="ui-radio" type="radio" value="div" name="icon_tag_rd"> &lt;div&gt;</label>
+            </div>
+            
+			<div class="ui-form-item fn-each-margin">
+				<label class="ui-label">间隔：</label>
+				<label><input class="ui-radio" type="radio" value="1" name="icon_margin_rd" checked="checked"> 逐层缩小1px</label>
+				<label><input class="ui-radio" type="radio" value="0" name="icon_margin_rd"> 相同间隔</label>
+            </div>
+            
+			<div class="ui-form-item fn-each-scale">
+				<label class="ui-label">缩放：</label>
+				<label><input class="ui-radio" type="radio" value="" name="icon_scale_rd" checked="checked"> 不缩放</label>
+				<label><input class="ui-radio" type="radio" value="1" name="icon_scale_rd"> 逐层缩小</label>
+            </div>
+
+            <div class="ui-form-item fn-each-dir">
+                <label class="ui-label">位置：</label>
+                <label><input class="ui-radio" type="radio" value="left" name="icon_dir_rd" checked="checked"> 浮在左侧</label>
+                <label><input class="ui-radio" type="radio" value="right" name="icon_dir_rd"> 浮在右侧</label>
+            </div>
+
+            <div class="ui-form-item fn-each-opacity">
+                <label class="ui-label">透明：</label>
+                <label><input class="ui-radio" type="radio" value="1" name="icon_opacity_rd" checked="checked"> 逐层透明</label>
+                <label><input class="ui-radio" type="radio" value=".2" name="icon_opacity_rd"> 递减0.2</label>
+                <label><input class="ui-radio" type="radio" value="" name="icon_opacity_rd"> 不变</label>
+            </div>
+
+			<div class="ui-form-item">
+				<input class="ui-input fn-ok" type="button" value="生成">
+			</div>
+			<div class="ui-form-item demo">
+				<iframe frameborder="0" class="iframe"></iframe>
+			</div>
+		</div>
+
+		<script>
+		$(function(){
+			var me = $('#mod_ui_aplha_shadow');
+			var el = {
+                getVal: function(selector, noUnit){
+                    var val = $(selector).val();
+                    return !noUnit ? val : parseInt(val, 10);
+                },
+				getHTML : function(){
+                    var tag = this.getVal('.fn-each-tag .ui-radio:checked'),
+                        selector = this.getVal('.fn-selector'),
+                        size = this.getVal('.fn-size', true);
+                    var tpl = `<${tag}></${tag}>\n`;
+
+					return `<div class="${selector}">
+                        ${tpl.repeat(size)}
+                    </div>`;
+				},
+				tuneVal : function(obj, index){
+					var id = $(obj).attr('data-id');
+					var txt = $('.' + id, me);
+					var val = txt.val();
+					if(val != ''){
+						var tmp = parseInt(val, 10);
+						txt.val((tmp += index) + 'px');
+					}
+                },
+                getOneRule: function(selector, tag, size, index, other){
+                    
+                    var flag = index + 1;
+
+                    var height = this.getVal('.fn-height', true),
+                        width = this.getVal('.fn-width', true),
+                        top = this.getVal('.fn-top', true),
+                        left = this.getVal('.fn-left', true),
+                        distX = this.getVal('.fn-dist-x', true),
+                        distY = this.getVal('.fn-dist-y', true),
+                        dir = this.getVal('.fn-each-dir .ui-radio:checked'),
+                        needScale = this.getVal('.fn-each-scale .ui-radio:checked'),
+                        opacityReduce = this.getVal('.fn-each-opacity .ui-radio:checked'),
+                        opacity, transformVal;
+
+                    if(opacityReduce){
+                        if(opacityReduce == '1'){
+                            opacity = `opacity: ${flag / size};`;
+                        }else{
+                            opacity = `opacity: ${1 - Number(opacityReduce) * (size - index - 1)};`;
+                        }
+                    }
+                    
+                    if(!distX || !distY || distX == 0 || distY == 0){
+
+                        var top2 = this.getVal('.fn-top2', true),
+                            left2 = this.getVal('.fn-left2', true);
+
+                        distY = (top2 - top) / size;
+                        distX = (left2 - left) / size;
+                    }
+
+                    var tranX, tranY;
+
+                    if(dir == 'left'){
+                        tranX = distX * (size - index),
+                        tranY = distY * (size - index);
+                    }else{
+                        tranX = distX * index,
+                        tranY = distY * (size - index);
+                    }
+
+                    if(needScale){
+                        if(dir == 'left'){
+                            transformVal = `transform-origin:right center;\ntransform:translate3d(-${distX * index}px,0,0) scale(${flag / size});\n`;
+                        }else{
+                            transformVal = `transform-origin:left center;\ntransform:translate3d(${distX * index}px,0,0) scale(${flag / size});\n`;
+                        }
+                    }else{
+                        transformVal = `transform:translate3d(${tranX}px,${tranY}px,0);\n`;
+                    }
+
+if(distX > 0 || distY > 0){
+
+return `${selector} ${tag}:nth-child(${flag}){
+    width: ${width}px;
+    height: ${height}px;
+    top: ${top}px;
+    left: ${left}px;
+    ${transformVal}
+    ${opacity}
+}`;
+}
+                },
+				getCSS : function(){
+                    var tag = this.getVal('.fn-each-tag .ui-radio:checked'),
+                        dir = this.getVal('.fn-each-dir .ui-radio:checked'),
+                        selector = '.' + this.getVal('.fn-selector'),
+                        bgcolor = this.getVal('.fn-background-color'),
+                        size = this.getVal('.fn-size', true);
+
+                var cssText = [];
+                cssText.push(`
+${selector} {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    z-index: 1;
+
+    padding: 0 80px;
+}
+${selector} ${tag} {
+    display: block;
+    position: absolute;
+    background-color: ${bgcolor};
+    transform: translate3d(0,0,0);
+    transform-origin: 0 center;
+    transition: all .6s linear;
+    box-shadow: -4px 6px 14px rgba(0,0,0,.3);
+}`);
+                for(var i = 0; i < size; i ++){
+                    cssText.push(this.getOneRule(selector, tag, size, i));
+                }
+                return cssText.join('\n');
+        }
+}
+			$('.fn-plus', me).click(function(e){
+				el.tuneVal(this, !e.shiftKey ? 1 : 5);
+				e.preventDefault();
+				e.stopPropagation();
+            })
+            
+			$('.fn-reduce', me).click(function(e){
+				el.tuneVal(this, !e.shiftKey ? -1 : -5);
+				e.preventDefault();
+				e.stopPropagation();
+			})
+			
+			$('.fn-size-user', me).change(function(){
+				var _txt = $('.fn-size-user-txt', me);
+				if(this.checked){
+					_txt.show();
+					$(this).val(_txt.val());
+				}
+			})
+			
+			$('.fn-ok', me).click(function(e){
+				var _demo = $('.iframe', me)[0];
+				preview(_demo,el.getCSS(), el.getHTML());
+			})
+			$('.fn-get-btn', me).click(function(e){
+				$('.ui-btn-setting').removeClass('hide');
+			})
+			
+		})
+		</script>	
+		
+	</div>	
+
+	<div class="ui-line"></div>
+
+	
+<div class="result-panel">
+
+	<div class="css-panel">
+		<textarea class="ui-input-code" id="css_code" cols="30" rows="10"></textarea>
+	</div>
+	<div class="html-panel">
+		<textarea class="ui-input-code" id="html_code" cols="30" rows="10"></textarea>
+	</div>
+</div>
+
+<script>
+function preview(ele, css, htm){
+    var head = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title></title>
+`;
+
+var foot = `<style>
+*{margin:0;padding:0;list-style:none;}
+body{line-height:1.5;}
+
+${css}
+</style>
+</head>
+<body>
+${htm}
+</body>
+</html>
+`
+	var doc = ele.contentDocument;
+		doc.open();
+		doc.write(head + foot);
+
+    $('#css_code').val(css);
+    $('#html_code').val(htm);
+
+}
+</script>
+
+</body>
+</html>

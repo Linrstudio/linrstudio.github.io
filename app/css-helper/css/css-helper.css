@@ -1,0 +1,103 @@
+/* todo 
+ 超出长度省略
+ */
+html{overflow-y:scroll;}
+img{-ms-interpolation-mode:bicubic}
+section,article,aside,header,footer,nav,figure{display:block}
+body,h1,h2,h3,h4,h5,h6,p,blockquote,dl,dt,dd,ul,ol,li,pre,form,fieldset,legend,button,input,textarea,th,td,figure{margin:0;padding:0}
+body,button,input,select,textarea{font:12px/1.5 arial}
+h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-size:100%}
+address,cite,dfn,em,var{font-style:normal}
+code,kbd,pre,samp{font-family:courier new,courier,monospace}
+small{font-size:12px}
+ul,ol{list-style:none}
+a{text-decoration:none}
+a:hover{text-decoration:underline}
+sup{vertical-align:text-top}
+sub{vertical-align:text-bottom}
+legend{color:#000}
+fieldset,img{border:0}
+table{border-collapse:collapse;border-spacing:0}
+input::-moz-focus-inner,button::-moz-focus-inner{border:0;padding:0;outline:0}
+::-webkit-file-upload-button{cursor:pointer;}
+.clear{*zoom:1}
+.clear:after{content:'\20';display:block;clear:both;height:0}
+.hide{display:none;}
+
+.app{padding:10px;font-family:"微软雅黑", Tahoma, "HelveticaNeue", "Helvetica Neue", Helvetica, Arial;}
+h3{font-size:20px;font-weight:300;padding-bottom:10px;}
+
+.ui-line{
+	border-bottom:1px solid #CCC;
+}
+
+.ui-form-item{
+	padding-left:100px;
+	margin-bottom:10px;
+	color:#666;
+}
+.ui-label{
+	font-size:14px;
+	color:#333;
+}
+.ui-input{
+	height:18px;
+	padding:2px;
+}
+.ui-input[type="button"]{
+	height:auto;
+	padding:3px 10px;
+	background:#86d993;
+	border:none;
+	font-size:14px;
+	color:#FFF;
+	text-shadow:0px 1px 0px rgba(0,0,0,0.4);
+	cursor:pointer;
+}
+.ui-form-item label *,
+.ui-radio{vertical-align:middle;}
+.ui-form .ui-label{
+	margin-left:-100px;
+	width:100px;
+	text-align:right;
+	display:inline-block;
+}
+.app .ui-line,
+.app .ui-form{
+	margin-bottom:20px;
+}
+.ui-link-button{
+	padding:4px 8px;
+    border:1px solid #DDD;
+	cursor: pointer;
+	user-select: none;
+}
+.ui-link-button:hover{text-decoration:none;border-color:#BBB;}
+.ui-form-group{
+	margin:10px 0;
+	padding:5px 0;
+	border:1px solid #D1D1D1;
+}
+
+.result-panel{
+	position:fixed;
+	_position:absolute;
+	top:0;
+	right:0;
+	width:500px;
+	border:1px solid #EEE;
+	background:#FFF;
+	box-shadow:1px 1px 3px #CCC;
+}
+.css-panel,.html-panel{
+	padding:6px;
+}
+.ui-input-code{
+	width:100%;
+	border:1px solid #EEE;
+}
+
+.app-aplha-shadow .iframe{
+    width: 100%;
+    min-height: 600px;
+}
