@@ -79,13 +79,20 @@
                 <input class="ui-input fn-dist-x" type="text" value="10">
                 <a class="ui-link-button fn-plus" data-id="fn-dist-x">+</a>
                 <a class="ui-link-button fn-reduce" data-id="fn-dist-x">-</a>
+
+                <label>X偏移：
+                <input class="ui-input fn-offset-x" type="text" value="0"></label>
             </div>
             <div class="ui-form-item">
                 <label class="ui-label">Y间隔：</label>
                 <input class="ui-input fn-dist-y" type="text" value="10">
                 <a class="ui-link-button fn-plus" data-id="fn-dist-y">+</a>
                 <a class="ui-link-button fn-reduce" data-id="fn-dist-y">-</a>
+                <label>Y偏移：
+                    <input class="ui-input fn-offset-y" type="text" value="0"></label>
             </div>
+
+            
 
 			<div class="ui-form-item fn-each-tag">
 				<label class="ui-label">元素：</label>
@@ -117,6 +124,12 @@
                 <label><input class="ui-radio" type="radio" value="1" name="icon_opacity_rd" checked="checked"> 逐层透明</label>
                 <label><input class="ui-radio" type="radio" value=".2" name="icon_opacity_rd"> 递减0.2</label>
                 <label><input class="ui-radio" type="radio" value="" name="icon_opacity_rd"> 不变</label>
+            </div>
+
+            <div class="ui-form-item fn-each-unit">
+                <label class="ui-label">单位：</label>
+				<label><input class="ui-radio" type="radio" value="px" name="icon_unit_rd" checked="checked"> px</label>
+				<label><input class="ui-radio" type="radio" value="rem" name="icon_unit_rd" title="相对 HTML 为 100px。"> rem</label>
             </div>
 
 			<div class="ui-form-item">
@@ -158,22 +171,30 @@
                     
                     var flag = index + 1;
 
-                    var height = this.getVal('.fn-height', true),
+                        var times = 1,
+                        height = this.getVal('.fn-height', true),
                         width = this.getVal('.fn-width', true),
                         top = this.getVal('.fn-top', true),
                         left = this.getVal('.fn-left', true),
                         distX = this.getVal('.fn-dist-x', true),
                         distY = this.getVal('.fn-dist-y', true),
+                        offsetX = this.getVal('.fn-offset-x', true),
+                        offsetY = this.getVal('.fn-offset-y', true),
                         dir = this.getVal('.fn-each-dir .ui-radio:checked'),
+                        unit = this.getVal('.fn-each-unit .ui-radio:checked'),
                         needScale = this.getVal('.fn-each-scale .ui-radio:checked'),
                         opacityReduce = this.getVal('.fn-each-opacity .ui-radio:checked'),
                         opacity, transformVal;
+
+                    if(unit == 'rem'){
+                        times = 100;
+                    }
 
                     if(opacityReduce){
                         if(opacityReduce == '1'){
                             opacity = `opacity: ${flag / size};`;
                         }else{
-                            opacity = `opacity: ${1 - Number(opacityReduce) * (size - index - 1)};`;
+                            opacity = `opacity: ${1 - Number(opacityReduce) * (size - flag)};`;
                         }
                     }
                     
@@ -189,41 +210,54 @@
                     var tranX, tranY;
 
                     if(dir == 'left'){
-                        tranX = distX * (size - index),
-                        tranY = distY * (size - index);
+                        tranX = distX * (size - flag),
+                        tranY = distY * (size - flag);
                     }else{
                         tranX = distX * index,
-                        tranY = distY * (size - index);
+                        tranY = distY * (size - flag);
                     }
 
                     if(needScale){
+                        var tranXVal = (distX * index - offsetX) / times;
                         if(dir == 'left'){
-                            transformVal = `transform-origin:right center;\ntransform:translate3d(-${distX * index}px,0,0) scale(${flag / size});\n`;
+                            transformVal = `transform-origin:right center;\ntransform:translate3d(-${tranXVal}${unit},0,0) scale(${flag / size});`;
                         }else{
-                            transformVal = `transform-origin:left center;\ntransform:translate3d(${distX * index}px,0,0) scale(${flag / size});\n`;
+                            transformVal = `transform-origin:left center;\ntransform:translate3d(${tranXVal}${unit},0,0) scale(${flag / size});`;
                         }
                     }else{
-                        transformVal = `transform:translate3d(${tranX}px,${tranY}px,0);\n`;
+                        if(unit == 'px'){
+                            transformVal = `transform:translate3d(${tranX - offsetX}${unit},${tranY - offsetY}${unit},0);`;
+                        }else{
+                            var tranXVal = (tranX - offsetX) / times,
+                                tranYVal = (tranY - offsetY) / times;
+                            transformVal = `transform:translate3d(${tranXVal}${unit},${tranYVal}${unit},0);`;
+                        }
                     }
 
 if(distX > 0 || distY > 0){
 
 return `${selector} ${tag}:nth-child(${flag}){
-    width: ${width}px;
-    height: ${height}px;
-    top: ${top}px;
-    left: ${left}px;
     ${transformVal}
     ${opacity}
 }`;
 }
                 },
 				getCSS : function(){
-                    var tag = this.getVal('.fn-each-tag .ui-radio:checked'),
+                    var times = 1,
+                        height = this.getVal('.fn-height', true),
+                        width = this.getVal('.fn-width', true),
+                        top = this.getVal('.fn-top', true),
+                        left = this.getVal('.fn-left', true),
+                        tag = this.getVal('.fn-each-tag .ui-radio:checked'),
                         dir = this.getVal('.fn-each-dir .ui-radio:checked'),
+                        unit = this.getVal('.fn-each-unit .ui-radio:checked'),
                         selector = '.' + this.getVal('.fn-selector'),
                         bgcolor = this.getVal('.fn-background-color'),
                         size = this.getVal('.fn-size', true);
+                        
+                    if(unit == 'rem'){
+                        times = 100;
+                    }
 
                 var cssText = [];
                 cssText.push(`
@@ -240,6 +274,10 @@ ${selector} {
 }
 ${selector} ${tag} {
     display: block;
+    width: ${width / times}${unit};
+    height: ${height / times}${unit};
+    top: ${top / times}${unit};
+    left: ${left / times}${unit};
     position: absolute;
     background-color: ${bgcolor};
     transform: translate3d(0,0,0);
@@ -250,6 +288,11 @@ ${selector} ${tag} {
                 for(var i = 0; i < size; i ++){
                     cssText.push(this.getOneRule(selector, tag, size, i));
                 }
+
+                if(unit == 'rem'){
+                    cssText.push('\n\n\nhtml{font-size:100px;}');
+                };
+
                 return cssText.join('\n');
         }
 }
