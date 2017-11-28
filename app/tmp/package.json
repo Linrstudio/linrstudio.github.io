@@ -1,0 +1,7 @@
+{
+  "name": "Mailer",
+  "version": "1.0.0",
+  "release": "1.0.0",
+  "description": "A Mail Electron application",
+  "main": "main.js"
+}
