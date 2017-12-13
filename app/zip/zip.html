@@ -1,21 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+<style>
+*{margin:0;padding:0;box-sizing: border-box;}
+.layer{}
+.layer:hover{
+    outline: 1px solid blue;
+}
+</style>
+</head>
+<body>
 
-
+<input type="file" name="file" id="file" />
+<div id="viewer"></div>
+<script src="jszip.min.js"></script>
 <script>
-var file = document.getElementById('file');
-var map = document.getElementById('map');
+var file = document.getElementById('file'),
+    viewer = document.getElementById('viewer');
 
 var PREVIEW_MAX_SIZE = 2048.0
 var PREVIEW_ARTBOARD_PADDING = 60.0
 
 var JSZip = new (window.jszip || window.JSZip)();
-map.innerHTML = JSZip;
 
-var vm = {};
+var vm = {
+    imageWidth: 0,
+    artboardWidth: 0,
+    artboardFactor: 0,
+};
+
+function walkLayers(layers, artboardFactor, pid) {
+    if(layers) {
+    var layersHTML = [];
+        layers.map( (layer, j) => {
+            layersHTML.push(`<div class="layer" style="
+                    position:absolute;
+                    left: ${layer.frame.x * artboardFactor}px;
+                    top: ${layer.frame.y * artboardFactor}px;
+                    width: ${layer.frame.width * artboardFactor}px;
+                    height: ${layer.frame.height * artboardFactor}px;
+                    visibility: ${layer.isVisible ? "visibile" : "hidden"};
+                    boxSizing: border-box;"
+                    data-name="${layer.name}"
+                    data-id="${layer.do_objectID}"
+                    title="top: ${layer.name}, \ntop: ${layer.frame.y}, left: ${layer.frame.x}, width: ${layer.frame.width}, height: ${layer.frame.height}"
+                >${ layers && layer.isVisible ? walkLayers(layer.layers, artboardFactor) : ''}</div>
+            `);
+        })
+
+        return layersHTML.join('\n');
+    } else {
+        return '';
+    }
+}
+
+function walkArtboards(vm) {
+
+    var artboardsHTML = [];
+    
+    if(vm.imageData) { 
+        artboardsHTML.push(`
+            <div style="width:${vm.imageWidth + 60}px;height:${vm.imageHeight}px;margin: 30px 50px">
+
+                <div style="position: relative;
+                    background-image: url(${vm.imageData});
+                    background-repeat: no-repeat;
+                    background-size: contain;
+                    background-position: center;
+                    background-size: ${vm.imageWidth}px ${vm.imageHeight}px;width: ${vm.imageWidth}px;height:${vm.imageHeight}px">
+        `);
+    }
+
+    vm.artboards.map((artboard, i) => {
+        artboardsHTML.push(`<div style="color: white;position: absolute;left: ${(i * (PREVIEW_ARTBOARD_PADDING + vm.artboardWidth))}px;top: ${artboard.frame.y * vm.artboardFactor}px;width: ${vm.artboardWidth}px;height: ${artboard.frame.height * vm.artboardFactor}px;box-sizing: border-box;">`);
+        artboardsHTML.push(walkLayers(artboard.layers, vm.artboardWidth / artboard.frame.width));
+        artboardsHTML.push(`</div>`);
+    });
+
+    if(vm.imageData) { 
+        artboardsHTML.push(`</div>`);
+        artboardsHTML.push(`</div>`);
+    }
+
+    return artboardsHTML.join('\n');
+}
 
 function fileChange(e) {
     
     var file = e.target.files[0];
-    map.innerHTML = e.target.files[0].name;
     var reader = new FileReader()
 
     reader.onload = function(e){
@@ -31,15 +107,14 @@ function fileChange(e) {
                         image.onload = function () {
                             vm.imageWidth = image.width
                             vm.imageHeight = image.height
-
                             if (vm.imageWidth && vm.artboards && vm.imageWidth >= PREVIEW_MAX_SIZE) {
                                 vm.artboardWidth = (PREVIEW_MAX_SIZE - (PREVIEW_ARTBOARD_PADDING * (vm.artboards.length - 1))) / vm.artboards.length
                             }
+
+                            viewer.innerHTML = walkArtboards(vm);
                         }
 
                         image.src = vm.imageData
-
-                        map.innerHTML = vm.imageData
                     },
                         function error(e) {
                             console.log(e)
@@ -53,6 +128,9 @@ function fileChange(e) {
                         if (vm.imageWidth && vm.artboards && vm.imageWidth >= PREVIEW_MAX_SIZE) {
                             vm.artboardWidth = (PREVIEW_MAX_SIZE - (PREVIEW_ARTBOARD_PADDING * (vm.artboards.length - 1))) / vm.artboards.length
                         }
+
+                        console.log(vm.artboards);
+                        
                     },
                         function error(e) {
                             console.log(e)
@@ -70,3 +148,6 @@ function fileChange(e) {
 
 file.addEventListener('change', fileChange, false);
 </script>
+    
+</body>
+</html>
