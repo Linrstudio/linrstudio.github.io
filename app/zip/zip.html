@@ -1,0 +1,72 @@
+
+
+<script>
+var file = document.getElementById('file');
+var map = document.getElementById('map');
+
+var PREVIEW_MAX_SIZE = 2048.0
+var PREVIEW_ARTBOARD_PADDING = 60.0
+
+var JSZip = new (window.jszip || window.JSZip)();
+map.innerHTML = JSZip;
+
+var vm = {};
+
+function fileChange(e) {
+    
+    var file = e.target.files[0];
+    map.innerHTML = e.target.files[0].name;
+    var reader = new FileReader()
+
+    reader.onload = function(e){
+        var data = e.target.result
+        JSZip.loadAsync(data).then(function (zip) {
+            zip.forEach(function (relativePath, zipEntry) {
+                if (relativePath === 'previews/preview.png') {
+                    zipEntry.async('base64').then(function success(content) {
+                        vm.imageData = 'data:image/png;base64,' + content
+
+                        var image = new Image()
+
+                        image.onload = function () {
+                            vm.imageWidth = image.width
+                            vm.imageHeight = image.height
+
+                            if (vm.imageWidth && vm.artboards && vm.imageWidth >= PREVIEW_MAX_SIZE) {
+                                vm.artboardWidth = (PREVIEW_MAX_SIZE - (PREVIEW_ARTBOARD_PADDING * (vm.artboards.length - 1))) / vm.artboards.length
+                            }
+                        }
+
+                        image.src = vm.imageData
+
+                        map.innerHTML = vm.imageData
+                    },
+                        function error(e) {
+                            console.log(e)
+                            vm.error = 'Could not load Sketch preview'
+                        })
+                } else if (relativePath.startsWith('pages/')) {
+                    zipEntry.async('string').then(function success(content) {
+                        var page = JSON.parse(content)
+                        vm.artboards = page.layers
+
+                        if (vm.imageWidth && vm.artboards && vm.imageWidth >= PREVIEW_MAX_SIZE) {
+                            vm.artboardWidth = (PREVIEW_MAX_SIZE - (PREVIEW_ARTBOARD_PADDING * (vm.artboards.length - 1))) / vm.artboards.length
+                        }
+                    },
+                        function error(e) {
+                            console.log(e)
+                            vm.error = 'Could not load page'
+                        })
+                }
+            })
+        }, function (e) {
+            console.log(e)
+            vm.error = 'Only .sketch files that were saved using the new Sketch 43 are supported.'
+        })
+    }
+    reader.readAsArrayBuffer(file);
+}
+
+file.addEventListener('change', fileChange, false);
+</script>
