@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html xmlns:wb="http://open.weibo.com/wb">
+<head>
+<meta charset="UTF-8">
+<title></title>
+</head>
+<script src="http://tjs.sjs.sinajs.cn/open/api/js/wb.js?appkey=539350311" type="text/javascript" charset="utf-8"></script>
+
+<body>
+<input type="button" value="ok" id="btn" />
+<button id="wb_selector" type="button" ></button>
+<script>
+WB2.login(function(){
+//callback function
+console.log('log');
+});
+document.getElementById('btn').onclick = function(){
+	
+WB2.anyWhere(function(W){
+
+    //数据交互
+    W.parseCMD('/favorites.json', function(oResult, bStatus) {
+
+        if(bStatus) {
+			console.log(oResult);
+            //to do something...
+        }
+
+    },{},{
+
+        method : 'get',
+        cache_time : 30
+
+    });
+
+});
+}
+
+WB2.anyWhere(function(W){
+
+    W.widget.selector({
+
+        id : "wb_selector"
+
+    });
+
+});
+</script>
+
+
+</body>
+</html>
