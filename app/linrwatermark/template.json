@@ -5,14 +5,14 @@
           "img": "https://ui.qzone.com/12x12#12x12",
           "offset": {
             "left": 10,
-            "top": 10,
+            "top": 10
           }
         },
         {
           "img": "https://ui.qzone.com/122x122#122x122",
           "offset": {
             "bottom": 10,
-            "right": 10,
+            "right": 10
           }
         }
       ]
