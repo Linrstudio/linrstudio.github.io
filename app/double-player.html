@@ -1,5 +1,8 @@
 <div class=flex>
-  <div class=start>
-    <video onclick="navigator.clipboard.readText().then(str=>this.src=str)">
+  <div class=start onclick="navigator.clipboard.readText().then(str=>this.innerHTML='<video src=\"' + src + '\" />')">
+    Top
+  </div>
+  <div class=start onclick="navigator.clipboard.readText().then(str=>this.innerHTML='<video src=\"' + src + '\" />')">
+    Bottom
   </div>
 </div>
