@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -9,7 +8,7 @@
   html,body {color: rgba(255,255,255,.5);background: #000;width: 100%;}
   .flex {display: flex;flex-direction: column;}
   .flex > div {min-height: 200px;width: 100%;}
-  video {width: 100%;}
+  video,iframe {width: 100%;aspect-ratio: 16 / 9;}
 </style>
 
 </head>
@@ -25,13 +24,25 @@
     Bottom
   </div>
 </div>
-
+<Button id=fullscreen onclick="setFullscreen()">Fullscreen</Button>
 <script>
+function setFullscreen() {
+        let el = window.top ? window.top.document.documentElement : document.documentElement;
+        let rfs = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+         try {
+           if (typeof rfs !== "undefined" && rfs) {
+                rfs.call(el);
+           }} catch ( e ) {
+                  console.log(e);
+                }
+        return;
+ }
  document.body.addEventListener('click', function(e) {
    const eo = e.target;
    if(eo.matches('.flex > div')) {
-    navigator.clipboard.readText().then(src => eo.innerHTML=`<video controls loop src="${src}" />`);
-   }
+    //navigator.clipboard.readText().then(src => eo.innerHTML=`<video controls loop src="${src}" />`);
+     navigator.clipboard.readText().then(src => eo.innerHTML=`<iframe src="${src}"></iframe>`);
+    }
  }, false)
 </script>
 </body>
