@@ -23,8 +23,9 @@ function nextOrPrev(src, dir) {
   const index = arr.length - 2;
   const tune = arr[index];
   alert(tune);
+  alert(Number(tune) + dir)
   arr.splice(index, 1, Number(tune) + dir);
-  alert(arr)
+  alert(arr.join('/'))
 return arr.join('/');
 }
 function setFullscreen() {
