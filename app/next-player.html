@@ -21,7 +21,14 @@
  <button id="next">Next</button>
  <button id=fullscreen onclick="setFullscreen()">Fullscreen</button> 
 
- <script> 
+ <script>
+function nextOrPrev(src, dir = 1) {
+  const arr = src.split('/');
+  const index = arr.length - 2;
+  const tune = arr[index];
+  const newSrc = arr.splice(index,1, +tune + dir);
+  return newSrc;
+}
  function setFullscreen() { 
          let el = window.top ? window.top.document.documentElement : document.documentElement; 
          let rfs = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen; 
@@ -45,7 +52,11 @@
       }); 
     }
     if(eo.matches('#next')) {
-      const src = 
+      const src = nextOrPrev(window.$src);
+      document.querySelector('.start').src = iframe(src);
+    }
+    if(eo.matches('#prev')) {
+      const src = nextOrPrev(window.$src, -1);
       document.querySelector('.start').src = iframe(src);
     }
   }, false) 
