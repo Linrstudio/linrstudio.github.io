@@ -50,13 +50,13 @@ document.body.addEventListener('click', function(e) {
   if(eo.matches('#next')) {
     const rsrc = document.getElementById('frame').src;
     const src = nextOrPrev(rsrc, 1);
-    alert(src);
+    // alert(src);
     document.querySelector('.start').innerHTML = iframe(src);
   }
   if(eo.matches('#prev')) {
     const rsrc = document.getElementById('frame').src;
     const src = nextOrPrev(rsrc, -1);
-    alert(src);
+    // alert(src);
     document.querySelector('.start').innerHTML = iframe(src);
   }
 }, false);
