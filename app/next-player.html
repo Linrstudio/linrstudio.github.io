@@ -25,8 +25,8 @@ function nextOrPrev(src, dir) {
   alert(tune);
   alert(Number(tune) + dir)
   arr.splice(index, 1, Number(tune) + dir);
-  alert(arr.join('/'))
-return arr.join('/');
+  alert(arr.join('\/'))
+return arr.join('\/');
 }
 function setFullscreen() {
   let el = window.top ? window.top.document.documentElement : document.documentElement;
@@ -54,12 +54,12 @@ document.body.addEventListener('click', function(e) {
   if(eo.matches('#next')) {
     const rsrc = document.getElementById('frame').src;
     const src = nextOrPrev(rsrc, 1);
-    document.querySelector('.start').src = iframe(src);
+    document.querySelector('.start').innerHTML = iframe(src);
   }
   if(eo.matches('#prev')) {
 const rsrc = document.getElementById('frame').src;
     const src = nextOrPrev(rsrc, -1);
-    document.querySelector('.start').src = iframe(src);
+    document.querySelector('.start').innerHTML = iframe(src);
   }
 }, false);
 </script>
