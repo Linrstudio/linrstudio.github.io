@@ -1,0 +1,54 @@
+<!DOCTYPE html> 
+ <html lang="zh-CN"> 
+  
+ <head> 
+     <meta charset="utf-8"> 
+     <meta name="viewport" content="width=device-width, initial-scale=1"> 
+ <style> 
+   html,body {color: rgba(255,255,255,.5);background: #000;width: 100%;} 
+   .flex {display: flex;flex-direction: column;} 
+   .flex > div {height: calc(100vh);width: 100%;} 
+   video,iframe {width: 100%;height:100%;border:none;} 
+ </style> 
+  
+ </head> 
+ <body> 
+ <div class=flex> 
+   <div class=start> 
+     Top 
+   </div> 
+ </div> 
+ <button id="next">Next</button>
+ <button id=fullscreen onclick="setFullscreen()">Fullscreen</button> 
+
+ <script> 
+ function setFullscreen() { 
+         let el = window.top ? window.top.document.documentElement : document.documentElement; 
+         let rfs = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen; 
+          try { 
+            if (typeof rfs !== "undefined" && rfs) { 
+                 rfs.call(el); 
+            }} catch ( e ) { 
+                   console.log(e); 
+                 } 
+         return; 
+  } 
+  function iframe(src) {
+    return `<iframe src="${src}"></iframe>`;
+  }
+  document.body.addEventListener('click', function(e) { 
+    const eo = e.target; 
+    if(eo.matches('.flex > div')) { 
+      navigator.clipboard.readText().then(src => {
+       eo.innerHTML= iframe(src);
+       window.$src = src;
+      }); 
+    }
+    if(eo.matches('#next')) {
+      const src = 
+      document.querySelector('.start').src = iframe(src);
+    }
+  }, false) 
+ </script> 
+ </body> 
+ </html>
