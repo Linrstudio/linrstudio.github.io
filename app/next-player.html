@@ -43,7 +43,7 @@ function setFullscreen() {
   return;
 }
 function iframe(src) {
-  location.hash = src;
+  location.hash = "#" + src;
   return `<iframe id="frame" src="${src}"></iframe>
 ${src}
 <br/>
