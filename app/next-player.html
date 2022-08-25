@@ -47,7 +47,11 @@ function iframe(src) {
   return `<iframe id="frame" src="${src}"></iframe>
 ${src}
 <br/>
-<a href="${src}" target="_blank">Open</a>`;
+<a href="${src}" target="_blank">Open</a>
+<br/>`;
+}
+function go(src) {
+  document.querySelector('.start').innerHTML = iframe(src);
 }
 document.body.addEventListener('click', function(e) {
   const eo = e.target;
@@ -66,9 +70,13 @@ document.body.addEventListener('click', function(e) {
     const rsrc = document.getElementById('frame').src;
     const src = nextOrPrev(rsrc, -1);
     // alert(src);
-    document.querySelector('.start').innerHTML = iframe(src);
+    go(src);
   }
 }, false);
+let hash = location.hash.slice(1);
+if(hash) {
+ go(hash);
+}
 </script>
 </body>
 </html>
