@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .editor {
+            padding: 20px;
+            font-family: "FZXiJinLJW";
+            font-size: calc(var(--font-size, 30px) + 1vw);
+            word-break: keep-all;
+            background-color: var(--bg);
+            color: var(--fg, #313233);
+        }
+    </style>
+
+</head>
+<body>
+    字号
+    <input type="range" min="0" max="500" id="fontSizeRange" value="30" />
+    背景图
+    <input type="file" id="editorBgImg" />
+    背景色
+    <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
+    颜色
+    <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
+
+    <div contenteditable=""
+         class="editor">
+        您好~
+    </div>
+    <script src="./js/index.mjs" type="module"></script>
+</body>
+</html>
