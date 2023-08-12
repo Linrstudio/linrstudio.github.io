@@ -1,4 +1,4 @@
-import * as Font from '../Woffs/FZXiJinLJW.woff.json' assert {type: 'json'};
+import * as Font from './Woffs/FZXiJinLJW.woff.json' assert {type: 'json'};
 import {
     insertFont
 } from './utils.mjs';
