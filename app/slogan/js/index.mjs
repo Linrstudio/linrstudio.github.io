@@ -4,6 +4,7 @@ import {
 } from './utils.mjs';
 
 const LS_KEY = 'linrslogan/msg';
+const editor = document.getElementById('editor');
 
 window.addEventListener('load', function () {
     insertFont(Font.default.value);
@@ -32,11 +33,11 @@ const editorBgImg = document.getElementById('editorBgImg');
 editorBgImg.addEventListener('change', function(e){
    const [file] = this.files;
   if (file) {
-    document.body.style.backgroundImage = `url(${URL.createObjectURL(file)})`;
+    editor.style.backgroundImage = `url(${URL.createObjectURL(file)})`;
   }
 });
 
-const editor = document.getElementById('editor');
+
 editor.addEventListener('input', function(e) {
     localStorage.setItem(LS_KEY, this.textContent);
 });
