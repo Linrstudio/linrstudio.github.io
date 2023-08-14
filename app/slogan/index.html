@@ -15,7 +15,7 @@
         .editor {
             padding: 20px;
             font-family: "FZXiJinLJW";
-            font-size: calc(var(--font-size, 30px) + 1vw);
+            font-size: var(--font-size, 30px);
             word-break: keep-all;
             background-color: var(--bg);
             background-size: cover;
@@ -35,7 +35,7 @@
         class="flex-center"
     >
         <label>字号</label>
-        <input type="range" min="10" max="100" id="fontSizeRange" value="30" class="flex-auto" />
+        <input type="range" min="10" max="100" id="fontSizeRange" value="30" class="flex-auto" step="1" />
     </div>
     <div
         class="flex-center"
