@@ -16,6 +16,7 @@
             padding: 20px;
             font-family: "FZXiJinLJW";
             font-size: var(--font-size, 30px);
+            line-height:  var(--line-height, 38px);
             word-break: keep-all;
             background-color: var(--bg);
             background-size: cover;
@@ -36,6 +37,12 @@
     >
         <label>字号</label>
         <input type="range" min="10" max="100" id="fontSizeRange" value="30" class="flex-auto" step="1" />
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>行高</label>
+        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" document.body.style.setProperty('--line-height', this.value + 'px'); />
     </div>
     <div
         class="flex-center"
