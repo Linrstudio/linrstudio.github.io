@@ -3,6 +3,8 @@ import {
     insertFont
 } from './utils.mjs';
 
+const LS_KEY = 'linrslogan/msg';
+
 window.addEventListener('load', function () {
     insertFont(Font.default.value);
 }, false);
@@ -23,3 +25,17 @@ editorBgImg.addEventListener('change', function(e){
     document.body.style.backgroundImage = `url(${URL.createObjectURL(file)})`;
   }
 });
+
+const editor = document.getElementById('editor');
+editor.addEventListener('input', function(e) {
+    localStorage.setItem(LS_KEY, this.innerHTML);
+});
+
+function init() {
+    const msg = localStorage.getItem(LS_KEY);
+    if (msg) {
+        editor.innerHTML = msg;
+    }
+}
+
+init();
