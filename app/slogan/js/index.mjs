@@ -10,6 +10,16 @@ window.addEventListener('load', function () {
 }, false);
 
 
+const fontFamilySelect = document.getElementById('fontFamilySelect');
+fontFamilySelect.addEventListener('change', function(){
+    (async (ff) => {
+      if (somethingIsTrue) {
+        const font = await import(`../Woffs/${ff}.woff.json`);
+        insertFont(font.default.value);
+      }
+    })(this.value);
+});
+
 const fontSizeRange = document.getElementById('fontSizeRange');
 
 fontSizeRange.addEventListener('change', function(){
