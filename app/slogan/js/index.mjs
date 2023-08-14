@@ -28,13 +28,13 @@ editorBgImg.addEventListener('change', function(e){
 
 const editor = document.getElementById('editor');
 editor.addEventListener('input', function(e) {
-    localStorage.setItem(LS_KEY, this.innerHTML);
+    localStorage.setItem(LS_KEY, this.textContent);
 });
 
 function init() {
     const msg = localStorage.getItem(LS_KEY);
     if (msg) {
-        editor.innerHTML = msg;
+        editor.textContent = msg;
     }
 }
 
