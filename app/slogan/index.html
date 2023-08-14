@@ -5,12 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
+        .flex-center {
+            display: flex;
+            align-items: center;
+        }
+        .flex-auto {
+            flex: auto;
+        }
         .editor {
             padding: 20px;
             font-family: "FZXiJinLJW";
             font-size: calc(var(--font-size, 30px) + 1vw);
             word-break: keep-all;
             background-color: var(--bg);
+            background-size: cover;
             color: var(--fg, #313233);
         }
     </style>
@@ -22,18 +30,29 @@
     </script>
 </head>
 <body>
-    字号
-    <input type="range" min="0" max="500" id="fontSizeRange" value="30" />
-    背景图
-    <input type="file" id="editorBgImg" />
-    背景色
-    <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
-    颜色
-    <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
-
-    <div contenteditable=""
-         class="editor">
-        您好~
+    
+    <div
+        class="flex-center"
+    >
+        <label>字号</label>
+        <input type="range" min="0" max="1000" id="fontSizeRange" value="30" class="flex-auto" />
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>背景图</label>
+        <input type="file" id="editorBgImg" />
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>背景色</label>
+        <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
+        <label>颜色</label>
+        <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
+    </div>
+    <div contenteditable="" class="editor" id="editor">
+        
     </div>
     <script src="./js/index.mjs" type="module"></script>
 </body>
