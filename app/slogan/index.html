@@ -14,7 +14,7 @@
         }
         .editor {
             padding: 20px;
-            font-family: "FZXiJinLJW";
+            font-family: var(--font-family, "FZXiJinLJW");
             font-size: var(--font-size, 30px);
             line-height:  var(--line-height, 38px);
             word-break: keep-all;
@@ -31,7 +31,14 @@
     </script>
 </head>
 <body>
-    
+     <div
+        class="flex-center"
+    >
+        <label>字体</label>
+        <select id="fontFamilySelect" onchange="document.body.style.setProperty('--font-family', this.value);">
+            <option value="FZXiJinLJW"></option>
+        </select>
+    </div>
     <div
         class="flex-center"
     >
@@ -42,7 +49,7 @@
         class="flex-center"
     >
         <label>行高</label>
-        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" document.body.style.setProperty('--line-height', this.value + 'px'); />
+        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" onchange="document.body.style.setProperty('--line-height', this.value + 'px');"/>
     </div>
     <div
         class="flex-center"
