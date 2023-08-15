@@ -17,7 +17,7 @@ fontFamilySelect.addEventListener('change', function(){
     const val = this.value;
     const loaded = this.dataset[val];
     (async (ff, loaded) => {
-      if (loaded) {
+      if (!loaded) {
         const font = await import(`../Woffs/${ff}.woff.json`);
         insertFont(font.default.value);
         me.dataset[val] = 'loaded';
