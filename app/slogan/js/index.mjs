@@ -13,12 +13,16 @@ window.addEventListener('load', function () {
 
 const fontFamilySelect = document.getElementById('fontFamilySelect');
 fontFamilySelect.addEventListener('change', function(){
-    (async (ff) => {
+    const me = this;
+    const val = this.value;
+    const loaded = this.dataset[val];
+    (async (ff, loaded) => {
       if (somethingIsTrue) {
         const font = await import(`../Woffs/${ff}.woff.json`);
         insertFont(font.default.value);
+        me.dataset[val] = 'loaded';
       }
-    })(this.value);
+    })(this.value, loaded);
 });
 
 const fontSizeRange = document.getElementById('fontSizeRange');
