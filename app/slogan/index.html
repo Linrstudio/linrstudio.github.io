@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
+        .flex {
+            display: flex;
+        }
+        .flex-col {
+            flex-direction: column;
+        }
         .flex-center {
             display: flex;
             align-items: center;
@@ -12,6 +18,8 @@
         .flex-auto {
             flex: auto;
         }
+        .gap-12 { gap:12px;}
+        .mb-24 {margin-bottom: 24px;}
         .editor {
             padding: 20px;
             font-family: var(--font-family, "FZXiJinLJW");
@@ -34,6 +42,7 @@
     </script>
 </head>
 <body>
+  <div class="flex flex-col gap-12 mb-24">
      <div
         class="flex-center"
     >
