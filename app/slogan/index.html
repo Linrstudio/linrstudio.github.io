@@ -28,7 +28,7 @@
             line-height:  var(--line-height, 38px);
             word-break: keep-all;
             background-color: var(--bg);
-            background-size: cover;
+            background-size: contain;
             color: var(--fg, #313233);
             border-radius: 8px;
             min-height: 300px;
@@ -51,6 +51,8 @@
           background-color: #9c27b0;
           color: #fff;
         }
+        h5 {font-size: 14px;}
+        h6 {font-size: 12px;}
     </style>
     <script>
         function loadJSONFont(obj) {
@@ -61,7 +63,46 @@
 </head>
 <body>
   <div class="flex flex-col gap-12 mb-24">
-      <div class="formatter">
+      
+          
+     <div
+        class="flex-center"
+    >
+        <label>字体</label>
+        <select id="fontFamilySelect" onchange="document.body.style.setProperty('--font-family', this.value);">
+            <option value="FZXiJinLJW">FZXiJinLJW</option>
+            <option value="JiXiangSong">JiXiangSong</option>
+        </select>
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>字号</label>
+        <input type="range" min="10" max="100" id="fontSizeRange" value="30" class="flex-auto" step="1" />
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>行高</label>
+        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" onchange="document.body.style.setProperty('--line-height', this.value + 'px');"/>
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>背景图</label>
+        <input type="file" id="editorBgImg" />
+    </div>
+    <div
+        class="flex-center"
+    >
+        <label>背景色</label>
+        <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
+        <label>颜色</label>
+        <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
+    </div>
+
+
+     <div class="formatter">
        <button class="btn btn-default" data-command="bold">
         <i class="fa fa-bold"></i>
        </button>
@@ -109,42 +150,7 @@
        </button>
        <p class="edit-text" contenteditable="true" rows="15">Text Goes Here</p>
     </div>
-          
-     <div
-        class="flex-center"
-    >
-        <label>字体</label>
-        <select id="fontFamilySelect" onchange="document.body.style.setProperty('--font-family', this.value);">
-            <option value="FZXiJinLJW">FZXiJinLJW</option>
-            <option value="JiXiangSong">JiXiangSong</option>
-        </select>
-    </div>
-    <div
-        class="flex-center"
-    >
-        <label>字号</label>
-        <input type="range" min="10" max="100" id="fontSizeRange" value="30" class="flex-auto" step="1" />
-    </div>
-    <div
-        class="flex-center"
-    >
-        <label>行高</label>
-        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" onchange="document.body.style.setProperty('--line-height', this.value + 'px');"/>
-    </div>
-    <div
-        class="flex-center"
-    >
-        <label>背景图</label>
-        <input type="file" id="editorBgImg" />
-    </div>
-    <div
-        class="flex-center"
-    >
-        <label>背景色</label>
-        <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
-        <label>颜色</label>
-        <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
-    </div>
+
     <div contenteditable="" class="editor" id="editor" spellcheck="false">
         
     </div>
@@ -167,7 +173,7 @@
         });
         
         function formatText(command){
-          if(command === 'h1' || command === 'h2' || command === 'p'){
+          if(command === 'h6' || command === 'h5' || command === 'p'){
             document.execCommand('formatBlock', false, command);
             return;
           }else if(command === 'createlink'){
