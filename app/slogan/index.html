@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
     <style>
         .flex {
             display: flex;
@@ -33,6 +34,22 @@
             min-height: 300px;
             resize: vertical;
         }
+        
+        .formatter {
+        }
+        button.btn{
+          margin: 5px;
+          padding: 4px 4px;
+          font-size: 0.8em;
+          background-color: #673AB7;
+          color: #fff;
+          cursor: pointer;
+          border: 0;
+        }
+        button.btn:hover,button.btn:active{
+          background-color: #9c27b0;
+          color: #fff;
+        }
     </style>
     <script>
         function loadJSONFont(obj) {
@@ -43,6 +60,55 @@
 </head>
 <body>
   <div class="flex flex-col gap-12 mb-24">
+      <div class="formatter">
+       <button class="btn btn-default" data-command="bold">
+        <i class="fa fa-bold"></i>
+       </button>
+       <button class="btn btn-default" data-command="italic">
+         <i class="fa fa-italic"></i>
+       </button>
+       <button class="btn btn-default" data-command="underline">
+        <i class="fa fa-underline"></i>
+       </button>
+       <button class="btn btn-default" data-command="strikeThrough">
+        <i class="fa fa-strikethrough"></i>
+       </button>
+       <button class="btn btn-default" data-command="justifyLeft">
+        <i class="fa fa-align-left"></i>
+       </button>
+       <button class="btn btn-default" data-command="justifyCenter">
+        <i class="fa fa-align-center"></i>    
+       </button>
+       <button class="btn btn-default" data-command="justifyRight">
+        <i class="fa fa-align-right"></i>
+       </button>
+       <button class="btn btn-default" data-command="justifyFull">
+        <i class="fa fa-align-justify"></i>
+       </button>
+       <button class="btn btn-default" data-command="indent">
+        <i class="fa fa-indent"></i>
+       </button>
+       <button class="btn btn-default" data-command="outdent">
+        <i class="fa fa-outdent"></i>
+       </button>
+       <button class="btn btn-default" data-command="insertUnorderedList">
+        <i class="fa fa-list-ul"></i>
+       </button> 
+       <button class="btn btn-default" data-command="insertOrderedList">
+        <i class="fa fa-list-ol"></i>
+       </button>
+       <button class="btn btn-default" data-command="h1">H1</button>
+       <button class="btn btn-default" data-command="h2">H2</button>
+       <button class="btn btn-default" data-command="p">P</button>
+       <button class="btn btn-default" data-command="createlink">
+        <i class="fa fa-link"></i>
+       </button>
+       <button class="btn btn-default" data-command="unlink">
+        <i class="fa fa-unlink"></i>
+       </button>
+       <p class="edit-text" contenteditable="true" rows="15">Text Goes Here</p>
+    </div>
+          
      <div
         class="flex-center"
     >
@@ -82,5 +148,40 @@
         
     </div>
     <script src="./js/index.mjs" type="module"></script>
+    <script>
+        var wys = select('.editor');
+        var wyg = select('.text');
+        console.log(wyg);
+        
+        wys.addEventListener('keyup', function(e){
+          wyg.innerHTML = this.innerHTML;
+        });
+        
+        var buttons = select('.formatter button');
+        
+        buttons.forEach(function(button){
+          button.addEventListener('click', function(){
+            formatText(this.getAttribute('data-command'));
+          })
+        });
+        
+        function formatText(command){
+          if(command === 'h1' || command === 'h2' || command === 'p'){
+            document.execCommand('formatBlock', false, command);
+            return;
+          }else if(command === 'createlink'){
+            var url = prompt('Enter the link here: ', 'http:\/\/');
+            document.execCommand(command, false, url);
+          }else{
+            document.execCommand(command, false, null);
+          }
+          wys.dispatchEvent(new Event('keyup'));
+        }
+        
+        function select(query){
+          var elements = document.querySelectorAll(query);
+          return ( elements.length > 1 ) ? elements : elements[0] ;
+        }
+    </script>
 </body>
 </html>
