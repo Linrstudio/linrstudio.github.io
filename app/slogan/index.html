@@ -29,6 +29,7 @@
             word-break: keep-all;
             background-color: var(--bg);
             background-size: contain;
+            background-repeat: no-repeat;
             color: var(--fg, #313233);
             border-radius: 8px;
             min-height: 300px;
@@ -222,11 +223,22 @@
                     fontListSelect.appendChild(option);
             })
     };
-    chrome.fontSettings.getFontList(
-        function(details) { 
-            initFontList(details);
+    async function logFontData() {
+      try {
+        const availableFonts = await window.queryLocalFonts();
+        for (const fontData of availableFonts) {
+          // console.log(fontData.postscriptName);
+          // console.log(fontData.fullName);
+          // console.log(fontData.family);
+          // console.log(fontData.style);
+            const option = new Option(fontData.postscriptName, fontData.fullName);
+                    fontListSelect.appendChild(option);
         }
-    );
+      } catch (err) {
+        console.error(err.name, err.message);
+      }
+    };
+    logFontData();
     </script>
 </body>
 </html>
