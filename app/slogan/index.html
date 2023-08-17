@@ -53,6 +53,8 @@
         }
         h5 {font-size: 14px;}
         h6 {font-size: 12px;}
+        h1 {font-size: 30px;}
+        h2 {font-size: 26px;}
     </style>
     <script>
         function loadJSONFont(obj) {
@@ -141,6 +143,8 @@
        </button>
        <button class="btn btn-default" data-command="h1">H1</button>
        <button class="btn btn-default" data-command="h2">H2</button>
+       <button class="btn btn-default" data-command="h5">H5</button>
+       <button class="btn btn-default" data-command="h6">H6</button>
        <button class="btn btn-default" data-command="p">P</button>
        <button class="btn btn-default" data-command="createlink">
         <i class="fa fa-link"></i>
@@ -148,7 +152,6 @@
        <button class="btn btn-default" data-command="unlink">
         <i class="fa fa-unlink"></i>
        </button>
-       <p class="edit-text" contenteditable="true" rows="15">Text Goes Here</p>
     </div>
 
     <div contenteditable="" class="editor" id="editor" spellcheck="false">
@@ -173,7 +176,7 @@
         });
         
         function formatText(command){
-          if(command === 'h6' || command === 'h5' || command === 'p'){
+          if(command === 'h1' || command === 'h2' || command === 'h6' || command === 'h5' || command === 'p'){
             document.execCommand('formatBlock', false, command);
             return;
           }else if(command === 'createlink'){
