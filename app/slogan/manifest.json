@@ -1,0 +1,21 @@
+{
+    "short_name": "LinrSlogan",
+    "name": "Linr Slogan",
+    "icons": [
+      {
+        "src": "./images/fav.png",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/png"
+      },
+      {
+        "src": "./images/logo192x192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#296bef",
+    "background_color": "#ffffff"
+  }
+  
