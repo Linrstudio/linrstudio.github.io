@@ -62,13 +62,13 @@
     <script>
         function getSelectText() { return window.getSelection().toString(); }
         function setBodyStyle(key, val) { document.body.style.setProperty(key, val); }
-        function execCommand(key, val) { document.execCommand('fontName', false, this.value); }
+        function execCommand(key, val) { document.execCommand(key, false, val); }
         function formatGo(execName, key, val) {
             const txt = getSelectText();
             if(!txt) {
                 setBodyStyle(key, val);
             } else {
-                execCommand(execName, false, val);
+                execCommand(execName, val);
             }
         }
         function loadJSONFont(obj) {
