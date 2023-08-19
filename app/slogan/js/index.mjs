@@ -12,9 +12,10 @@ window.addEventListener('load', function () {
 
 
 const fontFamilySelect = document.getElementById('fontFamilySelect');
-fontFamilySelect.addEventListener('change', function(){
+fontFamilySelect.addEventListener('change', function() {
     const me = this;
     const val = this.value;
+    if (val === '') return;
     const loaded = this.dataset[val];
     (async (ff, loaded) => {
       if (!loaded) {
