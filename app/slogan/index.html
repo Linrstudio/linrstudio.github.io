@@ -239,7 +239,7 @@
           // console.log(fontData.fullName);
           // console.log(fontData.family);
           // console.log(fontData.style);
-            const option = new Option(fontData.postscriptName, fontData.fullName);
+            const option = new Option(fontData.fullName, fontData.postscriptName);
             option.dataset.local = 1;
             fontListSelect.appendChild(option);
         }
