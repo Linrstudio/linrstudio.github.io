@@ -1,4 +1,4 @@
-import * as Font from '../Woffs/FZXiJinLJW.woff.json' assert {type: 'json'};
+// import * as Font from '../Woffs/FZXiJinLJW.woff.json' assert {type: 'json'};
 import {
     insertFont
 } from './utils.mjs';
@@ -7,7 +7,7 @@ const LS_KEY = 'linrslogan/msg';
 const editor = document.getElementById('editor');
 
 window.addEventListener('load', function () {
-    insertFont(Font.default.value);
+    // insertFont(Font.default.value);
 }, false);
 
 
