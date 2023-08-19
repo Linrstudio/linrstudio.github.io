@@ -60,6 +60,17 @@
         h2 {font-size: 46px;}
     </style>
     <script>
+        function getSelectText() { return window.getSelection().toString(); }
+        function setBodyStyle(key, val) { document.body.style.setProperty(key, val); }
+        function execCommand(key, val) { document.execCommand('fontName', false, this.value); }
+        function formatGo(execName, key, val) {
+            const txt = getSelectText();
+            if(!txt) {
+                setBodyStyle(key, val);
+            } else {
+                execCommand(execName, val);
+            }
+        }
         function loadJSONFont(obj) {
             alert(obj);
         }
@@ -73,7 +84,7 @@
         class="flex-center"
     >
         <label>字体</label>
-        <select id="fontFamilySelect" onchange="document.body.style.setProperty('--font-family', this.value);">
+        <select id="fontFamilySelect" onchange="formatGo('fontName', '--font-family', this.value);">
             <option value="">请选择</option>
             <option value="JXZhuoKai">JXZhuoKai</option>
             <option value="FZXiJinLJW">FZXiJinLJW</option>
@@ -90,7 +101,7 @@
         class="flex-center"
     >
         <label>行高</label>
-        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" onchange="document.body.style.setProperty('--line-height', this.value + 'px');"/>
+        <input type="range" min="10" max="100" id="lineHeight" value="30" class="flex-auto" step="1" onchange="setBodyStyle('--line-height', this.value + 'px');"/>
     </div>
     <div
         class="flex-center"
@@ -102,9 +113,9 @@
         class="flex-center"
     >
         <label>背景色</label>
-        <input type="color" id="editorBg" onchange="document.body.style.setProperty('--bg', this.value);" />
+        <input type="color" id="editorBg" onchange="formatGo('backColor', '--bg', this.value);" />
         <label>颜色</label>
-        <input type="color" id="editorfg" onchange="document.body.style.setProperty('--fg', this.value);" />
+        <input type="color" id="editorfg" onchange="formatGo('foreColor', '--fg', this.value);" />
         <button id="download">Download</button>
     </div>
 
