@@ -46,13 +46,13 @@ editorBgImg.addEventListener('change', function(e){
 
 
 editor.addEventListener('input', function(e) {
-    localStorage.setItem(LS_KEY, this.textContent);
+    localStorage.setItem(LS_KEY, this.innerHTML);
 });
 
 function init() {
     const msg = localStorage.getItem(LS_KEY);
     if (msg) {
-        editor.textContent = msg;
+        editor.innerHTML = msg;
     }
 }
 
