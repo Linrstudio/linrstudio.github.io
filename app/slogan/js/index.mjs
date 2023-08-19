@@ -14,7 +14,8 @@ window.addEventListener('load', function () {
 const fontFamilySelect = document.getElementById('fontFamilySelect');
 fontFamilySelect.addEventListener('change', function(e) {
     const eo = e.target;
-    if (eo.dataset.local) return;
+    const option = this.options[this.selectedIndex];
+    if (option.dataset.local) return;
     const me = this;
     const val = this.value;
     if (val === '') return;
@@ -36,7 +37,6 @@ fontSizeRange.addEventListener('change', function(){
     document.body.style.setProperty('--font-size', `${this.value}px`);
 });
 
-
 const editorBgImg = document.getElementById('editorBgImg');
 
 editorBgImg.addEventListener('change', function(e){
@@ -45,7 +45,6 @@ editorBgImg.addEventListener('change', function(e){
     editor.style.backgroundImage = `url(${URL.createObjectURL(file)})`;
   }
 });
-
 
 editor.addEventListener('input', function(e) {
     localStorage.setItem(LS_KEY, this.innerHTML);
