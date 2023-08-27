@@ -33,7 +33,7 @@
             line-height:  var(--line-height, 38px);
             word-break: keep-all;
             background-color: var(--bg);
-            background-size: cover;
+            background-size: var(--bg-fill, cover);
             background-repeat: no-repeat;
             color: var(--fg, #313233);
             border-radius: 8px;
@@ -111,6 +111,14 @@
     >
         <label>背景图</label>
         <input type="file" id="editorBgImg" />
+        &nbsp;
+        <label>填充方式</label>
+        <select onchange="setBodyStyle('--bg-fill', this.value);">
+            <option value="cover">请选择</option>
+            <option value="contain">contain</option>
+            <option value="50%">50%</option>
+            <option value="none">none</option>
+        </select>
     </div>
     <div
         class="flex-center"
