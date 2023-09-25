@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Happy Birthday To Doudou</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap");
+* {
+  box-sizing: border-box;
+}
+:root {
+  --bg: #2a3d51;
+  --body: #fff;
+  --stripes: #f5b1a3;
+  --flame-1: #eb9947;
+  --flame-2: #fae39e;
+  --paper: #bad9f7;
+  --paper-2: #e8f2fc;
+  --paper-3: #4799eb;
+  --card: #fafafa;
+  --insert: #bad9f7;
+  --bottom-frosting: #f5b1a3;
+  --mid-frosting: #a3f5f5;
+  --top-frosting: #ccf5a3;
+  --balloon-3: 10;
+  --balloon-2: 180;
+  --balloon-1: 90;
+  --size: 35vmin;
+  --height: var(--size);
+  --width: calc(var(--size) * 1.4);
+  --read: 0;
+  --transition: 0.2s;
+}
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+input {
+  opacity: 0;
+  position: fixed;
+  right: 100%;
+}
+label {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  transform-style: preserve-3d;
+  transform: translate3d(0, 0, 100px);
+}
+:checked ~ .scene {
+  --read: 1;
+}
+:checked ~ .scene .hide-back {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+:checked ~ .scene .cake__candle {
+  transform: translate(0, 0);
+}
+.stamp {
+  height: 8vmin;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 1px);
+  filter: saturate(0.5);
+  border-radius: 50%;
+}
+.barcode {
+  height: 6vmin;
+  width: 8vmin;
+  position: absolute;
+  bottom: 2vmin;
+  right: 2vmin;
+  transform: translate3d(0, 0, 1px);
+  --l: #808080;
+  background: repeating-linear-gradient(90deg, var(--l) 0 1%, transparent 1% 2%, var(--l) 2% 4%, transparent 4% 5%, var(--l) 5% 10%);
+}
+.scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotateY(calc(var(--x, 0) * 1deg)) rotateX(calc(var(--y, 0) * 1deg));
+  height: 100vh;
+  width: 100vw;
+  transform-style: preserve-3d;
+}
+.card {
+  height: calc(var(--height));
+  position: relative;
+  width: var(--width);
+  transform-style: preserve-3d;
+  transform: translate(0, calc(var(--read, 0) * 25%)) rotateX(calc(var(--read, 0) * 90deg));
+  transition: transform var(--transition);
+}
+.card__confetti {
+  --size: calc(var(--s) * 1vmin);
+  height: var(--size);
+  width: var(--size);
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  transition: transform calc(var(--read) * var(--transition)) calc(var(--read) * var(--transition)), opacity calc(var(--read) * var(--transition)) calc((var(--read) * var(--transition)) * 2);
+  transform: scale(var(--read)) translate(-50%, 10%) rotate(calc(var(--r) * 1deg)) rotateX(calc(var(--a) * 1deg)) skew(calc(var(--sk) * 1deg)) translate(0, calc(var(--height) * (var(--read, 0) * 1.5)));
+  opacity: calc(1 - var(--read));
+}
+.card__confetti:after {
+  background: hsl(var(--hue), 80%, 80%);
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  transition: transform calc(var(--read) * var(--transition)) calc(var(--read) * var(--transition));
+  transform: rotateX(calc((var(--rx) * var(--read)) * 1deg)) rotateY(calc((var(--ry) * var(--read)) * 1deg));
+}
+.card__content {
+  transform-style: preserve-3d;
+  height: 100%;
+  width: 100%;
+}
+.card__content--bottom:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--insert);
+  -webkit-clip-path: polygon(0 0, 15% 0, 15% 30%, 85% 30%, 85% 0, 100% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 15% 0, 15% 30%, 85% 30%, 85% 0, 100% 0, 100% 100%, 0 100%);
+}
+.card__content--top:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--insert);
+  -webkit-clip-path: polygon(0 0, 100% 0, 100% 100%, 85% 100%, 85% 70%, 78% 70%, 78% 46%, 72.4% 46%, 72.4% 26.8%, 27.6% 26.8%, 27.6% 46%, 22% 46%, 22% 70%, 15% 70%, 15% 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 85% 100%, 85% 70%, 78% 70%, 78% 46%, 72.4% 46%, 72.4% 26.8%, 27.6% 26.8%, 27.6% 46%, 22% 46%, 22% 70%, 15% 70%, 15% 100%, 0 100%);
+}
+.card__message {
+  position: absolute;
+  padding: 1rem;
+  font-family: sans-serif;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+.card__part {
+  height: var(--h, 100%);
+  width: var(--w, 100%);
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  transform-style: preserve-3d;
+}
+.card__inner {
+  --h: 96%;
+  --w: 95%;
+  transform: translate3d(-50%, 0, calc(var(--height) * 0));
+}
+.card__sleeve {
+  height: 100%;
+  width: 100%;
+}
+.message {
+  font-family: "Fredoka One", cursive;
+  color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 50%;
+  left: 20%;
+  transform: translate3d(0, -50%, 0);
+  margin: 0;
+  font-size: 4.5vmin;
+}
+.card__message {
+  font-family: "Fredoka One", cursive;
+  color: #1a1a1a;
+  font-size: 4vmin;
+  white-space: nowrap;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+.flip {
+  transform-style: preserve-3d;
+}
+.flip__piece {
+  height: 100%;
+  position: absolute;
+  width: 100%;
+  transform-origin: 50% 0;
+  transform-style: preserve-3d;
+  transition: transform var(--transition);
+}
+.flip__piece--front {
+  transform: rotateX(calc(var(--front) * 1deg));
+}
+.flip__piece--back {
+  transform: rotateX(calc(var(--rear) * 1deg));
+}
+.card__inner {
+  --rear: calc(-1.75 + (var(--read, 0) * 2));
+  --front: calc(1.75 + (var(--read, 0) * 88));
+}
+.card__outer {
+  --rear: calc(-2 + (var(--read, 0) * 2));
+  --front: calc(2 + (var(--read, 0) * 88));
+}
+.card__content-container {
+  transform-style: preserve-3d;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  position: absolute;
+}
+.card__content-container--inner-top {
+  transform: rotate(180deg) translate3d(0, 0, 0);
+}
+.card__content-container--inner-bottom {
+  transform: translate3d(0, 0, 0);
+}
+.cover__content {
+  height: 100%;
+  width: 100%;
+  background: var(--card);
+  position: absolute;
+  font-size: 2vmin;
+  transform-style: preserve-3d;
+}
+.cover__content--front,
+.cover__content--rear {
+  transform: translate3d(0, 0, 1px);
+}
+.front-cover__front,
+.rear-cover__front {
+  background: var(--card);
+}
+.front-cover__front:after,
+.rear-cover__front:after {
+  content: '';
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0px);
+  background: var(--paper-3);
+  height: 95%;
+  width: 95%;
+}
+.rear-cover__front:after {
+  transform: translate(-50%, 0, 2px);
+}
+.cake__section {
+  position: absolute;
+  transform-style: preserve-3d;
+  transition: var(--transition);
+}
+.cake__section--top {
+  height: 80%;
+  width: 80%;
+  left: 50%;
+  bottom: 0;
+}
+.cake__section--top-top {
+  transform: translate(-50%, 0) rotateX(calc(var(--read, 0) * 90deg)) translate3d(0, -100%, calc(var(--read, 0) * 0px)) rotateX(calc(var(--read, 0) * -90deg));
+  transform-origin: 50% 100%;
+  background: var(--paper);
+}
+.cake__section--top-front {
+  background: var(--paper-2);
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotateX(calc(var(--read, 0) * 90deg));
+}
+.cake__section--mid {
+  height: 80%;
+  width: 80%;
+  left: 50%;
+}
+.cake__section--mid-front {
+  bottom: 0;
+  transform-origin: 50% 0;
+  transform: translate3d(-50%, 0, 0) rotateX(calc((180 - (var(--read, 0) * -90)) * 1deg));
+  background: var(--paper-2);
+}
+.cake__section--mid-top {
+  background: transparent;
+  bottom: 0;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, 0) rotateX(calc(var(--read, 0) * 90deg)) translate3d(0, -100%, calc(var(--read, 0) * 0px)) rotateX(calc(var(--read, 0) * -90deg));
+}
+.cake__section--mid-top:before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  -webkit-clip-path: polygon(0 0, 10% 0, 10% 80%, 90% 80%, 90% 0, 100% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 10% 0, 10% 80%, 90% 80%, 90% 0, 100% 0, 100% 100%, 0 100%);
+  transform: rotate(180deg);
+  background: var(--paper);
+}
+.cake__section--bottom {
+  height: 30%;
+  width: 70%;
+  left: 50%;
+  transition: var(--transition);
+}
+.cake__section--bottom-top {
+  background: transparent;
+  transform-origin: 50% 100%;
+  bottom: 0;
+  transform: translate(-50%, -100%) rotateX(calc(var(--read, 0) * -90deg));
+}
+.cake__section--bottom-top:before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  -webkit-clip-path: polygon(0 0, 10% 0, 10% 80%, 90% 80%, 90% 0, 100% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 10% 0, 10% 80%, 90% 80%, 90% 0, 100% 0, 100% 100%, 0 100%);
+  transform: rotate(180deg);
+  background: var(--paper);
+}
+.cake__section--bottom-front {
+  background: var(--paper-2);
+  top: 0;
+  transform-origin: 50% 0;
+  transform: translate(-50%, 100%) rotateX(calc(var(--read, 0) * 90deg));
+}
+.section {
+  height: 100%;
+  width: 100%;
+}
+.section__piece {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  transform-style: preserve-3d;
+}
+.section__piece--back {
+  transform: rotateY(180deg);
+}
+.balloon {
+  overflow: visible !important;
+  height: 6vmin;
+  position: absolute;
+  left: calc(var(--x, 0) * 1%);
+  top: calc(var(--y, 0) * 1%);
+  -webkit-animation: float calc(var(--s, 0) * 1s) calc(var(--d, 0) * 1s) infinite;
+          animation: float calc(var(--s, 0) * 1s) calc(var(--d, 0) * 1s) infinite;
+}
+.balloon__body {
+  fill: hsla(var(--hue, 0), 80%, 50%, 0.75);
+}
+.balloon__glare {
+  fill: rgba(255,255,255,0.75);
+}
+.balloon__shadow {
+  fill: hsla(var(--hue, 0), 80%, 30%, 0.75);
+}
+.balloon__string {
+  stroke: #b3914d;
+}
+.balloon:nth-of-type(1) {
+  --hue: var(--balloon-1);
+  --x: 58;
+  --y: 28;
+}
+.balloon:nth-of-type(2) {
+  --hue: var(--balloon-2);
+  --x: 68;
+  --y: 20;
+}
+.balloon:nth-of-type(3) {
+  --hue: var(--balloon-3);
+  --x: 65;
+  --y: 40;
+}
+.cake {
+  overflow: visible !important;
+  width: 100%;
+  height: 100%;
+  transform: translate3d(0, 0, 1px);
+}
+.cake__frosting {
+  fill: var(--frosting);
+}
+.cake__eyes {
+  transform-origin: 50% 24px;
+  -webkit-animation: blink 5s infinite;
+          animation: blink 5s infinite;
+}
+.cake__body {
+  fill: var(--body);
+}
+.cake--bottom {
+  --frosting: var(--bottom-frosting);
+}
+.cake--mid {
+  --frosting: var(--mid-frosting);
+}
+.cake--top {
+  --frosting: var(--top-frosting);
+}
+.cake--bottom,
+.cake--mid {
+  transform: translate3d(0, 0, -1px) rotate(180deg);
+}
+.cake--mid .cake__sprinkles,
+.cake--top .cake__sprinkles {
+  transform: translate(0, -8px);
+}
+.cake__candle {
+  transform: translate(0, 12px);
+  transition: var(--transition);
+}
+.cake__sprinkle {
+  fill: hsl(var(--hue), 80%, 70%);
+}
+.candle__body {
+  fill: var(--body);
+}
+.candle__stripes {
+  fill: var(--stripes);
+}
+.candle__flame {
+  -webkit-animation: scribble 0.5s infinite;
+          animation: scribble 0.5s infinite;
+}
+.candle__flame-outer {
+  fill: var(--flame-1);
+}
+.candle__flame-inner {
+  fill: var(--flame-2);
+}
+@-webkit-keyframes blink {
+  0%, 47%, 49%, 51%, 100% {
+    transform: scaleY(1);
+  }
+  48%, 50% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes blink {
+  0%, 47%, 49%, 51%, 100% {
+    transform: scaleY(1);
+  }
+  48%, 50% {
+    transform: scaleY(0.1);
+  }
+}
+@-webkit-keyframes float {
+  0%, 100% {
+    transform: translate3d(0, 0, calc(var(--s) * 1px));
+  }
+  50% {
+    transform: translate3d(0, -25%, calc(var(--s) * 1px));
+  }
+}
+@keyframes float {
+  0%, 100% {
+    transform: translate3d(0, 0, calc(var(--s) * 1px));
+  }
+  50% {
+    transform: translate3d(0, -25%, calc(var(--s) * 1px));
+  }
+}
+@-webkit-keyframes scribble {
+  0% {
+    filter: url("#scribble--0");
+  }
+  25% {
+    filter: url("#scribble--1");
+  }
+  50% {
+    filter: url("#scribble--2");
+  }
+  75% {
+    filter: url("#scribble--3");
+  }
+  100% {
+    filter: url("#scribble--4");
+  }
+}
+@keyframes scribble {
+  0% {
+    filter: url("#scribble--0");
+  }
+  25% {
+    filter: url("#scribble--1");
+  }
+  50% {
+    filter: url("#scribble--2");
+  }
+  75% {
+    filter: url("#scribble--3");
+  }
+  100% {
+    filter: url("#scribble--4");
+  }
+}
+</style>
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<input id="read" type="checkbox"/>
+<label for="read">Read Card</label>
+<div class="scene">
+  <div class="card">
+    <div class="card__confetti" style="--rx: 285.46838345855656; --ry: 305.8782040107905; --a: 6.04387531395324; --hue: 191.2489404107241; --r: 60.50310916100415; --s:0.1551057910764253; --sk: 8.929854963815211;"></div>
+    <div class="card__confetti" style="--rx: 259.6568356062324; --ry: 64.96867678500864; --a: 88.27497941234697; --hue: 0.9743857805655587; --r: -55.282027414246684; --s:1.7742332327741661; --sk: 15.970489157897951;"></div>
+    <div class="card__confetti" style="--rx: 176.95549620111822; --ry: 194.381027659724; --a: 11.97880807315802; --hue: 254.95259777913353; --r: 27.752219898042924; --s:0.6376494154502776; --sk: 9.65994593194354;"></div>
+    <div class="card__confetti" style="--rx: 332.66690470426755; --ry: 318.5780865642916; --a: 70.41414257541057; --hue: 300.6834410055825; --r: 18.271326195913034; --s:4.9305492426290165; --sk: 18.419082608258158;"></div>
+    <div class="card__confetti" style="--rx: 304.1459289154267; --ry: 171.80155080986356; --a: 19.12286901963109; --hue: 335.96026763196716; --r: 70.4714849830645; --s:0.10485593113154001; --sk: 19.998050021179225;"></div>
+    <div class="card__confetti" style="--rx: 27.6417264631571; --ry: 19.45107425897106; --a: 9.016739458945588; --hue: 209.6719911076077; --r: 75.58768422467429; --s:4.733115166426445; --sk: 12.445336641746398;"></div>
+    <div class="card__confetti" style="--rx: 13.51341502153046; --ry: 204.685422224665; --a: 35.78672996108705; --hue: 248.16374015426197; --r: 37.46463158031207; --s:3.247027180766996; --sk: 3.6371284534548076;"></div>
+    <div class="card__confetti" style="--rx: 105.59190692165775; --ry: 101.2028418091229; --a: 79.99343921743575; --hue: 94.47490755178785; --r: 76.67528565056571; --s:3.865610016011752; --sk: 19.451853782959127;"></div>
+    <div class="card__confetti" style="--rx: 89.71650171595108; --ry: 216.34351891345113; --a: 33.944286086567445; --hue: 227.3412186087571; --r: -48.55006491332063; --s:3.008980754151369; --sk: 10.821895994932614;"></div>
+    <div class="card__confetti" style="--rx: 263.7356329535801; --ry: 168.41964954924381; --a: 54.15023092540377; --hue: 320.7417742966795; --r: 42.01585520415648; --s:2.5008868423124353; --sk: 18.14040858271231;"></div>
+    <div class="card__confetti" style="--rx: 228.93095080775166; --ry: 166.90623817196916; --a: 38.82847015904321; --hue: 272.7684194387208; --r: -82.77340691680675; --s:2.907654865263879; --sk: 15.141874247074458;"></div>
+    <div class="card__confetti" style="--rx: 138.26977227370594; --ry: 207.00805050205778; --a: 78.09970576924079; --hue: 175.24940844601187; --r: -57.484040402147315; --s:0.4912199348399571; --sk: 12.435523646002666;"></div>
+    <div class="card__confetti" style="--rx: 48.66920368963545; --ry: 265.6082155570155; --a: 13.31528734786562; --hue: 242.12838108835678; --r: 78.55259799015258; --s:2.0322109283981504; --sk: 6.6863925980357;"></div>
+    <div class="card__confetti" style="--rx: 231.88297065341908; --ry: 160.2760435053464; --a: 78.34033061789735; --hue: 91.2152740264391; --r: -16.674972397711272; --s:2.390759184471163; --sk: 14.047285634400026;"></div>
+    <div class="card__confetti" style="--rx: 287.33453850522255; --ry: 24.668359138268457; --a: 28.560231868510762; --hue: 227.41887527513214; --r: -27.85285964467805; --s:1.369874328302425; --sk: 8.245185537161879;"></div>
+    <div class="card__confetti" style="--rx: 250.5894162201339; --ry: 236.95155653923587; --a: 69.95911211850886; --hue: 337.2743728027855; --r: -31.24317571054719; --s:4.731102172495673; --sk: 2.5100195551819837;"></div>
+    <div class="card__confetti" style="--rx: 337.3473605134773; --ry: 139.9524596014651; --a: 89.2293202837879; --hue: 18.182955529584746; --r: -10.692111092748064; --s:2.3282557983640197; --sk: 1.3634350015585772;"></div>
+    <div class="card__confetti" style="--rx: 93.79608296960151; --ry: 78.8170947543265; --a: 1.9016164475269681; --hue: 93.60336540780548; --r: 88.89518147223143; --s:3.010533542271344; --sk: 3.86275847672942;"></div>
+    <div class="card__confetti" style="--rx: 205.064373286664; --ry: 265.9475090293293; --a: 28.161590562799198; --hue: 62.11415668310062; --r: 52.03680135119697; --s:3.5408796821410036; --sk: 15.947231532440629;"></div>
+    <div class="card__confetti" style="--rx: 323.946116404454; --ry: 106.63027014704753; --a: 80.27920555570925; --hue: 164.96589036565717; --r: -22.254589835221054; --s:1.4117344406411714; --sk: 1.8974046441060644;"></div>
+    <div class="card__confetti" style="--rx: 134.77100637977594; --ry: 193.57531666719524; --a: 21.996162160716292; --hue: 41.27639289577893; --r: 42.76069067391532; --s:2.8008271356317085; --sk: 5.467437415358409;"></div>
+    <div class="card__confetti" style="--rx: 197.79241308762732; --ry: 236.8020792860595; --a: 19.057503541358834; --hue: 45.52776187181805; --r: -53.35638712570216; --s:0.9871048642503144; --sk: 4.38869057905225;"></div>
+    <div class="card__confetti" style="--rx: 47.406314971688104; --ry: 323.77765595215527; --a: 77.28769302022883; --hue: 70.26229107723475; --r: 12.854657729316443; --s:0.6967571379411219; --sk: 0.5039184502607519;"></div>
+    <div class="card__confetti" style="--rx: 225.20206790118544; --ry: 206.61490370641084; --a: 66.37417554021944; --hue: 169.69852944793044; --r: 48.67599975490157; --s:4.355489841171353; --sk: 13.719126485556572;"></div>
+    <div class="card__confetti" style="--rx: 296.5754399909448; --ry: 65.47814345862548; --a: 5.4476625273268535; --hue: 155.2608194275962; --r: 50.660998690616225; --s:0.21700482227308138; --sk: 19.022500966012768;"></div>
+    <div class="card__confetti" style="--rx: 153.87354965115344; --ry: 83.0225506067295; --a: 18.766315556626008; --hue: 314.60753143446243; --r: 43.53644386669899; --s:4.378100341375451; --sk: 8.929431881127975;"></div>
+    <div class="card__confetti" style="--rx: 3.179750762647533; --ry: 61.85746304026737; --a: 35.18313971861549; --hue: 243.08181756839417; --r: 84.07195860670166; --s:1.8053567575871254; --sk: 1.825906602969507;"></div>
+    <div class="card__confetti" style="--rx: 32.86625981162865; --ry: 307.9504189431674; --a: 88.60970586034084; --hue: 71.3419995956623; --r: 22.16140474038319; --s:4.530962283640698; --sk: 1.0086451896357351;"></div>
+    <div class="card__confetti" style="--rx: 185.89740232191684; --ry: 140.31450398469386; --a: 18.974051934312794; --hue: 74.43277585051663; --r: -24.031061502896293; --s:0.7205273533389944; --sk: 4.56796947222645;"></div>
+    <div class="card__confetti" style="--rx: 8.44471390400959; --ry: 183.11311097443348; --a: 20.522554745358143; --hue: 350.16930721650897; --r: 8.890499602965491; --s:1.9698119570607553; --sk: 7.269937297679112;"></div>
+    <div class="card__confetti" style="--rx: 283.8064643779287; --ry: 338.1877781768062; --a: 78.5838736198943; --hue: 270.4890605199204; --r: 8.28286697068107; --s:1.713485187250936; --sk: 2.6318764481770174;"></div>
+    <div class="card__confetti" style="--rx: 53.870057210382825; --ry: 6.8689522694791805; --a: 36.57591307249837; --hue: 84.20906095508677; --r: -6.232506529097009; --s:3.150366501788797; --sk: 10.36792355456273;"></div>
+    <div class="card__confetti" style="--rx: 322.8151739424542; --ry: 285.1787140116725; --a: 16.157519930002824; --hue: 131.36068130068145; --r: -52.08411588389757; --s:2.787018954327766; --sk: 5.074901540499641;"></div>
+    <div class="card__confetti" style="--rx: 7.235046149191744; --ry: 122.89010838228702; --a: 67.64621870385302; --hue: 147.80997244006173; --r: -86.08140688395308; --s:1.7796928984870608; --sk: 17.312244205552556;"></div>
+    <div class="card__confetti" style="--rx: 325.4834625407391; --ry: 230.75222773183702; --a: 45.85932348696253; --hue: 180.67208213759554; --r: 22.079893432833913; --s:3.302954263064304; --sk: 4.0882826054836485;"></div>
+    <div class="card__confetti" style="--rx: 151.1377127420563; --ry: 49.11946497422757; --a: 55.634345510219575; --hue: 26.581192610076485; --r: 74.74190856574563; --s:4.89470124755769; --sk: 5.301566897369727;"></div>
+    <div class="card__confetti" style="--rx: 250.25636818767794; --ry: 115.13485796108257; --a: 24.386436721351348; --hue: 154.98080403448623; --r: -48.860598492876804; --s:1.4727652813688763; --sk: 10.539491092869051;"></div>
+    <div class="card__confetti" style="--rx: 124.03120643093611; --ry: 248.23374213367413; --a: 60.332507325711404; --hue: 331.7922566871524; --r: 73.95074832506481; --s:1.5966786895634488; --sk: 3.6950006321698226;"></div>
+    <div class="card__confetti" style="--rx: 190.37366759439786; --ry: 163.01311362086838; --a: 43.59122400698972; --hue: 94.51895542882863; --r: 44.04581004565165; --s:4.311364966412271; --sk: 17.05217056317551;"></div>
+    <div class="card__confetti" style="--rx: 327.60564980191947; --ry: 336.0023343427184; --a: 47.57974332095989; --hue: 193.73552271006744; --r: 0.11775020950952353; --s:1.2250746585044103; --sk: 14.412274425045585;"></div>
+    <div class="card__confetti" style="--rx: 315.8480672750445; --ry: 341.3734816605434; --a: 41.058411720668914; --hue: 189.79600745581956; --r: -9.876097122840761; --s:2.074777253961054; --sk: 4.574666332954038;"></div>
+    <div class="card__confetti" style="--rx: 207.81102119044246; --ry: 170.97489520527458; --a: 12.299878663301236; --hue: 281.62428938966855; --r: -88.75794582661707; --s:4.439340333439161; --sk: 0.8074925174482184;"></div>
+    <div class="card__confetti" style="--rx: 67.47213836802374; --ry: 148.9862951501126; --a: 37.74728726611818; --hue: 344.5647654867683; --r: 58.63358906547063; --s:1.1583716356369067; --sk: 14.38943460597956;"></div>
+    <div class="card__confetti" style="--rx: 146.9206345811066; --ry: 221.7649685794699; --a: 20.31272074440825; --hue: 168.11411596326795; --r: 23.04684731114287; --s:2.4127320497373237; --sk: 6.271046502940032;"></div>
+    <div class="card__confetti" style="--rx: 172.17066702828726; --ry: 125.98423513848533; --a: 18.262636141697314; --hue: 138.61888082055918; --r: 54.309445613068675; --s:0.700044959015067; --sk: 16.72124677230601;"></div>
+    <div class="card__confetti" style="--rx: 312.65644326573545; --ry: 147.71231375760428; --a: 82.95856148886418; --hue: 329.76753078463196; --r: -57.23361567672069; --s:0.7082419850739285; --sk: 19.124164563290122;"></div>
+    <div class="card__confetti" style="--rx: 193.44225945368873; --ry: 296.3626679739079; --a: 64.32843728048485; --hue: 128.14007867475948; --r: 65.54718427139167; --s:2.9771197547577444; --sk: 6.429095483555751;"></div>
+    <div class="card__confetti" style="--rx: 283.5824924716268; --ry: 69.66291900325542; --a: 54.979849487217756; --hue: 355.2907412439911; --r: 87.06258643243743; --s:0.6620962325726631; --sk: 15.580325399980426;"></div>
+    <div class="card__confetti" style="--rx: 302.9898918037453; --ry: 245.73882914861764; --a: 52.27229398008222; --hue: 161.96604049167712; --r: 54.32861925082858; --s:2.839043250303405; --sk: 8.294220475552873;"></div>
+    <div class="card__confetti" style="--rx: 311.3763205526131; --ry: 146.56924179530571; --a: 32.53577378017817; --hue: 112.92603841347; --r: -20.086187523726593; --s:0.40293285508662846; --sk: 12.812051365080155;"></div>
+    <div class="card__outer card__part flip">
+      <div class="flip__piece flip__piece--front section">
+        <div class="section__piece section__piece--front front-cover front-cover__front"></div>
+        <div class="section__piece section__piece--rear front-cover hide-back">
+          <div class="cover__content cover__content--front hide-back">
+            <h1 class="message hide-back"><span>Happy</span><span>Birthday!</span></h1>
+            <svg class="balloon" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 117.9 124.8" style="--s: 6.920910348412515; --d: -5.044500078745926;">
+              <path class="balloon__string" d="M59 121v170" stroke-width="2.4"></path>
+              <path class="balloon__body" d="M59 0A59 59 0 000 59a59 59 0 0050 58 6 6 0 005 8h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0z"></path>
+              <path class="balloon__glare" d="M14 42a45 45 0 0127-26" stroke-width="7.9" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path class="balloon__shadow" d="M59 0a59 59 0 00-5 0 59 59 0 0157 59 59 59 0 01-58 59 59 59 0 01-3 0v1c0 3 2 6 5 6h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0zm-5 0a59 59 0 00-6 1 59 59 0 016-1zm-6 1a59 59 0 00-6 2 59 59 0 016-2zm-6 2zm0 0a59 59 0 00-5 1 59 59 0 015-1zm-5 1a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-5 2 59 59 0 015-2zm-5 2zm0 0a59 59 0 00-5 3 59 59 0 015-3zm-5 3zm0 0a59 59 0 00-4 3 59 59 0 014-3zm-4 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-2 4 59 59 0 012-4zm-2 4a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-1 4 59 59 0 011-4zm-1 4a59 59 0 00-1 2 59 59 0 011-2zm-1 2a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 000 4 59 59 0 010-4z"></path>
+            </svg>
+            <svg class="balloon" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 117.9 124.8" style="--s: 8.246734127360698; --d: -4.759582761058989;">
+              <path class="balloon__string" d="M59 121v170" stroke-width="2.4"></path>
+              <path class="balloon__body" d="M59 0A59 59 0 000 59a59 59 0 0050 58 6 6 0 005 8h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0z"></path>
+              <path class="balloon__glare" d="M14 42a45 45 0 0127-26" stroke-width="7.9" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path class="balloon__shadow" d="M59 0a59 59 0 00-5 0 59 59 0 0157 59 59 59 0 01-58 59 59 59 0 01-3 0v1c0 3 2 6 5 6h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0zm-5 0a59 59 0 00-6 1 59 59 0 016-1zm-6 1a59 59 0 00-6 2 59 59 0 016-2zm-6 2zm0 0a59 59 0 00-5 1 59 59 0 015-1zm-5 1a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-5 2 59 59 0 015-2zm-5 2zm0 0a59 59 0 00-5 3 59 59 0 015-3zm-5 3zm0 0a59 59 0 00-4 3 59 59 0 014-3zm-4 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-2 4 59 59 0 012-4zm-2 4a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-1 4 59 59 0 011-4zm-1 4a59 59 0 00-1 2 59 59 0 011-2zm-1 2a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 000 4 59 59 0 010-4z"></path>
+            </svg>
+            <svg class="balloon" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 117.9 124.8" style="--s: 9.877726776531894; --d: -4.429117148136974;">
+              <path class="balloon__string" d="M59 121v170" stroke-width="2.4"></path>
+              <path class="balloon__body" d="M59 0A59 59 0 000 59a59 59 0 0050 58 6 6 0 005 8h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0z"></path>
+              <path class="balloon__glare" d="M14 42a45 45 0 0127-26" stroke-width="7.9" stroke-linecap="round" stroke-linejoin="round"></path>
+              <path class="balloon__shadow" d="M59 0a59 59 0 00-5 0 59 59 0 0157 59 59 59 0 01-58 59 59 59 0 01-3 0v1c0 3 2 6 5 6h7a6 6 0 006-8 59 59 0 0050-58A59 59 0 0059 0zm-5 0a59 59 0 00-6 1 59 59 0 016-1zm-6 1a59 59 0 00-6 2 59 59 0 016-2zm-6 2zm0 0a59 59 0 00-5 1 59 59 0 015-1zm-5 1a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-5 2 59 59 0 015-2zm-5 2zm0 0a59 59 0 00-5 3 59 59 0 015-3zm-5 3zm0 0a59 59 0 00-4 3 59 59 0 014-3zm-4 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 3 59 59 0 013-3zm-3 3a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-3 4 59 59 0 013-4zm-3 4a59 59 0 000 1 59 59 0 010-1zm0 1a59 59 0 00-2 4 59 59 0 012-4zm-2 4a59 59 0 00-1 1 59 59 0 011-1zm-1 1a59 59 0 00-1 4 59 59 0 011-4zm-1 4a59 59 0 00-1 2 59 59 0 011-2zm-1 2a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 00-1 3 59 59 0 011-3zm-1 3a59 59 0 000 3 59 59 0 010-3zm0 3a59 59 0 000 4 59 59 0 010-4z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="flip__piece flip__piece--back section">
+        <div class="section__piece section__piece--front rear-cover rear-cover__front"></div>
+        <div class="section__piece section__piece--back hide-back">
+          <div class="cover__content cover__content--rear">
+            <div class="barcode"></div><img class="stamp" 
+src="data:image/jpeg;base64,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" alt="Doudou"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card__inner card__part flip">
+      <div class="flip__piece flip__piece--front section">
+        <div class="section__piece section__piece--back inner-top">
+          <div class="card__content-container card__content-container--inner-top">
+            <div class="card__content card__content--top">
+              <div class="cake__section cake__section--bottom cake__section--bottom-top">
+                <div class="cake__section cake__section--mid-top cake__section--mid">
+                  <div class="cake__section cake__section--top-top cake__section--top"></div>
+                  <div class="cake__section cake__section--top-front cake__section--top">
+                    <svg class="cake cake--top" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.8 45.4" preserveAspectRatio="none">
+                      <path class="cake__body" d="M0 0h106v45H0z"></path>
+                      <path class="cake__frosting" d="M1-8h104c4 0 8 4 8 9s-4 8-8 9c-5 0-8-8-13-8s-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8c-4-1-8-4-8-9s3-9 8-9z" fill="purple"></path>
+                      <g class="cake__candle">
+                        <g transform="translate(-13 -238)">
+                          <rect class="candle__body" ry="0" y="212.2" x="34.2" height="21.8" width="6.8"></rect>
+                          <path class="candle__stripes" d="M34 224v3l7 7v-3zM34 218v4l7 6v-3zM34 212v4l7 7v-4z"></path>
+                        </g>
+                        <g class="candle__flame">
+                          <path class="candle__flame-outer" d="M29-30a4 4 0 01-8 0c0-2 4-2 4-7s4 5 4 7z"></path>
+                          <path class="candle__flame-inner" d="M27-29a2 2 0 01-4-1c0-1 2-1 2-3 1-2 2 3 2 4z"></path>
+                        </g>
+                      </g>
+                      <g class="cake__candle">
+                        <g transform="translate(43 -238)">
+                          <rect class="candle__body" width="6.8" height="21.8" x="34.2" y="212.2" ry="0"></rect>
+                          <path class="candle__stripes" d="M34 224v3l7 7v-3zM34 218v4l7 6v-3zM34 212v4l7 7v-4z"></path>
+                        </g>
+                        <g class="candle__flame">
+                          <path class="candle__flame-outer" d="M85-29a4 4 0 01-8 0c0-3 4-3 4-7 0-6 4 4 4 7z"></path>
+                          <path class="candle__flame-inner" d="M83-29a2 2 0 01-4-1c0-1 2 0 2-3 1-2 2 3 2 4z"></path>
+                        </g>
+                      </g>
+                      <g class="cake__candle">
+                        <g transform="translate(15 -232)">
+                          <rect class="candle__body" width="6.8" height="21.8" x="34.2" y="212.2" ry="0"></rect>
+                          <path class="candle__stripes" d="M34 224v3l7 7v-3zM34 218v4l7 6v-3zM34 212v4l7 7v-4z"></path>
+                        </g>
+                        <g class="candle__flame">
+                          <path class="candle__flame-outer" d="M57-24a4 4 0 01-8 0c0-2 4-2 4-7s4 5 4 7z"></path>
+                          <path class="candle__flame-inner" d="M55-24a2 2 0 01-4 0c0-1 2-1 2-3 1-2 2 2 2 3z"></path>
+                        </g>
+                      </g>
+                      <g class="cake__sprinkles">
+                        <g transform="translate(-10 -237)">
+                          <rect class="cake__sprinkle" style="--hue: 145.45301584511694" transform="rotate(39)" ry="1.2" y="199.6" x="185.8" height="6.3" width="2.4"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 198.4838350797887" width="2.4" height="6.3" x="-141.5" y="236.8" ry="1.2" transform="rotate(-36)"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 4.316200367951656" transform="rotate(-72)" ry="1.2" y="185.1" x="-231.3" height="6.3" width="2.4"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 244.7760940787632" width="2.4" height="6.3" x="220" y="190.4" ry="1.2" transform="rotate(30)"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 22.50716100333306" transform="rotate(46)" ry="1.2" y="128.8" x="257.6" height="6.3" width="2.4"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 335.4272177882431" width="2.4" height="6.3" x="-186.3" y="216.6" ry="1.2" transform="rotate(-56)"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 26.05248645770227" transform="rotate(30)" ry="1.2" y="212.4" x="178.7" height="6.3" width="2.4"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 198.95360109119258" width="2.4" height="6.3" x="-191.8" y="199.2" ry="1.2" transform="rotate(-51)"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 335.6097911873044" transform="rotate(77)" ry="1.2" y="-7.4" x="284.7" height="6.3" width="2.4"></rect>
+                          <rect class="cake__sprinkle" style="--hue: 245.46539762289197" width="2.4" height="6.3" x="-218.9" y="174.7" ry="1.2" transform="rotate(-63)"></rect>
+                        </g>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+                <div class="cake__section cake__section--mid-front cake__section--mid">
+                  <svg class="cake cake--mid" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.8 45.4" preserveAspectRatio="none">
+                    <path class="cake__body" d="M0 0h106v45H0z"></path>
+                    <path class="cake__frosting" d="M1-8h104c4 0 8 4 8 9s-4 8-8 9c-5 0-8-8-13-8s-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8c-4-1-8-4-8-9s3-9 8-9z" fill="purple"></path>
+                    <g class="cake__sprinkles">
+                      <g transform="translate(-10 -237)">
+                        <rect class="cake__sprinkle" style="--hue: 145.35339857158522" transform="rotate(39)" ry="1.2" y="199.6" x="185.8" height="6.3" width="2.4"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 101.86714786816749" width="2.4" height="6.3" x="-141.5" y="236.8" ry="1.2" transform="rotate(-36)"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 38.44831317605304" transform="rotate(-72)" ry="1.2" y="185.1" x="-231.3" height="6.3" width="2.4"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 330.0175467592261" width="2.4" height="6.3" x="220" y="190.4" ry="1.2" transform="rotate(30)"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 1.4742387821838812" transform="rotate(46)" ry="1.2" y="128.8" x="257.6" height="6.3" width="2.4"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 268.2303535176375" width="2.4" height="6.3" x="-186.3" y="216.6" ry="1.2" transform="rotate(-56)"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 281.78162686735897" transform="rotate(30)" ry="1.2" y="212.4" x="178.7" height="6.3" width="2.4"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 305.040693553717" width="2.4" height="6.3" x="-191.8" y="199.2" ry="1.2" transform="rotate(-51)"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 261.7322884685278" transform="rotate(77)" ry="1.2" y="-7.4" x="284.7" height="6.3" width="2.4"></rect>
+                        <rect class="cake__sprinkle" style="--hue: 65.02484555717497" width="2.4" height="6.3" x="-218.9" y="174.7" ry="1.2" transform="rotate(-63)"></rect>
+                      </g>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flip__piece flip__piece--back section">
+        <div class="section__piece section__piece--front inner-bottom">
+          <div class="card__content-container card__content-container--inner-bottom">
+            <div class="card__content card__content--bottom">
+              <div class="cake__section cake__section--bottom-front cake__section--bottom">
+                <svg class="cake cake--bottom" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.8 45.4" preserveAspectRatio="none">
+                  <path class="cake__body" d="M0 0h106v45H0z"></path>
+                  <path class="cake__frosting" d="M1-8h104c4 0 8 4 8 9s-4 8-8 9c-5 0-8-8-13-8s-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8-8-8-13-8-8 8-13 8c-4-1-8-4-8-9s3-9 8-9z" fill="purple"></path>
+                  <g class="cake__face">
+                    <g class="cake__eyes">
+                      <g transform="translate(-8 -237)">
+                        <circle cx="38.6" cy="259.2" r="4.5"></circle>
+                        <circle cx="36.3" cy="257.1" r=".8" fill="#fff"></circle>
+                      </g>
+                      <g transform="translate(37 -237)">
+                        <circle r="4.5" cy="259.2" cx="38.6"></circle>
+                        <circle r=".8" cy="257.1" cx="36.3" fill="#fff"></circle>
+                      </g>
+                    </g>
+                    <g class="cake__mouth">
+                      <path d="M57 25a4 4 0 11-8 0"></path>
+                      <path d="M55 26a3 3 0 00-3 2 4 4 0 004-1 3 3 0 00-1-1z" fill="red"></path>
+                    </g>
+                    <g class="cake__cheeks" transform="translate(-13 -237)" fill="#ffd5d5">
+                      <circle r="3.7" cy="265.5" cx="28.6"></circle>
+                      <circle cx="102.9" cy="265.5" r="3.7"></circle>
+                    </g>
+                  </g>
+                  <g class="cake__sprinkles">
+                    <g transform="translate(-10 -237)">
+                      <rect class="cake__sprinkle" style="--hue: 274.7339540858997" transform="rotate(39)" ry="1.2" y="199.6" x="185.8" height="6.3" width="2.4"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 271.1350488677856" width="2.4" height="6.3" x="-141.5" y="236.8" ry="1.2" transform="rotate(-36)"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 6.95355985030843" transform="rotate(-72)" ry="1.2" y="185.1" x="-231.3" height="6.3" width="2.4"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 160.40345379731528" width="2.4" height="6.3" x="220" y="190.4" ry="1.2" transform="rotate(30)"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 267.88500817694825" transform="rotate(46)" ry="1.2" y="128.8" x="257.6" height="6.3" width="2.4"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 307.5379510028573" width="2.4" height="6.3" x="-186.3" y="216.6" ry="1.2" transform="rotate(-56)"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 235.10637757204978" transform="rotate(30)" ry="1.2" y="212.4" x="178.7" height="6.3" width="2.4"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 61.3762626958997" width="2.4" height="6.3" x="-191.8" y="199.2" ry="1.2" transform="rotate(-51)"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 237.6921790886232" transform="rotate(77)" ry="1.2" y="-7.4" x="284.7" height="6.3" width="2.4"></rect>
+                      <rect class="cake__sprinkle" style="--hue: 33.91330942895006" width="2.4" height="6.3" x="-218.9" y="174.7" ry="1.2" transform="rotate(-63)"></rect>
+                    </g>
+                  </g>
+                </svg>
+              </div>
+              <h2 class="card__message">To 豆豆 ^^*</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<svg>
+  <filter id="scribble--0">
+    <feturbulence basefrequency="0.02" numoctaves="3" result="noise" seed="0"></feturbulence>
+    <fedisplacementmap id="displacement" in="SourceGraphic" in2="noise" scale="2"></fedisplacementmap>
+  </filter>
+  <filter id="scribble--1">
+    <feturbulence basefrequency="0.02" numoctaves="3" result="noise" seed="1"></feturbulence>
+    <fedisplacementmap in="SourceGraphic" in2="noise" scale="3"></fedisplacementmap>
+  </filter>
+  <filter id="scribble--2">
+    <feturbulence basefrequency="0.02" numoctaves="3" result="noise" seed="2"></feturbulence>
+    <fedisplacementmap in="SourceGraphic" in2="noise" scale="2"></fedisplacementmap>
+  </filter>
+  <filter id="scribble--3">
+    <feturbulence basefrequency="0.02" numoctaves="3" result="noise" seed="3"></feturbulence>
+    <fedisplacementmap in="SourceGraphic" in2="noise" scale="3"></fedisplacementmap>
+  </filter>
+  <filter id="scribble--4">
+    <feturbulence basefrequency="0.02" numoctaves="3" result="noise" seed="4"></feturbulence>
+    <fedisplacementmap in="SourceGraphic" in2="noise" scale="2"></fedisplacementmap>
+  </filter>
+</svg>
+<!-- partial -->
+<script>
+const mapRange = (a1, a2, b1, b2, value) => {
+  const inRange = a2 - a1;
+  const outRange = b2 - b1;
+  const func = v => b1 + ((v - a1) / inRange * outRange || 0);
+  return value || value === 0 ? func(value) : func;
+};
+
+const BOUNDS = 90;
+const UPDATE = ({ x: pointerX, y: pointerY }) => {
+  const x = mapRange(0, window.innerWidth, -BOUNDS, BOUNDS, pointerX);
+  const y = mapRange(0, window.innerHeight, BOUNDS, -BOUNDS, pointerY);
+  document.documentElement.style.setProperty('--x', x);
+  document.documentElement.style.setProperty('--y', y);
+};
+const CHEER = new Audio('https://assets.codepen.io/605876/kids-cheering.mp3');
+CHEER.volume = 0.5;
+const INPUT = document.querySelector('input');
+INPUT.addEventListener('change', () => {
+  if (INPUT.checked) {
+    CHEER.currentTime = 0;
+    CHEER.play();
+  }
+});
+
+window.addEventListener('pointermove', UPDATE);
+</script>
+
+</body>
+</html>
