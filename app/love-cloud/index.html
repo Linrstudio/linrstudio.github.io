@@ -1,1 +1,96 @@
-// 调用手机摄像头，拍摄云朵照片。然后调用AI大模型识别云朵匹配的可爱图片(卡通形象、动物、人物、生活中常见图案等)
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>云朵变变变 - 可爱图案匹配</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: '微软雅黑', Arial, sans-serif; margin: 0; padding: 0; background: #f0f8ff; color: #333;}
+    .container { max-width: 480px; margin: 30px auto; background: #fff; border-radius: 15px; box-shadow: 0 2px 16px #ddd; padding: 24px;}
+    h1 { text-align: center; color: #1e90ff;}
+    .photo-area { text-align: center; margin-bottom: 16px;}
+    .photo-area img, .result-area img { max-width: 100%; border-radius: 10px; margin: 10px 0;}
+    .btn { display: inline-block; padding: 12px 30px; background: #1e90ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;}
+    .btn:active { background: #1565c0; }
+    .loading { color: #888; text-align: center; }
+    .result-area { text-align: center; margin-top: 28px;}
+    .caption { font-size: 18px; margin: 10px 0 0 0; color: #e91e63;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>云朵变变变</h1>
+    <div class="photo-area">
+      <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
+      <button class="btn" onclick="document.getElementById('cameraInput').click()">拍摄或上传云朵照片</button>
+      <div id="cloudPhotoPreview"></div>
+    </div>
+    <div style="text-align:center;">
+      <button class="btn" onclick="analyzeCloud()" id="analyzeBtn" disabled>识别并匹配可爱图片</button>
+      <div class="loading" id="loadingTip" style="display:none;">AI识别中，请稍候……</div>
+    </div>
+    <div class="result-area" id="resultArea"></div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    const cameraInput = document.getElementById('cameraInput');
+    const previewDiv = document.getElementById('cloudPhotoPreview');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const loadingTip = document.getElementById('loadingTip');
+    const resultArea = document.getElementById('resultArea');
+
+    cameraInput.addEventListener('change', function(event) {
+      previewDiv.innerHTML = "";
+      resultArea.innerHTML = "";
+      const file = event.target.files[0];
+      if (file) {
+        selectedFile = file;
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.onload = function() { URL.revokeObjectURL(img.src); }
+        previewDiv.appendChild(img);
+        analyzeBtn.disabled = false;
+      }
+    });
+
+    async function analyzeCloud() {
+      if (!selectedFile) return alert("请先拍摄或上传一张云朵照片！");
+      loadingTip.style.display = "block";
+      analyzeBtn.disabled = true;
+      resultArea.innerHTML = "";
+
+      // 构造FormData并上传到后端API
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      try {
+        // 请将此接口替换为你的后端AI服务地址
+        const resp = await fetch('/api/cloud-analyze', {
+          method: 'POST',
+          body: formData
+        });
+        if (!resp.ok) throw new Error("网络错误/AI服务出错");
+        const data = await resp.json();
+        // data 应包含 { cute_image_url, caption }
+        if (data.cute_image_url) {
+          resultArea.innerHTML = `
+            <div>
+              <div style="color:#4caf50;font-size:16px;">AI匹配结果</div>
+              <img src="${data.cute_image_url}" alt="可爱匹配图案" />
+              <div class="caption">${data.caption ? data.caption : '和你的云朵很像哦！'}</div>
+            </div>
+          `;
+        } else {
+          resultArea.innerHTML = `<div style="color:#e91e63;">未能识别或匹配到可爱图片，请换一张试试~</div>`;
+        }
+      } catch (e) {
+        resultArea.innerHTML = `<div style="color:#e91e63;">出现错误：${e.message}</div>`;
+      } finally {
+        loadingTip.style.display = "none";
+        analyzeBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
+<!--// 调用手机摄像头，拍摄云朵照片。然后调用AI大模型识别云朵匹配的可爱图片(卡通形象、动物、人物、生活中常见图案等) -->
