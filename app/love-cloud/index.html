@@ -2,398 +2,363 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>云朵变变变 · 高级涂鸦板</title>
+  <title>云朵变变变 · 涂鸦板</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
-    body { font-family: '微软雅黑', Arial, sans-serif; background: #f0f8ff; color: #333;}
-    .container { max-width: 480px; margin: 30px auto; background: #fff; border-radius: 15px; box-shadow: 0 2px 16px #ddd; padding: 10px 0 24px 0;}
-    h1 { text-align: center; color: #1e90ff;}
-    .btn { display: inline-block; padding: 10px 18px; background: #1e90ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;}
-    .btn:active { background: #1565c0; }
-    .tool-bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 12px 0;}
-    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; outline: 1.5px solid #ccc;}
-    .color-btn.selected { outline: 2.5px solid #1e90ff;}
-    .color-btn.custom { border: 2px dashed #aaa;}
-    .tool-btn { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #ccc; background: #f6f6f6; font-size: 18px; cursor: pointer;}
-    .tool-btn.selected { background: #1e90ff; color: #fff;}
-    .size-btn { width: 25px; height: 25px; border-radius: 50%; background: #eee; border: none; font-size: 16px; cursor: pointer;}
-    .size-btn.selected { background: #1e90ff; color: #fff;}
-    .toolbar-label { font-size: 13px; color: #666; margin: 0 5px;}
-    .canvas-area { width: 100vw; max-width: 440px; height: 400px; margin: 0 auto; position: relative;}
-    canvas { background: #fff; border-radius: 12px; border: 1.5px solid #eee; touch-action: none; width: 100%; height: 100%;}
-    .action-bar { text-align:center; margin-top: 10px;}
-    .tips { color: #777; font-size: 13px; text-align: center; margin-top: 3px;}
-    .file-input { display: none;}
+    body { margin: 0; padding: 10px; background: #f0f8ff; }
+    .container { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #ddd; padding: 14px; }
+    h1 { text-align: center; color: #1e90ff; font-size: 24px; margin: 0 0 16px 0; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 10px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; background: #1e90ff; color: #fff; cursor: pointer; font-size: 15px; }
+    .btn:disabled { opacity: 0.5; }
+    .btn.outline { background: #fff; color: #1e90ff; border: 1px solid #1e90ff; }
+    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px #ccc; }
+    .color-btn.selected { box-shadow: 0 0 0 2px #1e90ff; }
+    .tool-btn { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid #ccc; background: #fff; font-size: 18px; cursor: pointer; }
+    .tool-btn.selected { background: #1e90ff; color: #fff; }
+    .size-btn { width: 24px; height: 24px; border-radius: 50%; background: #eee; border: none; cursor: pointer; }
+    .size-btn.selected { background: #1e90ff; }
+    .canvas-area { width: 100vw; max-width: 440px; height: 400px; margin: 0 auto; position: relative; }
+    canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 12px; background: #fff; border: 1px solid #eee; touch-action: none; }
+    .toolbar-label { font-size: 13px; color: #666; margin-right: 2px; }
+    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
 <div class="container">
-  <h1>云朵变变变 · 高级涂鸦板</h1>
-  <div class="tool-bar">
-    <label class="btn" style="background:#fff;color:#1e90ff;border:1px solid #1e90ff;">
+  <h1>云朵变变变</h1>
+  <div class="toolbar">
+    <label class="btn outline">
       拍照
-      <input type="file" accept="image/*" capture="environment" id="cameraInput" class="file-input">
+      <input type="file" accept="image/*" capture="environment" id="cameraInput">
     </label>
-    <label class="btn" style="background:#fff;color:#1e90ff;border:1px solid #1e90ff;">
-      选本地图
-      <input type="file" accept="image/*" id="localInput" class="file-input">
+    <label class="btn outline">
+      选择图片
+      <input type="file" accept="image/*" id="fileInput">
     </label>
-    <button class="btn" onclick="clearDrawLayer()">清空画布</button>
-    <button class="btn" onclick="saveCanvas()">保存到本地</button>
-    <button class="btn" onclick="undo()">撤销</button>
-    <button class="btn" onclick="redo()">重做</button>
+    <button class="btn" id="undoBtn" disabled>撤销</button>
+    <button class="btn" id="redoBtn" disabled>重做</button>
+    <button class="btn" id="saveBtn">保存</button>
+    <button class="btn" id="clearBtn">清空</button>
   </div>
-  <div class="tool-bar">
+  <div class="toolbar">
     <span class="toolbar-label">颜色</span>
-    <div id="colorBar" style="display:flex;"></div>
-    <input type="color" id="customColorPicker" style="display:none;">
-    <span class="toolbar-label">粗细</span>
-    <div id="sizeBar" style="display:flex;"></div>
-    <button class="tool-btn" id="penBtn" title="画笔">✏️</button>
+    <div id="colorPalette" style="display: flex; gap: 4px;"></div>
+    <input type="color" id="customColor" style="width:28px;height:28px;padding:0;cursor:pointer;">
+    <span class="toolbar-label">工具</span>
+    <button class="tool-btn selected" id="penBtn" title="画笔">✏️</button>
     <button class="tool-btn" id="eraserBtn" title="橡皮擦">🧹</button>
-    <button class="tool-btn" id="smudgeBtn" title="涂抹">🖌️</button>
+    <span class="toolbar-label">粗细</span>
+    <div id="sizeButtons" style="display: flex; gap: 2px;"></div>
   </div>
-  <div class="tips">双指捏合放大/缩小，拖动画布，单指绘制。支持橡皮擦和涂抹。</div>
   <div class="canvas-area" style="position:relative;">
-    <canvas id="bgCanvas" width="440" height="400" style="position:absolute;left:0;top:0;z-index:0;"></canvas>
-    <canvas id="drawCanvas" width="440" height="400" style="position:absolute;left:0;top:0;z-index:1;"></canvas>
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="drawCanvas"></canvas>
   </div>
-  <div class="action-bar"></div>
 </div>
 <script>
-  // 颜色、粗细
-  const cuteColors = [
-    {name: "桃粉", val: "#FFB6C1"},
-    {name: "柠檬黄", val: "#FFFACD"},
-    {name: "天蓝", val: "#87CEFA"},
-    {name: "薄荷绿", val: "#AEEEEE"},
-    {name: "薰衣草紫", val: "#E6E6FA"},
-    {name: "亮橙", val: "#FFD580"},
-    {name: "奶油白", val: "#fffbe7"},
-    {name: "黑", val: "#222"},
-    {name: "自定义", val: "#ff69b4", custom: true}
-  ];
-  const cuteSizes = [
-    {name: "细", val: 2},
-    {name: "中", val: 5},
-    {name: "粗", val: 10},
-    {name: "超粗", val: 20}
-  ];
-
-  let selectedColor = cuteColors[0].val;
-  let selectedSize = cuteSizes[1].val;
-  let tool = 'pen'; // pen, eraser, smudge
-
-  // 画布和变换
+(function() {
+  // 画布与状态
   const bgCanvas = document.getElementById('bgCanvas');
+  const drawCanvas = document.getElementById('drawCanvas');
   const bgCtx = bgCanvas.getContext('2d');
-  const canvas = document.getElementById('drawCanvas');
-  const ctx = canvas.getContext('2d');
-  let bgImage = null; // 底图
-  let canvasW = canvas.width, canvasH = canvas.height;
+  const ctx = drawCanvas.getContext('2d');
+  let bgImage = null;
+  let currentColor = "#000000";
+  let currentSize = 5;
+  let currentTool = "pen";
+  let isDrawing = false;
+  let lastPt = null;
+  let strokes = [];
+  let redoStack = [];
+  let currentStroke = null;
 
-  // 变换参数
+  // 缩放和平移
   let scale = 1, offsetX = 0, offsetY = 0;
   let lastScale = 1, lastOffsetX = 0, lastOffsetY = 0;
-  let isDrawing = false, lastPt = null;
-  let isPanning = false, lastPan = null;
-  let lastTouchDist = 0, lastTouchMid = null;
-  let drawingHist = [], redoHist = [];
+  let multiTouch = false, lastTouchDist = 0, lastTouchMid = null;
 
-  // --- 工具栏 ---
-  function setupColorBar() {
-    const colorBar = document.getElementById('colorBar');
-    colorBar.innerHTML = "";
-    cuteColors.forEach((c, i) => {
-      const btn = document.createElement('button');
-      btn.className = "color-btn" + (i === 0 ? " selected" : "") + (c.custom ? " custom" : "");
-      btn.style.background = c.val;
-      btn.title = c.name;
-      btn.onclick = () => {
-        if (c.custom) {
-          document.getElementById('customColorPicker').click();
-        } else {
-          selectedColor = c.val;
-          document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
-          btn.classList.add('selected');
-        }
-      };
-      colorBar.appendChild(btn);
+  // 初始化画布
+  function resizeCanvas() {
+    const ctn = document.querySelector('.canvas-area');
+    const w = ctn.clientWidth, h = ctn.clientHeight;
+    [bgCanvas, drawCanvas].forEach(c => {
+      c.width = w; c.height = h; c.style.width = w + 'px'; c.style.height = h + 'px';
     });
+    renderBg();
+    redrawStrokes();
   }
-  function setupSizeBar() {
-    const sizeBar = document.getElementById('sizeBar');
-    sizeBar.innerHTML = "";
-    cuteSizes.forEach((s, i) => {
+  window.addEventListener('resize', resizeCanvas);
+
+  // 颜色条
+  const paletteColors = [
+    '#FFB6C1', '#FFFACD', '#87CEFA', '#AEEEEE', '#E6E6FA', '#FFD580', '#fffbe7', '#222'
+  ];
+  function buildColorPalette() {
+    const colorPalette = document.getElementById('colorPalette');
+    colorPalette.innerHTML = "";
+    paletteColors.forEach((color, i) => {
       const btn = document.createElement('button');
-      btn.className = "size-btn" + (i === 1 ? " selected" : "");
-      btn.innerHTML = `<span style="display:inline-block;width:${s.val}px;height:${s.val}px;background:${selectedColor};border-radius:50%;"></span>`;
-      btn.title = s.name;
-      btn.onclick = () => {
-        selectedSize = s.val;
-        document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('selected'));
+      btn.className = 'color-btn' + (color === currentColor ? ' selected' : '');
+      btn.style.backgroundColor = color;
+      btn.onclick = function() { selectColor(color, false); };
+      colorPalette.appendChild(btn);
+    });
+    // 自定义颜色
+    const customColorInput = document.getElementById('customColor');
+    customColorInput.value = currentColor;
+    customColorInput.onchange = function(e) { selectColor(e.target.value, true); };
+  }
+  function selectColor(color, custom) {
+    currentColor = color;
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+    if (!custom) {
+      let idx = paletteColors.indexOf(color);
+      if (idx !== -1) document.getElementById('colorPalette').children[idx].classList.add('selected');
+    }
+  }
+  buildColorPalette();
+
+  // 粗细
+  const sizes = [2, 5, 9, 16];
+  function buildSizeButtons() {
+    const sizeButtons = document.getElementById('sizeButtons');
+    sizeButtons.innerHTML = "";
+    sizes.forEach(size => {
+      const btn = document.createElement('button');
+      btn.className = 'size-btn' + (size === currentSize ? ' selected' : '');
+      btn.innerHTML = `<span style="display:inline-block;width:${size}px;height:${size}px;background:currentColor;border-radius:50%;"></span>`;
+      btn.onclick = function() {
+        currentSize = size;
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
       };
-      sizeBar.appendChild(btn);
+      sizeButtons.appendChild(btn);
     });
   }
-  setupColorBar();
-  setupSizeBar();
+  buildSizeButtons();
 
-  // 自定义颜色
-  document.getElementById('customColorPicker').addEventListener('change',function(e){
-    selectedColor = e.target.value;
-    // 动态更新自定义按钮颜色
-    let btns = document.querySelectorAll('.color-btn.custom');
-    btns.forEach(btn=>btn.style.background=selectedColor);
-    document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
-    btns[0].classList.add('selected');
-  });
+  // 工具栏
+  document.getElementById('penBtn').onclick = function() {
+    currentTool = 'pen';
+    this.classList.add('selected');
+    document.getElementById('eraserBtn').classList.remove('selected');
+  };
+  document.getElementById('eraserBtn').onclick = function() {
+    currentTool = 'eraser';
+    this.classList.add('selected');
+    document.getElementById('penBtn').classList.remove('selected');
+  };
 
-  // 工具选择
-  const penBtn = document.getElementById('penBtn');
-  const eraserBtn = document.getElementById('eraserBtn');
-  const smudgeBtn = document.getElementById('smudgeBtn');
-  function selectTool(t) {
-    tool = t;
-    penBtn.classList.toggle('selected', t==='pen');
-    eraserBtn.classList.toggle('selected', t==='eraser');
-    smudgeBtn.classList.toggle('selected', t==='smudge');
-  }
-  penBtn.onclick = ()=>selectTool('pen');
-  eraserBtn.onclick = ()=>selectTool('eraser');
-  smudgeBtn.onclick = ()=>selectTool('smudge');
-  selectTool('pen');
-
-  // --- 图片导入 ---
-  function setBgImage(src) {
-    bgImage = new window.Image();
-    bgImage.onload = function() {
-      drawBg();
+  // 文件输入
+  document.getElementById('fileInput').onchange =
+  document.getElementById('cameraInput').onchange = function(e) {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        bgImage = new window.Image();
+        bgImage.onload = function() { renderBg(); };
+        bgImage.src = ev.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
     }
-    bgImage.src = src;
-  }
-  document.getElementById('cameraInput').addEventListener('change', function(e){
-    if (e.target.files[0]) {
-      const url = URL.createObjectURL(e.target.files[0]);
-      setBgImage(url);
-    }
-  });
-  document.getElementById('localInput').addEventListener('change', function(e){
-    if (e.target.files[0]) {
-      const url = URL.createObjectURL(e.target.files[0]);
-      setBgImage(url);
-    }
-  });
+  };
 
-  function drawBg() {
-    bgCtx.setTransform(1,0,0,1,0,0);
-    bgCtx.clearRect(0,0,canvasW,canvasH);
+  // 渲染底图
+  function renderBg() {
+    bgCtx.clearRect(0,0,bgCanvas.width, bgCanvas.height);
     if (bgImage) {
-      let s = Math.min(canvasW/bgImage.width, canvasH/bgImage.height), w = bgImage.width*s, h = bgImage.height*s;
-      bgCtx.drawImage(bgImage, (canvasW-w)/2, (canvasH-h)/2, w, h);
+      const scale = Math.min(bgCanvas.width / bgImage.width, bgCanvas.height / bgImage.height);
+      const w = bgImage.width * scale, h = bgImage.height * scale;
+      const x = (bgCanvas.width - w) / 2, y = (bgCanvas.height - h) / 2;
+      bgCtx.drawImage(bgImage, x, y, w, h);
     } else {
-      bgCtx.fillStyle="#fff"; bgCtx.fillRect(0,0,canvasW,canvasH);
+      bgCtx.fillStyle = '#fff';
+      bgCtx.fillRect(0,0,bgCanvas.width, bgCanvas.height);
     }
   }
 
-  // --- 绘制流程 ---
-  function drawAll() {
+  // 绘制所有笔画
+  function redrawStrokes() {
     ctx.setTransform(1,0,0,1,0,0);
-    ctx.clearRect(0,0,canvasW,canvasH);
+    ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
     ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-    drawingHist.forEach(d=>{
-      ctx.save();
-      ctx.globalAlpha = d.tool==='smudge'?0.7:1;
-      if (d.tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-      } else if (d.tool === 'smudge') {
-        ctx.globalCompositeOperation = 'source-over';
-      } else {
-        ctx.globalCompositeOperation = 'source-over';
-      }
-      ctx.strokeStyle = d.color;
-      ctx.lineWidth = d.size;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(d.points[0][0], d.points[0][1]);
-      for(let i=1;i<d.points.length;i++) ctx.lineTo(d.points[i][0], d.points[i][1]);
-      ctx.stroke();
-      ctx.restore();
-    });
+    strokes.forEach(drawStroke);
     ctx.setTransform(1,0,0,1,0,0);
   }
-  function addStroke(pts, color, size, tool) {
-    drawingHist.push({points:[...pts], color, size, tool});
-    redoHist = []; // 新绘制清空重做堆栈
-    drawAll();
+  function drawStroke(stroke) {
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = stroke.tool === 'eraser' ? '#fff' : stroke.color;
+    ctx.lineWidth = stroke.size;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
+    for(let i=1;i<stroke.points.length;i++) ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
+    ctx.stroke();
+    ctx.restore();
   }
-  function clearDrawLayer() {
-    drawingHist = []; redoHist = [];
-    drawAll();
-  }
-  function saveCanvas() {
-    // 合成底图+绘图层
-    let outCanvas = document.createElement('canvas');
-    outCanvas.width = canvasW; outCanvas.height = canvasH;
-    let outCtx = outCanvas.getContext('2d');
-    // 背景
-    if (bgImage) {
-      let s = Math.min(canvasW/bgImage.width, canvasH/bgImage.height), w = bgImage.width*s, h = bgImage.height*s;
-      outCtx.drawImage(bgImage, (canvasW-w)/2, (canvasH-h)/2, w, h);
-    } else {
-      outCtx.fillStyle="#fff"; outCtx.fillRect(0,0,canvasW,canvasH);
+
+  // 撤销/重做
+  document.getElementById('undoBtn').onclick = function() {
+    if (strokes.length) {
+      redoStack.push(strokes.pop());
+      redrawStrokes();
+      updateUndoRedo();
     }
-    // 绘图内容
-    drawingHist.forEach(d=>{
-      outCtx.save();
-      outCtx.globalAlpha = d.tool==='smudge'?0.7:1;
-      if (d.tool === 'eraser') {
-        outCtx.globalCompositeOperation = 'destination-out';
-     [0][1]);
-      for(let i=1;i<d.points.length;i++) outCtx.lineTo(d.points[i][0], d.points[i][1]);
-      outCtx.stroke();
-      outCtx.restore();
-    });
-    // 保存
-    const url = outCanvas.toDataURL("image/png");
+  };
+  document.getElementById('redoBtn').onclick = function() {
+    if (redoStack.length) {
+      strokes.push(redoStack.pop());
+      redrawStrokes();
+      updateUndoRedo();
+    }
+  };
+  function updateUndoRedo() {
+    document.getElementById('undoBtn').disabled = strokes.length === 0;
+    document.getElementById('redoBtn').disabled = redoStack.length === 0;
+  }
+
+  // 清空
+  document.getElementById('clearBtn').onclick = function() {
+    strokes = [];
+    redoStack = [];
+    redrawStrokes();
+    updateUndoRedo();
+  };
+
+  // 保存
+  document.getElementById('saveBtn').onclick = function() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bgCanvas.width;
+    tempCanvas.height = bgCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(bgCanvas, 0, 0);
+    tempCtx.drawImage(drawCanvas, 0, 0);
     const link = document.createElement('a');
     link.download = "云朵涂鸦.png";
-    link.href = url;
+    link.href = tempCanvas.toDataURL("image/png");
     link.click();
+  };
+
+  // 事件：绘画与缩放
+  function getPt(e) {
+    const rect = drawCanvas.getBoundingClientRect();
+    if (e.touches) {
+      return [(e.touches[0].clientX-rect.left-offsetX)/scale, (e.touches[0].clientY-rect.top-offsetY)/scale];
+    }
+    return [(e.clientX-rect.left-offsetX)/scale, (e.clientY-rect.top-offsetY)/scale];
+  }
+  function getTouchDist(e) {
+    if (e.touches.length < 2) return 0;
+    let dx = e.touches[1].clientX - e.touches[0].clientX;
+    let dy = e.touches[1].clientY - e.touches[0].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+  function getTouchMid(e) {
+    if (e.touches.length < 2) return [0,0];
+    return [
+      (e.touches[0].clientX + e.touches[1].clientX)/2,
+      (e.touches[0].clientY + e.touches[1].clientY)/2
+    ];
   }
 
-  // 撤销/重做功能
-  function undo() {
-    if (drawingHist.length>0) {
-      redoHist.push(drawingHist.pop());
-      drawAll();
-    }
-  }
-  function redo() {
-    if (redoHist.length>0) {
-      drawingHist.push(redoHist.pop());
-      drawAll();
-    }
-  }
-  window.undo = undo; window.redo = redo;
-
-  // ---- 触摸/鼠标事件 ----
-  function getCanvasPt(clientX, clientY) {
-    const rect = canvas.getBoundingClientRect();
-    const x = (clientX-rect.left - offsetX)/scale;
-    const y = (clientY-rect.top - offsetY)/scale;
-    return [x, y];
-  }
-  let currStroke = [];
-  let activeTouches = {};
-  let isMultiTouch = false;
-
-  // 统一Pointer事件
-  canvas.addEventListener('pointerdown', function(e){
-    if (e.pointerType==="touch" && isMultiTouch) return; // 跳过多指
-    if (e.button!==undefined && e.button!==0) return;
-    if (isMultiTouch) return; // 避免双指缩放时误触
-    isDrawing = true;
-    let pt = getCanvasPt(e.clientX, e.clientY);
-    currStroke = [pt];
-    lastPt = pt;
-  });
-  canvas.addEventListener('pointermove', function(e){
-    if (isDrawing && !isMultiTouch) {
-      let pt = getCanvasPt(e.clientX, e.clientY);
-      if (tool==='pen' || tool==='eraser') {
-        currStroke.push(pt);
-        drawAll();
-        // 临时画当前轨迹
-        ctx.save();
-        ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-        ctx.globalAlpha = tool==='eraser'?1:1;
-        ctx.globalCompositeOperation = tool==='eraser'?'destination-out':'source-over';
-        ctx.strokeStyle = tool==='pen'?selectedColor:"#000";
-        ctx.lineWidth = selectedSize;
-        ctx.beginPath();
-        ctx.moveTo(lastPt[0], lastPt[1]);
-        ctx.lineTo(pt[0], pt[1]);
-        ctx.stroke();
-        ctx.restore();
-        lastPt = pt;
-      } else if (tool==='smudge') {
-        smudgeAt(pt[0], pt[1], selectedSize);
-        currStroke.push(pt);
-      }
-    }
-  });
-  canvas.addEventListener('pointerup', function(e){
-    if (isDrawing && !isMultiTouch) {
-      addStroke(currStroke, tool==='pen'?selectedColor:"#000", selectedSize, tool);
-    }
-    isDrawing = false;
-    currStroke = [];
-  });
-('pointerout', function(e){
-    isDrawing = false;
-    currStroke = [];
-  });
-
-  // ---- 多指缩放/平移 ----
-  let touchInfo = {};
-  canvas.addEventListener('touchstart', function(e){
-    if (e.touches.length===2) {
-      isMultiTouch = true;
-      isDrawing = false; // 禁止绘制
-      lastScale = scale;
-      lastOffsetX = offsetX; lastOffsetY = offsetY;
+  drawCanvas.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) {
+      multiTouch = true; isDrawing = false;
+      lastScale = scale; lastOffsetX = offsetX; lastOffsetY = offsetY;
       lastTouchDist = getTouchDist(e);
       lastTouchMid = getTouchMid(e);
+    } else if (e.touches.length === 1 && !multiTouch) {
+      isDrawing = true;
+      const [x, y] = getPt(e);
+      lastPt = [x, y];
+      currentStroke = { tool: currentTool, color: currentColor, size: currentSize, points: [[x, y]] };
     }
   }, {passive:false});
-  canvas.addEventListener('touchmove', function(e){
-    if (e.touches.length===2) {
+  drawCanvas.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 2) {
+      let dist = getTouchDist(e);
+      let mid = getTouchMid(e);
+      let ds = dist / lastTouchDist;
+      scale = Math.max(0.5, Math.min(5, lastScale * ds));
+      offsetX = lastOffsetX + (mid[0]-lastTouchMid[0]);
+      offsetY = lastOffsetY + (mid[1]-lastTouchMid[1]);
+      redrawStrokes();
       e.preventDefault();
-      isMultiTouch = true;
-      let currDist = getTouchDist(e);
-      let currMid = getTouchMid(e();
+    } else if (e.touches.length === 1 && isDrawing && !multiTouch) {
+      const [x, y] = getPt(e);
+      currentStroke.points.push([x, y]);
+      redrawStrokes();
+      // 只画当前线段
+      ctx.save();
+      ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
+      ctx.globalCompositeOperation = currentTool==='eraser'?'destination-out':'source-over';
+      ctx.strokeStyle = currentTool==='pen'?currentColor:'#fff';
+      ctx.lineWidth = currentSize;
+      ctx.beginPath();
+      ctx.moveTo(lastPt[0], lastPt[1]);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.restore();
+      lastPt = [x, y];
+      e.preventDefault();
     }
   }, {passive:false});
-  canvas.addEventListener('touchend', function(e){
-    if (e.touches.length<2) {
-      isMultiTouch = false;
+  drawCanvas.addEventListener('touchend', function(e) {
+    if (multiTouch && e.touches.length < 2) {
+      multiTouch = false;
+    }
+    if (isDrawing && !multiTouch) {
+      if (currentStroke && currentStroke.points.length > 1) {
+        strokes.push(currentStroke);
+        redoStack = [];
+        updateUndoRedo();
+      }
+      isDrawing = false; currentStroke = null;
     }
   });
 
-  function getTouchDist(e){
-    let t0 = e.touches[0], t1 = e.touches[1];
-    let dx = t1.clientX-t0.clientX, dy = t1.clientY-t0.clientY;
-    return Math.sqrt(dx*dx+dy*dy);
-  }
-  function getTouchMid(e){
-    let t0 = e.touches[0], t1 =[1];
-    return [(t0.clientX+t1.clientX)/2, (t0.clientY+t1.clientY)/2];
-  }
-
-  // ---- 简单涂抹功能 ----
-  function smudgeAt(x, y, size){
-    let r = Math.floor(size*2);
-    let sx = Math.floor(x-r), sy = Math.floor(y-r);
-    let imgData = ctx.getImageData(sx, sy, r*2, r*2);
-    let d = imgData.data;
-    for (let i=0; i<d.length; i+=4){
-      let sumR=0,sumG=0,sumB=0,count=0;
-      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
-        let idx = i+((dx+dy*2)*4);
-        if(idx>=0 && idx<d.length){
-          sumR+=d[idx]; sumG+=d[idx+1]; sumB+=d[idx+2]; count++;
-        }
+  // 鼠标事件
+  drawCanvas.addEventListener('mousedown', function(e) {
+    if (multiTouch) return;
+    isDrawing = true;
+    const [x, y] = getPt(e);
+    lastPt = [x, y];
+    currentStroke = { tool: currentTool, color: currentColor, size: currentSize, points: [[x, y]] };
+  });
+  drawCanvas.addEventListener('mousemove', function(e) {
+    if (!isDrawing || multiTouch) return;
+    const [x, y] = getPt(e);
+    currentStroke.points.push([x, y]);
+    redrawStrokes();
+    ctx.save();
+    ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
+   (x, y);
+    ctx.stroke();
+    ctx.restore();
+    lastPt = [x, y];
+  });
+  drawCanvas.addEventListener('mouseup', function(e) {
+    if (isDrawing && !multiTouch) {
+      if (currentStroke && currentStroke.points.length > 1) {
+        strokes.push(currentStroke);
+        redoStack = [];
+        updateUndoRedo();
       }
-      d[i] = sumR/count; d[i+1], sx, sy);
-  }
+      isDrawing = false; currentStroke = null;
+    }
+  });
+  drawCanvas.addEventListener('mouseleave', function(e) {
+    isDrawing = false; currentStroke = null;
+  });
 
-  // --- 初始化 ---
-  bgCtx.fillStyle="#fff"; bgCtx.fillRect(0,0,canvasW,canvasH);
-  drawBg();
-  drawAll();
+  // 初始化
+  resizeCanvas();
+  renderBg();
+  redrawStrokes();
+})();
 </script>
 </body>
 </html>
