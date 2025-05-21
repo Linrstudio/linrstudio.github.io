@@ -2,19 +2,26 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>云朵变变变 - 可爱图案匹配</title>
+  <title>云朵变变变 - 可爱图案匹配与创意涂鸦</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: '微软雅黑', Arial, sans-serif; margin: 0; padding: 0; background: #f0f8ff; color: #333;}
     .container { max-width: 480px; margin: 30px auto; background: #fff; border-radius: 15px; box-shadow: 0 2px 16px #ddd; padding: 24px;}
     h1 { text-align: center; color: #1e90ff;}
-    .photo-area { text-align: center; margin-bottom: 16px;}
+    .photo-area, .draw-area { text-align: center; margin-bottom: 16px;}
     .photo-area img, .result-area img { max-width: 100%; border-radius: 10px; margin: 10px 0;}
     .btn { display: inline-block; padding: 12px 30px; background: #1e90ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;}
     .btn:active { background: #1565c0; }
     .loading { color: #888; text-align: center; }
     .result-area { text-align: center; margin-top: 28px;}
     .caption { font-size: 18px; margin: 10px 0 0 0; color: #e91e63;}
+    .tool-bar { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 10px 0;}
+    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; outline: 1.5px solid #ccc;}
+    .color-btn.selected { outline: 2.5px solid #1e90ff;}
+    .size-btn { width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #eee; border: none; font-size: 16px; cursor: pointer;}
+    .size-btn.selected { background: #1e90ff; color: #fff;}
+    .toolbar-label { font-size: 13px; color: #666;}
+    canvas { touch-action: none; border-radius: 10px; border: 1.5px solid #eee; background: #fff; }
   </style>
 </head>
 <body>
@@ -25,6 +32,17 @@
       <button class="btn" onclick="document.getElementById('cameraInput').click()">拍摄或上传云朵照片</button>
       <div id="cloudPhotoPreview"></div>
     </div>
+    <div class="draw-area" id="drawArea" style="display:none;">
+      <div class="toolbar-label">选择颜色：</div>
+      <div class="tool-bar" id="colorBar"></div>
+      <div class="toolbar-label">选择笔迹粗细：</div>
+      <div class="tool-bar" id="sizeBar"></div>
+      <canvas id="drawCanvas" width="320" height="320"></canvas>
+      <div style="margin-top:10px">
+        <button class="btn" onclick="clearCanvas()">清除画布</button>
+        <button class="btn" onclick="saveCanvas()">保存到本地</button>
+      </div>
+    </div>
     <div style="text-align:center;">
       <button class="btn" onclick="analyzeCloud()" id="analyzeBtn" disabled>识别并匹配可爱图片</button>
       <div class="loading" id="loadingTip" style="display:none;">AI识别中，请稍候……</div>
@@ -33,34 +51,179 @@
   </div>
 
   <script>
+    // 萌系可爱配色
+    const cuteColors = [
+      {name: "桃粉", val: "#FFB6C1"},
+      {name: "柠檬黄", val: "#FFFACD"},
+      {name: "天蓝", val: "#87CEFA"},
+      {name: "薄荷绿", val: "#AEEEEE"},
+      {name: "薰衣草紫", val: "#E6E6FA"},
+      {name: "亮橙", val: "#FFD580"},
+      {name: "奶油白", val: "#fffbe7"},
+      {name: "黑", val: "#333"},
+    ];
+    const cuteSizes = [
+      {name: "细", val: 2},
+      {name: "中", val: 5},
+      {name: "粗", val: 10},
+      {name: "超粗", val: 20}
+    ];
+    let selectedColor = cuteColors[0].val;
+    let selectedSize = cuteSizes[1].val;
     let selectedFile = null;
+    let bgImage = null;
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+
     const cameraInput = document.getElementById('cameraInput');
     const previewDiv = document.getElementById('cloudPhotoPreview');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const loadingTip = document.getElementById('loadingTip');
     const resultArea = document.getElementById('resultArea');
+    const drawArea = document.getElementById('drawArea');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const ctx = drawCanvas.getContext('2d');
 
+    // 配置颜色
+    function setupColorBar() {
+      const colorBar = document.getElementById('colorBar');
+      colorBar.innerHTML = "";
+      cuteColors.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = "color-btn" + (i === 0 ? " selected" : "");
+        btn.style.background = c.val;
+        btn.title = c.name;
+        btn.onclick = () => {
+          selectedColor = c.val;
+          document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
+          btn.classList.add('selected');
+        };
+        colorBar.appendChild(btn);
+      });
+    }
+    // 配置笔迹粗细
+    function setupSizeBar() {
+      const sizeBar = document.getElementById('sizeBar');
+      sizeBar.innerHTML = "";
+      cuteSizes.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = "size-btn" + (i === 1 ? " selected" : "");
+        btn.innerHTML = `<span style="display:inline-block;width:${s.val}px;height:${s.val}px;background:${selectedColor};border-radius:50%;"></span>`;
+        btn.title = s.name;
+        btn.onclick = () => {
+          selectedSize = s.val;
+          document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('selected'));
+          btn.classList.add('selected');
+        };
+        sizeBar.appendChild(btn);
+      });
+    }
+
+    // 绘图功能
+    function startDraw(e) {
+      drawing = true;
+      const [x, y] = getXY(e);
+      lastX = x; lastY = y;
+    }
+    function draw(e) {
+      if (!drawing) return;
+      const [x, y] = getXY(e);
+      ctx.strokeStyle = selectedColor;
+      ctx.lineWidth = selectedSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      lastX = x; lastY = y;
+    }
+    function endDraw() {
+      drawing = false;
+    }
+    function getXY(e) {
+      let rect = drawCanvas.getBoundingClientRect();
+      if (e.touches) {
+        return [
+          e.touches[0].clientX - rect.left,
+          e.touches[0].clientY - rect.top
+        ];
+      }
+      return [
+        e.offsetX !== undefined ? e.offsetX : e.clientX - rect.left,
+        e.offsetY !== undefined ? e.offsetY : e.clientY - rect.top
+      ];
+    }
+    function clearCanvas() {
+      if (bgImage) ctx.drawImage(bgImage, 0, 0, drawCanvas.width, drawCanvas.height);
+      else ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+    function saveCanvas() {
+      const link = document.createElement('a');
+      link.download = "云朵涂鸦.png";
+      link.href = drawCanvas.toDataURL("image/png");
+      link.click();
+    }
+
+    // 监听绘图事件
+    drawCanvas.addEventListener('mousedown', startDraw);
+    drawCanvas.addEventListener('mousemove', draw);
+    drawCanvas.addEventListener('mouseup', endDraw);
+    drawCanvas.addEventListener('mouseout', endDraw);
+    // 触摸事件
+    drawCanvas.addEventListener('touchstart', startDraw);
+    drawCanvas.addEventListener('touchmove', function(e){draw(e); e.preventDefault();}, {passive: false});
+    drawCanvas.addEventListener('touchend', endDraw);
+
+    // 图片上传后预览并初始化画布
     cameraInput.addEventListener('change', function(event) {
       previewDiv.innerHTML = "";
       resultArea.innerHTML = "";
+      drawArea.style.display = "none";
       const file = event.target.files[0];
       if (file) {
         selectedFile = file;
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
-        img.onload = function() { URL.revokeObjectURL(img.src); }
-        previewDiv.appendChild(img);
+        img.onload = function() {
+          // 显示图片预览
+          previewDiv.appendChild(img);
+          // 初始化绘画区域
+          setupDrawingPanel(img);
+          URL.revokeObjectURL(img.src);
+        };
         analyzeBtn.disabled = false;
       }
     });
 
+    // 初始化画布并将图片绘制为背景
+    function setupDrawingPanel(img) {
+      drawArea.style.display = "";
+      // 让图片适配canvas尺寸
+      drawCanvas.width = 320;
+      drawCanvas.height = 320;
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      // 计算图片缩放及居中
+      const scale = Math.min(drawCanvas.width / img.width, drawCanvas.height / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      const dx = (drawCanvas.width - w) / 2, dy = (drawCanvas.height - h) / 2;
+      // 绘制图片做底图
+      ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      ctx.drawImage(img, dx, dy, w, h);
+      // 存为底图
+      bgImage = new window.Image();
+      bgImage.src = drawCanvas.toDataURL();
+      // 工具栏
+      setupColorBar();
+      setupSizeBar();
+    }
+
+    // AI识别部分（可保留/对接后端服务）
     async function analyzeCloud() {
       if (!selectedFile) return alert("请先拍摄或上传一张云朵照片！");
       loadingTip.style.display = "block";
       analyzeBtn.disabled = true;
       resultArea.innerHTML = "";
-
-      // 构造FormData并上传到后端API
       const formData = new FormData();
       formData.append('image', selectedFile);
       try {
@@ -71,7 +234,6 @@
         });
         if (!resp.ok) throw new Error("网络错误/AI服务出错");
         const data = await resp.json();
-        // data 应包含 { cute_image_url, caption }
         if (data.cute_image_url) {
           resultArea.innerHTML = `
             <div>
@@ -90,7 +252,10 @@
         analyzeBtn.disabled = false;
       }
     }
+
+    // 初始化工具栏
+    setupColorBar();
+    setupSizeBar();
   </script>
 </body>
 </html>
-<!--// 调用手机摄像头，拍摄云朵照片。然后调用AI大模型识别云朵匹配的可爱图片(卡通形象、动物、人物、生活中常见图案等) -->
