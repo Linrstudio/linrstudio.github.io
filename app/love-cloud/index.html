@@ -8,7 +8,7 @@
     body { font-family: '微软雅黑', Arial, sans-serif; margin: 0; padding: 0; background: #f0f8ff; color: #333;}
     .container { max-width: 480px; margin: 30px auto; background: #fff; border-radius: 15px; box-shadow: 0 2px 16px #ddd; padding: 10px 0 24px 0;}
     h1 { text-align: center; color: #1e90ff;}
-    .btn { display: inline-block; padding: 10px 18px; background: #1e90ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;}
+    .btn { display: inline-block; padding: 6px 12px; background: #1e90ff; color: #fff; border: none; border-radius: 8px; font-size: 12px; cursor: pointer;}
     .btn:active { background: #1565c0; }
     .tool-bar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 12px 0;}
     .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; outline: 1.5px solid #ccc;}
@@ -37,17 +37,22 @@
       选本地图
       <input type="file" accept="image/*" id="localInput" class="file-input">
     </label>
-    <button class="btn" onclick="clearCanvas()">清空画布</button>
-    <button class="btn" onclick="saveCanvas()">保存到本地</button>
+    <button class="btn" onclick="clearCanvas()">清空</button>
+    <button class="btn" onclick="saveCanvas()">保存</button>
   </div>
   <div class="tool-bar">
-    <span class="toolbar-label">颜色</span>
-    <div id="colorBar" style="display:flex;"></div>
-    <span class="toolbar-label">粗细</span>
-    <div id="sizeBar" style="display:flex;"></div>
-    <button class="tool-btn" id="penBtn" title="画笔">✏️</button>
-    <button class="tool-btn" id="eraserBtn" title="橡皮擦">🧹</button>
-    <button class="tool-btn" id="smudgeBtn" title="涂抹">🖌️</button>
+    <div style="display: flex;flex:none;align-items: center;gap: 2px;">
+        <span class="toolbar-label">颜色</span>
+        <div id="colorBar" style="display:flex;"></div>
+        <input type="color" id="customColorPicker" style="display:none;">
+    </div>
+    <div style="display: flex;flex:none;align-items: center;gap: 2px;">
+        <span class="toolbar-label">粗细</span>
+        <div id="sizeBar" style="display:flex;"></div>
+        <button class="tool-btn" id="penBtn" title="画笔">✏️</button>
+        <button class="tool-btn" id="eraserBtn" title="橡皮擦">🧹</button>
+        <button class="tool-btn" id="smudgeBtn" title="涂抹">🖌️</button>
+    </div>
   </div>
   <div class="tips">双指捏合放大/缩小，拖动画布，单指绘制。支持橡皮擦和涂抹。</div>
   <div class="canvas-area">
@@ -68,6 +73,7 @@
     {name: "亮橙", val: "#FFD580"},
     {name: "奶油白", val: "#fffbe7"},
     {name: "黑", val: "#222"},
+    {name: "自定义", val: "#000", custom: true}
   ];
   const cuteSizes = [
     {name: "细", val: 2},
@@ -99,13 +105,17 @@
     colorBar.innerHTML = "";
     cuteColors.forEach((c, i) => {
       const btn = document.createElement('button');
-      btn.className = "color-btn" + (i === 0 ? " selected" : "");
+      btn.className = "color-btn" + (i === 0 ? " selected" : "") + (c.custom ? " custom" : "");;
       btn.style.background = c.val;
       btn.title = c.name;
       btn.onclick = () => {
-        selectedColor = c.val;
-        document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
-        btn.classList.add('selected');
+        if (c.custom) {
+          document.getElementById('customColorPicker').click();
+        } else {
+            selectedColor = c.val;
+            document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
       };
       colorBar.appendChild(btn);
     });
@@ -119,15 +129,26 @@
       btn.innerHTML = `<span style="display:inline-block;width:${s.val}px;height:${s.val}px;background:${selectedColor};border-radius:50%;"></span>`;
       btn.title = s.name;
       btn.onclick = () => {
+        
         selectedSize = s.val;
         document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('selected'));
         btn.classList.add('selected');
+        
       };
       sizeBar.appendChild(btn);
     });
   }
   setupColorBar();
   setupSizeBar();
+
+  document.getElementById('customColorPicker').addEventListener('change',function(e){
+    selectedColor = e.target.value;
+    // 动态更新自定义按钮颜色
+    let btns = document.querySelectorAll('.color-btn.custom');
+    btns.forEach(btn=>btn.style.background=selectedColor);
+    document.querySelectorAll('.color-btn').forEach(x=>x.classList.remove('selected'));
+    btns[0].classList.add('selected');
+  });
 
   // 工具选择
   const penBtn = document.getElementById('penBtn');
@@ -201,7 +222,48 @@
     });
     ctx.setTransform(1,0,0,1,0,0); // reset
   }
+  let undoStack = [];
+  let redoStack = [];
+
+  function saveState() {
+    undoStack.push(drawingHist.map(stroke => ({...stroke, points: [...stroke.points]})));
+    redoStack = [];
+  }
+
+  function undo() {
+    if (undoStack.length > 0) {
+      redoStack.push(drawingHist);
+      drawingHist = undoStack.pop();
+      drawAll();
+    }
+  }
+
+  function redo() {
+    if (redoStack.length > 0) {
+      undoStack.push(drawingHist);
+      drawingHist = redoStack.pop();
+      drawAll();
+    }
+  }
+
+  // Add event listeners for undo and redo buttons
+  const undoBtn = document.createElement('button');
+  undoBtn.className = 'btn';
+  undoBtn.innerText = '撤销';
+  undoBtn.onclick = undo;
+
+  document.querySelector('.action-bar').appendChild(undoBtn);
+
+  const redoBtn = document.createElement('button');
+  redoBtn.className = 'btn';
+  redoBtn.innerText = '重做';
+  redoBtn.onclick = redo;
+
+  document.querySelector('.action-bar').appendChild(redoBtn);
+
+  // Modify addStroke to save state
   function addStroke(pts, color, size, tool) {
+    saveState();
     drawingHist.push({points:[...pts], color, size, tool});
     drawAll();
   }
