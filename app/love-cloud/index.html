@@ -20,7 +20,7 @@
     .toolbar-label { font-size: 13px; color: #666; margin: 0 5px;}
     .canvas-area { width: 100vw; max-width: 440px; height: 400px; margin: 0 auto; position: relative;}
     canvas { background: #fff; border-radius: 12px; border: 1.5px solid #eee; touch-action: none; width: 100%; height: 100%;}
-    .action-bar { text-align:center; margin-top: 10px;}
+    .action-bar { text-align:center; display: inline-flex;gap: 8px;align-items: center;}
     .tips { color: #777; font-size: 13px; text-align: center; margin-top: 3px;}
     .file-input { display: none;}
   </style>
@@ -39,6 +39,9 @@
     </label>
     <button class="btn" onclick="clearCanvas()">清空</button>
     <button class="btn" onclick="saveCanvas()">保存</button>
+    <span class="action-bar">
+      <!-- 可扩展AI识别按钮 -->
+    </span>
   </div>
   <div class="tool-bar">
     <div style="display: flex;flex:none;align-items: center;gap: 2px;">
@@ -49,6 +52,7 @@
     <div style="display: flex;flex:none;align-items: center;gap: 2px;">
         <span class="toolbar-label">粗细</span>
         <div id="sizeBar" style="display:flex;"></div>
+        <span class="toolbar-label">工具</span>
         <button class="tool-btn" id="penBtn" title="画笔">✏️</button>
         <button class="tool-btn" id="eraserBtn" title="橡皮擦">🧹</button>
         <button class="tool-btn" id="smudgeBtn" title="涂抹">🖌️</button>
@@ -58,9 +62,7 @@
   <div class="canvas-area">
     <canvas id="drawCanvas" width="440" height="400"></canvas>
   </div>
-  <div class="action-bar">
-    <!-- 可扩展AI识别按钮 -->
-  </div>
+  
 </div>
 <script>
   // 颜色、粗细
@@ -73,7 +75,7 @@
     {name: "亮橙", val: "#FFD580"},
     {name: "奶油白", val: "#fffbe7"},
     {name: "黑", val: "#222"},
-    {name: "自定义", val: "#000", custom: true}
+    {name: "自定义", val: "#FF00FF", custom: true}
   ];
   const cuteSizes = [
     {name: "细", val: 2},
@@ -226,13 +228,13 @@
   let redoStack = [];
 
   function saveState() {
-    undoStack.push(drawingHist.map(stroke => ({...stroke, points: [...stroke.points]})));
+    undoStack.push(JSON.parse(JSON.stringify(drawingHist)));
     redoStack = [];
   }
 
   function undo() {
     if (undoStack.length > 0) {
-      redoStack.push(drawingHist);
+      redoStack.push(JSON.parse(JSON.stringify(drawingHist)));
       drawingHist = undoStack.pop();
       drawAll();
     }
@@ -240,7 +242,7 @@
 
   function redo() {
     if (redoStack.length > 0) {
-      undoStack.push(drawingHist);
+      undoStack.push(JSON.parse(JSON.stringify(drawingHist)));
       drawingHist = redoStack.pop();
       drawAll();
     }
@@ -261,13 +263,40 @@
 
   document.querySelector('.action-bar').appendChild(redoBtn);
 
-  // Modify addStroke to save state
-  function addStroke(pts, color, size, tool) {
+  // 临时绘制函数 - 不保存到历史记录
+  function drawTempStroke(pts, color, size, tool) {
+    ctx.save();
+    ctx.globalAlpha = tool==='smudge'?0.7:1;
+    if (tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+    } else if (tool === 'smudge') {
+      ctx.globalCompositeOperation = 'source-over';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    if (pts.length > 0) {
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 添加完整笔画到历史
+  function addCompleteStroke(pts, color, size, tool) {
+    if (pts.length < 2) return; // 忽略单点
     saveState();
     drawingHist.push({points:[...pts], color, size, tool});
     drawAll();
   }
+
   function clearCanvas() {
+    saveState();
     drawingHist = [];
     drawAll();
   }
@@ -293,43 +322,81 @@
   }
   // 触摸状态
   let currStroke = [];
+  let currStrokeColor = "";
+  let currStrokeSize = 0;
+  let currStrokeTool = "";
+  
   canvas.addEventListener('pointerdown', function(e){
     if (e.pointerType==="touch" && e.isPrimary===false) return; // 多指不作画
     if (e.button!==undefined && e.button!==0) return;
+    
+    // 判断是否双指触摸 - 修复双指缩放时错误绘制的问题
+    if (e.pointerType==="touch") {
+      // 检查是否有多点触摸
+      if (e.touches && e.touches.length >= 2) {
+        return; // 如果是多点触摸，直接返回不处理绘制
+      }
+      
+      // 检查是否处于缩放模式
+      if (isPanning) {
+        return; // 如果正在缩放/平移，不进行绘制
+      }
+    }
+    
     canvas.setPointerCapture(e.pointerId);
-    // 判断是否双指
-    if (e.pointerType==="touch" && e.touches && e.touches.length>=2) return;
     let pt = getCanvasPt(e.clientX, e.clientY);
     if (tool==='smudge') {
       smudgeAt(pt[0], pt[1], selectedSize);
       currStroke = [pt];
+      currStrokeTool = 'smudge';
     } else {
       isDrawing = true;
       currStroke = [pt];
+      currStrokeColor = tool==='pen' ? selectedColor : "#000";
+      currStrokeSize = selectedSize;
+      currStrokeTool = tool;
       lastPt = pt;
     }
   });
+  
   canvas.addEventListener('pointermove', function(e){
     if (e.pointerType==="touch" && e.isPrimary===false) return;
+    // 如果正在缩放/平移，不进行绘制
+    if (isPanning) return;
+    
     if (isDrawing) {
       let pt = getCanvasPt(e.clientX, e.clientY);
       if (tool==='pen' || tool==='eraser') {
-        addStroke([lastPt,pt], tool==='pen'?selectedColor:"#000", selectedSize, tool);
+        // 临时绘制当前线段
+        drawAll(); // 重绘所有历史
+        currStroke.push(pt);
+        drawTempStroke(currStroke, currStrokeColor, currStrokeSize, currStrokeTool);
       } else if (tool==='smudge') {
         smudgeAt(pt[0], pt[1], selectedSize);
+        currStroke.push(pt);
       }
       lastPt = pt;
-      currStroke.push(pt);
     }
   });
   canvas.addEventListener('pointerup', function(e){
-    if (isDrawing && (tool==='pen'||tool==='eraser')) {
-      addStroke(currStroke, tool==='pen'?selectedColor:"#000", selectedSize, tool);
+    if (isDrawing) {
+      if (currStroke.length > 1) {
+        if (tool==='pen' || tool==='eraser') {
+          // 完成一次完整的笔画，添加到历史
+          addCompleteStroke(currStroke, currStrokeColor, currStrokeSize, currStrokeTool);
+        }
+      }
     }
     isDrawing = false;
     currStroke = [];
   });
   canvas.addEventListener('pointerout', function(e){
+    if (isDrawing && currStroke.length > 1) {
+      if (currStrokeTool==='pen' || currStrokeTool==='eraser') {
+        // 完成一次完整的笔画，添加到历史
+        addCompleteStroke(currStroke, currStrokeColor, currStrokeSize, currStrokeTool);
+      }
+    }
     isDrawing = false;
     currStroke = [];
   });
@@ -338,7 +405,13 @@
   let activeTouches = {};
   canvas.addEventListener('touchstart', function(e){
     if (e.touches.length===2) {
+      // 设置缩放模式
       isPanning = true;
+      // 如果正在绘制，取消绘制
+      if (isDrawing) {
+        isDrawing = false;
+        currStroke = [];
+      }
       lastScale = scale;
       lastOffsetX = offsetX; lastOffsetY = offsetY;
       lastTouchDist = getTouchDist(e);
