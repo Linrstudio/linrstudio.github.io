@@ -197,4 +197,167 @@
                     <div class="timeline-markers"></div>
                     <div class="timeline-zoom"></div>
                 </div>
-  
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VideoFrameExtractor {
+            constructor(video) {
+                this.video = video;
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+            }
+
+            async extractFrames(interval = 5) {
+                const frames = [];
+                let currentTime = 0;
+
+                // 设置canvas尺寸
+                this.canvas.width = this.video.videoWidth;
+                this.canvas.height = this.video.videoHeight;
+
+                while (currentTime < this.video.duration) {
+                    this.video.currentTime = currentTime;
+                    await waitForSeeked(this.video);
+                    this.ctx.drawImage(this.video, 0, 0);
+                    frames.push({
+                        time: currentTime,
+                        data: this.canvas.toDataURL('image/jpeg', 0.8)
+                    });
+                    currentTime += interval;
+                }
+
+                return frames;
+            }
+        }
+
+        // 辅助函数：等待视频寻址完成
+        function waitForSeeked(video) {
+            return new Promise(resolve => {
+                const onSeeked = () => {
+                    video.removeEventListener('seeked', onSeeked);
+                    resolve();
+                };
+                video.addEventListener('seeked', onSeeked);
+            });
+        }
+
+        // 主程序
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            const videoInput = document.getElementById('videoInput');
+            const extractBtn = document.getElementById('extractBtn');
+            const timeline = document.getElementById('timeline');
+            const playBtn = document.getElementById('playBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const fileName = document.getElementById('fileName');
+            const framesContainer = document.getElementById('framesContainer');
+
+            let extractor = null;
+            let frames = [];
+
+            // 视频控制
+            playBtn.addEventListener('click', () => video.play());
+            pauseBtn.addEventListener('click', () => video.pause());
+
+            // 文件选择处理
+            videoInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    video.src = URL.createObjectURL(file);
+                    fileName.textContent = file.name;
+                    extractor = new VideoFrameExtractor(video);
+                    extractBtn.disabled = true; // 先禁用按钮
+                    video.addEventListener('loadedmetadata', () => {
+                        extractBtn.disabled = false;
+                    }, { once: true });
+                }
+            });
+
+            // 抽帧处理
+            extractBtn.addEventListener('click', async () => {
+                if (!extractor) return;
+
+                extractBtn.disabled = true;
+                extractBtn.textContent = '处理中...';
+                video.pause(); // 暂停视频以避免干扰
+                try {
+                    frames = await extractor.extractFrames(5); // 每5秒抽一帧
+                    renderTimeline();
+                    renderFramePreviews();
+                } catch (error) {
+                    console.error('抽帧失败:', error);
+                } finally {
+                    extractBtn.textContent = '开始抽帧';
+                    extractBtn.disabled = false;
+                }
+            });
+
+            // 渲染时间轴
+            function renderTimeline() {
+                const markers = timeline.querySelector('.timeline-markers');
+                markers.innerHTML = '';
+
+                frames.forEach(frame => {
+                    const marker = document.createElement('div');
+                    marker.className = 'marker';
+                    marker.style.left = `${(frame.time / video.duration) * 100}%`;
+                    marker.draggable = true;
+
+                    // 拖拽处理
+                    marker.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', frame.time);
+                    });
+
+                    markers.appendChild(marker);
+                });
+            }
+
+            // 渲染帧预览
+            function renderFramePreviews() {
+                framesContainer.innerHTML = '';
+
+                frames.forEach(frame => {
+                    const preview = document.createElement('div');
+                    preview.className = 'frame-preview';
+
+                    const img = document.createElement('img');
+                    img.src = frame.data;
+
+                    const time = document.createElement('div');
+                    time.className = 'frame-time';
+                    time.textContent = `${Math.floor(frame.time)}秒`;
+
+                    preview.appendChild(img);
+                    preview.appendChild(time);
+                    framesContainer.appendChild(preview);
+                });
+            }
+
+            // 时间轴缩放
+            let isDragging = false;
+            let startX;
+            let scrollLeft;
+
+            timeline.querySelector('.timeline-zoom').addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.pageX - timeline.offsetLeft;
+                scrollLeft = timeline.scrollLeft;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const x = e.pageX - timeline.offsetLeft;
+                const walk = (x - startX) * 2;
+                timeline.scrollLeft = scrollLeft - walk;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        });
+    </script>
+</body>
+</html>
