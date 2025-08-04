@@ -185,7 +185,7 @@
         <div class="bottom-container">
             <div class="left-panel">
                 <label class="file-upload">
-                    选择视频文件
+                    选择文件
                     <input type="file" id="videoInput" accept="video/*">
                 </label>
                 <div class="file-name" id="fileName">未选择文件</div>
@@ -226,6 +226,7 @@
                         data: this.canvas.toDataURL('image/jpeg', 0.8)
                     });
                     currentTime += interval;
+                    console.log(`Extracted frame at ${currentTime} seconds`); // 调试日志
                 }
 
                 return frames;
@@ -234,12 +235,17 @@
 
         // 辅助函数：等待视频寻址完成
         function waitForSeeked(video) {
-            return new Promise(resolve => {
+            return new Promise((resolve, reject) => {
                 const onSeeked = () => {
                     video.removeEventListener('seeked', onSeeked);
                     resolve();
                 };
                 video.addEventListener('seeked', onSeeked);
+                // 超时处理，防止卡死
+                setTimeout(() => {
+                    video.removeEventListener('seeked', onSeeked);
+                    reject(new Error('Seek timeout'));
+                }, 5000);
             });
         }
 
@@ -257,37 +263,73 @@
             let extractor = null;
             let frames = [];
 
+            // 调试：确认 DOM 元素是否正确获取
+            console.log('DOM elements:', { video, videoInput, extractBtn });
+
             // 视频控制
-            playBtn.addEventListener('click', () => video.play());
-            pauseBtn.addEventListener('click', () => video.pause());
+            playBtn.addEventListener('click', () => {
+                console.log('Play button clicked');
+                video.play().catch(err => console.error('Play error:', err));
+            });
+            pauseBtn.addEventListener('click', () => {
+                console.log('Pause button clicked');
+                video.pause();
+            });
 
             // 文件选择处理
             videoInput.addEventListener('change', (e) => {
+                console.log('File input changed'); // 调试日志
                 const file = e.target.files[0];
-                if (file) {
-                    video.src = URL.createObjectURL(file);
-                    fileName.textContent = file.name;
-                    extractor = new VideoFrameExtractor(video);
-                    extractBtn.disabled = true; // 先禁用按钮
-                    video.addEventListener('loadedmetadata', () => {
-                        extractBtn.disabled = false;
-                    }, { once: true });
+                if (!file) {
+                    console.log('No file selected');
+                    fileName.textContent = '未选择文件';
+                    extractBtn.disabled = true;
+                    return;
                 }
+
+                fileName.textContent = '加载中...';
+                const videoURL = URL.createObjectURL(file);
+                console.log('Video URL created:', videoURL);
+                video.src = videoURL;
+                extractor = new VideoFrameExtractor(video);
+
+                // 监听视频加载事件
+                video.addEventListener('loadedmetadata', () => {
+                    console.log('Metadata loaded:', { duration: video.duration, width: video.videoWidth, height: video.videoHeight });
+                    fileName.textContent = file.name;
+                    extractBtn.disabled = false;
+                }, { once: true });
+
+                // 错误处理
+                video.addEventListener('error', () => {
+                    console.error('Video load error:', video.error);
+                    fileName.textContent = '视频加载失败，请选择支持的格式（如 MP4）';
+                    extractBtn.disabled = true;
+                }, { once: true });
+
+                // 手动触发加载
+                video.load();
             });
 
             // 抽帧处理
             extractBtn.addEventListener('click', async () => {
-                if (!extractor) return;
+                console.log('Extract button clicked');
+                if (!extractor) {
+                    console.log('No extractor instance');
+                    return;
+                }
 
                 extractBtn.disabled = true;
                 extractBtn.textContent = '处理中...';
                 video.pause(); // 暂停视频以避免干扰
                 try {
                     frames = await extractor.extractFrames(5); // 每5秒抽一帧
+                    console.log('Frames extracted:', frames.length);
                     renderTimeline();
                     renderFramePreviews();
                 } catch (error) {
                     console.error('抽帧失败:', error);
+                    fileName.textContent = '抽帧失败，请检查视频格式';
                 } finally {
                     extractBtn.textContent = '开始抽帧';
                     extractBtn.disabled = false;
@@ -305,7 +347,6 @@
                     marker.style.left = `${(frame.time / video.duration) * 100}%`;
                     marker.draggable = true;
 
-                    // 拖拽处理
                     marker.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('text/plain', frame.time);
                     });
