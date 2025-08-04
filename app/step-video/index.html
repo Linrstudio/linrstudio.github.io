@@ -185,8 +185,8 @@
         <div class="bottom-container">
             <div class="left-panel">
                 <label class="file-upload">
-                    选择文件
-                    <input type="file" id="videoInput" accept="video/*">
+                    选择mp4文件
+                    <input type="file" id="videoInput" accept="video/mp4,video/webm,video/ogg">
                 </label>
                 <div class="file-name" id="fileName">未选择文件</div>
                 <button id="extractBtn" disabled>开始抽帧</button>
@@ -226,7 +226,7 @@
                         data: this.canvas.toDataURL('image/jpeg', 0.8)
                     });
                     currentTime += interval;
-                    console.log(`Extracted frame at ${currentTime} seconds`); // 调试日志
+                    console.log(`Extracted frame at ${currentTime} seconds`);
                 }
 
                 return frames;
@@ -241,7 +241,7 @@
                     resolve();
                 };
                 video.addEventListener('seeked', onSeeked);
-                // 超时处理，防止卡死
+                // 超时处理
                 setTimeout(() => {
                     video.removeEventListener('seeked', onSeeked);
                     reject(new Error('Seek timeout'));
@@ -263,7 +263,7 @@
             let extractor = null;
             let frames = [];
 
-            // 调试：确认 DOM 元素是否正确获取
+            // 调试：确认 DOM 元素
             console.log('DOM elements:', { video, videoInput, extractBtn });
 
             // 视频控制
@@ -278,11 +278,20 @@
 
             // 文件选择处理
             videoInput.addEventListener('change', (e) => {
-                console.log('File input changed'); // 调试日志
+                console.log('File input changed');
                 const file = e.target.files[0];
                 if (!file) {
                     console.log('No file selected');
                     fileName.textContent = '未选择文件';
+                    extractBtn.disabled = true;
+                    return;
+                }
+
+                // 验证文件扩展名
+                const validExtensions = ['.mp4', '.webm', '.ogg'];
+                const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+                if (!validExtensions.includes(fileExtension)) {
+                    fileName.textContent = '不支持的视频格式，请选择 MP4、WebM 或 Ogg';
                     extractBtn.disabled = true;
                     return;
                 }
@@ -301,9 +310,22 @@
                 }, { once: true });
 
                 // 错误处理
-                video.addEventListener('error', () => {
+                video.addEventListener('error', (e) => {
                     console.error('Video load error:', video.error);
-                    fileName.textContent = '视频加载失败，请选择支持的格式（如 MP4）';
+                    let errorMessage = '视频加载失败';
+                    if (video.error) {
+                        switch (video.error.code) {
+                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                                errorMessage = '视频格式不受支持，请选择 MP4（H.264）、WebM 或 Ogg';
+                                break;
+                            case MediaError.MEDIA_ERR_DECODE:
+                                errorMessage = '视频解码失败，文件可能损坏';
+                                break;
+                            default:
+                                errorMessage = `加载失败（错误代码：${video.error.code}）`;
+                        }
+                    }
+                    fileName.textContent = errorMessage;
                     extractBtn.disabled = true;
                 }, { once: true });
 
@@ -316,20 +338,21 @@
                 console.log('Extract button clicked');
                 if (!extractor) {
                     console.log('No extractor instance');
+                    fileName.textContent = '未初始化视频处理器';
                     return;
                 }
 
                 extractBtn.disabled = true;
                 extractBtn.textContent = '处理中...';
-                video.pause(); // 暂停视频以避免干扰
+                video.pause();
                 try {
-                    frames = await extractor.extractFrames(5); // 每5秒抽一帧
+                    frames = await extractor.extractFrames(5);
                     console.log('Frames extracted:', frames.length);
                     renderTimeline();
                     renderFramePreviews();
                 } catch (error) {
                     console.error('抽帧失败:', error);
-                    fileName.textContent = '抽帧失败，请检查视频格式';
+                    fileName.textContent = '抽帧失败，请检查视频文件';
                 } finally {
                     extractBtn.textContent = '开始抽帧';
                     extractBtn.disabled = false;
