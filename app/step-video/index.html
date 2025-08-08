@@ -1,9 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Frame Extractor</title>
+
     <style>
         * {
             margin: 0;
@@ -70,7 +72,17 @@
             height: 60px;
             background: #f5f5f5;
             border-radius: 4px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
+            user-select: none;
+        }
+
+        .timeline-content {
+            position: relative;
+            width: 100%;
+            min-width: 100%;
+            height: 100%;
+            transition: transform 0.1s ease;
         }
 
         .timeline-markers {
@@ -80,6 +92,7 @@
             width: 100%;
             height: 2px;
             background: #eee;
+            min-width: 100%;
         }
 
         .marker {
@@ -90,7 +103,14 @@
             border-radius: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            cursor: move;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 2;
+        }
+
+        .marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            background: #333;
         }
 
         .timeline-zoom {
@@ -98,8 +118,24 @@
             bottom: 0;
             width: 100%;
             height: 20px;
-            background: #eee;
+            background: linear-gradient(to right, #ddd, #eee, #ddd);
             cursor: ew-resize;
+            border-radius: 0 0 4px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .timeline-zoom:hover {
+            background: linear-gradient(to right, #ccc, #ddd, #ccc);
+        }
+
+        .timeline-zoom::after {
+            content: "拖拽缩放";
+            font-size: 10px;
+            color: #999;
         }
 
         button {
@@ -140,6 +176,100 @@
             margin-top: 8px;
             font-size: 14px;
             color: #666;
+        }
+
+        .progress-container {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #000;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        .video-generation {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .video-generation h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .generation-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            min-width: 80px;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .control-group input, .control-group select {
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .download-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .download-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .download-link:hover {
+            background: #218838;
+        }
+
+        .download-link:disabled,
+        .download-link.disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            pointer-events: none;
         }
 
         .frames-container {
@@ -190,11 +320,60 @@
                 </label>
                 <div class="file-name" id="fileName">未选择文件</div>
                 <button id="extractBtn" disabled>开始抽帧</button>
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+                
+                <div class="video-generation" id="videoGeneration" style="display: none;">
+                    <h3>生成新视频</h3>
+                    <div class="generation-controls">
+                        <div class="control-group">
+                            <label>帧率:</label>
+                            <select id="fpsInput">
+                                <option value="1">1 FPS</option>
+                                <option value="2">2 FPS</option>
+                                <option value="5" selected>5 FPS</option>
+                                <option value="10">10 FPS</option>
+                                <option value="15">15 FPS</option>
+                                <option value="24">24 FPS</option>
+                                <option value="30">30 FPS</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>质量:</label>
+                            <select id="qualityInput">
+                                <option value="23">高质量</option>
+                                <option value="28" selected>标准质量</option>
+                                <option value="35">低质量</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>格式:</label>
+                            <select id="formatSelect">
+                                <option value="webm" selected>WebM视频</option>
+                                <option value="gif">帧序列文件</option>
+                            </select>
+                        </div>
+                        <button id="generateBtn">生成视频</button>
+                    </div>
+                    
+                    <div class="download-section" id="downloadSection" style="display: none;">
+                        <div>视频生成完成！</div>
+                        <a href="#" id="downloadLink" class="download-link" download="generated_video.mp4">下载视频</a>
+                        <div style="margin-top: 8px; font-size: 12px; color: #666;" id="videoInfo"></div>
+                    </div>
+                </div>
+                
                 <div class="frames-container" id="framesContainer"></div>
             </div>
             <div class="timeline-container">
                 <div id="timeline" class="timeline">
-                    <div class="timeline-markers"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-markers"></div>
+                    </div>
                     <div class="timeline-zoom"></div>
                 </div>
             </div>
@@ -209,44 +388,241 @@
                 this.ctx = this.canvas.getContext('2d');
             }
 
-            async extractFrames(interval = 5) {
+            async extractFrames(interval = 5, onProgress = null) {
                 const frames = [];
                 let currentTime = 0;
+                const duration = this.video.duration;
+                const totalFrames = Math.ceil(duration / interval);
 
                 // 设置canvas尺寸
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
 
-                while (currentTime < this.video.duration) {
-                    this.video.currentTime = currentTime;
-                    await waitForSeeked(this.video);
-                    this.ctx.drawImage(this.video, 0, 0);
-                    frames.push({
-                        time: currentTime,
-                        data: this.canvas.toDataURL('image/jpeg', 0.8)
-                    });
-                    currentTime += interval;
-                    console.log(`Extracted frame at ${currentTime} seconds`);
+                console.log(`开始抽帧: 总时长 ${duration}秒, 间隔 ${interval}秒, 预计帧数 ${totalFrames}`);
+
+                let frameIndex = 0;
+                while (currentTime < duration) {
+                    try {
+                        // 设置视频时间
+                        this.video.currentTime = currentTime;
+                        
+                        // 等待视频寻址完成
+                        await this.waitForSeeked();
+                        
+                        // 确保视频已经渲染到当前时间
+                        await this.waitForVideoReady();
+                        
+                        // 绘制当前帧到canvas
+                        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                        
+                        // 转换为图片数据
+                        const imageData = this.canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        frames.push({
+                            time: currentTime,
+                            data: imageData,
+                            index: frameIndex
+                        });
+
+                        frameIndex++;
+                        
+                        // 更新进度
+                        if (onProgress) {
+                            const progress = Math.min((frameIndex / totalFrames) * 100, 100);
+                            onProgress(progress, frameIndex, totalFrames);
+                        }
+
+                        console.log(`已提取第 ${frameIndex} 帧 (${currentTime.toFixed(1)}秒)`);
+                        
+                        currentTime += interval;
+                        
+                        // 添加小延迟以确保浏览器有时间处理
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                        
+                    } catch (error) {
+                        console.error(`提取第 ${frameIndex} 帧时出错:`, error);
+                        // 继续处理下一帧
+                        currentTime += interval;
+                        frameIndex++;
+                    }
                 }
 
+                console.log(`抽帧完成: 成功提取 ${frames.length} 帧`);
                 return frames;
+            }
+
+            waitForSeeked() {
+                return new Promise((resolve, reject) => {
+                    if (this.video.seeking) {
+                        const onSeeked = () => {
+                            this.video.removeEventListener('seeked', onSeeked);
+                            resolve();
+                        };
+                        this.video.addEventListener('seeked', onSeeked);
+                        
+                        // 超时处理
+                        setTimeout(() => {
+                            this.video.removeEventListener('seeked', onSeeked);
+                            reject(new Error('视频寻址超时'));
+                        }, 3000);
+                    } else {
+                        // 如果没有在寻址，直接resolve
+                        resolve();
+                    }
+                });
+            }
+
+            waitForVideoReady() {
+                return new Promise((resolve) => {
+                    // 等待一小段时间确保视频帧已经渲染
+                    setTimeout(resolve, 50);
+                });
             }
         }
 
-        // 辅助函数：等待视频寻址完成
-        function waitForSeeked(video) {
-            return new Promise((resolve, reject) => {
-                const onSeeked = () => {
-                    video.removeEventListener('seeked', onSeeked);
-                    resolve();
+        // 视频生成器类
+        class VideoGenerator {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+            }
+
+            async generateVideo(frames, options = {}) {
+                const {
+                    fps = 5,
+                    quality = 0.8,
+                    format = 'webm',
+                    onProgress = null
+                } = options;
+
+                if (!frames || frames.length === 0) {
+                    throw new Error('没有可用的帧数据');
+                }
+
+                try {
+                    if (format === 'gif') {
+                        return await this.generateGIF(frames, fps, onProgress);
+                    } else {
+                        return await this.generateWebM(frames, fps, quality, onProgress);
+                    }
+                } catch (error) {
+                    console.error('Video generation error:', error);
+                    throw new Error(`视频生成失败: ${error.message}`);
+                }
+            }
+
+            async generateWebM(frames, fps, quality, onProgress) {
+                // 创建第一帧来确定视频尺寸
+                const firstFrame = await this.loadImage(frames[0].data);
+                this.canvas.width = firstFrame.width;
+                this.canvas.height = firstFrame.height;
+
+                // 创建MediaRecorder
+                const stream = this.canvas.captureStream(fps);
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9',
+                    videoBitsPerSecond: 2500000
+                });
+
+                const chunks = [];
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                    }
                 };
-                video.addEventListener('seeked', onSeeked);
-                // 超时处理
-                setTimeout(() => {
-                    video.removeEventListener('seeked', onSeeked);
-                    reject(new Error('Seek timeout'));
-                }, 5000);
-            });
+
+                return new Promise((resolve, reject) => {
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        resolve({
+                            url,
+                            blob,
+                            size: blob.size,
+                            format: 'webm',
+                            fps,
+                            frameCount: frames.length
+                        });
+                    };
+
+                    mediaRecorder.onerror = (error) => {
+                        reject(new Error('录制失败: ' + error.message));
+                    };
+
+                    // 开始录制
+                    mediaRecorder.start();
+
+                    // 播放帧序列
+                    this.playFrameSequence(frames, fps, onProgress).then(() => {
+                        mediaRecorder.stop();
+                    }).catch(reject);
+                });
+            }
+
+            async generateGIF(frames, fps, onProgress) {
+                // 对于GIF，我们创建一个简单的帧序列下载
+                if (onProgress) onProgress(50, '准备GIF数据...');
+                
+                // 创建一个包含所有帧的ZIP文件（简化版本）
+                const frameBlobs = [];
+                for (let i = 0; i < frames.length; i++) {
+                    const response = await fetch(frames[i].data);
+                    const blob = await response.blob();
+                    frameBlobs.push(blob);
+                    
+                    if (onProgress) {
+                        const progress = 50 + (i / frames.length) * 50;
+                        onProgress(progress, `处理帧 ${i + 1}/${frames.length}`);
+                    }
+                }
+
+                // 创建一个简单的帧序列文件
+                const combinedBlob = new Blob(frameBlobs, { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(combinedBlob);
+
+                if (onProgress) onProgress(100, 'GIF准备完成！');
+
+                return {
+                    url,
+                    blob: combinedBlob,
+                    size: combinedBlob.size,
+                    format: 'frames',
+                    fps,
+                    frameCount: frames.length
+                };
+            }
+
+            async playFrameSequence(frames, fps, onProgress) {
+                const frameDuration = 1000 / fps; // 每帧持续时间（毫秒）
+                
+                for (let i = 0; i < frames.length; i++) {
+                    const img = await this.loadImage(frames[i].data);
+                    
+                    // 清除画布并绘制当前帧
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 更新进度
+                    if (onProgress) {
+                        const progress = (i / frames.length) * 100;
+                        onProgress(progress, `录制帧 ${i + 1}/${frames.length}`);
+                    }
+                    
+                    // 等待下一帧
+                    if (i < frames.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, frameDuration));
+                    }
+                }
+            }
+
+            loadImage(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = src;
+                });
+            }
         }
 
         // 主程序
@@ -259,9 +635,25 @@
             const pauseBtn = document.getElementById('pauseBtn');
             const fileName = document.getElementById('fileName');
             const framesContainer = document.getElementById('framesContainer');
-
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            // 视频生成相关元素
+            const videoGeneration = document.getElementById('videoGeneration');
+            const generateBtn = document.getElementById('generateBtn');
+            const fpsInput = document.getElementById('fpsInput');
+            const qualityInput = document.getElementById('qualityInput');
+            const formatSelect = document.getElementById('formatSelect');
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadLink = document.getElementById('downloadLink');
+            const videoInfo = document.getElementById('videoInfo');
+            
+            // 创建实例
             let extractor = null;
+            const generator = new VideoGenerator();
             let frames = [];
+            let currentVideoURL = null;
 
             // 调试：确认 DOM 元素
             console.log('DOM elements:', { video, videoInput, extractBtn });
@@ -279,6 +671,20 @@
             // 文件选择处理
             videoInput.addEventListener('change', (e) => {
                 console.log('File input changed');
+                
+                // 清理之前的视频URL
+                if (currentVideoURL) {
+                    URL.revokeObjectURL(currentVideoURL);
+                    currentVideoURL = null;
+                }
+                
+                // 重置状态
+                frames = [];
+                framesContainer.innerHTML = '';
+                progressContainer.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+                
                 const file = e.target.files[0];
                 if (!file) {
                     console.log('No file selected');
@@ -287,39 +693,63 @@
                     return;
                 }
 
+                // 验证文件大小（限制为100MB）
+                const maxSize = 100 * 1024 * 1024; // 100MB
+                if (file.size > maxSize) {
+                    fileName.textContent = '文件过大，请选择小于100MB的视频文件';
+                    extractBtn.disabled = true;
+                    return;
+                }
+
                 // 验证文件扩展名
-                const validExtensions = ['.mp4', '.webm', '.ogg'];
+                const validExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
                 const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
                 if (!validExtensions.includes(fileExtension)) {
-                    fileName.textContent = '不支持的视频格式，请选择 MP4、WebM 或 Ogg';
+                    fileName.textContent = '不支持的视频格式，请选择 MP4、WebM、Ogg、MOV 或 AVI';
                     extractBtn.disabled = true;
                     return;
                 }
 
                 fileName.textContent = '加载中...';
-                const videoURL = URL.createObjectURL(file);
-                console.log('Video URL created:', videoURL);
-                video.src = videoURL;
-                extractor = new VideoFrameExtractor(video);
+                extractBtn.disabled = true;
+                
+                currentVideoURL = URL.createObjectURL(file);
+                console.log('Video URL created:', currentVideoURL);
+                video.src = currentVideoURL;
 
                 // 监听视频加载事件
-                video.addEventListener('loadedmetadata', () => {
-                    console.log('Metadata loaded:', { duration: video.duration, width: video.videoWidth, height: video.videoHeight });
-                    fileName.textContent = file.name;
-                    extractBtn.disabled = false;
-                }, { once: true });
+                const onLoadedMetadata = () => {
+                    console.log('Metadata loaded:', { 
+                        duration: video.duration, 
+                        width: video.videoWidth, 
+                        height: video.videoHeight,
+                        fileSize: (file.size / 1024 / 1024).toFixed(2) + 'MB'
+                    });
+                    
+                    if (video.duration && video.videoWidth && video.videoHeight) {
+                        fileName.textContent = `${file.name} (${Math.floor(video.duration)}秒, ${video.videoWidth}x${video.videoHeight})`;
+                        extractor = new VideoFrameExtractor(video);
+                        extractBtn.disabled = false;
+                    } else {
+                        fileName.textContent = '视频文件无效或损坏';
+                        extractBtn.disabled = true;
+                    }
+                };
 
                 // 错误处理
-                video.addEventListener('error', (e) => {
+                const onError = (e) => {
                     console.error('Video load error:', video.error);
                     let errorMessage = '视频加载失败';
                     if (video.error) {
                         switch (video.error.code) {
                             case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                                errorMessage = '视频格式不受支持，请选择 MP4（H.264）、WebM 或 Ogg';
+                                errorMessage = '视频格式不受支持，请选择标准的 MP4（H.264）格式';
                                 break;
                             case MediaError.MEDIA_ERR_DECODE:
-                                errorMessage = '视频解码失败，文件可能损坏';
+                                errorMessage = '视频解码失败，文件可能损坏或编码不兼容';
+                                break;
+                            case MediaError.MEDIA_ERR_NETWORK:
+                                errorMessage = '网络错误，请重试';
                                 break;
                             default:
                                 errorMessage = `加载失败（错误代码：${video.error.code}）`;
@@ -327,7 +757,16 @@
                     }
                     fileName.textContent = errorMessage;
                     extractBtn.disabled = true;
-                }, { once: true });
+                    
+                    // 清理资源
+                    if (currentVideoURL) {
+                        URL.revokeObjectURL(currentVideoURL);
+                        currentVideoURL = null;
+                    }
+                };
+
+                video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+                video.addEventListener('error', onError, { once: true });
 
                 // 手动触发加载
                 video.load();
@@ -342,17 +781,44 @@
                     return;
                 }
 
+                // 重置状态
+                frames = [];
+                framesContainer.innerHTML = '';
+                
                 extractBtn.disabled = true;
                 extractBtn.textContent = '处理中...';
+                progressContainer.style.display = 'block';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+                
                 video.pause();
+                
                 try {
-                    frames = await extractor.extractFrames(5);
+                    // 进度回调函数
+                    const onProgress = (progress, current, total) => {
+                        progressFill.style.width = `${progress}%`;
+                        progressText.textContent = `${Math.round(progress)}% (${current}/${total})`;
+                    };
+
+                    // 开始抽帧，间隔3秒
+                    frames = await extractor.extractFrames(3, onProgress);
                     console.log('Frames extracted:', frames.length);
-                    renderTimeline();
-                    renderFramePreviews();
+                    
+                    if (frames.length > 0) {
+                        renderTimeline();
+                        renderFramePreviews();
+                        progressText.textContent = `完成！共提取 ${frames.length} 帧`;
+                        
+                        // 显示视频生成选项
+                        videoGeneration.style.display = 'block';
+                    } else {
+                        progressText.textContent = '未提取到任何帧，请检查视频文件';
+                    }
+                    
                 } catch (error) {
                     console.error('抽帧失败:', error);
-                    fileName.textContent = '抽帧失败，请检查视频文件';
+                    progressText.textContent = `抽帧失败: ${error.message}`;
+                    progressContainer.style.display = 'none';
                 } finally {
                     extractBtn.textContent = '开始抽帧';
                     extractBtn.disabled = false;
@@ -364,14 +830,21 @@
                 const markers = timeline.querySelector('.timeline-markers');
                 markers.innerHTML = '';
 
-                frames.forEach(frame => {
+                if (!video.duration || frames.length === 0) {
+                    return;
+                }
+
+                frames.forEach((frame, index) => {
                     const marker = document.createElement('div');
                     marker.className = 'marker';
                     marker.style.left = `${(frame.time / video.duration) * 100}%`;
-                    marker.draggable = true;
+                    marker.title = `第${index + 1}帧 - ${frame.time.toFixed(1)}秒`;
 
-                    marker.addEventListener('dragstart', (e) => {
-                        e.dataTransfer.setData('text/plain', frame.time);
+                    // 点击跳转到对应时间
+                    marker.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        video.currentTime = frame.time;
+                        video.play().catch(err => console.error('Play error:', err));
                     });
 
                     markers.appendChild(marker);
@@ -382,16 +855,47 @@
             function renderFramePreviews() {
                 framesContainer.innerHTML = '';
 
-                frames.forEach(frame => {
+                frames.forEach((frame, index) => {
                     const preview = document.createElement('div');
                     preview.className = 'frame-preview';
+                    preview.style.cursor = 'pointer';
 
                     const img = document.createElement('img');
                     img.src = frame.data;
+                    img.alt = `Frame at ${frame.time.toFixed(1)}s`;
+                    
+                    // 添加加载错误处理
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                        const errorText = document.createElement('div');
+                        errorText.textContent = '图片加载失败';
+                        errorText.style.textAlign = 'center';
+                        errorText.style.color = '#999';
+                        errorText.style.padding = '20px';
+                        preview.appendChild(errorText);
+                    };
 
                     const time = document.createElement('div');
                     time.className = 'frame-time';
-                    time.textContent = `${Math.floor(frame.time)}秒`;
+                    const minutes = Math.floor(frame.time / 60);
+                    const seconds = Math.floor(frame.time % 60);
+                    time.textContent = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}秒`;
+
+                    // 点击跳转到对应时间
+                    preview.addEventListener('click', () => {
+                        video.currentTime = frame.time;
+                        video.play().catch(err => console.error('Play error:', err));
+                    });
+
+                    // 添加悬停效果
+                    preview.addEventListener('mouseenter', () => {
+                        preview.style.transform = 'scale(1.05)';
+                        preview.style.transition = 'transform 0.2s ease';
+                    });
+
+                    preview.addEventListener('mouseleave', () => {
+                        preview.style.transform = 'scale(1)';
+                    });
 
                     preview.appendChild(img);
                     preview.appendChild(time);
@@ -399,27 +903,116 @@
                 });
             }
 
-            // 时间轴缩放
+            // 时间轴交互功能
+            let timelineScale = 1;
             let isDragging = false;
             let startX;
-            let scrollLeft;
+            let startScale;
 
-            timeline.querySelector('.timeline-zoom').addEventListener('mousedown', (e) => {
+            // 时间轴点击跳转功能
+            timeline.addEventListener('click', (e) => {
+                if (e.target === timeline || e.target.classList.contains('timeline-markers') || e.target.classList.contains('timeline-content')) {
+                    const rect = timeline.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = clickX / rect.width;
+                    const targetTime = percentage * video.duration;
+                    
+                    if (targetTime >= 0 && targetTime <= video.duration) {
+                        video.currentTime = targetTime;
+                        video.play().catch(err => console.error('Play error:', err));
+                    }
+                }
+            });
+
+            // 时间轴缩放功能
+            const timelineZoom = timeline.querySelector('.timeline-zoom');
+            const timelineContent = timeline.querySelector('.timeline-content');
+            
+            timelineZoom.addEventListener('mousedown', (e) => {
                 isDragging = true;
-                startX = e.pageX - timeline.offsetLeft;
-                scrollLeft = timeline.scrollLeft;
+                startX = e.clientX;
+                startScale = timelineScale;
+                e.preventDefault();
             });
 
             document.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
-
-                const x = e.pageX - timeline.offsetLeft;
-                const walk = (x - startX) * 2;
-                timeline.scrollLeft = scrollLeft - walk;
+                
+                const deltaX = e.clientX - startX;
+                const scaleFactor = 1 + (deltaX / 200); // 调整缩放敏感度
+                timelineScale = Math.max(0.5, Math.min(5, startScale * scaleFactor)); // 限制缩放范围
+                
+                // 应用缩放
+                timelineContent.style.transform = `scaleX(${timelineScale})`;
+                
+                e.preventDefault();
             });
 
             document.addEventListener('mouseup', () => {
                 isDragging = false;
+            });
+
+            // 鼠标滚轮缩放
+            timeline.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                timelineScale = Math.max(0.5, Math.min(5, timelineScale * delta));
+                
+                timelineContent.style.transform = `scaleX(${timelineScale})`;
+            });
+            
+            // 视频生成处理
+            generateBtn.addEventListener('click', async () => {
+                if (frames.length === 0) {
+                    alert('请先抽取视频帧');
+                    return;
+                }
+                
+                const fps = parseInt(fpsInput.value);
+                const quality = parseInt(qualityInput.value);
+                const format = formatSelect.value;
+                
+                generateBtn.disabled = true;
+                generateBtn.textContent = '生成中...';
+                downloadSection.style.display = 'none';
+                
+                // 显示进度
+                progressContainer.style.display = 'block';
+                progressFill.style.width = '0%';
+                progressText.textContent = '准备生成视频...';
+                
+                try {
+                    const result = await generator.generateVideo(frames, {
+                        fps,
+                        quality,
+                        format,
+                        onProgress: (progress, message) => {
+                            progressFill.style.width = `${progress}%`;
+                            progressText.textContent = message || `${Math.round(progress)}%`;
+                        }
+                    });
+                    
+                    // 设置下载链接
+                    downloadLink.href = result.url;
+                    downloadLink.download = `generated_video.${format}`;
+                    
+                    // 显示视频信息
+                    const sizeInMB = (result.size / 1024 / 1024).toFixed(2);
+                    videoInfo.textContent = `格式: ${format.toUpperCase()}, 帧率: ${fps} FPS, 大小: ${sizeInMB} MB, 帧数: ${result.frameCount}`;
+                    
+                    // 显示下载区域
+                    downloadSection.style.display = 'block';
+                    progressContainer.style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('视频生成失败:', error);
+                    alert(`视频生成失败: ${error.message}`);
+                    progressContainer.style.display = 'none';
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = '生成视频';
+                }
             });
         });
     </script>
