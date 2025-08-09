@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Iframe App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* 自定义 shadcn/ui 风格的样式 */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: colors 0.2s;
+            height: 2.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-primary:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        
+        .btn-primary:disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        
+        .btn-fab {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 50;
+            height: 4rem;
+            width: 4rem;
+            border-radius: 50%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: #2563eb;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+            /* 防止位置变化和闪动 */
+            transform-origin: center;
+            will-change: background-color;
+        }
+        
+        .btn-fab:hover {
+            background-color: #1d4ed8;
+            /* 移除 transform 避免位置变化 */
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-fab:active {
+            background-color: #1e40af;
+            /* 只改变阴影，不改变大小 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .iframe-container {
+            transition: height 0.3s ease-in-out;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            color: #111827;
+        }
+        
+        .toast.error {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        
+        .toast.success {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+        
+        /* 确保页面占满全屏 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f9fafb;
+        }
+        
+        .iframe-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .iframe-item {
+            border: none;
+            width: 100%;
+            position: relative;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .btn-fab {
+                bottom: 1rem;
+                right: 1rem;
+                height: 4rem;
+                width: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container bg-gray-50">
+        <!-- 主内容区域 -->
+        <div id="iframe-container" class="iframe-wrapper">
+            <!-- iframe 将动态插入这里 -->
+        </div>
+        
+        <!-- 浮动添加按钮 -->
+        <button id="add-btn" class="btn-fab" title="添加新的 Web">
+            <i data-lucide="plus" class="h-8 w-8"></i>
+        </button>
+        
+        <!-- 空状态提示 -->
+        <div id="empty-state" class="flex-1 flex items-center justify-center p-8 fixed inset-0">
+            <div class="text-center">
+                <div class="mb-4">
+                    <i data-lucide="monitor" class="h-16 w-16 text-gray-400 mx-auto"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">欢迎使用 Split Web</h2>
+                <p class="text-sm text-gray-500">复制网页链接到剪贴板，然后点击加号即可拆分显示</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div id="toast-container"></div>
+
+    <script>
+        class SplitIframeApp {
+            constructor() {
+                this.iframes = [];
+                this.container = document.getElementById('iframe-container');
+                this.addBtn = document.getElementById('add-btn');
+                this.emptyState = document.getElementById('empty-state');
+                this.toastContainer = document.getElementById('toast-container');
+                
+                this.init();
+            }
+            
+            init() {
+                // 绑定事件
+                this.addBtn.addEventListener('click', () => this.addIframe());
+                
+                // 初始化 Lucide 图标
+                lucide.createIcons();
+                
+                // 从 URL hash 恢复状态
+                this.restoreFromHash();
+                
+                // 监听 hash 变化
+                window.addEventListener('hashchange', () => this.restoreFromHash());
+                
+                this.updateLayout();
+            }
+            
+            async addIframe() {
+                try {
+                    // 获取剪贴板内容
+                    const clipboardText = await navigator.clipboard.readText();
+                    
+                    if (!clipboardText) {
+                        this.showToast('剪贴板为空', 'error');
+                        return;
+                    }
+                    
+                    // 验证是否为有效 URL
+                    let url;
+                    try {
+                        url = new URL(clipboardText);
+                    } catch {
+                        // 如果不是完整 URL，尝试添加 https://
+                        try {
+                            url = new URL('https://' + clipboardText);
+                        } catch {
+                            this.showToast('剪贴板内容不是有效的 URL', 'error');
+                            return;
+                        }
+                    }
+                    
+/*                     // 检查是否已存在相同 URL
+                    if (this.iframes.some(iframe => iframe.url === url.href)) {
+                        this.showToast('该 URL 已存在', 'error');
+                        return;
+                    } */
+                    
+                    // 创建 iframe
+                    const iframeData = {
+                        id: Date.now().toString(),
+                        url: url.href,
+                        element: null
+                    };
+                    
+                    this.iframes.push(iframeData);
+                    this.createIframeElement(iframeData);
+                    this.updateLayout();
+                    this.updateHash();
+                    
+                    this.showToast('成功添加网页', 'success');
+                    
+                } catch (error) {
+                    console.error('添加 iframe 失败:', error);
+                    this.showToast('无法访问剪贴板，请手动复制链接', 'error');
+                }
+            }
+            
+            createIframeElement(iframeData) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'iframe-item iframe-container relative';
+                wrapper.dataset.id = iframeData.id;
+                
+                const iframe = document.createElement('iframe');
+                iframe.src = iframeData.url;
+                iframe.className = 'w-full h-full';
+                iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
+                
+                // 添加删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'absolute top-2 right-2 z-10 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors';
+                deleteBtn.innerHTML = '<i data-lucide="x" class="h-4 w-4"></i>';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.removeIframe(iframeData.id);
+                };
+                
+                wrapper.appendChild(iframe);
+                wrapper.appendChild(deleteBtn);
+                
+                iframeData.element = wrapper;
+                this.container.appendChild(wrapper);
+                
+                // 重新初始化图标
+                lucide.createIcons();
+            }
+            
+            removeIframe(id) {
+                const index = this.iframes.findIndex(iframe => iframe.id === id);
+                if (index !== -1) {
+                    const iframe = this.iframes[index];
+                    if (iframe.element) {
+                        iframe.element.remove();
+                    }
+                    this.iframes.splice(index, 1);
+                    this.updateLayout();
+                    this.updateHash();
+                    this.showToast('已删除网页', 'success');
+                }
+            }
+            
+            updateLayout() {
+                const count = this.iframes.length;
+                
+                if (count === 0) {
+                    this.emptyState.style.display = 'flex';
+                    return;
+                } else {
+                    this.emptyState.style.display = 'none';
+                }
+                
+                // 计算每个 iframe 的高度
+                const height = `${100 / count}%`;
+                
+                this.iframes.forEach(iframe => {
+                    if (iframe.element) {
+                        iframe.element.style.height = height;
+                    }
+                });
+            }
+            
+            updateHash() {
+                const urls = this.iframes.map(iframe => encodeURIComponent(iframe.url));
+                window.location.hash = urls.join(',');
+            }
+            
+            restoreFromHash() {
+                const hash = window.location.hash.slice(1);
+                if (!hash) return;
+                
+                const urls = hash.split(',').map(url => decodeURIComponent(url));
+                
+                // 清除现有 iframe
+                this.iframes.forEach(iframe => {
+                    if (iframe.element) {
+                        iframe.element.remove();
+                    }
+                });
+                this.iframes = [];
+                
+                // 重新创建 iframe
+                urls.forEach(url => {
+                    if (url) {
+                        const iframeData = {
+                            id: Date.now().toString() + Math.random(),
+                            url: url,
+                            element: null
+                        };
+                        this.iframes.push(iframeData);
+                        this.createIframeElement(iframeData);
+                    }
+                });
+                
+                this.updateLayout();
+            }
+            
+            showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                this.toastContainer.appendChild(toast);
+                
+                // 3秒后自动移除
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 3000);
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new SplitIframeApp();
+        });
+        
+        // 处理页面可见性变化，优化性能
+        document.addEventListener('visibilitychange', () => {
+            const iframes = document.querySelectorAll('iframe');
+            if (document.hidden) {
+                // 页面隐藏时暂停 iframe
+                iframes.forEach(iframe => {
+                    iframe.style.visibility = 'hidden';
+                });
+            } else {
+                // 页面显示时恢复 iframe
+                iframes.forEach(iframe => {
+                    iframe.style.visibility = 'visible';
+                });
+            }
+        });
+    </script>
+</body>
+</html>
