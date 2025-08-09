@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>人脸装饰器</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -55,6 +55,38 @@
             height: 2.75rem;
             padding: 0 2rem;
         }
+        
+        /* 手机端按钮优化 */
+        @media (max-width: 768px) {
+            .btn {
+                font-size: 1rem;
+                min-height: 48px; /* 符合触摸标准的最小尺寸 */
+                padding: 0.75rem 1rem;
+            }
+            .btn-sm {
+                height: 44px;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            .btn-lg {
+                height: 56px;
+                padding: 1rem 1.5rem;
+                font-size: 1.1rem;
+            }
+            
+            /* 调整大小手柄在手机上更大 */
+            .resize-handle {
+                width: 20px;
+                height: 20px;
+            }
+            
+            /* 删除按钮在手机上更大 */
+            .delete-handle {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+        }
         .card {
             border-radius: 0.5rem;
             border: 1px solid #e5e7eb;
@@ -94,7 +126,9 @@
         }
 
         .decoration-item.editing .decoration-text {
-            opacity: 0.3;
+            opacity: 1;
+            user-select: text;
+            cursor: text;
         }
         
         /* 8方向调节杆容器 */
@@ -169,6 +203,9 @@
                 outline: none;
                 min-width: 20px;
                 min-height: 1em;
+                user-select: text;
+                cursor: text;
+                pointer-events: auto;
             }
 
             .decoration-text[contenteditable="true"]:focus {
@@ -185,6 +222,19 @@
             font-size: 24px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .decoration-text-input {
+            font-size: 24px !important;
+            font-weight: bold !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+            border: 2px solid #3b82f6 !important;
+            border-radius: 4px !important;
+            padding: 4px 8px !important;
+            outline: none !important;
+            min-width: 100px !important;
+            color: inherit !important;
         }
         .decoration-image {
             width: 40px;
@@ -359,6 +409,13 @@
             position: relative;
             display: inline-block;
             max-width: 100%;
+            width: fit-content;
+            margin: 0 auto;
+        }
+        .canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
         .overlay-canvas {
             position: absolute;
@@ -439,25 +496,28 @@
             useEffect(() => {
                 initializeFaceMesh();
                 
-                // 添加全局鼠标事件监听
-                const handleMouseMove = (e) => {
+                // 添加全局鼠标和触摸事件监听
+                const handlePointerMove = (e) => {
                     if (isDragging && activeDecoration) {
+                        e.preventDefault(); // 防止页面滚动
                         handleDragMove(e);
                     }
                 };
                 
-                const handleMouseUp = () => {
+                const handlePointerEnd = () => {
                     if (isDragging) {
                         handleDragEnd();
                     }
                 };
                 
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
+                document.addEventListener('pointermove', handlePointerMove, { passive: false });
+                document.addEventListener('pointerup', handlePointerEnd);
+                document.addEventListener('pointercancel', handlePointerEnd);
                 
                 return () => {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
+                    document.removeEventListener('pointermove', handlePointerMove);
+                    document.removeEventListener('pointerup', handlePointerEnd);
+                    document.removeEventListener('pointercancel', handlePointerEnd);
                 };
             }, [isDragging, activeDecoration]);
 
@@ -472,11 +532,18 @@
                     }
                 });
 
+                // 根据设备性能动态调整配置
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isLowEndDevice = navigator.hardwareConcurrency <= 4; // 检测低端设备
+                
                 faceMesh.setOptions({
                     maxNumFaces: 1,
-                    refineLandmarks: true,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
+                    refineLandmarks: !isMobile || !isLowEndDevice, // 移动端低端设备关闭精细化检测
+                    minDetectionConfidence: isMobile ? 0.6 : 0.5, // 移动端提高阈值减少误检
+                    minTrackingConfidence: isMobile ? 0.6 : 0.5,
+                    selfieMode: false, // 关闭自拍模式以提高性能
+                    staticImageMode: true, // 静态图片模式，适合单张图片处理
+                    modelComplexity: isMobile && isLowEndDevice ? 0 : 1 // 低端设备使用简化模型
                 });
 
                 faceMesh.onResults(onFaceMeshResults);
@@ -488,6 +555,18 @@
                     setFaceLandmarks(results.multiFaceLandmarks[0]);
                 }
                 setIsProcessing(false);
+                
+                // 记录检测完成时间，用于性能监控
+                const endTime = performance.now();
+                if (window.detectionStartTime) {
+                    const detectionTime = endTime - window.detectionStartTime;
+                    console.log(`人脸检测耗时: ${detectionTime.toFixed(2)}ms`);
+                    
+                    // 如果检测时间过长（超过3秒），提示用户可能需要降低精度
+                    if (detectionTime > 3000) {
+                        console.warn('检测时间较长，建议在移动设备上使用较小的图片以提高性能');
+                    }
+                }
             };
 
             const handleImageUpload = (event) => {
@@ -522,18 +601,63 @@
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
                 
-                // 设置画布尺寸
-                const maxWidth = Math.min(window.innerWidth - 40, 600);
-                const scale = maxWidth / img.width;
+                // 获取 card-content 的实际可用宽度
+                const cardContent = document.querySelector('.card-content');
+                const cardContentWidth = cardContent ? cardContent.clientWidth - 48 : 600; // 减去 padding
+                
+                // 设置画布尺寸，确保不超过 card-content 宽度
+                const maxWidth = Math.min(window.innerWidth - 80, cardContentWidth, 600);
+                const scale = Math.min(maxWidth / img.width, 1); // 确保不放大图片
                 canvas.width = img.width * scale;
                 canvas.height = img.height * scale;
+                
+                // 设置 canvas 容器的尺寸与 canvas 一致
+                const canvasContainer = canvas.parentElement;
+                if (canvasContainer) {
+                    canvasContainer.style.width = canvas.width + 'px';
+                    canvasContainer.style.height = canvas.height + 'px';
+                }
                 
                 // 绘制图片
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // 处理人脸检测
+                // 创建一个适中尺寸的canvas用于人脸检测，平衡精度和性能
+                const detectionCanvas = document.createElement('canvas');
+                const detectionCtx = detectionCanvas.getContext('2d');
+                
+                // 智能调整检测图片尺寸，平衡精度和性能
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isLowEndDevice = navigator.hardwareConcurrency <= 4;
+                const deviceMemory = navigator.deviceMemory || 4; // 默认4GB内存
+                
+                // 根据设备性能和原图尺寸智能选择检测尺寸
+                let detectionMaxWidth;
+                if (isMobile && isLowEndDevice) {
+                    detectionMaxWidth = 320; // 低端移动设备
+                } else if (isMobile) {
+                    detectionMaxWidth = 480; // 中高端移动设备
+                } else if (deviceMemory < 8) {
+                    detectionMaxWidth = 640; // 低内存桌面设备
+                } else {
+                    detectionMaxWidth = 800; // 高性能桌面设备
+                }
+                
+                // 对于小图片，不需要过度缩小
+                if (img.width <= detectionMaxWidth) {
+                    detectionMaxWidth = img.width;
+                }
+                
+                const detectionScale = Math.min(detectionMaxWidth / img.width, 1);
+                detectionCanvas.width = img.width * detectionScale;
+                detectionCanvas.height = img.height * detectionScale;
+                
+                detectionCtx.drawImage(img, 0, 0, detectionCanvas.width, detectionCanvas.height);
+
+                // 处理人脸检测 - 使用适中尺寸的图片
                 if (faceMeshRef.current) {
-                    await faceMeshRef.current.send({ image: canvas });
+                    // 记录检测开始时间
+                    window.detectionStartTime = performance.now();
+                    await faceMeshRef.current.send({ image: detectionCanvas });
                 }
             };
 
@@ -549,6 +673,8 @@
                     sumY += faceLandmarks[index].y;
                 });
 
+                // 特征点坐标是基于检测用的缩小图片的，需要转换到显示画布坐标
+                // faceLandmarks 中的坐标是归一化的 (0-1)，直接乘以画布尺寸即可
                 return {
                     x: (sumX / landmarks.length) * canvasRef.current.width,
                     y: (sumY / landmarks.length) * canvasRef.current.height
@@ -592,16 +718,20 @@
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 
-                // 记录鼠标在画布中的相对位置
-                const canvasX = (e.clientX - rect.left) * scaleX;
-                const canvasY = (e.clientY - rect.top) * scaleY;
+                // 使用 Pointer Events 统一处理各种输入设备
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                
+                // 记录鼠标/触摸在画布中的相对位置
+                const canvasX = (clientX - rect.left) * scaleX;
+                const canvasY = (clientY - rect.top) * scaleY;
                 
                 // 找到当前装饰元素，记录鼠标相对于装饰元素的偏移
                 const decoration = decorations.find(d => d.id === decorationId);
                 if (decoration) {
                     setDragStart({ 
-                        mouseX: e.clientX,
-                        mouseY: e.clientY,
+                        mouseX: clientX,
+                        mouseY: clientY,
                         canvasX: canvasX,
                         canvasY: canvasY,
                         decorationX: decoration.x,
@@ -624,9 +754,13 @@
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
                 
-                // 计算当前鼠标在画布中的位置
-                const currentCanvasX = (e.clientX - rect.left) * scaleX;
-                const currentCanvasY = (e.clientY - rect.top) * scaleY;
+                // 使用 Pointer Events 统一处理各种输入设备
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                
+                // 计算当前鼠标/触摸在画布中的位置
+                const currentCanvasX = (clientX - rect.left) * scaleX;
+                const currentCanvasY = (clientY - rect.top) * scaleY;
                 
                 setDecorations(prev => prev.map(decoration => {
                     if (decoration.id === activeDecoration) {
@@ -641,13 +775,13 @@
                             
                             return { ...decoration, x: newX, y: newY };
                         } else if (dragMode === 'resize') {
-                            // 调整大小 - 基于鼠标移动距离
-                            const deltaX = e.clientX - dragStart.mouseX;
-                            const deltaY = e.clientY - dragStart.mouseY;
+                            // 调整大小 - 基于鼠标/触摸移动距离
+                            const deltaX = clientX - dragStart.mouseX;
+                            const deltaY = clientY - dragStart.mouseY;
                             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                             const direction = deltaX + deltaY > 0 ? 1 : -1;
                             
-                            const scaleFactor = 1 + (direction * distance) / 300; // 调整敏感度
+                            const scaleFactor = 1 + (direction * distance) / 200; // 提高敏感度，适合触摸操作
                             const newScale = Math.max(0.3, Math.min(3, dragStart.initialScale * scaleFactor));
                             
                             return { ...decoration, scale: newScale };
@@ -730,11 +864,12 @@
                         
                         // 绘制每个装饰元素
                         decorations.forEach(decoration => {
-                            // 直接使用装饰元素在canvas中的坐标
+                            // 装饰元素的坐标是基于显示canvas的，需要转换到原图坐标系
                             const x = decoration.x * scaleX;
                             const y = decoration.y * scaleY;
                             
-                            const scale = decoration.scale || 1;
+                            // 缩放也需要按比例调整
+                            const scale = (decoration.scale || 1) * Math.min(scaleX, scaleY);
                             
                             ctx.save();
                             ctx.translate(x, y);
@@ -742,7 +877,7 @@
                             
                             if (decoration.type === 'text') {
                                 // 绘制文本
-                                ctx.font = `${24 * scale}px Arial`;
+                                ctx.font = `${24}px Arial`;
                                 ctx.fillStyle = decoration.color || '#000000';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
@@ -750,17 +885,17 @@
                             } else if (decoration.type === 'circle') {
                                 // 绘制圆形
                                 ctx.beginPath();
-                                ctx.arc(0, 0, 20 * scale, 0, 2 * Math.PI);
+                                ctx.arc(0, 0, 20, 0, 2 * Math.PI);
                                 ctx.fillStyle = decoration.color || '#ff0000';
                                 ctx.fill();
                             } else if (decoration.type === 'square') {
                                 // 绘制方形
-                                const size = 40 * scale;
+                                const size = 40;
                                 ctx.fillStyle = decoration.color || '#0000ff';
                                 ctx.fillRect(-size/2, -size/2, size, size);
                             } else if (decoration.type === 'triangle') {
                                 // 绘制三角形
-                                const size = 30 * scale;
+                                const size = 30;
                                 ctx.beginPath();
                                 ctx.moveTo(0, -size);
                                 ctx.lineTo(-size, size);
@@ -770,7 +905,7 @@
                                 ctx.fill();
                             } else if (decoration.type === 'diamond') {
                                 // 绘制菱形
-                                const size = 25 * scale;
+                                const size = 25;
                                 ctx.beginPath();
                                 ctx.moveTo(0, -size);
                                 ctx.lineTo(size, 0);
@@ -819,57 +954,61 @@
                 // 渲染装饰内容
                 const renderContent = () => {
                     if (decoration.type === 'text') {
-                        return (
-                            <div 
-                                className="decoration-text"
-                                contentEditable={isEditing}
-                                suppressContentEditableWarning={true}
-                                ref={(el) => {
-                                    if (isEditing && el) {
-                                        // 当进入编辑模式时自动聚焦
-                                        setTimeout(() => {
-                                            el.focus();
-                                            // 选中所有文本
-                                            const range = document.createRange();
-                                            range.selectNodeContents(el);
-                                            const selection = window.getSelection();
-                                            selection.removeAllRanges();
-                                            selection.addRange(range);
-                                        }, 0);
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    if (isEditing) {
-                                        finishEditing(decoration.id, e.target.textContent);
-                                    }
-                                }}
-                                onKeyDown={(e) => {
-                                    if (isEditing) {
-                                        e.stopPropagation(); // 防止事件冒泡
-                                        if (e.key === 'Enter' && !e.shiftKey) {
+                        if (isEditing) {
+                            // 编辑模式：使用input元素
+                            return (
+                                <input
+                                    type="text"
+                                    className="decoration-text-input"
+                                    defaultValue={decoration.content}
+                                    autoFocus
+                                    onBlur={(e) => {
+                                        finishEditing(decoration.id, e.target.value);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                        if (e.key === 'Enter') {
                                             e.preventDefault();
                                             e.target.blur();
                                         } else if (e.key === 'Escape') {
                                             e.preventDefault();
                                             setEditingDecoration(null);
-                                            e.target.textContent = decoration.content;
-                                            e.target.blur();
                                         }
-                                    }
-                                }}
-                                onClick={(e) => {
-                                    if (isEditing) {
-                                        e.stopPropagation(); // 编辑时阻止点击事件冒泡
-                                    }
-                                }}
-                                style={{
-                                    cursor: isEditing ? 'text' : 'inherit',
-                                    userSelect: isEditing ? 'text' : 'none'
-                                }}
-                            >
-                                {decoration.content}
-                            </div>
-                        );
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                    }}
+                                    onPointerDown={(e) => {
+                                        e.stopPropagation();
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '2px solid #3b82f6',
+                                        borderRadius: '4px',
+                                        padding: '4px 8px',
+                                        fontSize: '24px',
+                                        fontWeight: 'bold',
+                                        textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                                        color: 'inherit',
+                                        outline: 'none',
+                                        minWidth: '100px'
+                                    }}
+                                />
+                            );
+                        } else {
+                            // 显示模式：使用div元素
+                            return (
+                                <div 
+                                    className="decoration-text"
+                                    style={{
+                                        cursor: 'pointer',
+                                        userSelect: 'none'
+                                    }}
+                                >
+                                    {decoration.content}
+                                </div>
+                            );
+                        }
                     } 
                     // 形状装饰
                     else if (decoration.type === 'circle') {
@@ -917,7 +1056,7 @@
                                 <div
                                     key={direction}
                                     className={`resize-handle ${direction}`}
-                                    onMouseDown={(e) => handleDragStart(e, decoration.id, 'resize', direction)}
+                                    onPointerDown={(e) => handleDragStart(e, decoration.id, 'resize', direction)}
                                     title={`调整大小 (${direction})`}
                                 />
                             ))}
@@ -950,22 +1089,21 @@
                         className={`decoration-item ${isActive ? 'active' : ''} ${isDragging && activeDecoration === decoration.id ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
                         style={style}
                         onClick={(e) => {
-                            e.stopPropagation();
                             if (!isEditing) {
+                                e.stopPropagation();
                                 setActiveDecoration(decoration.id);
                             }
                         }}
                         onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
                             if (decoration.type === 'text' && !isEditing) {
+                                e.stopPropagation();
+                                e.preventDefault();
                                 startEditing(decoration.id);
                             }
                         }}
-                        onMouseDown={(e) => {
+                        onPointerDown={(e) => {
                             if (isEditing) {
-                                e.preventDefault();
-                                e.stopPropagation();
+                                // 编辑状态下完全不处理事件
                                 return;
                             }
                             
@@ -1034,6 +1172,19 @@
                                 <div className="text-center py-4">
                                     <div className="spinner mx-auto mb-2"></div>
                                     <p>正在检测人脸...</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {(() => {
+                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                            const isLowEndDevice = navigator.hardwareConcurrency <= 4;
+                                            if (isMobile && isLowEndDevice) {
+                                                return "检测到低端移动设备，已优化性能配置";
+                                            } else if (isMobile) {
+                                                return "移动设备检测中，已平衡精度与性能";
+                                            } else {
+                                                return "桌面设备检测中，使用高精度配置";
+                                            }
+                                        })()}
+                                    </p>
                                 </div>
                             )}
 
