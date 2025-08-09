@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸装饰器</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* shadcn/ui inspired styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            outline: none;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #111827;
+        }
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+        }
+        .btn-sm {
+            height: 2.25rem;
+            padding: 0 0.75rem;
+        }
+        .btn-lg {
+            height: 2.75rem;
+            padding: 0 2rem;
+        }
+        .card {
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            background-color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .card-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            padding: 1.5rem;
+        }
+        .card-content {
+            padding: 1.5rem;
+            padding-top: 0;
+        }
+        .decoration-item {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+        .decoration-item.active {
+            border: 2px solid #3b82f6;
+            border-radius: 4px;
+            padding: 2px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        .decoration-item.dragging {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .decoration-item.editing {
+            z-index: 1500;
+        }
+
+        .decoration-item.editing .decoration-text {
+            opacity: 0.3;
+        }
+        
+        /* 8方向调节杆容器 */
+        .resize-handles {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            pointer-events: none;
+        }
+        
+        /* 调节杆基础样式 */
+        .resize-handle {
+            position: absolute;
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        .resize-handle:hover {
+            background: #2563eb;
+            transform: scale(1.2);
+        }
+        
+        /* 8个方向的调节杆位置 */
+        .resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .resize-handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .resize-handle.w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+        .resize-handle.e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+        .resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .resize-handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+        
+        /* 删除按钮 */
+        .delete-handle {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 20px;
+            height: 20px;
+            background: #ef4444;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        .delete-handle:hover {
+                background: #dc2626;
+                transform: scale(1.1);
+            }
+
+            /* 可编辑装饰元素样式 */
+            .decoration-text[contenteditable="true"] {
+                background: rgba(59, 130, 246, 0.1);
+                border: 2px solid #3b82f6;
+                border-radius: 4px;
+                padding: 4px 8px;
+                outline: none;
+                min-width: 20px;
+                min-height: 1em;
+            }
+
+            .decoration-text[contenteditable="true"]:focus {
+                background: rgba(59, 130, 246, 0.2);
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+            }
+
+            .decoration-text[contenteditable="true"]:empty:before {
+                content: "输入文字或Emoji";
+                color: #9ca3af;
+                font-style: italic;
+            }
+        .decoration-text {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .decoration-image {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .red-ball {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #d63031);
+            border-radius: 50%;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* 形状装饰 */
+        .shape-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .shape-square {
+            width: 30px;
+            height: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .shape-triangle {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 26px solid;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        
+        .shape-diamond {
+            width: 20px;
+            height: 20px;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* 特效装饰 */
+        .pulse-effect {
+            width: 25px;
+            height: 25px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .glow-effect {
+            width: 25px;
+            height: 25px;
+            background: #fbbf24;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #fbbf24, 0 0 40px #fbbf24, 0 0 60px #fbbf24;
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 20px #fbbf24, 0 0 30px #fbbf24, 0 0 40px #fbbf24; }
+            to { box-shadow: 0 0 30px #fbbf24, 0 0 50px #fbbf24, 0 0 70px #fbbf24; }
+        }
+        
+        /* 贴纸装饰 */
+        .sticker-arrow {
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 20px solid #6366f1;
+            position: relative;
+        }
+        
+        .sticker-arrow::after {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-left: 8px solid #6366f1;
+        }
+        
+        .sticker-bubble {
+            width: 30px;
+            height: 30px;
+            background: rgba(59, 130, 246, 0.8);
+            border-radius: 50%;
+            position: relative;
+            border: 2px solid #3b82f6;
+        }
+        
+        .sticker-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 8px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #3b82f6;
+        }
+        
+        .sticker-lightning {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 20px solid #eab308;
+            position: relative;
+            transform: rotate(15deg);
+        }
+        
+        .sticker-lightning::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -4px;
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 10px solid #eab308;
+        }
+        
+        .sticker-flower {
+            width: 25px;
+            height: 25px;
+            background: #ec4899;
+            border-radius: 50% 0;
+            position: relative;
+            transform: rotate(45deg);
+        }
+        
+        .sticker-flower::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 25px;
+            height: 25px;
+            background: #ec4899;
+            border-radius: 50% 0;
+            transform: rotate(90deg);
+        }
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        .overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // 预设装饰元素
+        const PRESET_DECORATIONS = {
+            text: [
+                { id: 'brackets', content: '( )', description: '括号' },
+                { id: 'smile', content: '😊', description: '笑脸' },
+                { id: 'heart', content: '❤️', description: '爱心' },
+                { id: 'star', content: '⭐', description: '星星' },
+                { id: 'glasses', content: '👓', description: '眼镜' },
+                { id: 'mustache', content: '👨', description: '胡子' },
+                { id: 'fire', content: '🔥', description: '火焰' },
+                { id: 'crown', content: '👑', description: '皇冠' },
+                { id: 'sunglasses', content: '😎', description: '墨镜' },
+                { id: 'kiss', content: '😘', description: '飞吻' }
+            ],
+            shapes: [
+                { id: 'circle', type: 'circle', description: '圆形', color: '#3b82f6' },
+                { id: 'square', type: 'square', description: '方形', color: '#ef4444' },
+                { id: 'triangle', type: 'triangle', description: '三角形', color: '#10b981' },
+                { id: 'diamond', type: 'diamond', description: '菱形', color: '#f59e0b' }
+            ],
+            effects: [
+                { id: 'spinner', type: 'spinner', description: '加载动画' },
+                { id: 'redball', type: 'redball', description: '红球' },
+                { id: 'pulse', type: 'pulse', description: '脉冲效果' },
+                { id: 'glow', type: 'glow', description: '发光效果' }
+            ],
+            stickers: [
+                { id: 'arrow', type: 'arrow', description: '箭头', direction: 'right' },
+                { id: 'bubble', type: 'bubble', description: '气泡' },
+                { id: 'lightning', type: 'lightning', description: '闪电' },
+                { id: 'flower', type: 'flower', description: '花朵' }
+            ]
+        };
+
+        // 面部特征点索引
+        const FACE_LANDMARKS = {
+            leftEye: [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246],
+            rightEye: [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398],
+            nose: [1, 2, 5, 4, 6, 19, 20, 94, 125, 141, 235, 236, 237, 238, 239, 240, 241, 242],
+            mouth: [61, 84, 17, 314, 405, 320, 307, 375, 321, 308, 324, 318]
+        };
+
+        function FaceDecoratorApp() {
+            const [image, setImage] = useState(null);
+            const [faceLandmarks, setFaceLandmarks] = useState(null);
+            const [decorations, setDecorations] = useState([]);
+            const [selectedFeature, setSelectedFeature] = useState('mouth');
+            const [customText, setCustomText] = useState('');
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [activeDecoration, setActiveDecoration] = useState(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const [dragMode, setDragMode] = useState('move'); // 'move' or 'resize'
+            const [resizeDirection, setResizeDirection] = useState('');
+            const [editingDecoration, setEditingDecoration] = useState(null);
+            
+            const canvasRef = useRef(null);
+            const overlayCanvasRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const cameraInputRef = useRef(null);
+            const faceMeshRef = useRef(null);
+
+            useEffect(() => {
+                initializeFaceMesh();
+                
+                // 添加全局鼠标事件监听
+                const handleMouseMove = (e) => {
+                    if (isDragging && activeDecoration) {
+                        handleDragMove(e);
+                    }
+                };
+                
+                const handleMouseUp = () => {
+                    if (isDragging) {
+                        handleDragEnd();
+                    }
+                };
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                
+                return () => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                };
+            }, [isDragging, activeDecoration]);
+
+            useEffect(() => {
+                initializeFaceMesh();
+            }, []);
+
+            const initializeFaceMesh = async () => {
+                const faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
+                    }
+                });
+
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults(onFaceMeshResults);
+                faceMeshRef.current = faceMesh;
+            };
+
+            const onFaceMeshResults = (results) => {
+                if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                    setFaceLandmarks(results.multiFaceLandmarks[0]);
+                }
+                setIsProcessing(false);
+            };
+
+            const handleImageUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            // 保存图片对象和data URL
+                            img.dataURL = e.target.result;
+                            setImage(img);
+                            processImage(img);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleCameraCapture = () => {
+                if (cameraInputRef.current) {
+                    cameraInputRef.current.click();
+                }
+            };
+
+            const processImage = async (img) => {
+                setIsProcessing(true);
+                setFaceLandmarks(null);
+                setDecorations([]);
+
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置画布尺寸
+                const maxWidth = Math.min(window.innerWidth - 40, 600);
+                const scale = maxWidth / img.width;
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                
+                // 绘制图片
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // 处理人脸检测
+                if (faceMeshRef.current) {
+                    await faceMeshRef.current.send({ image: canvas });
+                }
+            };
+
+            const getFeatureCenter = (featureName) => {
+                if (!faceLandmarks) return null;
+                
+                const landmarks = FACE_LANDMARKS[featureName];
+                if (!landmarks) return null;
+
+                let sumX = 0, sumY = 0;
+                landmarks.forEach(index => {
+                    sumX += faceLandmarks[index].x;
+                    sumY += faceLandmarks[index].y;
+                });
+
+                return {
+                    x: (sumX / landmarks.length) * canvasRef.current.width,
+                    y: (sumY / landmarks.length) * canvasRef.current.height
+                };
+            };
+
+            const addDecoration = (decorationType, content, color = null) => {
+                const center = getFeatureCenter(selectedFeature);
+                if (!center) {
+                    alert('请先上传图片并检测到人脸');
+                    return;
+                }
+
+                const decoration = {
+                    id: Date.now(),
+                    type: decorationType,
+                    content: content,
+                    feature: selectedFeature,
+                    x: center.x,
+                    y: center.y,
+                    scale: 1,
+                    color: color
+                };
+
+                setDecorations(prev => [...prev, decoration]);
+            };
+
+            // 拖拽相关函数
+            const handleDragStart = (e, decorationId, mode = 'move', direction = '') => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                setActiveDecoration(decorationId);
+                setIsDragging(true);
+                setDragMode(mode);
+                setResizeDirection(direction);
+                
+                // 获取画布坐标转换信息
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                // 记录鼠标在画布中的相对位置
+                const canvasX = (e.clientX - rect.left) * scaleX;
+                const canvasY = (e.clientY - rect.top) * scaleY;
+                
+                // 找到当前装饰元素，记录鼠标相对于装饰元素的偏移
+                const decoration = decorations.find(d => d.id === decorationId);
+                if (decoration) {
+                    setDragStart({ 
+                        mouseX: e.clientX,
+                        mouseY: e.clientY,
+                        canvasX: canvasX,
+                        canvasY: canvasY,
+                        decorationX: decoration.x,
+                        decorationY: decoration.y,
+                        offsetX: canvasX - decoration.x,
+                        offsetY: canvasY - decoration.y,
+                        initialScale: decoration.scale || 1
+                    });
+                }
+                
+                // 添加拖拽样式
+                document.body.style.cursor = mode === 'resize' ? `${direction}-resize` : 'move';
+            };
+
+            const handleDragMove = (e) => {
+                if (!isDragging || !activeDecoration || !dragStart) return;
+                
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                // 计算当前鼠标在画布中的位置
+                const currentCanvasX = (e.clientX - rect.left) * scaleX;
+                const currentCanvasY = (e.clientY - rect.top) * scaleY;
+                
+                setDecorations(prev => prev.map(decoration => {
+                    if (decoration.id === activeDecoration) {
+                        if (dragMode === 'move') {
+                            // 移动装饰元素 - 使用绝对位置而不是增量
+                            let newX = currentCanvasX - dragStart.offsetX;
+                            let newY = currentCanvasY - dragStart.offsetY;
+                            
+                            // 边界检查
+                            newX = Math.max(20, Math.min(canvas.width - 20, newX));
+                            newY = Math.max(20, Math.min(canvas.height - 20, newY));
+                            
+                            return { ...decoration, x: newX, y: newY };
+                        } else if (dragMode === 'resize') {
+                            // 调整大小 - 基于鼠标移动距离
+                            const deltaX = e.clientX - dragStart.mouseX;
+                            const deltaY = e.clientY - dragStart.mouseY;
+                            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                            const direction = deltaX + deltaY > 0 ? 1 : -1;
+                            
+                            const scaleFactor = 1 + (direction * distance) / 300; // 调整敏感度
+                            const newScale = Math.max(0.3, Math.min(3, dragStart.initialScale * scaleFactor));
+                            
+                            return { ...decoration, scale: newScale };
+                        }
+                    }
+                    return decoration;
+                }));
+            };
+
+            const handleDragEnd = () => {
+                setIsDragging(false);
+                setDragMode('move');
+                setResizeDirection('');
+                document.body.style.cursor = 'default';
+            };
+
+            const activateDecoration = (decorationId, e) => {
+                e.stopPropagation();
+                setActiveDecoration(decorationId);
+            };
+
+            const deactivateDecoration = () => {
+                setActiveDecoration(null);
+                setEditingDecoration(null);
+            };
+
+            const startEditing = (decorationId) => {
+                setEditingDecoration(decorationId);
+                setActiveDecoration(decorationId);
+            };
+
+            const finishEditing = (decorationId, newContent) => {
+                setDecorations(prev => prev.map(decoration => {
+                    if (decoration.id === decorationId) {
+                        return { ...decoration, content: newContent.trim() || decoration.content };
+                    }
+                    return decoration;
+                }));
+                setEditingDecoration(null);
+            };
+
+            const addCustomText = () => {
+                if (!customText.trim()) return;
+                addDecoration('text', customText);
+                setCustomText('');
+            };
+
+            const removeDecoration = (id) => {
+                setDecorations(prev => prev.filter(d => d.id !== id));
+            };
+
+            const saveDecoratedImage = async () => {
+                if (!image || decorations.length === 0) return;
+
+                try {
+                    // 创建一个临时的canvas
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 创建图片对象
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        // 设置canvas尺寸为图片尺寸
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        // 绘制原始图片
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // 获取canvas容器的尺寸和位置信息
+                        const canvasContainer = document.querySelector('.canvas-container');
+                        const canvasElement = canvasContainer.querySelector('canvas');
+                        const canvasRect = canvasElement.getBoundingClientRect();
+                        
+                        // 计算缩放比例
+                        const scaleX = img.width / canvasElement.width;
+                        const scaleY = img.height / canvasElement.height;
+                        
+                        // 绘制每个装饰元素
+                        decorations.forEach(decoration => {
+                            // 直接使用装饰元素在canvas中的坐标
+                            const x = decoration.x * scaleX;
+                            const y = decoration.y * scaleY;
+                            
+                            const scale = decoration.scale || 1;
+                            
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.scale(scale, scale);
+                            
+                            if (decoration.type === 'text') {
+                                // 绘制文本
+                                ctx.font = `${24 * scale}px Arial`;
+                                ctx.fillStyle = decoration.color || '#000000';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(decoration.content, 0, 0);
+                            } else if (decoration.type === 'circle') {
+                                // 绘制圆形
+                                ctx.beginPath();
+                                ctx.arc(0, 0, 20 * scale, 0, 2 * Math.PI);
+                                ctx.fillStyle = decoration.color || '#ff0000';
+                                ctx.fill();
+                            } else if (decoration.type === 'square') {
+                                // 绘制方形
+                                const size = 40 * scale;
+                                ctx.fillStyle = decoration.color || '#0000ff';
+                                ctx.fillRect(-size/2, -size/2, size, size);
+                            } else if (decoration.type === 'triangle') {
+                                // 绘制三角形
+                                const size = 30 * scale;
+                                ctx.beginPath();
+                                ctx.moveTo(0, -size);
+                                ctx.lineTo(-size, size);
+                                ctx.lineTo(size, size);
+                                ctx.closePath();
+                                ctx.fillStyle = decoration.color || '#00ff00';
+                                ctx.fill();
+                            } else if (decoration.type === 'diamond') {
+                                // 绘制菱形
+                                const size = 25 * scale;
+                                ctx.beginPath();
+                                ctx.moveTo(0, -size);
+                                ctx.lineTo(size, 0);
+                                ctx.lineTo(0, size);
+                                ctx.lineTo(-size, 0);
+                                ctx.closePath();
+                                ctx.fillStyle = decoration.color || '#ff00ff';
+                                ctx.fill();
+                            }
+                            // 可以继续添加其他装饰类型的绘制逻辑
+                            
+                            ctx.restore();
+                        });
+                        
+                        // 将canvas转换为blob并下载
+                        canvas.toBlob((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `decorated_image_${Date.now()}.png`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        }, 'image/png');
+                    };
+                    
+                    img.src = image.dataURL || image.src;
+                } catch (error) {
+                    console.error('保存图片失败:', error);
+                    alert('保存图片失败，请重试');
+                }
+            };
+
+            const renderDecoration = (decoration) => {
+                const isActive = activeDecoration === decoration.id;
+                const isEditing = editingDecoration === decoration.id;
+                const scale = decoration.scale || 1;
+                
+                const style = {
+                    left: decoration.x,
+                    top: decoration.y,
+                    transform: `translate(-50%, -50%) scale(${scale})`,
+                };
+
+                // 渲染装饰内容
+                const renderContent = () => {
+                    if (decoration.type === 'text') {
+                        return (
+                            <div 
+                                className="decoration-text"
+                                contentEditable={isEditing}
+                                suppressContentEditableWarning={true}
+                                ref={(el) => {
+                                    if (isEditing && el) {
+                                        // 当进入编辑模式时自动聚焦
+                                        setTimeout(() => {
+                                            el.focus();
+                                            // 选中所有文本
+                                            const range = document.createRange();
+                                            range.selectNodeContents(el);
+                                            const selection = window.getSelection();
+                                            selection.removeAllRanges();
+                                            selection.addRange(range);
+                                        }, 0);
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    if (isEditing) {
+                                        finishEditing(decoration.id, e.target.textContent);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (isEditing) {
+                                        e.stopPropagation(); // 防止事件冒泡
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            e.target.blur();
+                                        } else if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            setEditingDecoration(null);
+                                            e.target.textContent = decoration.content;
+                                            e.target.blur();
+                                        }
+                                    }
+                                }}
+                                onClick={(e) => {
+                                    if (isEditing) {
+                                        e.stopPropagation(); // 编辑时阻止点击事件冒泡
+                                    }
+                                }}
+                                style={{
+                                    cursor: isEditing ? 'text' : 'inherit',
+                                    userSelect: isEditing ? 'text' : 'none'
+                                }}
+                            >
+                                {decoration.content}
+                            </div>
+                        );
+                    } 
+                    // 形状装饰
+                    else if (decoration.type === 'circle') {
+                        return <div className="shape-circle" style={{ backgroundColor: decoration.color }}></div>;
+                    } else if (decoration.type === 'square') {
+                        return <div className="shape-square" style={{ backgroundColor: decoration.color }}></div>;
+                    } else if (decoration.type === 'triangle') {
+                        return <div className="shape-triangle" style={{ borderBottomColor: decoration.color }}></div>;
+                    } else if (decoration.type === 'diamond') {
+                        return <div className="shape-diamond" style={{ backgroundColor: decoration.color }}></div>;
+                    }
+                    // 特效装饰
+                    else if (decoration.type === 'spinner') {
+                        return <div className="spinner"></div>;
+                    } else if (decoration.type === 'redball') {
+                        return <div className="red-ball"></div>;
+                    } else if (decoration.type === 'pulse') {
+                        return <div className="pulse-effect"></div>;
+                    } else if (decoration.type === 'glow') {
+                        return <div className="glow-effect"></div>;
+                    }
+                    // 贴纸装饰
+                    else if (decoration.type === 'arrow') {
+                        return <div className="sticker-arrow"></div>;
+                    } else if (decoration.type === 'bubble') {
+                        return <div className="sticker-bubble"></div>;
+                    } else if (decoration.type === 'lightning') {
+                        return <div className="sticker-lightning"></div>;
+                    } else if (decoration.type === 'flower') {
+                        return <div className="sticker-flower"></div>;
+                    }
+                    
+                    return null;
+                };
+
+                // 渲染8方向调节杆
+                const renderResizeHandles = () => {
+                    if (!isActive) return null;
+                    
+                    const directions = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'];
+                    
+                    return (
+                        <div className="resize-handles">
+                            {directions.map(direction => (
+                                <div
+                                    key={direction}
+                                    className={`resize-handle ${direction}`}
+                                    onMouseDown={(e) => handleDragStart(e, decoration.id, 'resize', direction)}
+                                    title={`调整大小 (${direction})`}
+                                />
+                            ))}
+                        </div>
+                    );
+                };
+
+                // 渲染删除按钮
+                const renderDeleteHandle = () => {
+                    if (!isActive) return null;
+                    
+                    return (
+                        <div
+                            className="delete-handle"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                removeDecoration(decoration.id);
+                            }}
+                            title="删除装饰"
+                        >
+                            ✕
+                        </div>
+                    );
+                };
+
+                return (
+                    <div
+                        key={decoration.id}
+                        data-decoration-id={decoration.id}
+                        className={`decoration-item ${isActive ? 'active' : ''} ${isDragging && activeDecoration === decoration.id ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
+                        style={style}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isEditing) {
+                                setActiveDecoration(decoration.id);
+                            }
+                        }}
+                        onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            if (decoration.type === 'text' && !isEditing) {
+                                startEditing(decoration.id);
+                            }
+                        }}
+                        onMouseDown={(e) => {
+                            if (isEditing) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
+                            }
+                            
+                            if (!isActive) {
+                                setActiveDecoration(decoration.id);
+                            } else {
+                                handleDragStart(e, decoration.id, 'move');
+                            }
+                        }}
+                    >
+                        {renderContent()}
+                        {!isEditing && renderResizeHandles()}
+                        {!isEditing && renderDeleteHandle()}
+                    </div>
+                );
+            };
+
+            return (
+                <div className="container mx-auto p-4 max-w-4xl">
+                    <div className="card mb-6">
+                        <div className="card-header">
+                            <h1 className="text-2xl font-bold text-center">人脸装饰器</h1>
+                            <p className="text-gray-600 text-center">选择照片，检测人脸，添加有趣的装饰</p>
+                        </div>
+                        <div className="card-content">
+                            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                                <button
+                                    className="btn btn-primary btn-lg flex-1"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    📁 选择照片
+                                </button>
+                                <button
+                                    className="btn btn-secondary btn-lg flex-1"
+                                    onClick={handleCameraCapture}
+                                >
+                                    📷 拍照
+                                </button>
+                                {image && decorations.length > 0 && (
+                                    <button
+                                        className="btn btn-success btn-lg flex-1"
+                                        onClick={saveDecoratedImage}
+                                    >
+                                        💾 保存图片
+                                    </button>
+                                )}
+                            </div>
+
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+                            <input
+                                ref={cameraInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+
+                            {isProcessing && (
+                                <div className="text-center py-4">
+                                    <div className="spinner mx-auto mb-2"></div>
+                                    <p>正在检测人脸...</p>
+                                </div>
+                            )}
+
+                            {image && (
+                                <div 
+                                    className="canvas-container mx-auto"
+                                    onClick={deactivateDecoration}
+                                >
+                                    <canvas ref={canvasRef} className="max-w-full border rounded-lg"></canvas>
+                                    {decorations.map(renderDecoration)}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {faceLandmarks && (
+                        <div className="card">
+                            <div className="card-header">
+                                <h2 className="text-xl font-semibold">添加装饰</h2>
+                            </div>
+                            <div className="card-content space-y-6">
+                                {/* 选择特征部位 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">选择装饰位置：</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['leftEye', 'rightEye', 'nose', 'mouth'].map(feature => (
+                                            <button
+                                                key={feature}
+                                                className={`btn btn-sm ${selectedFeature === feature ? 'btn-primary' : 'btn-secondary'}`}
+                                                onClick={() => setSelectedFeature(feature)}
+                                            >
+                                                {feature === 'leftEye' ? '左眼' : 
+                                                 feature === 'rightEye' ? '右眼' : 
+                                                 feature === 'nose' ? '鼻子' : '嘴巴'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 预设文字装饰 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">预设文字装饰：</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {PRESET_DECORATIONS.text.map(item => (
+                                            <button
+                                                key={item.id}
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => addDecoration('text', item.content)}
+                                            >
+                                                {item.content} {item.description}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 自定义文字 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">自定义文字：</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={customText}
+                                            onChange={(e) => setCustomText(e.target.value)}
+                                            placeholder="输入自定义文字"
+                                            className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={addCustomText}
+                                        >
+                                            添加
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 特效装饰 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">特效装饰：</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PRESET_DECORATIONS.effects.map(item => (
+                                            <button
+                                                key={item.id}
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => addDecoration(item.type, '')}
+                                            >
+                                                {item.description}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 形状装饰 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">形状装饰：</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PRESET_DECORATIONS.shapes.map(item => (
+                                            <button
+                                                key={item.id}
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => addDecoration(item.type, '', item.color)}
+                                            >
+                                                {item.description}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 贴纸装饰 */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">贴纸装饰：</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PRESET_DECORATIONS.stickers.map(item => (
+                                            <button
+                                                key={item.id}
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => addDecoration(item.type, '')}
+                                            >
+                                                {item.description}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 装饰列表 */}
+                                {decorations.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">当前装饰（点击删除）：</label>
+                                        <div className="space-y-2">
+                                            {decorations.map(decoration => (
+                                                <div
+                                                    key={decoration.id}
+                                                    className="flex items-center justify-between p-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200"
+                                                    onClick={() => removeDecoration(decoration.id)}
+                                                >
+                                                    <span>
+                                                        {decoration.feature === 'leftEye' ? '左眼' : 
+                                                         decoration.feature === 'rightEye' ? '右眼' : 
+                                                         decoration.feature === 'nose' ? '鼻子' : '嘴巴'} - 
+                                                        {decoration.type === 'text' ? decoration.content : 
+                                                         decoration.type === 'spinner' ? '加载动画' : '红球'}
+                                                    </span>
+                                                    <span className="text-red-500">✕</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<FaceDecoratorApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
