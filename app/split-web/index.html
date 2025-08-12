@@ -73,7 +73,11 @@
         }
 
         .btn-full {
-            right: calc(7rem);
+            right: 7rem;
+        }
+        :fullscreen .btn-fab {
+            visibility: hidden;
+            opacity: 0;
         }
         
         .iframe-container {
@@ -152,7 +156,7 @@
             <!-- iframe 将动态插入这里 -->
         </div>
         
-        <button id="full-btn" class="btn-full btn-fab" title="添加新的 Web">
+        <button id="full-btn" class="btn-full btn-fab" title="全屏">
             <i data-lucide="fullscreen" class="h-8 w-8"></i>
         </button>
 
