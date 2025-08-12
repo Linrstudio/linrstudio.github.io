@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie 预览工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            gap: 30px;
+        }
+
+        .preview-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            min-width: 400px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #lottie-container {
+            width: 300px;
+            height: 300px;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+        }
+
+        #lottie-container.loaded {
+            border: none;
+            background: transparent;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #666;
+        }
+
+        .placeholder .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .input-group {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .drag-drop-area {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 6px;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drag-drop-area:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #764ba2;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .drag-drop-area.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .relative {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 全屏拖拽覆盖层 */
+        .drag-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .drag-overlay.show {
+            display: flex;
+        }
+
+        .drag-overlay-content {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 60px;
+            text-align: center;
+            border: 3px dashed #667eea;
+            max-width: 500px;
+            transition: all 0.3s ease;
+        }
+
+        .drag-overlay.dragover .drag-overlay-content {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(1.05);
+        }
+
+        .drag-overlay .icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .drag-overlay p {
+            font-size: 1.5rem;
+            margin: 15px 0;
+            color: #333;
+        }
+
+        .drag-overlay .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .drag-drop-area .icon {
+            font-size: 16px;
+            opacity: 0.8;
+            margin: 0;
+        }
+
+        .drag-drop-area p {
+            display: none;
+        }
+
+        .drag-drop-area .highlight {
+            display: none;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 50px 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.1);
+            color: #F44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status.loading {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FF9800;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .preview-container {
+                min-width: auto;
+                width: 100%;
+                padding: 20px;
+            }
+
+            #lottie-container {
+                width: 250px;
+                height: 250px;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🎬 Lottie 预览工具</h1>
+        <p>通过 URL 参数、手动输入或拖拽本地文件预览 Lottie 动画</p>
+    </div>
+
+    <!-- 全屏拖拽覆盖层 -->
+    <div class="drag-overlay" id="drag-overlay">
+        <div class="drag-overlay-content">
+            <div class="icon">📁</div>
+            <p class="highlight">释放文件以加载 Lottie 动画</p>
+            <p>支持 .json 格式文件</p>
+        </div>
+    </div>
+
+    <div class="container">
+
+
+        <div class="input-group">
+            <label for="lottie-url">Lottie JSON URL:</label>
+            <div class="relative">
+                <input type="url" id="lottie-url" placeholder="请输入 Lottie JSON 文件的 URL">
+                <div title="点击选择本地文件" class="drag-drop-area" id="drag-drop-area" onclick="document.getElementById('file-input').click()">
+                    📁
+                    <input type="file" id="file-input" class="file-input" accept=".json" onchange="handleFileSelect(event)">
+                </div>
+            </div>
+            <button class="btn" onclick="loadFromInput()" style="margin-top: 15px; width: 100%;">
+                加载动画
+            </button>
+        </div>
+
+        <div class="preview-container">
+            <div id="lottie-container">
+                <div class="placeholder">
+                    <div class="icon">🎭</div>
+                    <p>等待加载 Lottie 动画...</p>
+                </div>
+            </div>
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="controls" id="controls" style="display: none;">
+            <button class="btn" onclick="playAnimation()">▶️ 播放</button>
+            <button class="btn" onclick="pauseAnimation()">⏸️ 暂停</button>
+            <button class="btn" onclick="stopAnimation()">⏹️ 停止</button>
+            <button class="btn" onclick="toggleLoop()">🔄 循环: <span id="loop-status">开</span></button>
+            <button class="btn" onclick="changeSpeed()">⚡ 速度: <span id="speed-status">1x</span></button>
+        </div>
+    </div>
+
+    <script>
+        let animationInstance = null;
+        let isLooping = true;
+        let currentSpeed = 1;
+        const speeds = [0.5, 1, 1.5, 2];
+        let speedIndex = 1;
+
+        // 从 URL 参数获取 Lottie 资源
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 显示状态信息
+        function showStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // 隐藏状态信息
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        // 加载 Lottie 动画（从 URL）
+        async function loadLottieAnimation(url) {
+            if (!url) {
+                showStatus('请提供有效的 Lottie JSON URL', 'error');
+                return;
+            }
+
+            try {
+                showStatus('正在加载动画...', 'loading');
+
+                // 清除之前的动画
+                if (animationInstance) {
+                    animationInstance.destroy();
+                    animationInstance = null;
+                }
+
+                const container = document.getElementById('lottie-container');
+                container.innerHTML = '';
+                container.classList.remove('loaded');
+
+                // 加载新动画
+                animationInstance = lottie.loadAnimation({
+                    container: container,
+                    renderer: 'svg',
+                    loop: isLooping,
+                    autoplay: true,
+                    path: url
+                });
+
+                // 监听加载完成事件
+                animationInstance.addEventListener('DOMLoaded', function () {
+                    showStatus('动画加载成功！', 'success');
+                    container.classList.add('loaded');
+                    document.getElementById('controls').style.display = 'flex';
+
+                    setTimeout(() => {
+                        hideStatus();
+                    }, 2000);
+                });
+
+                // 监听加载错误事件
+                animationInstance.addEventListener('data_failed', function () {
+                    showStatus('动画加载失败，请检查 URL 是否正确', 'error');
+                    document.getElementById('controls').style.display = 'none';
+                });
+
+            } catch (error) {
+                console.error('加载动画时出错:', error);
+                showStatus('加载动画时出现错误: ' + error.message, 'error');
+                document.getElementById('controls').style.display = 'none';
+            }
+        }
+
+        // 加载 Lottie 动画（从 JSON 数据）
+        async function loadLottieFromData(animationData) {
+            try {
+                showStatus('正在加载动画...', 'loading');
+
+                // 清除之前的动画
+                if (animationInstance) {
+                    animationInstance.destroy();
+                    animationInstance = null;
+                }
+
+                const container = document.getElementById('lottie-container');
+                container.innerHTML = '';
+                container.classList.remove('loaded');
+
+                // 加载新动画
+                animationInstance = lottie.loadAnimation({
+                    container: container,
+                    renderer: 'svg',
+                    loop: isLooping,
+                    autoplay: true,
+                    animationData: animationData
+                });
+
+                // 监听加载完成事件
+                animationInstance.addEventListener('DOMLoaded', function () {
+                    showStatus('动画加载成功！', 'success');
+                    container.classList.add('loaded');
+                    document.getElementById('controls').style.display = 'flex';
+
+                    setTimeout(() => {
+                        hideStatus();
+                    }, 2000);
+                });
+
+                // 监听加载错误事件
+                animationInstance.addEventListener('data_failed', function () {
+                    showStatus('动画加载失败，请检查文件格式是否正确', 'error');
+                    document.getElementById('controls').style.display = 'none';
+                });
+
+            } catch (error) {
+                console.error('加载动画时出错:', error);
+                showStatus('加载动画时出现错误: ' + error.message, 'error');
+                document.getElementById('controls').style.display = 'none';
+            }
+        }
+
+        // 从输入框加载动画
+        function loadFromInput() {
+            const url = document.getElementById('lottie-url').value.trim();
+            if (url) {
+                loadLottieAnimation(url);
+            } else {
+                showStatus('请输入有效的 URL', 'error');
+            }
+        }
+
+        // 播放动画
+        function playAnimation() {
+            if (animationInstance) {
+                animationInstance.play();
+            }
+        }
+
+        // 暂停动画
+        function pauseAnimation() {
+            if (animationInstance) {
+                animationInstance.pause();
+            }
+        }
+
+        // 停止动画
+        function stopAnimation() {
+            if (animationInstance) {
+                animationInstance.stop();
+            }
+        }
+
+        // 切换循环模式
+        function toggleLoop() {
+            isLooping = !isLooping;
+            document.getElementById('loop-status').textContent = isLooping ? '开' : '关';
+
+            if (animationInstance) {
+                animationInstance.loop = isLooping;
+            }
+        }
+
+        // 改变播放速度
+        function changeSpeed() {
+            speedIndex = (speedIndex + 1) % speeds.length;
+            currentSpeed = speeds[speedIndex];
+            document.getElementById('speed-status').textContent = currentSpeed + 'x';
+
+            if (animationInstance) {
+                animationInstance.setSpeed(currentSpeed);
+            }
+        }
+
+        // 页面加载完成后检查 URL 参数
+        window.addEventListener('load', function () {
+            const lottieUrl = getUrlParameter('url');
+
+            if (lottieUrl) {
+                document.getElementById('lottie-url').value = lottieUrl;
+                loadLottieAnimation(lottieUrl);
+            }
+        });
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        // 处理文件读取
+        function handleFile(file) {
+            console.log('处理文件:', file.name, '类型:', file.type, '大小:', file.size, '最后修改:', file.lastModified);
+
+            // 检查文件是否存在
+            if (!file || file.size === 0) {
+                showStatus('文件为空或无效，请选择有效的文件', 'error');
+                return;
+            }
+
+            // 更宽松的文件类型检查
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.json')) {
+                showStatus('请选择 .json 扩展名的文件', 'error');
+                return;
+            }
+
+            // 检查文件大小（限制为 10MB）
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('文件过大，请选择小于 10MB 的文件', 'error');
+                return;
+            }
+
+            showStatus('正在读取文件...', 'loading');
+
+            // 检查 FileReader 支持
+            if (!window.FileReader) {
+                showStatus('您的浏览器不支持文件读取功能', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            // 设置超时处理
+            const timeout = setTimeout(() => {
+                reader.abort();
+                showStatus('文件读取超时，请重试', 'error');
+            }, 30000); // 30秒超时
+
+            reader.onload = function (e) {
+                clearTimeout(timeout);
+                try {
+                    const result = e.target.result;
+                    console.log('文件读取成功，内容长度:', result ? result.length : 0);
+
+                    if (!result || result.trim() === '') {
+                        showStatus('文件内容为空', 'error');
+                        return;
+                    }
+
+                    // 尝试解析 JSON
+                    const jsonData = JSON.parse(result);
+                    console.log('JSON 解析成功，数据类型:', typeof jsonData);
+
+                    // 基本的 Lottie 格式验证
+                    if (typeof jsonData !== 'object' || !jsonData.v) {
+                        showStatus('这不是有效的 Lottie 动画文件', 'error');
+                        return;
+                    }
+
+                    loadLottieFromData(jsonData);
+                } catch (error) {
+                    console.error('JSON 解析错误:', error);
+                    showStatus('文件格式错误：' + error.message, 'error');
+                }
+            };
+
+            reader.onerror = function (e) {
+                clearTimeout(timeout);
+                console.error('文件读取错误:', e);
+                console.error('错误详情:', reader.error);
+
+                let errorMsg = '文件读取失败';
+                if (reader.error) {
+                    switch (reader.error.code) {
+                        case reader.error.NOT_FOUND_ERR:
+                            errorMsg = '文件未找到';
+                            break;
+                        case reader.error.NOT_READABLE_ERR:
+                            errorMsg = '文件不可读';
+                            break;
+                        case reader.error.ABORT_ERR:
+                            errorMsg = '文件读取被中断';
+                            break;
+                        case reader.error.SECURITY_ERR:
+                            errorMsg = '文件读取安全错误';
+                            break;
+                        default:
+                            errorMsg = '文件读取未知错误';
+                    }
+                }
+                showStatus(errorMsg + '，请重试或选择其他文件', 'error');
+            };
+
+            reader.onabort = function () {
+                clearTimeout(timeout);
+                console.log('文件读取被中断');
+                showStatus('文件读取被中断', 'error');
+            };
+
+            reader.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const percentLoaded = Math.round((e.loaded / e.total) * 100);
+                    showStatus(`正在读取文件... ${percentLoaded}%`, 'loading');
+                }
+            };
+
+            // 使用 UTF-8 编码读取文件
+            try {
+                console.log('开始读取文件...');
+                reader.readAsText(file, 'UTF-8');
+            } catch (error) {
+                clearTimeout(timeout);
+                console.error('启动文件读取失败:', error);
+                showStatus('无法读取文件：' + error.message, 'error');
+            }
+        }
+
+        // 拖拽事件处理
+        function setupDragAndDrop() {
+            const dragOverlay = document.getElementById('drag-overlay');
+            const dragDropArea = document.getElementById('drag-drop-area');
+            let dragCounter = 0;
+
+            // 防止默认拖拽行为
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // 在整个页面监听拖拽事件
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // 拖拽进入页面时显示覆盖层
+            document.addEventListener('dragenter', function (e) {
+                dragCounter++;
+                if (e.dataTransfer.types.includes('Files')) {
+                    dragOverlay.classList.add('show');
+                }
+            });
+
+            // 拖拽在页面上移动时保持覆盖层显示
+            document.addEventListener('dragover', function (e) {
+                if (e.dataTransfer.types.includes('Files')) {
+                    dragOverlay.classList.add('show');
+                    dragOverlay.classList.add('dragover');
+                }
+            });
+
+            // 拖拽离开页面时隐藏覆盖层
+            document.addEventListener('dragleave', function (e) {
+                dragCounter--;
+                if (dragCounter === 0) {
+                    dragOverlay.classList.remove('show');
+                    dragOverlay.classList.remove('dragover');
+                }
+            });
+
+            // 处理文件拖放
+            document.addEventListener('drop', function (e) {
+                dragCounter = 0;
+                dragOverlay.classList.remove('show');
+                dragOverlay.classList.remove('dragover');
+
+                console.log('拖放事件触发');
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                console.log('拖放文件数量:', files.length);
+
+                if (files.length > 0) {
+                    console.log('开始处理拖放的文件:', files[0].name);
+                    handleFile(files[0]);
+                } else {
+                    showStatus('未检测到文件，请重试', 'error');
+                }
+            });
+
+            // 鼠标离开页面时隐藏覆盖层
+            document.addEventListener('mouseleave', function (e) {
+                // 检查鼠标是否真的离开了页面
+                if (e.clientY <= 0 || e.clientX <= 0 ||
+                    e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+                    dragCounter = 0;
+                    dragOverlay.classList.remove('show');
+                    dragOverlay.classList.remove('dragover');
+                }
+            });
+
+            // 保持原有的拖拽区域点击功能
+            dragDropArea.addEventListener('dragenter', function (e) {
+                dragDropArea.classList.add('dragover');
+            });
+
+            dragDropArea.addEventListener('dragleave', function (e) {
+                dragDropArea.classList.remove('dragover');
+            });
+
+            dragDropArea.addEventListener('drop', function (e) {
+                dragDropArea.classList.remove('dragover');
+            });
+        }
+
+        // 支持回车键快速加载
+        document.getElementById('lottie-url').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                loadFromInput();
+            }
+        });
+
+        // 初始化拖拽功能
+        setupDragAndDrop();
+    </script>
+</body>
+
+</html>
