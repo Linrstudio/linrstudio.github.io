@@ -75,7 +75,8 @@
         .btn-full {
             right: 7rem;
         }
-        :fullscreen .btn-fab {
+        :fullscreen .btn-fab,
+        :fullscreen .linr-split-web-close {
             visibility: hidden;
             opacity: 0;
         }
@@ -285,7 +286,7 @@
                 
                 // 添加删除按钮
                 const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'absolute top-2 right-2 z-10 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors';
+                deleteBtn.className = 'linr-split-web-close absolute top-2 right-2 z-10 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition-colors';
                 deleteBtn.innerHTML = '<i data-lucide="x" class="h-4 w-4"></i>';
                 deleteBtn.onclick = (e) => {
                     e.stopPropagation();
