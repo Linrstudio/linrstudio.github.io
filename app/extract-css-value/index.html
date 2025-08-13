@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS自定义属性提取工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 简化的shadcn/ui样式 */
+        .input {
+            flex: 1;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            background-color: transparent;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            transition: border-color 0.15s ease-in-out;
+        }
+        .input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        .textarea {
+            min-height: 200px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+        }
+        .card {
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            padding: 1.5rem 1.5rem 0;
+        }
+        .card-content {
+            padding: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-900">CSS自定义属性提取工具</h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左栏 -->
+            <div class="space-y-6">
+                <!-- 上输入框 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">带CSS自定义属性的样式</h2>
+                    </div>
+                    <div class="card-content">
+                        <label class="label" for="css-with-vars">输入包含CSS自定义属性的样式：</label>
+                        <textarea 
+                            id="css-with-vars" 
+                            class="input textarea w-full" 
+                            placeholder="例如：color: var(--x-color, red);\nfont-size: var(--x-fs, 12px);"
+                        ></textarea>
+                    </div>
+                </div>
+                
+                <!-- 下输入框 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">不带自定义属性的CSS</h2>
+                    </div>
+                    <div class="card-content">
+                        <label class="label" for="css-without-vars">输入普通CSS样式：</label>
+                        <textarea 
+                            id="css-without-vars" 
+                            class="input textarea w-full" 
+                            placeholder="例如：color: #231211;\nfont-size: 20px;\nline-height: normal;"
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右栏 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">提取的CSS自定义属性</h2>
+                </div>
+                <div class="card-content">
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="label" for="extracted-vars">提取结果：</label>
+                        <button 
+                            id="settings-btn" 
+                            class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded transition-colors duration-200 flex items-center space-x-1"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span>设置</span>
+                        </button>
+                    </div>
+                    <textarea 
+                        id="extracted-vars" 
+                        class="input textarea w-full" 
+                        readonly
+                        placeholder="提取的CSS自定义属性将显示在这里..."
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-96 max-w-90vw">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">设置选项</h3>
+                <button id="close-settings" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center space-x-3">
+                    <label class="text-sm font-medium text-gray-600 w-20" for="root-font-size">Root字号：</label>
+                    <input 
+                        type="number" 
+                        id="root-font-size" 
+                        class="input w-20 text-center" 
+                        value="100" 
+                        min="1" 
+                        step="1"
+                    >
+                    <span class="text-sm text-gray-500">px</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input 
+                        type="checkbox" 
+                        id="use-rem-unit" 
+                        class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    >
+                    <label class="text-sm font-medium text-gray-600" for="use-rem-unit">使用 rem 单位</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 本地存储键名
+        const STORAGE_KEYS = {
+            cssWithVars: 'css-with-vars',
+            cssWithoutVars: 'css-without-vars',
+            rootFontSize: 'root-font-size',
+            useRemUnit: 'use-rem-unit'
+        };
+
+        // 获取DOM元素
+        const cssWithVarsInput = document.getElementById('css-with-vars');
+        const cssWithoutVarsInput = document.getElementById('css-without-vars');
+        const extractedVarsOutput = document.getElementById('extracted-vars');
+        const rootFontSizeInput = document.getElementById('root-font-size');
+        const useRemUnitCheckbox = document.getElementById('use-rem-unit');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings');
+
+        // 从本地存储加载数据
+        function loadFromStorage() {
+            cssWithVarsInput.value = localStorage.getItem(STORAGE_KEYS.cssWithVars) || '';
+            cssWithoutVarsInput.value = localStorage.getItem(STORAGE_KEYS.cssWithoutVars) || '';
+            rootFontSizeInput.value = localStorage.getItem(STORAGE_KEYS.rootFontSize) || '100';
+            useRemUnitCheckbox.checked = localStorage.getItem(STORAGE_KEYS.useRemUnit) === 'true';
+            extractCSSVariables();
+        }
+
+        // 保存到本地存储
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEYS.cssWithVars, cssWithVarsInput.value);
+            localStorage.setItem(STORAGE_KEYS.cssWithoutVars, cssWithoutVarsInput.value);
+            localStorage.setItem(STORAGE_KEYS.rootFontSize, rootFontSizeInput.value);
+            localStorage.setItem(STORAGE_KEYS.useRemUnit, useRemUnitCheckbox.checked);
+        }
+
+        // 解析CSS属性
+        function parseCSS(cssText) {
+            const properties = {};
+            const lines = cssText.split('\n');
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine && !trimmedLine.startsWith('/*') && !trimmedLine.startsWith('//')) {
+                    const colonIndex = trimmedLine.indexOf(':');
+                    if (colonIndex > 0) {
+                        const property = trimmedLine.substring(0, colonIndex).trim();
+                        const value = trimmedLine.substring(colonIndex + 1).trim().replace(/;$/, '');
+                        properties[property] = value;
+                    }
+                }
+            }
+            
+            return properties;
+        }
+
+        // 转换px为rem
+        function convertPxToRem(value, rootFontSize) {
+            const pxRegex = /(\d+(?:\.\d+)?)px/g;
+            return value.replace(pxRegex, (match, number) => {
+                const remValue = parseFloat((parseFloat(number) / rootFontSize).toFixed(4));
+                return `${remValue}rem`;
+            });
+        }
+
+        // 显示设置弹窗
+        function showSettingsModal() {
+            settingsModal.classList.remove('hidden');
+            settingsModal.classList.add('flex');
+        }
+
+        // 隐藏设置弹窗
+        function hideSettingsModal() {
+            settingsModal.classList.add('hidden');
+            settingsModal.classList.remove('flex');
+        }
+
+        // 提取CSS自定义属性
+        function extractCSSVariables() {
+            const cssWithVars = cssWithVarsInput.value;
+            const cssWithoutVars = cssWithoutVarsInput.value;
+            
+            if (!cssWithVars.trim() || !cssWithoutVars.trim()) {
+                extractedVarsOutput.value = '';
+                return;
+            }
+
+            // 解析两个输入框的CSS
+            const varsProperties = parseCSS(cssWithVars);
+            const normalProperties = parseCSS(cssWithoutVars);
+            
+            const extractedVars = [];
+            const useRem = useRemUnitCheckbox.checked;
+            const rootFontSize = parseFloat(rootFontSizeInput.value) || 100;
+            
+            // 遍历带自定义属性的CSS
+            for (const [property, value] of Object.entries(varsProperties)) {
+                // 检查是否使用了var()函数
+                const varMatch = value.match(/var\(\s*([^,)]+)\s*(?:,\s*([^)]+))?\s*\)/);
+                if (varMatch) {
+                    const varName = varMatch[1].trim();
+                    const fallbackValue = varMatch[2] ? varMatch[2].trim() : '';
+                    
+                    // 在普通CSS中查找对应的属性值
+                    let finalValue = '';
+                    if (normalProperties[property]) {
+                        finalValue = normalProperties[property];
+                    } else if (fallbackValue) {
+                        finalValue = fallbackValue;
+                    }
+                    
+                    // 如果启用了rem转换，则转换px为rem
+                    if (useRem && finalValue) {
+                        finalValue = convertPxToRem(finalValue, rootFontSize);
+                    }
+                    
+                    if (finalValue) {
+                        extractedVars.push(`${varName}: ${finalValue};`);
+                    }
+                }
+            }
+            
+            extractedVarsOutput.value = extractedVars.join('\n');
+        }
+
+        // 添加事件监听器
+        cssWithVarsInput.addEventListener('input', () => {
+            saveToStorage();
+            extractCSSVariables();
+        });
+
+        cssWithoutVarsInput.addEventListener('input', () => {
+            saveToStorage();
+            extractCSSVariables();
+        });
+
+        rootFontSizeInput.addEventListener('input', () => {
+            saveToStorage();
+            extractCSSVariables();
+        });
+
+        useRemUnitCheckbox.addEventListener('change', () => {
+            saveToStorage();
+            extractCSSVariables();
+        });
+
+        // 设置按钮事件
+        settingsBtn.addEventListener('click', showSettingsModal);
+
+        // 关闭设置弹窗事件
+        closeSettingsBtn.addEventListener('click', hideSettingsModal);
+
+        // 点击模态框背景关闭
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                hideSettingsModal();
+            }
+        });
+
+        // ESC键关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
+                hideSettingsModal();
+            }
+        });
+
+        // 页面加载时从本地存储恢复数据
+        window.addEventListener('load', loadFromStorage);
+    </script>
+</body>
+</html>
