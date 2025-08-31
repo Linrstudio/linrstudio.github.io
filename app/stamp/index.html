@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Postage stamp Creator（邮票生成器）</title>
+  <style>
+    :root{
+      --bg:#0b0c10;--panel:#12141a;--muted:#2a2f3a;--text:#e7ecf3;--accent:#5bb6ff;--accent-2:#7c4dff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0c10,#0e1117);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;}
+    header{padding:16px 20px;border-bottom:1px solid #1d2230;background:rgba(255,255,255,0.02);backdrop-filter: blur(6px);position:sticky;top:0;z-index:10}
+    header h1{margin:0;font-size:18px;font-weight:600;letter-spacing:0.2px}
+    main{display:grid;grid-template-columns:420px 1fr;gap:18px;padding:18px;align-items:start}
+
+    .card{background:var(--panel);border:1px solid #1d2230;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .card .title{padding:12px 14px;border-bottom:1px solid #1d2230;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.00));font-size:14px;font-weight:600}
+    .card .body{padding:14px}
+
+    .controls label{display:block;font-size:12px;color:#b8c0cc;margin:10px 0 6px}
+    .controls input[type="file"]{width:100%;padding:10px;background:#0f131a;border:1px dashed #2c3342;border-radius:10px;color:#cbd5e1}
+    .radio-group{display:flex;gap:8px;flex-wrap:wrap}
+    .radio{position:relative}
+    .radio input{display:none}
+    .radio span{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #2b3342;border-radius:10px;cursor:pointer;background:#141923;transition:.2s}
+    .radio input:checked + span{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,182,255,.2) inset}
+    .ratio-viz{display:inline-block;width:18px;height:14px;border:1px solid #3a4356;border-radius:3px;background:linear-gradient(180deg,#212734,#1a2030)}
+    .ratio-viz.landscape{width:22px;height:14px}
+    .ratio-viz.portrait{width:14px;height:22px}
+    .ratio-viz.square{width:18px;height:18px}
+
+    .range{display:flex;align-items:center;gap:10px}
+    .range input[type="range"]{flex:1;accent-color:var(--accent);}
+    .range .val{min-width:44px;text-align:right;color:#c2cbe0}
+
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .btn{padding:8px 12px;border-radius:10px;border:1px solid #2a3242;background:#151b26;color:#e8eef7;cursor:pointer;transition:.15s}
+    .btn:hover{transform:translateY(-1px);background:#101620}
+    .btn.primary{border-color:var(--accent);background:linear-gradient(180deg,#1f3b61,#17263c);box-shadow:0 6px 20px rgba(91,182,255,.15)}
+
+    .crop-wrap{position:relative;aspect-ratio:4/3;background:#0e131b;border:1px dashed #2b3342;border-radius:12px;overflow:hidden}
+    canvas#cropCanvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+    .hint{font-size:12px;color:#9aa3b2;margin-top:8px}
+
+    .preview-wrap{padding:16px;display:flex;justify-content:center;align-items:center;min-height:520px}
+    #preview svg{max-width:100%;height:auto}
+
+    /* Mobile responsive */
+    @media (max-width: 900px){
+      main{grid-template-columns:1fr;gap:12px;padding:12px}
+      header h1{font-size:16px}
+      .card .body{padding:12px}
+      .preview-wrap{min-height:340px;padding:12px}
+      .btn{flex:1}
+      .range .val{min-width:56px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Postage stamp Creator（邮票生成器）</h1>
+</header>
+<main>
+  <section class="card">
+    <div class="title">步骤 1：上传并裁剪图片</div>
+    <div class="body controls">
+      <label>选择图片</label>
+      <input id="file" type="file" accept="image/*" />
+
+      <label>邮票尺寸方向</label>
+      <div class="radio-group" id="ratioGroup">
+        <label class="radio"><input type="radio" name="ratio" value="3:2" checked /><span><i class="ratio-viz landscape"></i> 横版 3:2</span></label>
+        <label class="radio"><input type="radio" name="ratio" value="2:3" /><span><i class="ratio-viz portrait"></i> 竖版 2:3</span></label>
+        <label class="radio"><input type="radio" name="ratio" value="1:1" /><span><i class="ratio-viz square"></i> 正方形 1:1</span></label>
+      </div>
+
+      <label>边缘打孔锯齿大小</label>
+      <div class="range">
+        <input id="perfRange" type="range" min="2" max="14" step="0.5" value="6" />
+        <div class="val"><span id="perfVal">6</span> px</div>
+      </div>
+
+      <label>打孔间距（倍数）</label>
+      <div class="range">
+        <input id="spacingRange" type="range" min="1.6" max="4.0" step="0.1" value="2.4" />
+        <div class="val"><span id="spacingVal">2.4</span> × r ≈ <span id="spacingPx">14</span> px</div>
+      </div>
+
+      <div class="crop-wrap" id="cropWrap">
+        <canvas id="cropCanvas"></canvas>
+      </div>
+      <div class="hint">提示：拖动/触摸裁剪框移动；拖拽/触摸四角手柄缩放（保持比例）。</div>
+
+      <div class="btns">
+        <button class="btn" id="resetBtn">重置裁剪</button>
+        <button class="btn primary" id="applyBtn">应用裁剪并生成邮票</button>
+        <button class="btn" id="downloadBtn" disabled>下载 PNG</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">步骤 2：预览邮票</div>
+    <div class="preview-wrap">
+      <div id="preview">请先上传图片并裁剪</div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const fileInput = document.getElementById('file');
+  const ratioGroup = document.getElementById('ratioGroup');
+  const perfRange = document.getElementById('perfRange');
+  const perfVal = document.getElementById('perfVal');
+  const cropCanvas = document.getElementById('cropCanvas');
+  const cropWrap = document.getElementById('cropWrap');
+  const resetBtn = document.getElementById('resetBtn');
+  const applyBtn = document.getElementById('applyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const preview = document.getElementById('preview');
+  const spacingRange = document.getElementById('spacingRange');
+  const spacingVal = document.getElementById('spacingVal');
+  const spacingPx = document.getElementById('spacingPx');
+
+  const ctx = cropCanvas.getContext('2d');
+
+  // State
+  let img = null;
+  let naturalW = 0, naturalH = 0;
+  let displayScale = 1; // image display scale (natural -> canvas)
+  let view = {x:0,y:0,w:0,h:0}; // image drawn rect in canvas coords
+  let crop = {x:0,y:0,w:0,h:0}; // crop rect in canvas coords
+  let aspect = {w:3,h:2};
+  let dragging = false; let dragMode = 'move'; let dragOffset = {x:0,y:0};
+  let spacingFactor = 2.4;
+
+  function parseRatio(v){
+    const [w,h] = v.split(':').map(Number); return {w,h};
+  }
+
+  function fitCanvas(){
+    const r = cropWrap.getBoundingClientRect();
+    // Make canvas big for crisp drawing
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cropCanvas.width = Math.floor(r.width * dpr);
+    cropCanvas.height = Math.floor(r.width * dpr * (3/4)); // keep 4:3 canvas viewport
+    cropCanvas.style.height = (r.width * (3/4)) + 'px';
+    cropCanvas.style.width = r.width + 'px';
+    redraw();
+  }
+
+  function loadImage(file){
+    return new Promise((resolve,reject)=>{
+      const fr = new FileReader();
+      fr.onload = () => {
+        const image = new Image();
+        image.onload = ()=>resolve(image);
+        image.onerror = reject;
+        image.src = fr.result;
+      };
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function setImage(image){
+    img = image; naturalW = img.naturalWidth; naturalH = img.naturalHeight;
+    // Fit image into canvas keeping aspect
+    const cw = cropCanvas.width, ch = cropCanvas.height;
+    const scale = Math.min(cw/naturalW, ch/naturalH);
+    const dw = naturalW * scale, dh = naturalH * scale;
+    displayScale = scale;
+    view = {x: (cw-dw)/2, y:(ch-dh)/2, w:dw, h:dh};
+    initCropToAspect();
+    redraw();
+  }
+
+  function initCropToAspect(){
+    // Fit crop rect to view with given aspect ratio
+    const ar = aspect.w/aspect.h;
+    let w = view.w, h = view.h;
+    if (w/h > ar){ w = h*ar; } else { h = w/ar; }
+    crop = {x: view.x + (view.w - w)/2, y: view.y + (view.h - h)/2, w, h};
+  }
+
+  function roundedRectPath(ctx,x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y, x+w,y+h, rr);
+    ctx.arcTo(x+w,y+h, x,y+h, rr);
+    ctx.arcTo(x,y+h, x,y, rr);
+    ctx.arcTo(x,y, x+w,y, rr);
+    ctx.closePath();
+  }
+
+  function redraw(){
+    const cw = cropCanvas.width, ch = cropCanvas.height;
+    ctx.clearRect(0,0,cw,ch);
+    // bg
+    ctx.fillStyle = '#0b0f17';
+    ctx.fillRect(0,0,cw,ch);
+
+    if(!img){
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '16px ui-sans-serif,system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('请先选择图片…', cw/2, ch/2);
+      return;
+    }
+
+    // draw image
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0,0,naturalW,naturalH, view.x,view.y,view.w,view.h);
+
+    // overlay dark except crop rect
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.fillRect(0,0,cw,ch);
+    ctx.globalCompositeOperation = 'destination-out';
+    roundedRectPath(ctx, crop.x, crop.y, crop.w, crop.h, 2);
+    ctx.fill();
+    ctx.restore();
+
+    // crop border
+    ctx.save();
+    ctx.strokeStyle = '#5bb6ff'; ctx.lineWidth = 2; ctx.setLineDash([8,6]);
+    roundedRectPath(ctx, crop.x, crop.y, crop.w, crop.h, 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // handles
+    const handles = getHandles();
+    ctx.fillStyle = '#5bb6ff'; ctx.strokeStyle='#0b0c10';
+    handles.forEach(h=>{ ctx.beginPath(); ctx.arc(h.x,h.y,6,0,Math.PI*2); ctx.fill(); ctx.stroke(); });
+  }
+
+  function getHandles(){
+    const {x,y,w,h} = crop; return [
+      {name:'nw', x:x, y:y},
+      {name:'ne', x:x+w, y:y},
+      {name:'se', x:x+w, y:y+h},
+      {name:'sw', x:x, y:y+h},
+    ];
+  }
+
+  function hitTest(mx,my){
+    // handles first
+    const hs = getHandles();
+    for(const h of hs){ if(Math.hypot(mx-h.x,my-h.y) <= 10) return {type:'handle', handle:h.name}; }
+    // inside crop
+    if(mx>=crop.x && mx<=crop.x+crop.w && my>=crop.y && my<=crop.y+crop.h) return {type:'move'};
+    return null;
+  }
+
+  function onDown(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if(!img) return;
+    const rect = cropCanvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio||1,2);
+    const mx = (e.clientX - rect.left) * dpr;
+    const my = (e.clientY - rect.top) * dpr;
+    const hit = hitTest(mx,my);
+    if(!hit) return;
+    dragging = true; dragMode = hit.type==='move'?'move':hit.handle; dragOffset.x = mx - crop.x; dragOffset.y = my - crop.y;
+    if (e.pointerId !== undefined && cropCanvas.setPointerCapture) { try { cropCanvas.setPointerCapture(e.pointerId); } catch(_){} }
+  }
+  function onMove(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if(!dragging || !img) return;
+    const rect = cropCanvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio||1,2);
+    const mx = (e.clientX - rect.left) * dpr;
+    const my = (e.clientY - rect.top) * dpr;
+    const ar = aspect.w/aspect.h;
+    if(dragMode==='move'){
+      let nx = mx - dragOffset.x, ny = my - dragOffset.y;
+      // constrain within view
+      nx = Math.min(Math.max(nx, view.x), view.x + view.w - crop.w);
+      ny = Math.min(Math.max(ny, view.y), view.y + view.h - crop.h);
+      crop.x = nx; crop.y = ny;
+    } else {
+      // robust corner resize with fixed opposite corner and view constraints
+      const minH = 60; const minW = minH * ar;
+      if(dragMode==='nw'){
+        const fx = crop.x + crop.w, fy = crop.y + crop.h; // fixed bottom-right
+        const maxWByLeft = fx - view.x;
+        const maxWByTop = (fy - view.y) * ar;
+        const maxW = Math.max(minW, Math.min(maxWByLeft, maxWByTop));
+        let w = fx - mx; w = Math.max(minW, Math.min(maxW, w));
+        const h = w / ar;
+        const nx = fx - w; const ny = fy - h;
+        crop = {x:nx,y:ny,w,h};
+      } else if(dragMode==='ne'){
+        const fx = crop.x, fy = crop.y + crop.h; // fixed bottom-left
+        const maxWByRight = (view.x + view.w) - fx;
+        const maxWByTop = (fy - view.y) * ar;
+        const maxW = Math.max(minW, Math.min(maxWByRight, maxWByTop));
+        let w = mx - fx; w = Math.max(minW, Math.min(maxW, w));
+        const h = w / ar;
+        const nx = fx; const ny = fy - h;
+        crop = {x:nx,y:ny,w,h};
+      } else if(dragMode==='se'){
+        const fx = crop.x, fy = crop.y; // fixed top-left
+        const maxWByRight = (view.x + view.w) - fx;
+        const maxWByBottom = ((view.y + view.h) - fy) * ar;
+        const maxW = Math.max(minW, Math.min(maxWByRight, maxWByBottom));
+        let w = mx - fx; w = Math.max(minW, Math.min(maxW, w));
+        const h = w / ar;
+        const nx = fx; const ny = fy;
+        crop = {x:nx,y:ny,w,h};
+      } else if(dragMode==='sw'){
+        const fx = crop.x + crop.w, fy = crop.y; // fixed top-right
+        const maxWByLeft = fx - view.x;
+        const maxWByBottom = ((view.y + view.h) - fy) * ar;
+        const maxW = Math.max(minW, Math.min(maxWByLeft, maxWByBottom));
+        let w = fx - mx; w = Math.max(minW, Math.min(maxW, w));
+        const h = w / ar;
+        const nx = fx - w; const ny = fy;
+        crop = {x:nx,y:ny,w,h};
+      }
+    }
+    redraw();
+  }
+  function onUp(e){ dragging = false; if (e && e.pointerId !== undefined && cropCanvas.releasePointerCapture){ try { cropCanvas.releasePointerCapture(e.pointerId); } catch(_){} } }
+
+  // Switch to Pointer Events for better mobile support
+  cropCanvas.addEventListener('pointerdown', onDown, {passive:false});
+  window.addEventListener('pointermove', onMove, {passive:false});
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
+
+  window.addEventListener('resize', fitCanvas);
+
+  fileInput.addEventListener('change', async (e)=>{
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    const image = await loadImage(f);
+    fitCanvas();
+    setImage(image);
+    preview.innerHTML = '图片已加载，请调整裁剪区域，然后点击“应用裁剪并生成邮票”。';
+    downloadBtn.disabled = true;
+  });
+
+  ratioGroup.addEventListener('change', (e)=>{
+    const v = ratioGroup.querySelector('input[name="ratio"]:checked').value;
+    aspect = parseRatio(v);
+    if(img){ initCropToAspect(); redraw(); updatePreview(); }
+  });
+
+  perfRange.addEventListener('input', ()=>{ perfVal.textContent = perfRange.value; updateSpacingUI(); updatePreview(); });
+  resetBtn.addEventListener('click', ()=>{ if(img){ initCropToAspect(); redraw(); } });
+
+  spacingRange.addEventListener('input', ()=>{
+    spacingFactor = parseFloat(spacingRange.value);
+    updateSpacingUI();
+    updatePreview();
+  });
+
+  applyBtn.addEventListener('click', ()=>{
+    if(!img){ alert('请先选择图片'); return; }
+    // export cropped image as dataURL
+    const ar = aspect.w/aspect.h;
+    const longSide = 1200; // export resolution
+    const outW = ar >= 1 ? longSide : Math.round(longSide*ar);
+    const outH = ar >= 1 ? Math.round(longSide/ar) : longSide;
+    const out = document.createElement('canvas'); out.width=outW; out.height=outH; const octx = out.getContext('2d');
+    // compute crop in natural image coords
+    const sx = Math.max(0, Math.round((crop.x - view.x) / displayScale));
+    const sy = Math.max(0, Math.round((crop.y - view.y) / displayScale));
+    const sw = Math.min(naturalW - sx, Math.round(crop.w / displayScale));
+    const sh = Math.min(naturalH - sy, Math.round(crop.h / displayScale));
+    octx.imageSmoothingQuality='high';
+    octx.drawImage(img, sx,sy,sw,sh, 0,0,outW,outH);
+    const dataURL = out.toDataURL('image/jpeg', 0.95);
+    buildAndShowStamp(dataURL);
+    downloadBtn.disabled = false;
+  });
+
+  downloadBtn.addEventListener('click', async ()=>{
+    const svgEl = preview.querySelector('svg'); if(!svgEl){ return; }
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(svgEl);
+    // draw to canvas then download PNG
+    const imgEl = new Image();
+    const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    imgEl.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(imgEl.naturalWidth || svgEl.viewBox.baseVal.width);
+      canvas.height = Math.ceil(imgEl.naturalHeight || svgEl.viewBox.baseVal.height);
+      const cctx = canvas.getContext('2d');
+      cctx.imageSmoothingQuality = 'high';
+      cctx.drawImage(imgEl, 0, 0);
+      URL.revokeObjectURL(url);
+      const png = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = png; a.download = 'stamp.png'; a.click();
+    };
+    imgEl.src = url;
+  });
+
+  function updatePreview(){
+    // re-generate with latest perforation size if cropped image already exists
+    const imgInPreview = preview.querySelector('svg image');
+    if(imgInPreview){
+      const href = imgInPreview.getAttribute('href') || imgInPreview.getAttribute('xlink:href');
+      if(href) buildAndShowStamp(href);
+    }
+  }
+
+  function updateSpacingUI(){
+    if(!spacingRange) return;
+    const r = parseFloat(perfRange.value||'6');
+    spacingVal.textContent = spacingRange.value;
+    spacingPx.textContent = Math.round(r * parseFloat(spacingRange.value));
+  }
+
+  function buildAndShowStamp(imageHref){
+    const ratio = aspect.w/aspect.h;
+    const longSide = 700; const width = ratio>=1? longSide : Math.round(longSide*ratio);
+    const height = ratio>=1? Math.round(longSide/ratio) : longSide;
+    const r = parseFloat(perfRange.value); // perforation radius in px
+
+    const svg = buildStampSVG({width,height,r,imageHref, spacingFactor});
+    preview.innerHTML = '';
+    preview.appendChild(svg);
+  }
+
+  // Build SVG using stamp.svg concept (rect + mask with repeated edge holes)
+  function buildStampSVG({width,height,r,imageHref, spacingFactor}){
+    const xmlns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(xmlns,'svg');
+    svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+
+    const defs = document.createElementNS(xmlns,'defs');
+    const mask = document.createElementNS(xmlns,'mask');
+    const maskId = 'mask-'+Math.random().toString(36).slice(2,8);
+    mask.setAttribute('id', maskId);
+
+    // Mask base: white rect (visible area)
+    const mRect = document.createElementNS(xmlns,'rect');
+    mRect.setAttribute('x','0'); mRect.setAttribute('y','0'); mRect.setAttribute('width',width); mRect.setAttribute('height',height); mRect.setAttribute('fill','#fff');
+    mask.appendChild(mRect);
+
+    // Create perforation holes (black circles along four edges)
+    const step = Math.max(1, r * (spacingFactor || 2.4)); // spacing factor controlled by UI
+    const inset = 0; // circle center sits at edge
+
+    // top & bottom
+    for(let x=step/2; x<=width; x+=step){
+      const cTop = document.createElementNS(xmlns,'circle');
+      cTop.setAttribute('cx', x.toFixed(2)); cTop.setAttribute('cy', inset.toFixed(2)); cTop.setAttribute('r', r.toFixed(2)); cTop.setAttribute('fill','#000');
+      mask.appendChild(cTop);
+      const cBot = document.createElementNS(xmlns,'circle');
+      cBot.setAttribute('cx', x.toFixed(2)); cBot.setAttribute('cy', (height - inset).toFixed(2)); cBot.setAttribute('r', r.toFixed(2)); cBot.setAttribute('fill','#000');
+      mask.appendChild(cBot);
+    }
+    // left & right
+    for(let y=step/2; y<=height; y+=step){
+      const cL = document.createElementNS(xmlns,'circle');
+      cL.setAttribute('cx', inset.toFixed(2)); cL.setAttribute('cy', y.toFixed(2)); cL.setAttribute('r', r.toFixed(2)); cL.setAttribute('fill','#000');
+      mask.appendChild(cL);
+      const cR = document.createElementNS(xmlns,'circle');
+      cR.setAttribute('cx', (width - inset).toFixed(2)); cR.setAttribute('cy', y.toFixed(2)); cR.setAttribute('r', r.toFixed(2)); cR.setAttribute('fill','#000');
+      mask.appendChild(cR);
+    }
+
+    defs.appendChild(mask);
+    svg.appendChild(defs);
+
+    // background paper
+    const paper = document.createElementNS(xmlns,'rect');
+    paper.setAttribute('x','0'); paper.setAttribute('y','0'); paper.setAttribute('width',width); paper.setAttribute('height',height);
+    paper.setAttribute('fill','#fff');
+    paper.setAttribute('mask',`url(#${maskId})`);
+    svg.appendChild(paper);
+
+    // image content
+    const imgEl = document.createElementNS(xmlns,'image');
+    imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'href', imageHref);
+    imgEl.setAttribute('x','0'); imgEl.setAttribute('y','0'); imgEl.setAttribute('width',width); imgEl.setAttribute('height',height);
+    imgEl.setAttribute('preserveAspectRatio','xMidYMid slice');
+    imgEl.setAttribute('mask',`url(#${maskId})`);
+    svg.appendChild(imgEl);
+
+    // shadow group for depth
+    const filter = document.createElementNS(xmlns,'filter');
+    const fid = 'f-'+Math.random().toString(36).slice(2,8);
+    filter.setAttribute('id',fid);
+    filter.innerHTML = '<feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35" />';
+    defs.appendChild(filter);
+    const g = document.createElementNS(xmlns,'g');
+    g.setAttribute('filter',`url(#${fid})`);
+    // Move everything inside group? Simpler: wrap an empty rect to apply filter
+    const shadowRect = document.createElementNS(xmlns,'rect');
+    shadowRect.setAttribute('x','0'); shadowRect.setAttribute('y','0'); shadowRect.setAttribute('width',width); shadowRect.setAttribute('height',height);
+    shadowRect.setAttribute('fill','transparent');
+    g.appendChild(shadowRect);
+    svg.appendChild(g);
+
+    return svg;
+  }
+
+  // Initialize
+  fitCanvas();
+})();
+</script>
+</body>
+</html>
