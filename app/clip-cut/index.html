@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>视频抽帧生成新视频</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0b1020;
+      --surface: #121a2b;
+      --card: #0f172a;
+      --muted: #8a94a7;
+      --text: #e5e9f0;
+      --border: rgba(255,255,255,0.08);
+      --primary: #4f8cff;
+      --primary-600: #3d79ef;
+      --primary-700: #2c62d6;
+      --accent: #22d3ee;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --card: #ffffff;
+        --muted: #6b7280;
+        --text: #0f172a;
+        --border: rgba(15, 23, 42, 0.08);
+        --primary: #2563eb;
+        --primary-600: #1d4ed8;
+        --primary-700: #1e40af;
+        --accent: #0ea5e9;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --shadow: 0 12px 24px rgba(2, 6, 23, 0.08);
+      }
+    }
+
+    html, body { height: 100%; overflow-x: hidden; }
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 80% -20%, rgba(79, 140, 255, .10), transparent 60%),
+                  radial-gradient(1000px 700px at -10% 20%, rgba(34, 211, 238, .10), transparent 60%),
+                  var(--bg);
+    }
+
+    .container { max-width: 1200px; padding: 24px; margin: 0 auto; }
+    h1 { font-size: 24px; margin: 6px 0 18px; letter-spacing: .3px; display: flex; align-items: center; gap: 10px; }
+    h1::before { content: ''; display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 4px 12px rgba(79, 140, 255, .45); }
+
+    /* CSS spacing tweaks */
+    .panel.controls { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px 16px; backdrop-filter: blur(8px); box-shadow: var(--shadow); }
+    .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 8px 0; }
+    label { color: var(--muted); font-size: 13px; }
+
+    input[type="number"], input[type="text"], select { color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; outline: none; transition: border-color .2s ease, box-shadow .2s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,.02); }
+    input[type="number"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79,140,255,.15); }
+    input[type="file"] { color: var(--muted); }
+
+    .btn { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); color: var(--text); cursor: pointer; font-size: 14px; transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,.18); }
+    .btn:active { transform: translateY(0); }
+    .btn[disabled] { opacity: .5; cursor: not-allowed; }
+    .btn.primary { background: linear-gradient(180deg, var(--primary), var(--primary-600)); border-color: transparent; color: #fff; box-shadow: 0 8px 22px rgba(37, 99, 235, .35); }
+    .btn.primary:hover { background: linear-gradient(180deg, var(--primary-600), var(--primary-700)); }
+    .btn.danger { background: linear-gradient(180deg, var(--danger), #b91c1c); border-color: transparent; color: #fff; }
+
+    .main { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+    video { width: 100%; height: auto; max-height: 400px; background: #000; border-radius: var(--radius); box-shadow: var(--shadow); outline: 1px solid var(--border); }
+
+    .timeline-wrap { display: none; position: relative; padding: 12px 10px 22px; border: 1px dashed transparent; background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    /* Scrollable timeline for narrow screens */
+    .timeline-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; margin-top: 8px; }
+    .timeline-scroll::-webkit-scrollbar { height: 8px; }
+    .timeline-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.25); border-radius: 999px; }
+    .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
+    .timeline-inner { position: relative; min-width: 680px; padding-right: 16px; }
+    @media (max-width: 768px) { .timeline-inner { min-width: 900px; } }
+
+    .timeline-bar { position: relative; height: 14px; border-radius: 999px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 2px, transparent 2px 6px), linear-gradient(90deg, rgba(79,140,255,.35), rgba(34,211,238,.35)); outline: 1px solid var(--border); }
+    .markers { position: relative; height: 0; }
+    .marker { position: absolute; top: -10px; width: 16px; height: 28px; margin-left: -8px; background: linear-gradient(180deg, var(--primary), var(--accent)); border: 2px solid #fff; border-radius: 6px; cursor: grab; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+    .marker:active { cursor: grabbing; }
+    .marker .dot { width: 5px; height: 5px; background: #fff; border-radius: 50%; }
+    .marker .del { position: absolute; top: -10px; right: -10px; width: 18px; height: 18px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 12px; display: none; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(239, 68, 68, .5); }
+    .marker:hover .del { display: flex; }
+
+    .timeline-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; font-weight: 500; }
+    .timeline-help { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    .frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; margin-top: 14px; }
+    .frame { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--card); box-shadow: var(--shadow); transition: transform .12s ease, box-shadow .2s ease; }
+    .frame:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(0,0,0,.28); }
+    .frame img { width: 100%; height: 96px; object-fit: cover; display: block; }
+    .frame .info { font-size: 12px; padding: 6px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-weight: 600; }
+
+    .progress { height: 8px; background: rgba(255,255,255,.06); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin: 8px 0; display: none; }
+    .progress .fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .2s ease; }
+    .progress-text { font-size: 12px; color: var(--muted); margin-left: 8px; }
+
+    .output { margin-top: 18px; }
+    .download a.btn { font-weight: 600; letter-spacing: .2px; }
+
+    .tips ul { margin: 8px 0 0 20px; }
+    .tips li { color: var(--muted); margin: 6px 0; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>视频抽帧生成新视频</h1>
+
+    <div class="panel controls">
+      <div class="row">
+        <label>选择本地视频：<input id="videoInput" type="file" accept="video/*" /></label>
+        <span id="fileName" style="font-size:12px;color:var(--muted);">未选择文件</span>
+      </div>
+      <div class="row">
+        <label>截帧间隔(s)：<input id="intervalInput" type="number" min="0.1" step="0.1" value="3" /></label>
+        <label>帧停留时长(s)：<input id="holdInput" type="number" min="0.1" step="0.1" value="1" /></label>
+        <label><input id="advancedToggle" type="checkbox" /> 高级模式（拖拽时间点）</label>
+      </div>
+      <div class="row">
+        <button id="extractBtn" class="btn" disabled>抽帧</button>
+        <button id="generateBtn" class="btn primary" disabled>合成视频</button>
+        <button id="ffmpegDecodeBtn" class="btn" title="浏览器无法解码时使用">使用 FFmpeg 解码</button>
+        <span class="progress-text" id="statusText"></span>
+      </div>
+      <div class="row" style="align-items:center;">
+        <div class="progress" id="progress"><div class="fill" id="progressFill"></div></div>
+        <span class="progress-text" id="progressText"></span>
+      </div>
+    </div>
+
+    <div class="main">
+      <video id="video" controls muted playsinline></video>
+
+      <div id="timelineWrap" class="timeline-wrap">
+        <div id="timelineScroll" class="timeline-scroll">
+          <div id="timelineInner" class="timeline-inner">
+            <div id="timelineBar" class="timeline-bar"></div>
+            <div id="markers" class="markers"></div>
+          </div>
+        </div>
+        <div class="timeline-meta"><span id="currentLabel">00:00</span><span id="durationLabel">00:00</span></div>
+        <div class="timeline-help">提示：拖拽标记可调整抽帧时间点；点击时间轴空白区域可新增标记；悬停标记可删除。</div>
+      </div>
+    </div>
+
+    <div id="frames" class="frames"></div>
+
+    <div id="output" class="output hidden">
+      <div class="download">
+        <a id="downloadLink" class="btn primary" download="frames.webm">下载生成视频</a>
+      </div>
+      <video id="outputVideo" controls playsinline></video>
+    </div>
+
+    <div class="tips">
+      <p>说明：</p>
+      <ul>
+        <li>默认每隔 3 秒截取一帧，您可以调整间隔；打开“高级模式”后可在时间轴精确调整单个截取帧的时间点。</li>
+        <li>合成视频默认输出 WebM（VP8/VP9）格式，兼容性较好；如需 MP4/H.264，推荐使用桌面浏览器或导出后本地转换。</li>
+        <li>在部分手机浏览器中，如果选择的 MP4 并非标准 H.264/AAC 导致无法播放/解码，可点击“使用 FFmpeg 解码”进行本地解码（WASM 实现，较慢且占内存）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const $ = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    const fmt = (t) => { if (!isFinite(t)) return '00:00'; const m = Math.floor(t / 60), s = Math.floor(t % 60); return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0'); };
+
+    const video = $('#video');
+    const videoInput = $('#videoInput');
+    const fileNameEl = $('#fileName');
+    const intervalInput = $('#intervalInput');
+    const holdInput = $('#holdInput');
+    const advancedToggle = $('#advancedToggle');
+    const extractBtn = $('#extractBtn');
+    const generateBtn = $('#generateBtn');
+    const progress = $('#progress');
+    const progressFill = $('#progressFill');
+    const progressText = $('#progressText');
+    const statusText = $('#statusText');
+    const framesEl = $('#frames');
+    const output = $('#output');
+    const outputVideo = $('#outputVideo');
+    const downloadLink = $('#downloadLink');
+
+    const timelineWrap = $('#timelineWrap');
+    const timelineScroll = $('#timelineScroll');
+    const timelineInner = $('#timelineInner');
+    const timelineBar = $('#timelineBar');
+    const markersEl = $('#markers');
+    const currentLabel = $('#currentLabel');
+    const durationLabel = $('#durationLabel');
+
+    const ffmpegDecodeBtn = $('#ffmpegDecodeBtn');
+
+    let currentVideoURL = null;
+    let frames = []; // {time:number, blob:Blob, url:string}
+    let markerTimes = []; // seconds
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d');
+
+    function resetState() {
+      frames = [];
+      markerTimes = [];
+      framesEl.innerHTML = '';
+      output.classList.add('hidden');
+      progress.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = '';
+      statusText.textContent = '';
+      generateBtn.disabled = true;
+    }
+
+    function buildDefaultTimes() {
+      const interval = Math.max(0.1, Number(intervalInput.value) || 3);
+      const duration = video.duration || 0;
+      const times = [];
+      for (let t = 0; t < duration; t += interval) times.push(Math.min(t, Math.max(0, duration - 0.05)));
+      if (times.length === 0 && duration > 0) times.push(Math.max(0, duration - 0.05));
+      return times;
+    }
+
+    function computeTimelineWidth() {
+      const basePxPerSec = window.innerWidth < 600 ? 40 : 20;
+      const minWidth = Math.max(600, timelineWrap.clientWidth);
+      const dur = video.duration || 0;
+      const w = dur ? Math.max(minWidth, Math.min(8000, Math.round(dur * basePxPerSec))) : minWidth;
+      if (timelineInner) timelineInner.style.width = w + 'px';
+    }
+
+    function renderMarkers() {
+      markersEl.innerHTML = '';
+      const duration = video.duration || 0;
+      durationLabel.textContent = fmt(duration);
+      currentLabel.textContent = '00:00';
+      const width = timelineBar.clientWidth;
+      markerTimes.forEach((t, i) => {
+        const marker = document.createElement('div');
+        marker.className = 'marker';
+        const left = duration ? (t / duration) * width : 0;
+        marker.style.left = left + 'px';
+        const dot = document.createElement('div'); dot.className = 'dot';
+        const del = document.createElement('div'); del.className = 'del'; del.textContent = '×';
+        del.title = '删除';
+        del.addEventListener('click', (e) => { e.stopPropagation(); markerTimes.splice(i,1); renderMarkers(); });
+        marker.appendChild(dot); marker.appendChild(del);
+
+        let dragging = false; let startX = 0; let initLeft = 0;
+        const onMove = (clientX) => {
+          const barRect = timelineBar.getBoundingClientRect();
+          const scrollRect = timelineScroll.getBoundingClientRect();
+          const edge = 30; const speed = 15;
+          if (clientX - scrollRect.left < edge) timelineScroll.scrollLeft = Math.max(0, timelineScroll.scrollLeft - speed);
+          if (scrollRect.right - clientX < edge) timelineScroll.scrollLeft = Math.min(timelineScroll.scrollWidth, timelineScroll.scrollLeft + speed);
+          const nx = Math.min(Math.max(barRect.left, clientX), barRect.right);
+          const dx = nx - startX;
+          const nl = Math.min(Math.max(0, initLeft + dx), width);
+          marker.style.left = nl + 'px';
+          const nt = duration ? (nl / width) * duration : 0;
+          currentLabel.textContent = fmt(nt);
+        };
+        marker.addEventListener('pointerdown', (e) => {
+          dragging = true; startX = e.clientX; initLeft = parseFloat(marker.style.left) || 0; marker.setPointerCapture(e.pointerId);
+          marker.style.cursor = 'grabbing';
+        });
+        marker.addEventListener('pointermove', (e) => { if (dragging) onMove(e.clientX); });
+        marker.addEventListener('pointerup', (e) => {
+          if (!dragging) return; dragging = false; marker.style.cursor = 'grab';
+          const nl = parseFloat(marker.style.left) || 0; const nt = duration ? (nl / width) * duration : 0;
+          markerTimes[i] = Math.min(Math.max(0, nt), Math.max(0, duration - 0.05));
+          currentLabel.textContent = fmt(markerTimes[i]);
+        });
+        markersEl.appendChild(marker);
+      });
+    }
+
+    function ensureMarkersVisible() {
+      if (advancedToggle.checked) {
+        timelineWrap.style.display = 'block';
+        markerTimes = markerTimes.length ? markerTimes : buildDefaultTimes();
+        computeTimelineWidth();
+        renderMarkers();
+      } else {
+        timelineWrap.style.display = 'none';
+      }
+    }
+
+    if (timelineBar) {
+      timelineBar.addEventListener('click', (e) => {
+        if (!advancedToggle.checked) return;
+        const rect = timelineBar.getBoundingClientRect();
+        const x = Math.min(Math.max(rect.left, e.clientX), rect.right) - rect.left;
+        const w = timelineBar.clientWidth; const duration = video.duration || 0;
+        const t = duration ? (x / w) * duration : 0;
+        markerTimes.push(Math.min(Math.max(0, t), Math.max(0, duration - 0.05)));
+        markerTimes.sort((a,b)=>a-b);
+        renderMarkers();
+      });
+    }
+
+    function setProgress(p, text='') {
+      progress.style.display = 'block';
+      progressFill.style.width = Math.max(0, Math.min(100, p)) + '%';
+      progressText.textContent = text || (Math.round(p) + '%');
+    }
+
+    function addFrameThumb(obj, idx) {
+      const div = document.createElement('div'); div.className = 'frame';
+      const img = document.createElement('img'); img.src = obj.url; div.appendChild(img);
+      const info = document.createElement('div'); info.className = 'info';
+      info.innerHTML = `<span>#${idx+1}</span><span>${fmt(obj.time)}</span>`;
+      div.appendChild(info); framesEl.appendChild(div);
+    }
+
+    function seekTo(time) {
+      return new Promise((resolve, reject) => {
+        const onSeeked = () => { cleanup(); resolve(); };
+        const onError = () => { cleanup(); reject(video.error || new Error('seek error')); };
+        const cleanup = () => { video.removeEventListener('seeked', onSeeked); video.removeEventListener('error', onError); };
+        video.addEventListener('seeked', onSeeked, { once: true });
+        video.addEventListener('error', onError, { once: true });
+        try { video.currentTime = Math.min(Math.max(0, time), Math.max(0, (video.duration||0)-0.05)); } catch (e) { cleanup(); reject(e); }
+      });
+    }
+
+    async function extractFrames(times) {
+      frames = []; framesEl.innerHTML = '';
+      const width = video.videoWidth, height = video.videoHeight;
+      if (!width || !height) throw new Error('视频未就绪');
+      canvas.width = width; canvas.height = height;
+      setProgress(0, '0%');
+      for (let i = 0; i < times.length; i++) {
+        const t = times[i];
+        await seekTo(t);
+        ctx.drawImage(video, 0, 0, width, height);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+        const url = URL.createObjectURL(blob);
+        const item = { time: t, blob, url };
+        frames.push(item); addFrameThumb(item, i);
+        setProgress(((i+1)/times.length)*100, `${i+1}/${times.length}`);
+        await new Promise(r => setTimeout(r, 0));
+      }
+      statusText.textContent = `已抽取 ${frames.length} 帧`;
+      generateBtn.disabled = frames.length === 0;
+    }
+
+    function pickMimeType() {
+      const candidates = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=h264'];
+      for (const m of candidates) { if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }
+      return '';
+    }
+
+    async function generateVideoFromFrames() {
+      if (!frames.length) return;
+      const width = canvas.width, height = canvas.height;
+      const fps = 30;
+      const holdSec = Math.max(0.1, Number(holdInput.value) || 1);
+      const holdFrames = Math.max(1, Math.round(fps * holdSec));
+
+      const mimeType = pickMimeType();
+      if (!mimeType) { alert('当前浏览器不支持 MediaRecorder 视频录制。建议使用桌面版 Chrome/Edge/Firefox，或改用 FFmpeg（稍慢）。'); return; }
+
+      const drawCanvas = canvas;
+      const stream = drawCanvas.captureStream(fps);
+      const recorder = new MediaRecorder(stream, { mimeType });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      const recDone = new Promise(res => recorder.onstop = res);
+
+      const images = await Promise.all(frames.map(f => new Promise((resolve,reject)=>{ const img = new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=f.url; })));
+
+      let i = 0, count = 0;
+      const draw = () => {
+        if (i >= images.length) return false;
+        ctx.drawImage(images[i], 0, 0, width, height);
+        count++;
+        if (count >= holdFrames) { count = 0; i++; }
+        return i < images.length;
+      };
+
+      recorder.start();
+      const frameInterval = 1000 / fps;
+      await new Promise((resolve) => {
+        const timer = setInterval(() => {
+          const hasMore = draw();
+          if (!hasMore) { clearInterval(timer); recorder.stop(); resolve(); }
+        }, frameInterval);
+      });
+      await recDone;
+
+      const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      outputVideo.src = url;
+      downloadLink.href = url;
+      downloadLink.download = `frames_${Date.now()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`;
+      output.classList.remove('hidden');
+    }
+
+    // FFmpeg 解码（WASM）
+    let ffmpegLoaded = false; let ffmpeg = null; let FFmpeg = null;
+    async function ensureFFmpeg() {
+      if (ffmpegLoaded) return;
+      statusText.textContent = '正在加载 FFmpeg 核心(≈20MB)…';
+      if (!window.FFmpeg) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js';
+          s.onload = resolve; s.onerror = () => reject(new Error('FFmpeg 脚本加载失败'));
+          document.head.appendChild(s);
+        });
+      }
+      FFmpeg = window.FFmpeg;
+      ffmpeg = FFmpeg.createFFmpeg({ log: false, corePath: 'https://unpkg.com/@ffmpeg/core@0.12.3/dist/ffmpeg-core.js' });
+      await ffmpeg.load();
+      ffmpegLoaded = true;
+      statusText.textContent = 'FFmpeg 加载完成';
+    }
+
+    async function decodeFramesWithFFmpeg(file) {
+      await ensureFFmpeg();
+      resetState();
+      const interval = Math.max(0.1, Number(intervalInput.value) || 3);
+      const data = new Uint8Array(await file.arrayBuffer());
+      const inName = 'input';
+      const inFile = `${inName}${file.name.includes('.') ? '' : '.mp4'}`;
+      ffmpeg.FS('writeFile', inFile, data);
+      statusText.textContent = '正在解码并抽帧（耗时取决于视频时长与性能）…';
+
+      const outPattern = 'frame_%05d.jpg';
+      await ffmpeg.run('-i', inFile, '-vf', `fps=1/${interval}`, '-q:v', '2', outPattern);
+
+      const files = ffmpeg.FS('readdir', '/').filter(n => /^frame_\d{5}\.jpg$/.test(n)).sort();
+      const maxExport = 300;
+      const used = files.slice(0, maxExport);
+
+      frames = [];
+      framesEl.innerHTML = '';
+      let i = 0;
+      for (const name of used) {
+        const buf = ffmpeg.FS('readFile', name);
+        const blob = new Blob([buf.buffer], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        const t = i * interval;
+        const item = { time: t, blob, url };
+        frames.push(item); addFrameThumb(item, i);
+        i++;
+      }
+      statusText.textContent = `FFmpeg 抽帧完成：共 ${frames.length} 帧${files.length > maxExport ? '（已限制前 300 帧）' : ''}`;
+      generateBtn.disabled = frames.length === 0;
+
+      try { ffmpeg.FS('unlink', inFile); } catch {}
+      for (const name of used) { try { ffmpeg.FS('unlink', name); } catch {} }
+    }
+
+    advancedToggle.addEventListener('change', ensureMarkersVisible);
+
+    videoInput.addEventListener('change', (e) => {
+      resetState();
+      const file = e.target.files && e.target.files[0];
+      if (!file) { fileNameEl.textContent = '未选择文件'; extractBtn.disabled = true; return; }
+      fileNameEl.textContent = file.name + `（${(file.size/1024/1024).toFixed(2)}MB）`;
+
+      if (currentVideoURL) { URL.revokeObjectURL(currentVideoURL); currentVideoURL = null; }
+      currentVideoURL = URL.createObjectURL(file);
+      video.src = currentVideoURL;
+
+      const onLoaded = () => {
+        extractBtn.disabled = false; statusText.textContent = `时长 ${fmt(video.duration)}，分辨率 ${video.videoWidth}×${video.videoHeight}`;
+        ensureMarkersVisible();
+        computeTimelineWidth();
+      };
+      const onError = () => {
+        extractBtn.disabled = true; statusText.textContent = '浏览器无法解码此视频。可尝试点击“使用 FFmpeg 解码”。';
+      };
+      video.addEventListener('loadedmetadata', onLoaded, { once: true });
+      video.addEventListener('error', onError, { once: true });
+    });
+
+    extractBtn.addEventListener('click', async () => {
+      try {
+        const times = advancedToggle.checked ? [...markerTimes].sort((a,b)=>a-b) : buildDefaultTimes();
+        if (!times.length) { alert('没有可用的时间点'); return; }
+        extractBtn.disabled = true; generateBtn.disabled = true; statusText.textContent = '抽帧中…';
+        await extractFrames(times);
+        statusText.textContent = `抽帧完成：${frames.length} 帧`;
+      } catch (e) {
+        console.error(e); alert('抽帧失败：' + (e && e.message ? e.message : e));
+      } finally {
+        extractBtn.disabled = false;
+      }
+    });
+
+    generateBtn.addEventListener('click', async () => {
+      try {
+        generateBtn.disabled = true; statusText.textContent = '正在合成视频…';
+        await generateVideoFromFrames();
+        statusText.textContent = '已生成视频';
+      } catch (e) {
+        console.error(e); alert('合成失败：' + (e && e.message ? e.message : e));
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    ffmpegDecodeBtn.addEventListener('click', async () => {
+      const file = videoInput.files && videoInput.files[0];
+      if (!file) { alert('请先选择视频文件'); return; }
+      try {
+        ffmpegDecodeBtn.disabled = true; extractBtn.disabled = true; generateBtn.disabled = true;
+        await decodeFramesWithFFmpeg(file);
+      } catch (e) {
+        console.error(e); alert('FFmpeg 解码失败：' + (e && e.message ? e.message : e));
+      } finally {
+        ffmpegDecodeBtn.disabled = false; extractBtn.disabled = false; generateBtn.disabled = frames.length === 0;
+      }
+    });
+
+    window.addEventListener('resize', () => { if (advancedToggle.checked) { computeTimelineWidth(); renderMarkers(); } });
+  </script>
+</body>
+</html>
