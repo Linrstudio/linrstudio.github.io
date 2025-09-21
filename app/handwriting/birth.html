@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>汉字学习练习</title>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #141f23;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            width: 100%;
+        }
+
+        .app-header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .close-btn {
+            min-width: 30px; /* */
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            background: 0; /* */
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+        }
+
+        .progress-header {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+
+        .progress-header-fill {
+            height: 100%;
+            background: #ffd700;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .hearts {
+            display: flex;
+            gap: 5px;
+        }
+
+        .heart {
+            color: #e74c3c;
+            font-size: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .mode-selector {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 15px;
+            color: white;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .exercise-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .character-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .character-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .sound-btn {
+            width: 40px;
+            height: 40px;
+            background: #3498db;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character-pinyin {
+            font-size: 18px;
+            color: #ecf0f1;
+        }
+
+        /* 描笔画模式样式 */
+        .stroke-mode {
+            display: block;
+        }
+
+        .stroke-mode.hidden {
+            display: none;
+        }
+
+        .practice-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+            gap: 20px;
+        }
+
+        .demo-character, .practice-character {
+            /* background: rgba(255, 255, 255, 0.1); */
+
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .demo-character {
+            display: none;
+        }
+
+        /* 新增：使练习容器能承载提示叠层 */
+        .practice-character {
+            position: relative;
+        }
+
+        /* 新增：提示叠层覆盖在手写区域之上，不拦截触摸 */
+        #hint-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* 新增：预绘制笔画背景层（持久显示），位于提示层下方 */
+        #prefill-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #practice-target {
+            border: 3px dashed rgba(255, 255, 255, 0);
+            /* border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2); */
+
+        }
+
+        .arrow-indicator {
+            font-size: 24px;
+            color: #ecf0f1;
+            display: none;
+        }
+
+        /* 部首拆分模式样式 */
+        .radical-mode {
+            display: none;
+        }
+
+        .radical-mode.active {
+            display: block;
+        }
+
+        .build-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .target-slots {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            min-height: 200px;
+        }
+
+        .target-slot {
+            background: rgba(0, 0, 0, 0.3);
+            border: 3px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+            position: relative;
+            transition: all 0.3s ease;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .target-slot.filled {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.2);
+        }
+
+        .target-slot.highlight {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .radical-content {
+            font-size: 48px;
+            color: white;
+            font-weight: bold;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .options-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-btn:hover, .option-btn:active {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(0.95);
+        }
+
+        .option-btn.selected {
+            background: rgba(52, 152, 219, 0.4);
+            border-color: #3498db;
+        }
+
+        .option-btn.used {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* 反馈和控制 */
+        .feedback {
+            visibility: hidden;
+            position: fixed;
+            top: 0;
+            text-align: center;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .feedback.success {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            border: 2px solid #2ecc71;
+        }
+
+        .feedback.error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+        }
+
+        .feedback.info {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+            border: 2px solid #3498db;
+        }
+
+        .bottom-controls {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .check-btn {
+            width: 100%;
+            padding: 18px;
+            background: #2ecc71;
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .check-btn:hover {
+            background: #27ae60;
+        }
+
+        .check-btn:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+        }
+
+        .control-buttons {
+            
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 简单的笔画样式 */
+        #practice-target path {
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 15px;
+            }
+
+            .practice-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .demo-character, .practice-character {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .target-slots {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .options-area {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .option-btn {
+                min-height: 70px;
+                font-size: 28px;
+            }
+        }
+
+        /* 触摸反馈 */
+        .touchable {
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 确保绘制区域的触摸事件 */
+        #practice-target, #practice-target svg, #practice-target svg * {
+            pointer-events: auto !important;
+            touch-action: none !important;
+        }
+        #practice-target svg {
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 260 260'%3E%3Cpath stroke='%2339464F' stroke-dasharray='7 4' stroke-width='2' d='M0 129h260M131 0v260'/%3E%3C/svg%3E");
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* 成功动画 */
+        @keyframes success-flash {
+            0% { background: rgba(46, 204, 113, 0.2); }
+            50% { background: rgba(46, 204, 113, 0.6); }
+            100% { background: rgba(46, 204, 113, 0.2); }
+        }
+
+        .success-animation {
+            animation: success-flash 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="header-left">
+            <button class="close-btn touchable">
+                Dinguo
+            </button>
+            <div class="progress-header">
+                <div class="progress-header-fill" id="header-progress"></div>
+            </div>
+        </div>
+        <div class="hearts">
+            <span class="heart">🎂</span>
+            <span class="heart">🎂</span>
+            <span class="heart">🎂</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- 模式选择 -->
+        <div class="mode-selector">
+            <button class="mode-btn active touchable" id="stroke-mode-btn">描笔画</button>
+            <button class="mode-btn touchable" id="radical-mode-btn">拼部首</button>
+        </div>
+
+        <!-- 练习标题 -->
+        <div class="exercise-title" id="exercise-title">Build the hanzi in "Shanghai"</div>
+
+        <!-- 汉字信息 -->
+        <div class="character-display">
+            <div class="character-info">
+                <button class="sound-btn touchable" id="sound-btn">🔊</button>
+                <div class="character-pinyin" id="character-pinyin">shàng hǎi</div>
+            </div>
+        </div>
+
+        <!-- 描笔画模式 -->
+        <div class="stroke-mode" id="stroke-mode">
+            <div class="practice-container">
+                <div class="demo-character">
+                    <div id="demo-target"></div>
+                </div>
+                <div class="arrow-indicator">→</div>
+                <div class="practice-character">
+                    <div id="practice-target"></div>
+                    <canvas id="prefill-overlay"></canvas>
+                    <canvas id="hint-overlay"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 部首拆分模式 -->
+        <div class="radical-mode" id="radical-mode">
+            <div class="build-area">
+                <div class="target-slots" id="target-slots">
+                    <div class="target-slot" data-slot="0">
+                        <div class="radical-content" id="slot-0"></div>
+                    </div>
+                    <div class="target-slot" data-slot="1">
+                        <div class="radical-content" id="slot-1"></div>
+                    </div>
+                </div>
+                
+                <div class="options-area" id="options-area">
+                    <!-- 选项将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 反馈信息 -->
+        <div class="feedback hidden" id="feedback"></div>
+    </div>
+
+    <!-- 底部控制 -->
+    <div class="bottom-controls">
+        <button class="check-btn touchable" id="check-btn">CHECK</button>
+        <div class="control-buttons">
+            <button class="control-btn touchable" id="skip-btn">跳过</button>
+            <button class="control-btn touchable" id="hint-btn">提示</button>
+            <button class="control-btn touchable" id="reset-btn">重置</button>
+        </div>
+    </div>
+
+    <script>
+        class HanziLearningApp {
+            constructor() {
+                this.currentMode = 'stroke'; // 'stroke' or 'radical'
+                this.currentCharacter = '冬';
+                this.characterSequence = ['冬', '海', '好', '明', '森', '想'];
+                this.currentCharacterIndex = 0;
+                this.demoWriter = null;
+                this.practiceWriter = null;
+                this.currentStroke = 0;
+                this.totalStrokes = 0;
+                this.prefilledStrokes = new Set();
+                this.completedStrokes = new Set();
+                this.score = 0;
+                this.isQuizActive = false;
+                this.hearts = 3;
+                this.isCompletingCharacter = false; // 防止重复调用completeCharacter的标志
+                
+                // 新增：绘图区配置与提示相关状态
+                this.writerConfig = { width: 260, height: 260, padding: 20 };
+                this.characterDataCache = null;
+                
+                // 部首模式相关
+                this.radicalData = {
+                    '上': { radicals: ['丄', '一'], type: 'vertical', slots: 2 },
+                    '海': { radicals: ['氵', '每'], type: 'horizontal', slots: 2 },
+                    '好': { radicals: ['女', '子'], type: 'horizontal', slots: 2 },
+                    '明': { radicals: ['日', '月'], type: 'horizontal', slots: 2 },
+                    '森': { radicals: ['木', '林'], type: 'vertical', slots: 2 },
+                    '想': { radicals: ['相', '心'], type: 'vertical', slots: 2 }
+                };
+                this.currentRadicalAnswer = [];
+                this.selectedOptions = [];
+                this.usedOptions = new Set();
+                
+                // 预定义拼音数据
+                this.pinyinData = {
+                    '上': 'shàng',
+                    '海': 'hǎi',
+                    '好': 'hǎo',
+                    '明': 'míng',
+                    '森': 'sēn',
+                    '想': 'xiǎng'
+                };
+                
+                this.initEventListeners();
+                console.log('HanziLearningApp初始化完成，加载第一个字符');
+                this.loadCharacter(this.currentCharacter);
+            }
+
+            initEventListeners() {
+                // 模式切换
+                document.getElementById('stroke-mode-btn').addEventListener('click', () => this.switchMode('stroke'));
+                document.getElementById('radical-mode-btn').addEventListener('click', () => this.switchMode('radical'));
+                
+                // 控制按钮
+                document.getElementById('check-btn').addEventListener('click', () => this.checkAnswer());
+                document.getElementById('skip-btn').addEventListener('click', () => this.skipCurrent());
+                document.getElementById('hint-btn').addEventListener('click', () => this.showHint());
+                document.getElementById('reset-btn').addEventListener('click', () => this.resetCurrent());
+                document.getElementById('sound-btn').addEventListener('click', () => this.playSound());
+                
+                // 防止页面滑动和缩放
+                document.addEventListener('touchmove', (e) => {
+                    if (!e.target.closest('#practice-target')) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+                
+                document.addEventListener('gesturestart', (e) => e.preventDefault());
+                document.addEventListener('gesturechange', (e) => e.preventDefault());
+                document.addEventListener('gestureend', (e) => e.preventDefault());
+            }
+
+            switchMode(mode) {
+                this.currentMode = mode;
+                
+                // 更新模式按钮状态
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`${mode}-mode-btn`).classList.add('active');
+                
+                // 切换显示的模式
+                document.getElementById('stroke-mode').classList.toggle('hidden', mode !== 'stroke');
+                document.getElementById('radical-mode').classList.toggle('active', mode === 'radical');
+                
+                // 重新加载当前字符
+                this.loadCharacter(this.currentCharacter);
+            }
+
+            async loadCharacter(character) {
+                this.currentCharacter = character;
+                this.updateUI();
+                
+                if (this.currentMode === 'stroke') {
+                    await this.loadStrokeMode(character);
+                } else {
+                    this.loadRadicalMode(character);
+                }
+            }
+
+            async loadStrokeMode(character) {
+                console.log(`=== 开始加载汉字: ${character} ===`);
+                this.showFeedback('正在加载汉字数据...', 'info');
+                
+                try {
+                    // 完全停止当前quiz并重置状态
+                    console.log('重置quiz状态');
+                    this.isQuizActive = false;
+                    this.clearStrokeHint();
+                    this.clearPrefillOverlay();
+                    
+                    // 强制清理旧的writers
+                    if (this.demoWriter) {
+                        console.log('强制清理旧的demoWriter');
+                        try {
+                            this.demoWriter.cancelQuiz();
+                            this.demoWriter.destroy && this.demoWriter.destroy();
+                        } catch (e) {
+                            console.log('清理demoWriter时出错:', e);
+                        }
+                        this.demoWriter = null;
+                    }
+                    if (this.practiceWriter) {
+                        console.log('强制清理旧的practiceWriter');
+                        try {
+                            this.practiceWriter.cancelQuiz();
+                            this.practiceWriter.destroy && this.practiceWriter.destroy();
+                        } catch (e) {
+                            console.log('清理practiceWriter时出错:', e);
+                        }
+                        this.practiceWriter = null;
+                    }
+
+                    // 强制清空容器并等待DOM更新
+                    const demoTarget = document.getElementById('demo-target');
+                    const practiceTarget = document.getElementById('practice-target');
+                    demoTarget.innerHTML = '';
+                    practiceTarget.innerHTML = '';
+                    console.log('容器已清空');
+                    
+                    // 等待DOM清理完成
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // 完全重置所有状态变量
+                    this.completedStrokes = new Set();
+                    this.prefilledStrokes = new Set();
+                    this.currentStroke = 0;
+                    this.totalStrokes = 0;
+                    this.score = 0;
+                    console.log('状态变量已重置');
+
+                    // 加载字符数据（增加重试机制）
+                    console.log(`正在加载字符数据: ${character}`);
+                    let characterData = null;
+                    let retryCount = 0;
+                    const maxRetries = 3;
+                    
+                    while (!characterData && retryCount < maxRetries) {
+                        try {
+                            characterData = await HanziWriter.loadCharacterData(character);
+                            if (characterData && characterData.strokes && characterData.strokes.length > 0) {
+                                console.log(`字符数据加载成功，笔画数: ${characterData.strokes.length}`);
+                                break;
+                            } else {
+                                throw new Error('字符数据无效');
+                            }
+                        } catch (error) {
+                            retryCount++;
+                            console.log(`字符数据加载失败 (尝试 ${retryCount}/${maxRetries}):`, error);
+                            if (retryCount < maxRetries) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                    }
+                    
+                    if (!characterData) {
+                        throw new Error(`无法加载字符数据: ${character} (已重试${maxRetries}次)`);
+                    }
+                    
+                    this.totalStrokes = characterData.strokes.length;
+                    console.log(`设置总笔画数: ${this.totalStrokes}`);
+                    
+                    // 生成预绘制笔画
+                    this.generatePrefilledStrokes(characterData);
+                    console.log(`预绘制笔画生成完成，预设笔画: ${Array.from(this.prefilledStrokes).join(', ')}`);
+
+                    // 创建demo writer（增加错误处理）
+                    console.log('创建demo writer');
+                    try {
+                        this.demoWriter = HanziWriter.create('demo-target', character, {
+                            width: 120,
+                            height: 120,
+                            padding: 10,
+                            strokeColor: '#95a5a6',
+                            showOutline: true,
+                            showCharacter: true,
+                            charDataLoader: () => characterData
+                        });
+                        
+                        if (!this.demoWriter) {
+                            throw new Error('Demo writer创建返回null');
+                        }
+                        console.log('Demo writer创建成功');
+                    } catch (error) {
+                        console.error('Demo writer创建失败:', error);
+                        throw new Error(`Demo writer创建失败: ${error.message}`);
+                    }
+
+                    // 创建practice writer（增加错误处理）
+                    console.log('创建practice writer');
+                    try {
+                        this.practiceWriter = HanziWriter.create('practice-target', character, {
+                            width: 260,
+                            height: 260,
+                            padding: 20,
+                            // strokeColor: '#95a5a6',
+                            strokeColor: '#FFF',
+                            // drawingColor: '#3498db',
+                            drawingColor: '#FFF',
+                            // radicalColor: '#168F16',
+                            // highlightColor: '#f00',
+                            outlineColor: '#39464f',
+                            drawingWidth: 16,
+                            drawingWidth: 32,
+                            strokeAnimationSpeed: 1,
+                            delayBetweenStrokes: 100,
+                            showOutline: true,
+                            showCharacter: false,
+                            showHintAfterMisses: 2,
+                            highlightOnComplete: true,
+                            leniency: 1.2,
+                            acceptBackwardsStrokes: false,
+                            charDataLoader: () => characterData
+                        });
+                        
+                        if (!this.practiceWriter) {
+                            throw new Error('Practice writer创建返回null');
+                        }
+                        console.log('Practice writer创建成功');
+                    } catch (error) {
+                        console.error('Practice writer创建失败:', error);
+                        throw new Error(`Practice writer创建失败: ${error.message}`);
+                    }
+
+                    // 等待writers完全初始化
+                    console.log('等待writers初始化完成');
+                    await new Promise(resolve => setTimeout(resolve, 800));
+
+                    // 显示预绘制的笔画
+                    console.log('显示预绘制笔画');
+                    await this.showPrefilledStrokes();
+                    
+                    // 初始化状态
+                    this.currentStroke = this.findNextStroke();
+                    this.updateProgress();
+                    console.log(`当前笔画索引: ${this.currentStroke}`);
+                    
+                    // 开始quiz
+                    console.log('开始quiz');
+                    this.startQuiz();
+                    
+                    // 显示第一笔的引导线
+                    console.log('显示引导线');
+                    this.renderStrokeHint(this.currentStroke);
+                    
+                    this.hideFeedback();
+                    console.log(`汉字 ${character} 加载完成`);
+                    
+                } catch (error) {
+                    console.error(`加载汉字 ${character} 失败:`, error);
+                    this.showFeedback(`加载汉字 ${character} 失败: ${error.message}`, 'error');
+                    
+                    // 尝试重试机制
+                    setTimeout(() => {
+                        console.log(`尝试重新加载汉字: ${character}`);
+                        this.loadStrokeMode(character);
+                    }, 2000);
+                }
+            }
+
+            loadRadicalMode(character) {
+                // 切入部首模式时清空叠层，避免残留
+                this.clearStrokeHint();
+                this.clearPrefillOverlay();
+                const data = this.radicalData[character];
+                if (!data) {
+                    this.showFeedback('该汉字暂不支持部首模式', 'error');
+                    return;
+                }
+
+                this.currentRadicalAnswer = [...data.radicals];
+                this.selectedOptions = new Array(data.slots).fill('');
+                this.usedOptions.clear();
+
+                // 设置目标槽位
+                this.setupTargetSlots(data.slots, data.type);
+                
+                // 生成选项（包括正确答案和干扰项）
+                this.generateRadicalOptions(data.radicals);
+                
+                this.updateRadicalDisplay();
+                this.hideFeedback();
+            }
+
+            setupTargetSlots(slotCount, type) {
+                const slotsContainer = document.getElementById('target-slots');
+                slotsContainer.innerHTML = '';
+                
+                // 根据类型设置网格
+                if (type === 'horizontal') {
+                    slotsContainer.style.gridTemplateColumns = '1fr 1fr';
+                } else if (type === 'vertical') {
+                    slotsContainer.style.gridTemplateColumns = '1fr';
+                    slotsContainer.style.gridTemplateRows = '1fr 1fr';
+                }
+
+                for (let i = 0; i < slotCount; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'target-slot';
+                    slot.dataset.slot = i;
+                    
+                    const content = document.createElement('div');
+                    content.className = 'radical-content';
+                    content.id = `slot-${i}`;
+                    
+                    slot.appendChild(content);
+                    slotsContainer.appendChild(slot);
+                }
+            }
+
+            generateRadicalOptions(correctRadicals) {
+                // 干扰项池
+                const distractors = ['氵', '木', '女', '子', '日', '月', '心', '土', '口', '人', '大', '小', '山', '水', '火'];
+                
+                // 选择干扰项
+                const wrongOptions = distractors
+                    .filter(item => !correctRadicals.includes(item))
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, 2);
+                
+                // 合并正确答案和干扰项
+                const allOptions = [...correctRadicals, ...wrongOptions].sort(() => Math.random() - 0.5);
+                
+                // 生成选项按钮
+                const optionsContainer = document.getElementById('options-area');
+                optionsContainer.innerHTML = '';
+                
+                allOptions.forEach((option, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn touchable';
+                    btn.textContent = option;
+                    btn.dataset.radical = option;
+                    btn.addEventListener('click', () => this.selectRadical(option, btn));
+                    optionsContainer.appendChild(btn);
+                });
+            }
+
+            selectRadical(radical, btnElement) {
+                if (this.usedOptions.has(radical)) return;
+
+                // 找到第一个空槽位
+                const emptySlotIndex = this.selectedOptions.findIndex(slot => slot === '');
+                if (emptySlotIndex === -1) return; // 没有空槽位
+
+                // 填充槽位
+                this.selectedOptions[emptySlotIndex] = radical;
+                this.usedOptions.add(radical);
+                
+                // 更新显示
+                btnElement.classList.add('used');
+                this.updateRadicalDisplay();
+                
+                // 检查是否填满
+                if (this.selectedOptions.every(slot => slot !== '')) {
+                    document.getElementById('check-btn').disabled = false;
+                }
+            }
+
+            updateRadicalDisplay() {
+                this.selectedOptions.forEach((radical, index) => {
+                    const slot = document.getElementById(`slot-${index}`);
+                    const slotContainer = slot.parentElement;
+                    
+                    if (radical) {
+                        slot.textContent = radical;
+                        slotContainer.classList.add('filled');
+                    } else {
+                        slot.textContent = '';
+                        slotContainer.classList.remove('filled');
+                    }
+                });
+
+                // 高亮下一个要填的槽位
+                const nextEmptyIndex = this.selectedOptions.findIndex(slot => slot === '');
+                document.querySelectorAll('.target-slot').forEach((slot, index) => {
+                    slot.classList.toggle('highlight', index === nextEmptyIndex);
+                });
+            }
+
+            generatePrefilledStrokes(characterData) {
+                this.prefilledStrokes.clear();
+                this.completedStrokes.clear();
+
+                const total = this.totalStrokes;
+                const all = Array.from({ length: total }, (_, i) => i);
+
+                // 计算笔画度量：长度与包围盒与重心
+                const metrics = (() => {
+                    const getPointsFromPath = (path) => {
+                        const cmds = path.match(/[MLQZ][^MLQZ]*/g) || [];
+                        const pts = [];
+                        let last = null;
+                        for (const cmd of cmds) {
+                            const t = cmd[0];
+                            const nums = cmd.slice(1).trim().split(/[\s,]+/).map(Number);
+                            if (t === 'M' || t === 'L') {
+                                if (nums.length >= 2) {
+                                    const p = { x: nums[0], y: nums[1] };
+                                    pts.push(p);
+                                    last = p;
+                                }
+                            } else if (t === 'Q' && nums.length >= 4) {
+                                const cp = { x: nums[0], y: nums[1] };
+                                const end = { x: nums[2], y: nums[3] };
+                                // 近似：用控制点与终点参与包围盒与粗略长度
+                                pts.push(cp, end);
+                                last = end;
+                            }
+                        }
+                        return pts;
+                    };
+
+                    const arr = [];
+                    for (let i = 0; i < total; i++) {
+                        const stroke = characterData.strokes[i];
+                        const pts = (characterData.medians && characterData.medians[i]) ?
+                            characterData.medians[i].map(([x, y]) => ({ x, y })) :
+                            getPointsFromPath(stroke.path);
+                        if (!pts.length) {
+                            arr.push({ i, len: 0, cx: 512, cy: 450, minX: 512, maxX: 512, minY: 450, maxY: 450, area: 0 });
+                            continue;
+                        }
+                        let len = 0;
+                        for (let k = 1; k < pts.length; k++) {
+                            const dx = pts[k].x - pts[k - 1].x;
+                            const dy = pts[k].y - pts[k - 1].y;
+                            len += Math.hypot(dx, dy);
+                        }
+                        const xs = pts.map(p => p.x);
+                        const ys = pts.map(p => p.y);
+                        const minX = Math.min(...xs), maxX = Math.max(...xs);
+                        const minY = Math.min(...ys), maxY = Math.max(...ys);
+                        const area = (maxX - minX) * (maxY - minY);
+                        const cx = xs.reduce((a, b) => a + b, 0) / xs.length;
+                        const cy = ys.reduce((a, b) => a + b, 0) / ys.length;
+                        arr.push({ i, len, cx, cy, minX, maxX, minY, maxY, area });
+                    }
+                    return arr;
+                })();
+
+                const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+                const choose = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+                // 策略A：全字预绘，仅留少量简单笔画给用户
+                const strategyWholeMinusSimple = () => {
+                    const leaveCount = Math.min(Math.max(2, Math.ceil(total * 0.2)), Math.min(4, total - 1));
+                    const sortedBySimple = [...metrics].sort((a, b) => a.len - b.len);
+                    const leave = sortedBySimple.slice(0, leaveCount).map(m => m.i);
+                    const prefill = all.filter(i => !leave.includes(i));
+                    return new Set(prefill);
+                };
+
+                // 策略B：完整偏旁/部首
+                const strategyRadical = () => {
+                    // 优先使用radStrokes
+                    if (characterData.radStrokes && characterData.radStrokes.length) {
+                        return new Set(characterData.radStrokes);
+                    }
+                    // 启发式：按重心分群（左/右/上/下），取规模适中的一群
+                    const groups = {
+                        left: metrics.filter(m => m.cx < 512).map(m => m.i),
+                        right: metrics.filter(m => m.cx >= 512).map(m => m.i),
+                        top: metrics.filter(m => m.cy > 450).map(m => m.i),   // 注意原始坐标系Y翻转，使用阈值近似
+                        bottom: metrics.filter(m => m.cy <= 450).map(m => m.i),
+                    };
+                    // 倾向于左或上（常见偏旁）
+                    const candidates = [groups.left, groups.top, groups.right, groups.bottom]
+                        .filter(g => g.length >= Math.max(2, Math.floor(total * 0.25)) && g.length <= Math.ceil(total * 0.8));
+                    const chosen = candidates[0] || groups.left || groups.top || groups.right || groups.bottom || [];
+                    return new Set(chosen);
+                };
+
+                // 策略C：连续笔画
+                const strategyContinuous = () => {
+                    const minLen = Math.max(2, Math.ceil(total * 0.4));
+                    const maxLen = Math.max(minLen, Math.min(total - 1, Math.ceil(total * 0.7)));
+                    const L = randInt(minLen, maxLen);
+                    // 确保至少留1-2笔未预绘
+                    const maxStart = Math.max(0, total - L - 1);
+                    const start = randInt(0, maxStart);
+                    const prefill = [];
+                    for (let k = start; k < start + L; k++) prefill.push(k);
+                    return new Set(prefill);
+                };
+
+                // 可选策略D：框架笔画（大包围盒/长笔画）
+                const strategyFramework = () => {
+                    const topK = Math.max(2, Math.ceil(total * 0.35));
+                    const big = [...metrics].sort((a, b) => (b.area + b.len) - (a.area + a.len)).slice(0, topK).map(m => m.i);
+                    return new Set(big);
+                };
+
+                const strategies = [strategyWholeMinusSimple, strategyRadical, strategyContinuous, strategyFramework];
+                const pick = choose(strategies);
+                const prefilled = pick();
+
+                // 边界兜底：若过少或过多，回退到A
+                if (prefilled.size < 2 || prefilled.size > total - 1) {
+                    const alt = strategyWholeMinusSimple();
+                    this.prefilledStrokes = alt;
+                } else {
+                    this.prefilledStrokes = prefilled;
+                }
+
+                // 标记为已完成，便于从下一个未预绘笔画开始测验
+                this.completedStrokes.clear();
+                this.prefilledStrokes.forEach(i => this.completedStrokes.add(i));
+            }
+            
+
+
+            async showPrefilledStrokes() {
+                if (!this.practiceWriter || this.prefilledStrokes.size === 0) return;
+
+                // 使用独立的预绘制背景层，确保不被提示层或quiz流程清除
+                const canvas = document.getElementById('prefill-overlay');
+                const practiceTarget = document.getElementById('practice-target');
+                const practiceCharacter = document.querySelector('.practice-character');
+                if (!canvas || !practiceTarget || !practiceCharacter) return;
+
+                // 设置画布尺寸与容器一致（与提示层同样的尺寸策略）
+                canvas.width = practiceCharacter.offsetWidth;
+                canvas.height = practiceCharacter.offsetHeight;
+
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                try { this.practiceWriter.showOutline(); } catch (_) {}
+                try { this.practiceWriter.hideCharacter(); } catch (_) {}
+
+                // 坐标与缩放配置保持与 renderStrokeHint 一致
+                const writerConfig = { width: 260, height: 260, padding: 20 };
+                const containerPadding = 15; // practice-character 的 padding
+                const targetBorder = 3; // practice-target 的 border
+                const drawingArea = writerConfig.width - 2 * writerConfig.padding; // 220
+                const scale = drawingArea / 1024;
+
+                const transformPoint = (x, y) => {
+                    const flippedY = 900 - y; // 参考 makemeahanzi 坐标翻转
+                    const transformedX = containerPadding + targetBorder + writerConfig.padding + x * scale;
+                    const transformedY = containerPadding + targetBorder + writerConfig.padding + flippedY * scale;
+                    return { x: transformedX, y: transformedY };
+                };
+
+                const characterData = this.practiceWriter._character;
+                if (!characterData || !characterData.strokes) return;
+
+                // 逐个绘制预绘制笔画为“红色实心填充”，保持持久显示
+                const sorted = Array.from(this.prefilledStrokes).sort((a, b) => a - b);
+                for (const strokeIndex of sorted) {
+                    const stroke = characterData.strokes[strokeIndex];
+                    if (!stroke) continue;
+
+                    try {
+                        // 构建路径
+                        ctx.beginPath();
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+
+                        const pathData = stroke.path;
+                        const commands = pathData.match(/[MLQZ][^MLQZ]*/g) || [];
+
+                        for (const command of commands) {
+                            const type = command[0];
+                            const coords = command.slice(1).trim().split(/[\s,]+/).map(Number);
+
+                            if (type === 'M' && coords.length >= 2) {
+                                const p = transformPoint(coords[0], coords[1]);
+                                ctx.moveTo(p.x, p.y);
+                            } else if (type === 'L' && coords.length >= 2) {
+                                const p = transformPoint(coords[0], coords[1]);
+                                ctx.lineTo(p.x, p.y);
+                            } else if (type === 'Q' && coords.length >= 4) {
+                                const cp = transformPoint(coords[0], coords[1]);
+                                const end = transformPoint(coords[2], coords[3]);
+                                ctx.quadraticCurveTo(cp.x, cp.y, end.x, end.y);
+                            } else if (type === 'Z') {
+                                ctx.closePath();
+                            }
+                        }
+
+                        // 填充红色，保证高亮且不透明
+                        ctx.fillStyle = '#fff';
+                        ctx.strokeStyle = '#fff';
+                        ctx.globalAlpha = 1.0;
+
+                        // 先填充再描边，增强可见度
+                        ctx.fill();
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                    } catch (error) {
+                        console.log(`预绘制笔画 ${strokeIndex} 绘制失败:`, error);
+                    }
+                }
+            }
+
+            findNextStroke() {
+                for (let i = 0; i < this.totalStrokes; i++) {
+                    if (!this.completedStrokes.has(i)) {
+                        return i;
+                    }
+                }
+                return this.totalStrokes;
+            }
+
+            startQuiz() {
+                console.log('开始启动quiz');
+                
+                if (!this.practiceWriter) {
+                    console.error('practiceWriter不存在，无法启动quiz');
+                    return;
+                }
+                
+                if (this.isQuizActive) {
+                    console.log('quiz已经激活，跳过启动');
+                    return;
+                }
+
+                const nextStroke = this.findNextStroke();
+                console.log(`下一个笔画索引: ${nextStroke}, 总笔画数: ${this.totalStrokes}`);
+                
+                if (nextStroke >= this.totalStrokes) {
+                    console.log('所有笔画已完成，完成字符');
+                    this.completeCharacter();
+                    return;
+                }
+
+                try {
+                    // 确保outline显示
+                    this.practiceWriter.showOutline();
+                    console.log('outline显示成功');
+                } catch (error) {
+                    console.log('显示outline失败:', error);
+                }
+
+                this.isQuizActive = true;
+                this.currentStroke = nextStroke;
+                
+                // 显示当前笔画的引导线
+                console.log(`渲染笔画提示: ${nextStroke}`);
+                this.renderStrokeHint(nextStroke);
+                
+                try {
+                    console.log(`启动quiz，起始笔画: ${nextStroke}`);
+                    this.practiceWriter.quiz({
+                        quizStartStrokeNum: nextStroke,
+                        leniency: 1.2,
+                        showHintAfterMisses: 2,
+                        highlightOnComplete: false,
+                        acceptBackwards: false,
+                        onCorrectStroke: (data) => {
+                            console.log('正确笔画回调触发:', data);
+                            this.onCorrectStroke(data);
+                        },
+                        onMistake: (data) => {
+                            console.log('错误笔画回调触发:', data);
+                            this.onMistake(data);
+                        },
+                        onComplete: () => {
+                            console.log('quiz完成回调触发');
+                            this.onQuizComplete();
+                        }
+                    });
+                    console.log('quiz启动成功');
+                } catch (error) {
+                    console.error('启动quiz失败:', error);
+                    this.isQuizActive = false;
+                    this.showFeedback('启动练习失败，请重试', 'error');
+                }
+            }
+
+            onCorrectStroke(data) {
+                console.log('正确笔画处理开始，当前笔画:', this.currentStroke);
+                
+                this.score += 10;
+                this.completedStrokes.add(this.currentStroke);
+                console.log('已完成笔画:', Array.from(this.completedStrokes));
+                
+                setTimeout(() => {
+                    try {
+                        if (this.practiceWriter) {
+                            this.practiceWriter.showOutline();
+                            console.log('outline重新显示成功');
+                        }
+                    } catch (error) {
+                        console.log('显示outline失败:', error);
+                    }
+
+                    const nextStroke = this.findNextStroke();
+                    console.log(`查找下一个笔画: ${nextStroke}, 总笔画数: ${this.totalStrokes}`);
+                    
+                    this.currentStroke = nextStroke;
+                    this.updateProgress();
+                    
+                    if (this.currentStroke >= this.totalStrokes) {
+                        console.log('所有笔画已完成，准备完成字符');
+                        this.clearStrokeHint();
+                        this.isQuizActive = false;
+                        // 检查是否已在完成字符中
+                        if (!this.isCompletingCharacter) {
+                            this.completeCharacter();
+                        }
+                    } else {
+                        console.log(`准备开始下一个笔画: ${this.currentStroke}`);
+                        this.isQuizActive = false;
+                        // 添加短暂延迟确保状态重置
+                        setTimeout(() => {
+                            this.startQuiz();
+                        }, 200);
+                    }
+                }, 300);
+            }
+
+            onMistake(data) {
+                this.score = Math.max(0, this.score - 2);
+                // 不显示错误信息，让用户继续尝试
+            }
+
+            onQuizComplete() {
+                console.log('onQuizComplete触发，检查是否已在完成字符中:', this.isCompletingCharacter);
+                if (!this.isCompletingCharacter) {
+                    this.completeCharacter();
+                }
+            }
+
+            checkAnswer() {
+                if (this.currentMode === 'stroke') {
+                    // 描笔画模式的检查逻辑
+                    if (this.currentStroke >= this.totalStrokes) {
+                        if (!this.isCompletingCharacter) {
+                            this.completeCharacter();
+                        }
+                    } else {
+                        this.showFeedback('请完成所有笔画', 'info');
+                    }
+                } else {
+                    // 部首拆分模式的检查逻辑
+                    this.checkRadicalAnswer();
+                }
+            }
+
+            checkRadicalAnswer() {
+                const isCorrect = this.selectedOptions.every((selected, index) => 
+                    selected === this.currentRadicalAnswer[index]
+                );
+
+                if (isCorrect) {
+                    this.showFeedback('正确！', 'success');
+                    document.querySelector('.build-area').classList.add('success-animation');
+                    setTimeout(() => {
+                        if (!this.isCompletingCharacter) {
+                            this.completeCharacter();
+                        }
+                    }, 1000);
+                } else {
+                    this.showFeedback('顺序不对，再试试', 'error');
+                    this.hearts = Math.max(0, this.hearts - 1);
+                    this.updateHearts();
+                    
+                    if (this.hearts === 0) {
+                        this.resetCurrent();
+                        this.hearts = 3;
+                        this.updateHearts();
+                    }
+                }
+            }
+
+            completeCharacter() {
+                console.log('completeCharacter被调用，当前状态:', this.isCompletingCharacter);
+                
+                // 防止重复调用
+                if (this.isCompletingCharacter) {
+                    console.log('已在完成字符中，跳过重复调用');
+                    return;
+                }
+                
+                this.isCompletingCharacter = true;
+                console.log('开始完成字符流程');
+                
+                this.showFeedback(`完成 "${this.currentCharacter}"！`, 'success');
+                
+                setTimeout(() => {
+                    this.nextCharacter();
+                }, 1500);
+            }
+
+            nextCharacter() {
+                console.log(`当前字符索引: ${this.currentCharacterIndex}, 准备切换到下一个字符`);
+                
+                try {
+                    // 完整的状态重置
+                    this.isQuizActive = false;
+                    this.clearStrokeHint();
+                    this.clearPrefillOverlay();
+                    
+                    // 停止当前的quiz
+                    if (this.practiceWriter && typeof this.practiceWriter.cancelQuiz === 'function') {
+                        console.log('取消当前quiz');
+                        this.practiceWriter.cancelQuiz();
+                    }
+                    
+                    // 重置所有相关状态变量
+                    this.completedStrokes.clear();
+                    this.currentStroke = 1;
+                    this.score = 0;
+                    
+                    console.log('状态重置完成');
+                    
+                    this.currentCharacterIndex++;
+                    
+                    if (this.currentCharacterIndex >= this.characterSequence.length) {
+                        // 完成所有字符练习
+                        console.log('所有字符练习完成');
+                        this.showFeedback('🎉 恭喜完成所有练习！', 'success');
+                        
+                        // 显示重新开始按钮
+                        setTimeout(() => {
+                            const restartConfirm = confirm('是否重新开始练习？');
+                            if (restartConfirm) {
+                                this.currentCharacterIndex = 0;
+                                console.log('重新开始练习，加载第一个字符:', this.characterSequence[0]);
+                                this.loadCharacter(this.characterSequence[this.currentCharacterIndex]);
+                            }
+                        }, 2000);
+                        return;
+                    }
+                    
+                    const nextCharacter = this.characterSequence[this.currentCharacterIndex];
+                    console.log(`准备切换到字符: ${nextCharacter} (索引: ${this.currentCharacterIndex})`);
+                    
+                    // 添加延迟确保状态完全重置
+                    setTimeout(() => {
+                        console.log(`开始加载字符: ${nextCharacter}`);
+                        this.loadCharacter(nextCharacter);
+                        // 重置防重复调用标志
+                        this.isCompletingCharacter = false;
+                        console.log('字符切换完成，重置isCompletingCharacter标志');
+                    }, 500);
+                    
+                } catch (error) {
+                    console.error('切换字符时发生错误:', error);
+                    this.showFeedback('切换字符失败，请重试', 'error');
+                    
+                    // 错误恢复：重新加载当前字符
+                    setTimeout(() => {
+                        console.log('错误恢复：重新加载当前字符');
+                        this.loadCharacter(this.characterSequence[this.currentCharacterIndex]);
+                    }, 1000);
+                }
+            }
+
+            skipCurrent() {
+                if (this.currentMode === 'stroke') {
+                    if (this.currentStroke < this.totalStrokes) {
+                        this.completedStrokes.add(this.currentStroke);
+                        this.currentStroke = this.findNextStroke();
+                        this.updateProgress();
+                        
+                        if (this.currentStroke >= this.totalStrokes) {
+                            if (!this.isCompletingCharacter) {
+                                this.completeCharacter();
+                            }
+                        } else {
+                            this.isQuizActive = false;
+                            this.startQuiz();
+                        }
+                    }
+                } else {
+                    this.nextCharacter();
+                }
+            }
+
+            showHint() {
+                if (this.currentMode === 'stroke') {
+                    if (!this.practiceWriter || this.currentStroke >= this.totalStrokes) return;
+                    try {
+                        this.practiceWriter.animateStroke(this.currentStroke, { 
+                            strokeAnimationSpeed: 1.0 
+                        });
+                        this.showFeedback('提示：注意笔画的方向和路径', 'info');
+                    } catch (error) {
+                        console.log('显示提示失败:', error);
+                    }
+                } else {
+                    // 部首模式提示：高亮正确的下一个选项
+                    const nextCorrectIndex = this.selectedOptions.findIndex(slot => slot === '');
+                    if (nextCorrectIndex !== -1) {
+                        const correctRadical = this.currentRadicalAnswer[nextCorrectIndex];
+                        const correctBtn = document.querySelector(`[data-radical="${correctRadical}"]`);
+                        if (correctBtn && !correctBtn.classList.contains('used')) {
+                            correctBtn.style.background = 'rgba(241, 196, 15, 0.4)';
+                            setTimeout(() => {
+                                correctBtn.style.background = '';
+                            }, 2000);
+                        }
+                    }
+                }
+            }
+
+            resetCurrent() {
+                if (this.currentMode === 'stroke') {
+                    this.completedStrokes.clear();
+                    this.prefilledStrokes.forEach(stroke => this.completedStrokes.add(stroke));
+                    this.currentStroke = this.findNextStroke();
+                    this.isQuizActive = false;
+                    this.loadCharacter(this.currentCharacter);
+                } else {
+                    this.selectedOptions.fill('');
+                    this.usedOptions.clear();
+                    document.querySelectorAll('.option-btn').forEach(btn => {
+                        btn.classList.remove('used', 'selected');
+                    });
+                    this.updateRadicalDisplay();
+                    document.getElementById('check-btn').disabled = true;
+                }
+            }
+
+            playSound() {
+                // 模拟发音功能
+                this.showFeedback(`正在播放 "${this.currentCharacter}" 的发音`, 'info');
+                setTimeout(() => this.hideFeedback(), 1500);
+            }
+
+            updateUI() {
+                // 更新标题
+                const currentPinyin = this.pinyinData[this.currentCharacter] || 'unknown';
+                document.getElementById('character-pinyin').textContent = currentPinyin;
+                
+                // 更新练习标题
+                if (this.currentMode === 'stroke') {
+                    document.getElementById('exercise-title').textContent = `Trace the hanzi "${this.currentCharacter}"`;
+                } else {
+                    document.getElementById('exercise-title').textContent = `Build the hanzi "${this.currentCharacter}"`;
+                }
+            }
+
+            updateProgress() {
+                if (this.currentMode === 'stroke' && this.totalStrokes > 0) {
+                    const progress = (this.completedStrokes.size / this.totalStrokes) * 100;
+                    document.getElementById('header-progress').style.width = `${progress}%`;
+                }
+            }
+
+            updateHearts() {
+                const heartElements = document.querySelectorAll('.heart');
+                heartElements.forEach((heart, index) => {
+                    heart.style.opacity = index < this.hearts ? '1' : '0.3';
+                });
+            }
+
+            showFeedback(message, type) {
+                const feedback = document.getElementById('feedback');
+                feedback.textContent = message;
+                feedback.className = `feedback ${type}`;
+                feedback.classList.remove('hidden');
+            }
+
+            hideFeedback() {
+                setTimeout(() => {
+                    document.getElementById('feedback').classList.add('hidden');
+                }, 3000);
+            }
+
+            renderStrokeHint(strokeIndex) {
+                if (!this.practiceWriter || strokeIndex >= this.totalStrokes) {
+                    this.clearStrokeHint();
+                    return;
+                }
+
+                try {
+                    const characterData = this.practiceWriter._character;
+                    const stroke = characterData.strokes[strokeIndex];
+                    if (!stroke) return;
+
+                    const canvas = document.getElementById('hint-overlay');
+                    const practiceTarget = document.getElementById('practice-target');
+                    const practiceCharacter = document.querySelector('.practice-character');
+                    
+                    // 调试：检查容器的实际尺寸
+                    console.log('容器尺寸调试信息:');
+                    console.log('practiceCharacter尺寸:', {
+                        offsetWidth: practiceCharacter.offsetWidth,
+                        offsetHeight: practiceCharacter.offsetHeight,
+                        clientWidth: practiceCharacter.clientWidth,
+                        clientHeight: practiceCharacter.clientHeight
+                    });
+                    console.log('practiceTarget尺寸:', {
+                        offsetWidth: practiceTarget.offsetWidth,
+                        offsetHeight: practiceTarget.offsetHeight,
+                        clientWidth: practiceTarget.clientWidth,
+                        clientHeight: practiceTarget.clientHeight
+                    });
+                    
+                    // 设置画布尺寸与practice-character容器一致
+                    canvas.width = practiceCharacter.offsetWidth;
+                    canvas.height = practiceCharacter.offsetHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // HanziWriter配置：width: 260, height: 260, padding: 20
+                    const writerConfig = {
+                        width: 260,
+                        height: 260,
+                        padding: 20
+                    };
+                    
+                    // practice-character容器的padding: 15px
+                    const containerPadding = 15;
+                    
+                    // practice-target的border: 3px
+                    const targetBorder = 3;
+                    
+                    // HanziWriter内部绘制区域尺寸（去除padding）
+                    const drawingArea = writerConfig.width - 2 * writerConfig.padding; // 220px
+                    
+                    // HanziWriter使用1024x1024的内部坐标系统（来自makemeahanzi数据）
+                    // 计算缩放比例：实际绘制区域 / 内部坐标系
+                    const scale = drawingArea / 1024;
+                    
+                    // 精确的坐标变换：
+                    // Make Me a Hanzi坐标系统：左上角(0, 900)，右下角(1024, -124)，Y轴向下递减
+                    // 需要应用SVG变换：scale(1, -1) translate(0, -900)
+                    // 1. practice-character的padding偏移 (15px)
+                    // 2. practice-target的border偏移 (3px)
+                    // 3. HanziWriter的padding偏移 (20px)
+                    // 4. 坐标缩放和Y轴翻转
+                    const transformPoint = (x, y) => {
+                        // 应用Make Me a Hanzi的坐标变换：scale(1, -1) translate(0, -900)
+                        // 这相当于：newY = -y - 900，但我们需要调整为正确的屏幕坐标
+                        const flippedY = 900 - y; // 将Y轴翻转并调整原点
+                        
+                        const transformedX = containerPadding + targetBorder + writerConfig.padding + x * scale;
+                        const transformedY = containerPadding + targetBorder + writerConfig.padding + flippedY * scale;
+                        
+                        // 调试：输出变换参数（只在第一个点输出）
+                        if (x === 0 && y === 0) {
+                            console.log('坐标变换调试信息:', {
+                                原始坐标: { x, y },
+                                缩放比例: scale,
+                                绘制区域尺寸: drawingArea,
+                                容器padding: containerPadding,
+                                目标border: targetBorder,
+                                Writer_padding: writerConfig.padding,
+                                变换后坐标: { x: transformedX, y: transformedY }
+                            });
+                        }
+                        
+                        return { x: transformedX, y: transformedY };
+                    };
+
+                    // 绘制笔画路径
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#f39c12'; // 引导虚线轮廓使用橙色
+                    ctx.lineWidth = 2; // 减小线宽以更好匹配实际笔画
+                    ctx.setLineDash([6, 3]); // 调整虚线样式
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+
+                    let firstPoint = null;
+                    
+                    // 解析SVG路径
+                    const pathData = stroke.path;
+                    const commands = pathData.match(/[MLQZ][^MLQZ]*/g) || [];
+                    
+                    for (const command of commands) {
+                        const type = command[0];
+                        const coords = command.slice(1).trim().split(/[\s,]+/).map(Number);
+                        
+                        if (type === 'M' && coords.length >= 2) {
+                            const point = transformPoint(coords[0], coords[1]);
+                            ctx.moveTo(point.x, point.y);
+                            if (!firstPoint) firstPoint = point;
+                        } else if (type === 'L' && coords.length >= 2) {
+                            const point = transformPoint(coords[0], coords[1]);
+                            ctx.lineTo(point.x, point.y);
+                        } else if (type === 'Q' && coords.length >= 4) {
+                            const cp = transformPoint(coords[0], coords[1]);
+                            const end = transformPoint(coords[2], coords[3]);
+                            ctx.quadraticCurveTo(cp.x, cp.y, end.x, end.y);
+                        }
+                    }
+                    
+                    ctx.stroke();
+
+                    // 添加数字标记起点
+                    if (firstPoint) {
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = '#f39c12';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        // 绘制白色背景圆圈
+                        ctx.beginPath();
+                        ctx.arc(firstPoint.x, firstPoint.y, 10, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'white';
+                        ctx.fill();
+                        ctx.strokeStyle = '#f39c12';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        
+                        // 绘制数字
+                        ctx.fillStyle = '#f39c12';
+                        ctx.fillText((strokeIndex + 1).toString(), firstPoint.x, firstPoint.y);
+                    }
+
+                } catch (error) {
+                    console.log('绘制引导线失败:', error);
+                }
+            }
+
+
+
+            clearStrokeHint() {
+                const canvas = document.getElementById('hint-overlay');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            // 新增：清空预绘制背景层，防止字符/模式切换时残留
+            clearPrefillOverlay() {
+                const canvas = document.getElementById('prefill-overlay');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new HanziLearningApp();
+        });
+    </script>
+</body>
+</html>
