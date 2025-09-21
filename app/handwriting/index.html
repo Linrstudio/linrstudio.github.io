@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-    <title>练习</title>
+    <title>汉字学习练习</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
     <style>
         * {
@@ -51,9 +51,10 @@
         }
 
         .close-btn {
-            width: 30px;
+            min-width: 30px; /* */
             height: 30px;
             background: rgba(255, 255, 255, 0.2);
+            background: 0; /* */
             border: none;
             border-radius: 50%;
             color: white;
@@ -62,6 +63,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 9px;
         }
 
         .progress-header {
@@ -320,6 +322,9 @@
 
         /* 反馈和控制 */
         .feedback {
+            visibility: hidden;
+            position: fixed;
+            top: 0;
             text-align: center;
             padding: 15px;
             border-radius: 15px;
@@ -377,9 +382,11 @@
         }
 
         .control-buttons {
+            
             display: flex;
             gap: 10px;
             margin-top: 15px;
+            display: none;
         }
 
         .control-btn {
@@ -470,15 +477,17 @@
 <body>
     <div class="app-header">
         <div class="header-left">
-            <button class="close-btn touchable">×</button>
+            <button class="close-btn touchable">
+                Dinguo
+            </button>
             <div class="progress-header">
                 <div class="progress-header-fill" id="header-progress"></div>
             </div>
         </div>
         <div class="hearts">
-            <span class="heart">♥</span>
-            <span class="heart">♥</span>
-            <span class="heart">♥</span>
+            <span class="heart">🎂</span>
+            <span class="heart">🎂</span>
+            <span class="heart">🎂</span>
         </div>
     </div>
 
@@ -550,8 +559,8 @@
         class HanziLearningApp {
             constructor() {
                 this.currentMode = 'stroke'; // 'stroke' or 'radical'
-                this.currentCharacter = '上';
-                this.characterSequence = ['上', '海', '好', '明', '森', '想'];
+                this.currentCharacter = '冬';
+                this.characterSequence = ['冬', '海', '好', '明', '森', '想'];
                 this.currentCharacterIndex = 0;
                 this.demoWriter = null;
                 this.practiceWriter = null;
