@@ -90,6 +90,8 @@
         .heart {
             color: #e74c3c;
             font-size: 20px;
+            display: inline-block;
+            transition: transform 0.2s ease;
         }
 
         .main-content {
@@ -480,6 +482,29 @@
         .success-animation {
             animation: success-flash 0.5s ease-in-out;
         }
+        /* 完成动画：心变蛋糕 */
+        .heart.morphing {
+            animation: heart-morph 300ms ease forwards;
+            filter: drop-shadow(0 0 0px rgba(255, 99, 71, 0.0));
+        }
+
+        .heart.cake-pop {
+            animation: cake-pop 480ms cubic-bezier(.2,.8,.2,1) forwards;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+        }
+
+        @keyframes heart-morph {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 0 rgba(255,0,0,0)); }
+            50% { transform: scale(0.1) rotate(-180deg); opacity: 0.8; }
+            100% { transform: scale(0.001) rotate(-360deg); opacity: 0.6; }
+        }
+
+        @keyframes cake-pop {
+            0% { transform: scale(0.001) rotate(0deg); opacity: 0.0; }
+            60% { transform: scale(1.15) rotate(3deg); opacity: 1; }
+            80% { transform: scale(0.95) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
     </style>
 </head>
 <body>
@@ -493,9 +518,9 @@
             </div>
         </div>
         <div class="hearts">
-            <span class="heart">🎂</span>
-            <span class="heart">🎂</span>
-            <span class="heart">🎂</span>
+            <span class="heart">♥</span>
+            <span class="heart">♥</span>
+            <span class="heart">♥</span>
         </div>
     </div>
 
@@ -636,6 +661,18 @@
                 document.addEventListener('gesturestart', (e) => e.preventDefault());
                 document.addEventListener('gesturechange', (e) => e.preventDefault());
                 document.addEventListener('gestureend', (e) => e.preventDefault());
+
+                // 窗口缩放/旋转时重绘两个叠层，保证清晰
+                this._onResize = this.debounce(() => {
+                    if (this.currentMode === 'stroke') {
+                        this.showPrefilledStrokes();
+                        this.renderStrokeHint(this.currentStroke);
+                    } else {
+                        this.clearPrefillOverlay();
+                        this.clearStrokeHint();
+                    }
+                }, 150);
+                window.addEventListener('resize', this._onResize);
             }
 
             switchMode(mode) {
@@ -1104,12 +1141,21 @@
                 const practiceCharacter = document.querySelector('.practice-character');
                 if (!canvas || !practiceTarget || !practiceCharacter) return;
 
-                // 设置画布尺寸与容器一致（与提示层同样的尺寸策略）
-                canvas.width = practiceCharacter.offsetWidth;
-                canvas.height = practiceCharacter.offsetHeight;
+                // 设置画布尺寸（按设备像素比提高清晰度）
+                const cssW = practiceCharacter.clientWidth;
+                const cssH = practiceCharacter.clientHeight;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = Math.max(1, Math.round(cssW * dpr));
+                canvas.height = Math.max(1, Math.round(cssH * dpr));
+                canvas.style.width = cssW + 'px';
+                canvas.style.height = cssH + 'px';
 
                 const ctx = canvas.getContext('2d');
+                // 先清空，再应用缩放到 CSS 坐标系
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                // 后续绘制继续使用 CSS 像素坐标
 
                 try { this.practiceWriter.showOutline(); } catch (_) {}
                 try { this.practiceWriter.hideCharacter(); } catch (_) {}
@@ -1399,6 +1445,8 @@
                         // 完成所有字符练习
                         console.log('所有字符练习完成');
                         this.showFeedback('🎉 恭喜完成所有练习！', 'success');
+                        // 将页头 ♥ 酷炫动画变为 🎂
+                        try { this.animateHeartsToCakes(); } catch (e) { console.log('动画触发失败', e); }
                         
                         // 显示重新开始按钮
                         setTimeout(() => {
@@ -1548,6 +1596,36 @@
                 }, 3000);
             }
 
+            // 完成所有练习后：将页头 ♥ 动画变为 🎂（若已是🎂也播放动效）
+            animateHeartsToCakes() {
+                const hearts = Array.from(document.querySelectorAll('.hearts .heart'));
+                if (!hearts.length) return;
+
+                hearts.forEach((el, idx) => {
+                    const delay = 120 * idx;
+                    setTimeout(() => {
+                        // 第一段：收缩/消隐
+                        el.classList.remove('cake-pop');
+                        el.classList.add('morphing');
+                        // 中段：切换为🎂并弹出发光
+                        setTimeout(() => {
+                            el.textContent = '🎂';
+                            el.classList.remove('morphing');
+                            el.classList.add('cake-pop');
+                        }, 260);
+                    }, delay);
+                });
+            }
+
+            // 简易防抖
+            debounce(fn, delay = 150) {
+                let t = null;
+                return (...args) => {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn.apply(this, args), delay);
+                };
+            }
+
             renderStrokeHint(strokeIndex) {
                 if (!this.practiceWriter || strokeIndex >= this.totalStrokes) {
                     this.clearStrokeHint();
@@ -1578,12 +1656,21 @@
                         clientHeight: practiceTarget.clientHeight
                     });
                     
-                    // 设置画布尺寸与practice-character容器一致
-                    canvas.width = practiceCharacter.offsetWidth;
-                    canvas.height = practiceCharacter.offsetHeight;
+                    // 设置画布尺寸，按设备像素比提高清晰度
+                    const cssW = practiceCharacter.clientWidth;
+                    const cssH = practiceCharacter.clientHeight;
+                    const dpr = window.devicePixelRatio || 1;
+                    canvas.width = Math.max(1, Math.round(cssW * dpr));
+                    canvas.height = Math.max(1, Math.round(cssH * dpr));
+                    canvas.style.width = cssW + 'px';
+                    canvas.style.height = cssH + 'px';
                     
                     const ctx = canvas.getContext('2d');
+                    // 先清空，再应用缩放到 CSS 坐标系
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    // 后续绘制继续使用 CSS 像素坐标
 
                     // HanziWriter配置：width: 260, height: 260, padding: 20
                     const writerConfig = {
