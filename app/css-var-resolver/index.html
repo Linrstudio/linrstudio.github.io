@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS自定义属性处理器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #fafafa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #eaeaea;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 100px);
+            gap: 1px;
+            background: #eaeaea;
+        }
+
+        .panel {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eaeaea;
+            background: #fafafa;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .panel-content {
+            flex: 1;
+            position: relative;
+            background: white;
+        }
+
+        .code-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 20px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            background: transparent;
+            color: transparent;
+            caret-color: #333;
+            tab-size: 2;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        .code-editor::selection {
+            background: rgba(0, 123, 255, 0.2);
+        }
+
+        .code-editor:focus {
+            background: transparent;
+        }
+
+        .syntax-highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .syntax-highlight .selector { color: #d73a49; font-weight: 600; }
+        .syntax-highlight .property { color: #005cc5; }
+        .syntax-highlight .value { color: #032f62; }
+        .syntax-highlight .variable { color: #e36209; font-weight: 500; }
+        .syntax-highlight .variable-def { color: #6f42c1; font-weight: 500; }
+        .syntax-highlight .comment { color: #6a737d; font-style: italic; }
+        .syntax-highlight .punctuation { color: #24292e; }
+        .syntax-highlight .string { color: #032f62; }
+        .syntax-highlight .number { color: #005cc5; }
+
+        .result-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 20px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            background: transparent;
+            color: transparent;
+            caret-color: #333;
+            tab-size: 2;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        .result-editor::selection {
+            background: rgba(0, 123, 255, 0.2);
+        }
+
+        .output-highlight {
+            background: #f8f9fa;
+        }
+
+        .error-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fee;
+            color: #c33;
+            padding: 12px 20px;
+            border-bottom: 1px solid #fcc;
+            font-size: 13px;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .status-bar {
+            padding: 8px 20px;
+            border-top: 1px solid #eaeaea;
+            background: #fafafa;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-success {
+            color: #059669;
+        }
+
+        .clear-btn {
+            background: #000;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .clear-btn:hover {
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CSS 自定义属性处理器</h1>
+        <p>将 CSS 自定义属性替换为实际值，支持 fallback 值处理</p>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">
+                输入 CSS 代码
+            </div>
+            <div class="panel-content">
+                <div class="syntax-highlight" id="input-highlight"></div>
+                <textarea 
+                    id="input-css" 
+                    class="code-editor" 
+                    spellcheck="false"
+                    placeholder="粘贴你的 CSS 代码..."></textarea>
+            </div>
+            <div class="status-bar">
+                <span id="input-status">等待输入...</span>
+                <div>
+                    <button class="clear-btn" onclick="formatInput()" style="margin-right: 8px;">格式化</button>
+                    <button class="clear-btn" onclick="clearInput()">清空</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                处理后的 CSS
+            </div>
+            <div class="panel-content">
+                <div id="error-display" class="error-message" style="display: none;"></div>
+                <div class="syntax-highlight output-highlight" id="output-highlight"></div>
+                <textarea 
+                    id="output-css" 
+                    class="result-editor" 
+                    readonly 
+                    spellcheck="false"
+                    placeholder="处理后的 CSS 将显示在这里..."></textarea>
+            </div>
+            <div class="status-bar">
+                <span id="output-status" class="status-success">准备就绪</span>
+                <button class="clear-btn" onclick="copyResult()">复制结果</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputEditor = document.getElementById('input-css');
+        const outputEditor = document.getElementById('output-css');
+        const inputHighlight = document.getElementById('input-highlight');
+        const outputHighlight = document.getElementById('output-highlight');
+        const inputStatus = document.getElementById('input-status');
+        const outputStatus = document.getElementById('output-status');
+        const errorDisplay = document.getElementById('error-display');
+
+        function highlightCss(code) {
+            if (!code) return '';
+            
+            // 转义HTML字符
+            code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // CSS语法高亮
+            code = code
+                // 注释
+                .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="comment">$1</span>')
+                // 选择器 (简化版，匹配到 { 之前的内容)
+                .replace(/^([^{]+)(\s*{)/gm, '<span class="selector">$1</span><span class="punctuation">$2</span>')
+                // CSS自定义属性定义
+                .replace(/(--[^:;\s]+)(\s*:\s*)([^;]+)(;)/g, '<span class="variable-def">$1</span><span class="punctuation">$2</span><span class="value">$3</span><span class="punctuation">$4</span>')
+                // var() 函数
+                .replace(/(var\()([^,)]+)((?:,\s*[^)]+)?)(\))/g, '<span class="variable">$1</span><span class="variable">$2</span><span class="variable">$3</span><span class="variable">$4</span>')
+                // CSS属性
+                .replace(/(\s+)([a-z-]+)(\s*:\s*)([^;]+)(;)/g, '$1<span class="property">$2</span><span class="punctuation">$3</span><span class="value">$4</span><span class="punctuation">$5</span>')
+                // 大括号
+                .replace(/([{}])/g, '<span class="punctuation">$1</span>');
+            
+            return code;
+        }
+
+        function updateHighlight() {
+            inputHighlight.innerHTML = highlightCss(inputEditor.value);
+            outputHighlight.innerHTML = highlightCss(outputEditor.value);
+            
+            // 同步滚动位置
+            syncScroll(inputEditor, inputHighlight);
+            syncScroll(outputEditor, outputHighlight);
+        }
+
+        function syncScroll(source, target) {
+            target.scrollTop = source.scrollTop;
+            target.scrollLeft = source.scrollLeft;
+        }
+
+        function updateTextareaSize(textarea, highlight) {
+            // 确保高亮层与文本域完全同步
+            highlight.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function showError(message) {
+            errorDisplay.textContent = message;
+            errorDisplay.style.display = 'block';
+            outputEditor.style.paddingTop = '60px';
+        }
+
+        function hideError() {
+            errorDisplay.style.display = 'none';
+            outputEditor.style.paddingTop = '20px';
+        }
+
+        function formatCss(cssText) {
+            if (!cssText.trim()) return '';
+            
+            let formatted = cssText;
+            
+            // 移除多余的空白和换行
+            formatted = formatted.replace(/\s+/g, ' ').trim();
+            
+            // 在选择器后添加换行和缩进
+            formatted = formatted.replace(/\s*{\s*/g, ' {\n  ');
+            
+            // 在每个属性后添加换行和缩进
+            formatted = formatted.replace(/;\s*/g, ';\n  ');
+            
+            // 在规则块结束后添加换行
+            formatted = formatted.replace(/\s*}\s*/g, '\n}\n\n');
+            
+            // 清理多余的缩进和空行
+            formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
+            formatted = formatted.replace(/{\n\s*\n/g, '{\n');
+            formatted = formatted.replace(/\n\s*\n}/g, '\n}');
+            
+            // 处理媒体查询和其他嵌套规则
+            formatted = formatted.replace(/@([^{]+){\s*/g, '@$1 {\n  ');
+            
+            // 清理最后的空行
+            formatted = formatted.trim();
+            
+            return formatted;
+        }
+
+        function processCss(cssText) {
+            try {
+                hideError();
+                
+                if (!cssText.trim()) {
+                    outputEditor.value = '';
+                    outputStatus.textContent = '等待输入...';
+                    inputStatus.textContent = '等待输入...';
+                    return;
+                }
+
+                // 提取自定义属性定义
+                const customProperties = new Map();
+                
+                // 匹配所有的自定义属性定义 --property-name: value;
+                const propertyRegex = /--([^:;\s]+)\s*:\s*([^;]+);/g;
+                let match;
+                while ((match = propertyRegex.exec(cssText)) !== null) {
+                    const propertyName = match[1];
+                    const propertyValue = match[2].trim();
+                    customProperties.set(`--${propertyName}`, propertyValue);
+                }
+
+                // 先移除自定义属性定义行，然后再处理var()函数
+                let processedCss = cssText;
+                
+                // 移除自定义属性定义（更精确的匹配）
+                processedCss = processedCss.replace(/^\s*--[^:;\s]+\s*:[^;]+;\s*$/gm, '');
+                // 也要移除在规则块内的自定义属性定义
+                processedCss = processedCss.replace(/([{;]\s*)--[^:;\s]+\s*:[^;]+;(\s*)/g, '$1$2');
+
+                // 改进的var()匹配正则，支持嵌套括号和复杂fallback值
+                function replaceVarFunctions(text) {
+                    let result = text;
+                    let hasChanges = true;
+                    let iterations = 0;
+                    const maxIterations = 10; // 防止无限循环
+                    
+                    while (hasChanges && iterations < maxIterations) {
+                        hasChanges = false;
+                        iterations++;
+                        
+                        // 更精确的var()匹配，处理嵌套括号和无fallback的情况
+                        result = result.replace(/var\(\s*(--[^,)]+)(?:\s*,\s*([^)]*(?:\([^)]*\)[^)]*)*))?\s*\)/g, (match, varName, fallback) => {
+                            hasChanges = true;
+                            varName = varName.trim();
+                            
+                            if (customProperties.has(varName)) {
+                                // 如果定义了这个自定义属性，使用定义的值
+                                return customProperties.get(varName);
+                            } else if (fallback !== undefined && fallback.trim() !== '') {
+                                // 如果有fallback值，使用fallback
+                                return fallback.trim();
+                            } else {
+                                // 如果既没有定义也没有fallback，移除这个var()调用
+                                return '';
+                            }
+                        });
+                        
+                        // 清理因移除var()导致的多余逗号和空格
+                        result = result.replace(/,\s*,/g, ','); // 连续逗号
+                        result = result.replace(/,\s*([;}])/g, '$1'); // 末尾逗号
+                        result = result.replace(/:\s*,/g, ':'); // 开头逗号
+                        result = result.replace(/\s+,/g, ','); // 逗号前多余空格
+                        result = result.replace(/,\s+/g, ', '); // 标准化逗号后空格
+                        result = result.replace(/\s{2,}/g, ' '); // 多余空格
+                        
+                        // 处理空的属性值
+                        result = result.replace(/:\s*;/g, ': initial;');
+                        // 移除只有initial值的无用属性
+                        result = result.replace(/^\s*[^:]+:\s*initial;\s*$/gm, '');
+                    }
+                    
+                    return result;
+                }
+                
+                processedCss = replaceVarFunctions(processedCss);
+                
+                // 清理多余的空行和空的规则块
+                processedCss = processedCss.replace(/\n\s*\n\s*\n/g, '\n\n');
+                processedCss = processedCss.replace(/{\s*\n\s*\n/g, '{\n');
+                processedCss = processedCss.replace(/\n\s*\n\s*}/g, '\n}');
+                // 移除空的CSS规则块
+                processedCss = processedCss.replace(/[^{}]+{\s*}/g, '');
+                // 清理开头和结尾的空白
+                processedCss = processedCss.trim();
+
+                // 格式化处理后的CSS
+                processedCss = formatCss(processedCss);
+
+                outputEditor.value = processedCss;
+                updateHighlight(); // 更新语法高亮
+                
+                const propertyCount = customProperties.size;
+                const originalVarCount = (cssText.match(/var\(/g) || []).length;
+                const remainingVarCount = (processedCss.match(/var\(/g) || []).length;
+                const replacedVarCount = originalVarCount - remainingVarCount;
+                
+                inputStatus.textContent = `发现 ${propertyCount} 个自定义属性，${originalVarCount} 个var()调用`;
+                
+                if (remainingVarCount > 0) {
+                    outputStatus.textContent = `处理完成 - 已替换 ${replacedVarCount}/${originalVarCount} 个var()调用，${remainingVarCount} 个未处理`;
+                    outputStatus.className = '';
+                } else {
+                    outputStatus.textContent = `处理完成 - 已替换所有 ${replacedVarCount} 个var()调用 - ${new Date().toLocaleTimeString()}`;
+                    outputStatus.className = 'status-success';
+                }
+
+            } catch (error) {
+                showError(`处理错误: ${error.message}`);
+                outputStatus.textContent = '处理失败';
+                outputStatus.className = '';
+            }
+        }
+
+        function clearInput() {
+            inputEditor.value = '';
+            outputEditor.value = '';
+            inputStatus.textContent = '已清空';
+            outputStatus.textContent = '等待输入...';
+            hideError();
+            updateHighlight();
+        }
+
+        function copyResult() {
+            if (outputEditor.value.trim()) {
+                outputEditor.select();
+                document.execCommand('copy');
+                
+                const originalText = outputStatus.textContent;
+                outputStatus.textContent = '已复制到剪贴板！';
+                setTimeout(() => {
+                    outputStatus.textContent = originalText;
+                }, 2000);
+            }
+        }
+
+        // 监听输入变化，增加格式化
+        inputEditor.addEventListener('input', () => {
+            processCss(inputEditor.value);
+            setTimeout(updateHighlight, 0); // 延迟更新确保同步
+        });
+
+        // 监听粘贴事件，增加格式化
+        inputEditor.addEventListener('paste', () => {
+            setTimeout(() => {
+                // 格式化输入的CSS
+                const formatted = formatCss(inputEditor.value);
+                if (formatted !== inputEditor.value) {
+                    inputEditor.value = formatted;
+                }
+                processCss(inputEditor.value);
+                setTimeout(updateHighlight, 0);
+            }, 10);
+        });
+
+        // 同步滚动
+        inputEditor.addEventListener('scroll', () => {
+            syncScroll(inputEditor, inputHighlight);
+        });
+        
+        outputEditor.addEventListener('scroll', () => {
+            syncScroll(outputEditor, outputHighlight);
+        });
+
+        // 添加格式化按钮功能
+        function formatInput() {
+            const formatted = formatCss(inputEditor.value);
+            inputEditor.value = formatted;
+            processCss(formatted);
+            setTimeout(updateHighlight, 0);
+        }
+
+        // 初始化示例并格式化
+        inputEditor.value = `.example {
+  --primary-color: #007bff;
+  --text-color: #333;
+  --border-width: 2px;
+  
+  background: var(--primary-color);
+  color: var(--text-color);
+  border: var(--border-width) solid var(--border-color, #ddd);
+  padding: var(--spacing, 16px);
+  letter-spacing: var(--web-ui_button-letter-spacing, 0.8px);
+  transition: filter .2s, transform var(--web-ui_button-transition-lip);
+}
+
+.card {
+  --bg-color: white;
+  background: var(--bg-color);
+  box-shadow: 0 2px 4px var(--shadow-color, rgba(0,0,0,0.1));
+  font-size: var(--undefined-size, calc(1rem + 2px));
+  animation: var(--undefined-animation) 1s ease;
+}`;
+
+        // 格式化初始示例
+        inputEditor.value = formatCss(inputEditor.value);
+        processCss(inputEditor.value);
+        updateHighlight(); // 初始化语法高亮
+    </script>
+</body>
+</html>
