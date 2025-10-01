@@ -381,22 +381,75 @@
                         hasChanges = false;
                         iterations++;
                         
-                        // 更精确的var()匹配，处理嵌套括号和无fallback的情况
-                        result = result.replace(/var\(\s*(--[^,)]+)(?:\s*,\s*([^)]*(?:\([^)]*\)[^)]*)*))?\s*\)/g, (match, varName, fallback) => {
-                            hasChanges = true;
-                            varName = varName.trim();
-                            
-                            if (customProperties.has(varName)) {
-                                // 如果定义了这个自定义属性，使用定义的值
-                                return customProperties.get(varName);
-                            } else if (fallback !== undefined && fallback.trim() !== '') {
-                                // 如果有fallback值，使用fallback
-                                return fallback.trim();
+                        // 使用更精确的方式匹配var()，手动处理括号匹配
+                        let processedText = '';
+                        let i = 0;
+                        
+                        while (i < result.length) {
+                            // 查找 var(
+                            if (result.substr(i, 4) === 'var(') {
+                                hasChanges = true;
+                                
+                                // 找到var(的起始位置
+                                let start = i;
+                                i += 4; // 跳过 'var('
+                                
+                                // 提取变量名和fallback
+                                let depth = 1;
+                                let varContent = '';
+                                
+                                while (i < result.length && depth > 0) {
+                                    if (result[i] === '(') {
+                                        depth++;
+                                    } else if (result[i] === ')') {
+                                        depth--;
+                                        if (depth === 0) break;
+                                    }
+                                    varContent += result[i];
+                                    i++;
+                                }
+                                
+                                // 跳过最后的 )
+                                i++;
+                                
+                                // 解析varContent，分离变量名和fallback
+                                let varName = '';
+                                let fallback = '';
+                                let commaPos = -1;
+                                let bracketDepth = 0;
+                                
+                                for (let j = 0; j < varContent.length; j++) {
+                                    if (varContent[j] === '(') bracketDepth++;
+                                    if (varContent[j] === ')') bracketDepth--;
+                                    
+                                    if (varContent[j] === ',' && bracketDepth === 0 && commaPos === -1) {
+                                        commaPos = j;
+                                        varName = varContent.substring(0, j).trim();
+                                        fallback = varContent.substring(j + 1).trim();
+                                        break;
+                                    }
+                                }
+                                
+                                if (commaPos === -1) {
+                                    varName = varContent.trim();
+                                }
+                                
+                                // 替换逻辑
+                                if (customProperties.has(varName)) {
+                                    processedText += customProperties.get(varName);
+                                } else if (fallback) {
+                                    processedText += fallback;
+                                } else {
+                                    // 没有定义也没有fallback，移除
+                                    processedText += '';
+                                }
                             } else {
-                                // 如果既没有定义也没有fallback，移除这个var()调用
-                                return '';
+                                processedText += result[i];
+                                i++;
                             }
-                        });
+                        }
+                        
+                        result = processedText;
                         
                         // 清理因移除var()导致的多余逗号和空格
                         result = result.replace(/,\s*,/g, ','); // 连续逗号
