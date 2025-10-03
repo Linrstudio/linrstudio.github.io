@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-    <title>豆豆国 - 生日快乐 - 练汉字</title>
+    <title>Doudougo - 学写字</title>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
     <style>
         * {
@@ -49,7 +49,7 @@
             pointer-events: none;
         }
         .app-splash {
-          animation: fadeout 0.3s forwards 1.5s;
+          animation: fadeout 0.3s forwards 2.5s;
         }
         .app-ending {
           visibility: hidden;
@@ -599,6 +599,8 @@
             100% { opacity: 0; }
         }
     </style>
+    <link rel="preload" href="./doudougo.svg" as="image">
+    <link rel="preload" href="./doudougo.riv" as="fetch">
 </head>
 <body>
     <div class="app-splash">
@@ -1908,6 +1910,8 @@
                     console.log('绘制引导线失败:', error);
                 }
             }
+
+
 
             clearStrokeHint() {
                 const canvas = document.getElementById('hint-overlay');
