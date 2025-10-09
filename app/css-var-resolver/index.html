@@ -234,7 +234,6 @@
                 <textarea 
                     id="output-css" 
                     class="result-editor" 
-                    readonly 
                     spellcheck="false"
                     placeholder="处理后的 CSS 将显示在这里..."></textarea>
             </div>
@@ -350,20 +349,32 @@
                     return;
                 }
 
+                // 保护Data URI，避免被错误处理
+                const dataUriMap = new Map();
+                let dataUriCounter = 0;
+                
+                // 临时替换所有的Data URI为占位符
+                let protectedCss = cssText.replace(/url\s*\(\s*["']?(data:[^"')]+)["']?\s*\)/gi, (match, dataUri) => {
+                    const placeholder = `__DATA_URI_${dataUriCounter}__`;
+                    dataUriMap.set(placeholder, match);
+                    dataUriCounter++;
+                    return placeholder;
+                });
+
                 // 提取自定义属性定义
                 const customProperties = new Map();
                 
                 // 匹配所有的自定义属性定义 --property-name: value;
                 const propertyRegex = /--([^:;\s]+)\s*:\s*([^;]+);/g;
                 let match;
-                while ((match = propertyRegex.exec(cssText)) !== null) {
+                while ((match = propertyRegex.exec(protectedCss)) !== null) {
                     const propertyName = match[1];
                     const propertyValue = match[2].trim();
                     customProperties.set(`--${propertyName}`, propertyValue);
                 }
 
                 // 先移除自定义属性定义行，然后再处理var()函数
-                let processedCss = cssText;
+                let processedCss = protectedCss;
                 
                 // 移除自定义属性定义（更精确的匹配）
                 processedCss = processedCss.replace(/^\s*--[^:;\s]+\s*:[^;]+;\s*$/gm, '');
@@ -470,6 +481,11 @@
                 
                 processedCss = replaceVarFunctions(processedCss);
                 
+                // 恢复Data URI
+                dataUriMap.forEach((original, placeholder) => {
+                    processedCss = processedCss.replace(new RegExp(placeholder, 'g'), original);
+                });
+                
                 // 清理多余的空行和空的规则块
                 processedCss = processedCss.replace(/\n\s*\n\s*\n/g, '\n\n');
                 processedCss = processedCss.replace(/{\s*\n\s*\n/g, '{\n');
@@ -533,6 +549,11 @@
         inputEditor.addEventListener('input', () => {
             processCss(inputEditor.value);
             setTimeout(updateHighlight, 0); // 延迟更新确保同步
+        });
+
+        // 监听输出编辑器变化，更新高亮
+        outputEditor.addEventListener('input', () => {
+            setTimeout(updateHighlight, 0);
         });
 
         // 监听粘贴事件，增加格式化
