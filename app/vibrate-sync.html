@@ -1,204 +1,177 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>同步震动（少女粉版）</title>
-  <link rel="icon" href="https://emoji-static.muan.co/emoji-png/1f497.png" />
-  <style>
-    body {
-      background: linear-gradient(120deg, #ffd6ec 0%, #ffe1ef 100%);
-      font-family: 'Liu Jian Mao Cao', 'Comic Sans MS', 'STXingkai', cursive, system-ui;
-      color: #d9408f;
-      max-width: 600px;
-      margin: 0px auto;
-      padding: 24px 8px 24px 8px;
-    }
-    h1 {
-      color: #ff69b4;
-      text-shadow: 0 2px 12px #fff0fa, 1px 2px 0 #ffb6d5;
-      font-family: 'Comic Sans MS','cursive',system-ui;
-      font-size:2.1em;
-    }
-    .card {
-      background: #fff6ff66;
-      border-radius: 22px;
-      padding: 22px 14px 18px 14px;
-      box-shadow: 0px 2px 16px #ffd6ec77;
-      margin:14px 0;
-    }
-    label {
-      display:block;
-      margin: 9px 0 2px 4px;
-      font-size:1.01em;
-      color: #d9408f;
-    }
-    input, select, button {
-      border-radius: 10px;
-      border: 1px solid #ffb7e3;
-      margin-top: 3px;
-      padding: 7px 14px;
-      font-size:1.01em;
-      background: #fff6ff;
-      color: #d9408f;
-      outline:none;
-      margin-bottom: 7px;
-    }
-    input:focus, select:focus {
-      border-color: #ff69b4;
-    }
-    button, .btn {
-      background: linear-gradient(90deg,#ffb7e3 0%, #ffd6ec 50%, #ffb7e3 100%);
-      color: #ec0c81;
-      border: 1px solid #ff69b4;
-      font-weight:bold;
-      cursor:pointer;
-      transition:0.2s;
-      margin-right:9px;
-    }
-    button:hover { box-shadow:0 0 9px #ffd0eb; }
-    .peer-id-box {
-      background: #ffebfa;
-      border-radius:13px;
-      padding:4px 10px;
-      font-size:0.98em;
-      word-break:break-all;
-      margin: 3px 0 8px 0;
-      color:#ffffff;
-      background: linear-gradient(90deg, #ff8ddf 30%, #ffc2ef 100%);
-      font-weight:bold;
-      letter-spacing: 1px;
-    }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .log {
-      min-height:44px;
-      max-height:110px;
-      overflow:auto;
-      background:#fff6ffcc;
-      font-size: 0.97em;
-      color: #d9408f;
-      padding: 9px 6px;
-      border-radius: 12px;
-      margin: 7px 0 2px 0;
-      border:1px solid #ffe8f4;
-    }
-    .corner {
-      background: linear-gradient(90deg,#ffd6ec 0%,#fffafb 100%);
-      border-radius: 13px;
-      padding:2px 10px;
-      font-size:.93em;
-      display:inline-block;
-      margin-left:8px;
-      color:#ec0c81;
-    }
-    @media (max-width:520px){.card{padding:12px 4px 10px 4px;} h1{font-size:1.2em;} }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>同步震动（修复版）</title>
+    <meta name="description" content="支持PWA安装，多浏览器兼容的同步震动工具">
+    <meta name="theme-color" content="#ff9999">
+
+    <!-- PWA 支持 -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        body { font-family: sans-serif; background: linear-gradient(#ffebee, #ffcccc); color: #333; text-align: center; padding: 20px; margin: 0; }
+        h1 { color: #ff69b4; }
+        input, button { padding: 12px; margin: 10px; font-size: 18px; border-radius: 8px; border: none; }
+        input { width: 80%; max-width: 300px; }
+        button { background: #ff69b4; color: white; cursor: pointer; width: 80%; max-width: 300px; }
+        button:disabled { background: #ccc; }
+        #status { margin: 20px; font-size: 20px; color: #ff1493; }
+        #vibrateBtn { background: #ff1493; font-size: 24px; padding: 20px; }
+        #vibrateBtn.active { background: #c71585; }
+    </style>
 </head>
 <body>
-  <h1>🤍 同步震动（少女粉版）</h1>
-  <div class="card">
-    <label>震动间隔 (毫秒)</label>
-    <input id="interval" type="number" value="1100" min="100" />
-    <label>每次震动模式（输入正整数毫秒，逗号分隔。如 180,40,180）</label>
-    <input id="pattern" type="text" value="150"  placeholder="如 150 或 100,80,100" />
-    <label>预设强度</label>
-    <select id="strength">
-      <option value="0">不使用预设</option>
-      <option value="1">微弱</option>
-      <option value="2">较弱</option>
-      <option value="3" selected>中等</option>
-      <option value="4">较强</option>
-      <option value="5">超强</option>
-    </select>
-    <div style="margin:12px 0 0 6px">
-      <button id="startBtn">✨ 开始震动</button>
-      <button id="stopBtn">❌ 停止</button>
-      <span class="corner">如震动无效，请用真机打开</span>
+    <h1>同步震动（少女粉版）</h1>
+    <p>支持安装到主屏（PWA），兼容 Edge 等浏览器震动</p>
+
+    <div id="roomSection">
+        <input type="text" id="roomId" placeholder="输入房间号加入，或直接创建">
+        <button id="joinBtn">加入 / 创建房间</button>
     </div>
-  </div>
-  <div class="card">
-    <div style="font-weight:bold; color:#ec0c81;margin-bottom:2px;">👭 多人同步：</div>
-    <div class="row" style="gap:2px">
-      <button id="createSession">👑创建房间(房主)</button>
-      <input id="hostIdInput" style="width:105px" placeholder="输入房主ID加入" />
-      <button id="joinSession">🔗加入房间</button>
+
+    <div id="controlSection" style="display:none;">
+        <p>房间号: <span id="currentRoom"></span></p>
+        <p id="status">等待对方...</p>
+        <button id="vibrateBtn">点击开始震动</button>
     </div>
-    <div>我的ID：<span id="myId" class="peer-id-box">-</span></div>
-    <div>已连房主：<span id="connectedHost" class="peer-id-box">-</span></div>
-    <div>在线成员：<span id="peersList" class="peer-id-box">-</span></div>
-    <label style="margin-top:7px;"><input type="checkbox" id="autoSync" checked /> 自动同步设置到成员</label>
-  </div>
-  <div class="card">
-    <b>操作日志：</b>
-    <div id="log" class="log"></div>
-  </div>
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-  <script>
-    // 日志
-    const logEl = document.getElementById('log');
-    function log(...args){ const s = args.join(' '); logEl.innerText += (new Date()).toLocaleTimeString() + ' - ' + s + '\n'; logEl.scrollTop = logEl.scrollHeight; }
-    // 元素
-    const intervalInput = document.getElementById('interval');
-    const patternInput = document.getElementById('pattern');
-    const strengthSelect = document.getElementById('strength');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const createSessionBtn = document.getElementById('createSession');
-    const joinSessionBtn = document.getElementById('joinSession');
-    const hostIdInput = document.getElementById('hostIdInput');
-    const myIdEl = document.getElementById('myId');
-    const connectedHostEl = document.getElementById('connectedHost');
-    const peersListEl = document.getElementById('peersList');
-    const autoSyncCheckbox = document.getElementById('autoSync');
-    // PeerJS变量
-    let peer= null, isHost=false, hostId=null, connections=[], timer=null, running=false;
-    const strengthMap = { '1':50, '2':100, '3':150, '4':250, '5':400 };
-    function parsePattern(text){
-      const parts=text.split(/[,\u001a\s]+/).map(s=>s.trim()).filter(Boolean);
-      const nums=parts.map(p=>Math.max(0, Number(p)||0));
-      return nums.length?nums:[150];
-    }
-    function getPattern(){
-      const s=strengthSelect.value;
-      if(s!=='0')return [strengthMap[s]||150];
-      return parsePattern(patternInput.value);
-    }
-    function startVibrate(){
-      if(!('vibrate'in navigator)){log('该设备/浏览器不支持震动');return;}
-      if(running)return;
-      running=true;
-      const interval = Math.max(50,Number(intervalInput.value)||1100);
-      const pattern = getPattern();
-      try{navigator.vibrate(pattern);}catch(e){log('vibrate异常',e);}
-      timer = setInterval(()=>{ try{navigator.vibrate(pattern);}catch(e){} },interval);
-      log('本机开始震动 pattern=' + JSON.stringify(pattern)+', 间隔='+interval);
-    }
-    function stopVibrate(){
-      if(!running)return;
-      running=false;
-      clearInterval(timer);timer=null;
-      try{navigator.vibrate(0);}catch(e){}
-      log('已停止震动');
-    }
-    startBtn.onclick=_=>{startVibrate();broadcast({type:'start'});};
-    stopBtn.onclick=_=>{stopVibrate();broadcast({type:'stop'});};
-    [intervalInput, patternInput,strengthSelect].forEach(el=>{
-      el.onchange=_=>{if(isHost&&autoSyncCheckbox.checked)sendConfig();else if(!isHost&&getHostConn()){getHostConn().send({type:'configRequest',config:getLocalCfg()});}}
-    });
-    function getLocalCfg(){ return {interval:Number(intervalInput.value)||1100, patternText:patternInput.value, strength:strengthSelect.value}; }
-    function applyCfg(cfg){if(!cfg)return;intervalInput.value=cfg.interval||1100;patternInput.value=cfg.patternText||patternInput.value;strengthSelect.value=cfg.strength||'0';log('同步设置:'+JSON.stringify(cfg));}
-    function ensurePeer(){ if(peer)return peer; peer=new Peer(); peer.on('open',id=>{myIdEl.innerText=id;log('Peer已就绪:'+id);}); peer.on('error',err=>{log('Peer错误:',err);}); return peer; }
-    createSessionBtn.onclick=_=>{ isHost=true;connections=[];ensurePeer(); peer.on('connection',conn=>{ log('有成员连接:'+conn.peer);connections.push(conn);updatePeers(); conn.on('data',data=>{ onClientMsg(conn,data); });conn.on('close',()=>{log('成员退出:'+conn.peer);connections=connections.filter(c=>c!==conn);updatePeers();});conn.on('open',()=>{conn.send({type:'sync',config:getLocalCfg(),running:running}); });}); log('房主已创建，分享下方ID邀请她人加入'); };
-    joinSessionBtn.onclick=_=>{ isHost=false;const to=hostIdInput.value.trim();if(!to){alert('请输入房主ID');return;} ensurePeer();const conn=peer.connect(to);hostId=to;connectedHostEl.innerText=hostId;conn.on('open',()=>{log('成功连接到房主:'+to);conn.send({type:'syncRequest'});});conn.on('data',data=>{onHostMsg(conn,data);});conn.on('close',()=>{log('与房主断开');connectedHostEl.innerText='-';});conn.on('error',err=>log('连接错误',err));connections=[conn];updatePeers(); };
-    function getHostConn(){ if(isHost)return null; return connections[0]||null; }
-    function updatePeers(){ peersListEl.innerText = isHost ? (connections.map(c=>c.peer).join(',')||'-') : '-'; }
-    function broadcast(msg){ if(isHost){connections.forEach(conn=>{if(conn.open)conn.send(msg);});} else{const c=getHostConn();if(c&&c.open)c.send(msg);} }
-    function sendConfig(){broadcast({type:'config',config:getLocalCfg()});log('设置自动同步');}
-    function onClientMsg(conn,data){try{if(!data||!data.type)return;if(data.type==='configRequest'){log('收到成员configRequest:'+conn.peer);}else if(data.type==='start'){broadcast({type:'start'});startVibrate();}else if(data.type==='stop'){broadcast({type:'stop'});stopVibrate();}else if(data.type==='syncRequest'){conn.send({type:'sync',config:getLocalCfg(),running:running});}else{log('未知成员消息',data);}}catch(e){}}
-    function onHostMsg(conn,data){try{if(!data||!data.type)return;if(data.type==='sync'){log('房主同步配置');applyCfg(data.config);if(data.running)startVibrate();else stopVibrate();}else if(data.type==='config'){log('房主已修改设置');applyCfg(data.config);}else if(data.type==='start'){startVibrate();log('收到房主开始指令');}else if(data.type==='stop'){stopVibrate();log('收到房主停止指令');}else{log('未知房主消息',data);}}catch(e){}}
-    window.addEventListener('beforeunload',()=>{try{if(peer)peer.destroy();}catch(e){}});
-  </script>
-  <div style="height:36px;"></div>
-  <div style="text-align:center;font-size:0.9em;color:#c97cb1">Copilot-Chat 生成 • 仅供学习参考</div>
+
+    <!-- 简单的 manifest.json 内容（实际部署时需单独文件，这里用 data URL 模拟支持） -->
+    <script>
+        // 模拟 manifest（如果服务器支持，可上传独立文件）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+
+    <script>
+        // 注意：此版本使用免费公共信令服务（示例用 Pusher 或简单 WebSocket）
+        // 这里用一个公开的免费房间同步服务示例（实际可替换为 socket.io 或 peerjs）
+        // 为简单起见，使用 https://www.chatzy.com/ 或类似，但这里模拟一个简单 Firebase Realtime Database 免费实例（需替换你的 config）
+
+        // 实际推荐：使用 PeerJS（P2P，无服务器）
+        const Peer = window.peerjs.Peer;
+        let peer = null;
+        let conn = null;
+        let roomId = null;
+        let isVibrating = false;
+
+        const statusEl = document.getElementById('status');
+        const vibrateBtn = document.getElementById('vibrateBtn');
+        const currentRoomEl = document.getElementById('currentRoom');
+
+        function startVibration() {
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200, 100, 200]); // 可自定义模式
+                isVibrating = true;
+                vibrateBtn.textContent = '停止震动';
+                vibrateBtn.classList.add('active');
+            }
+        }
+
+        function stopVibration() {
+            navigator.vibrate(0);
+            isVibrating = false;
+            vibrateBtn.textContent = '点击开始震动';
+            vibrateBtn.classList.remove('active');
+        }
+
+        vibrateBtn.onclick = () => {
+            if (isVibrating) {
+                stopVibration();
+                if (conn && conn.open) conn.send({action: 'stop'});
+            } else {
+                startVibration();
+                if (conn && conn.open) conn.send({action: 'start'});
+            }
+        };
+
+        document.getElementById('joinBtn').onclick = () => {
+            roomId = document.getElementById('roomId').value.trim() || Math.random().toString(36).substr(2, 8);
+            currentRoomEl.textContent = roomId;
+            document.getElementById('roomSection').style.display = 'none';
+            document.getElementById('controlSection').style.display = 'block';
+
+            // 使用 PeerJS（CDN 已加载）
+            peer = new Peer();
+
+            peer.on('open', id => {
+                console.log('My peer ID is: ' + id);
+            });
+
+            // 作为主机或加入
+            const remoteId = roomId; // 简单约定：房间号作为对方 Peer ID（实际可 hash 或用信令服务器）
+
+            // 简单轮询连接（实际用信令更好）
+            conn = peer.connect(remoteId);
+            conn.on('open', () => {
+                statusEl.textContent = '已连接对方！';
+            });
+
+            peer.on('connection', incoming => {
+                conn = incoming;
+                conn.on('open', () => statusEl.textContent = '已连接对方！');
+                conn.on('data', handleData);
+            });
+
+            conn.on('data', handleData);
+        };
+
+        function handleData(data) {
+            if (data.action === 'start') {
+                statusEl.textContent = '对方开始震动，点击你的按钮同步！';
+            } else if (data.action === 'stop') {
+                statusEl.textContent = '对方停止';
+            }
+        }
+    </script>
+
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <!-- 简单 service worker（实际部署时单独文件 sw.js） -->
+    <script>
+        // Inline service worker for basic PWA cache
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open('vibrate-sync-v1').then(cache => cache.addAll(['/app/vibrate-sync.html'])));
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(resp => resp || fetch(e.request)));
+});
+`;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl);
+        }
+    </script>
 </body>
 </html>
+配套文件（需上传到同一目录）：
+manifest.json
+{
+  "name": "同步震动",
+  "short_name": "震动同步",
+  "description": "支持PWA的同步震动工具",
+  "start_url": "/app/vibrate-sync.html",
+  "display": "standalone",
+  "background_color": "#ffebee",
+  "theme_color": "#ff9999",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
