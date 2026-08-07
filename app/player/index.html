@@ -172,7 +172,7 @@
 <body>
 
 <div id="stage">
-  <video id="video" playsinline></video>
+  <video id="video" controls playsinline></video>
   <div id="empty">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/>
@@ -223,6 +223,7 @@
 
   function loadSource(url, autoplay){
     if(!url) return;
+url = url.replaceAll('$','');
     input.value = url;
     showEmpty(false);
     setStatus('正在加载…');
