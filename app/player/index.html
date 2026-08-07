@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>M3U8 Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<style>
+  :root{
+    --background:#000000;
+    --surface:#0a0a0a;
+    --border:#27272a;
+    --foreground:#fafafa;
+    --muted:#a1a1aa;
+    --ring:#fafafa;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    background:var(--background);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    overflow:hidden;
+  }
+  #stage{
+    position:fixed;
+    inset:0;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  video{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    background:#000;
+    outline:none;
+  }
+
+  /* Empty state */
+  #empty{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:14px;
+    color:var(--muted);
+    text-align:center;
+    padding:24px;
+  }
+  #empty svg{opacity:.5;}
+  #empty h1{
+    font-size:14px;
+    font-weight:500;
+    color:var(--foreground);
+    margin:0;
+    letter-spacing:.01em;
+  }
+  #empty p{
+    font-size:13px;
+    color:var(--muted);
+    margin:0;
+    max-width:360px;
+    line-height:1.5;
+  }
+
+  /* Top bar */
+  #bar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    display:flex;
+    gap:8px;
+    padding:12px;
+    background:linear-gradient(to bottom, rgba(0,0,0,.65), rgba(0,0,0,0));
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:10;
+  }
+  #bar.hidden{
+    opacity:0;
+    transform:translateY(-8px);
+    pointer-events:none;
+  }
+  #url-input{
+    flex:1;
+    min-width:0;
+    background:rgba(10,10,10,.9);
+    border:1px solid var(--border);
+    color:var(--foreground);
+    font-family:inherit;
+    font-size:13px;
+    padding:9px 12px;
+    border-radius:var(--radius);
+    outline:none;
+    backdrop-filter:blur(6px);
+  }
+  #url-input::placeholder{color:var(--muted);}
+  #url-input:focus{
+    border-color:var(--ring);
+    box-shadow:0 0 0 1px var(--ring);
+  }
+  button{
+    font-family:inherit;
+    font-size:13px;
+    font-weight:500;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:rgba(10,10,10,.9);
+    color:var(--foreground);
+    padding:9px 14px;
+    cursor:pointer;
+    white-space:nowrap;
+    backdrop-filter:blur(6px);
+    transition:background .15s ease, border-color .15s ease;
+  }
+  button:hover{
+    background:rgba(255,255,255,.06);
+    border-color:#3f3f46;
+  }
+  button:active{background:rgba(255,255,255,.1);}
+  button.primary{
+    background:var(--foreground);
+    color:#000;
+    border-color:var(--foreground);
+  }
+  button.primary:hover{background:#e4e4e7;}
+  button.icon{
+    padding:9px 10px;
+    display:flex;
+    align-items:center;
+  }
+
+  /* Status pill */
+  #status{
+    position:fixed;
+    bottom:16px;
+    left:16px;
+    font-size:11px;
+    color:var(--muted);
+    background:rgba(10,10,10,.85);
+    border:1px solid var(--border);
+    padding:6px 10px;
+    border-radius:999px;
+    z-index:10;
+    display:none;
+    align-items:center;
+    gap:6px;
+    backdrop-filter:blur(6px);
+    transition:opacity .25s ease;
+  }
+  #status.show{display:flex;}
+  #status .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#71717a;
+  }
+  #status.error .dot{background:#ef4444;}
+  #status.ok .dot{background:#22c55e;}
+
+  ::selection{background:#3f3f46;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="video" playsinline></video>
+  <div id="empty">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/>
+      <path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none"/>
+    </svg>
+    <h1>未加载视频</h1>
+    <p>在上方输入 m3u8 地址，或通过 URL 参数 <code>?url=</code> 传入直播/点播地址</p>
+  </div>
+</div>
+
+<div id="bar">
+  <input id="url-input" type="text" placeholder="输入 m3u8 地址，例如 https://example.com/index.m3u8" autocomplete="off" spellcheck="false" />
+  <button id="load-btn" class="primary">播放</button>
+  <button id="fullscreen-btn" class="icon" title="全屏">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>
+    </svg>
+  </button>
+</div>
+
+<div id="status"><span class="dot"></span><span id="status-text"></span></div>
+
+<script>
+(function(){
+  const video = document.getElementById('video');
+  const empty = document.getElementById('empty');
+  const bar = document.getElementById('bar');
+  const input = document.getElementById('url-input');
+  const loadBtn = document.getElementById('load-btn');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const status = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+
+  let hls = null;
+
+  function setStatus(text, type){
+    statusText.textContent = text;
+    status.className = 'show' + (type ? ' ' + type : '');
+  }
+  function hideStatus(){
+    status.className = '';
+  }
+
+  function showEmpty(show){
+    empty.style.display = show ? 'flex' : 'none';
+    video.style.display = show ? 'none' : 'block';
+  }
+
+  function loadSource(url, autoplay){
+    if(!url) return;
+    input.value = url;
+    showEmpty(false);
+    setStatus('正在加载…');
+
+    if(hls){
+      hls.destroy();
+      hls = null;
+    }
+
+    if(window.Hls && Hls.isSupported()){
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function(){
+        setStatus('已连接', 'ok');
+        if(autoplay) tryPlay();
+      });
+      hls.on(Hls.Events.ERROR, function(event, data){
+        if(data.fatal){
+          setStatus('加载失败: ' + data.type, 'error');
+          switch(data.type){
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              break;
+          }
+        }
+      });
+    } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+      // Safari native HLS support
+      video.src = url;
+      video.addEventListener('loadedmetadata', function(){
+        setStatus('已连接', 'ok');
+        if(autoplay) tryPlay();
+      }, { once:true });
+    } else {
+      setStatus('当前浏览器不支持 HLS 播放', 'error');
+    }
+  }
+
+  function tryPlay(){
+    const p = video.play();
+    if(p && p.catch){
+      p.catch(function(){
+        // Autoplay blocked with sound — retry muted
+        video.muted = true;
+        video.play().catch(function(){});
+      });
+    }
+  }
+
+  loadBtn.addEventListener('click', function(){
+    const url = input.value.trim();
+    if(url) loadSource(url, true);
+  });
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      loadBtn.click();
+    }
+  });
+
+  fullscreenBtn.addEventListener('click', function(){
+    const el = document.getElementById('stage');
+    if(!document.fullscreenElement){
+      el.requestFullscreen && el.requestFullscreen();
+    } else {
+      document.exitFullscreen && document.exitFullscreen();
+    }
+  });
+
+  video.addEventListener('playing', function(){ setStatus('播放中', 'ok'); });
+  video.addEventListener('pause', function(){ setStatus('已暂停'); });
+  video.addEventListener('waiting', function(){ setStatus('缓冲中…'); });
+
+  // Auto-hide top bar
+  let hideTimer;
+  function showBar(){
+    bar.classList.remove('hidden');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function(){
+      if(document.activeElement !== input){
+        bar.classList.add('hidden');
+      }
+    }, 3000);
+  }
+  document.addEventListener('mousemove', showBar);
+  document.addEventListener('touchstart', showBar);
+  input.addEventListener('focus', function(){ clearTimeout(hideTimer); });
+  showBar();
+
+  // ---- URL parsing ----
+  // Requirement: if "$$$$$" appears anywhere in the page URL, strip it out
+  // and force autoplay once the resulting url is loaded.
+  let rawHref = window.location.href;
+  let forceAutoplay = false;
+  if(rawHref.indexOf('$$$$$') !== -1){
+    forceAutoplay = true;
+    rawHref = rawHref.split('$$$$$').join('');
+    // Reflect the cleaned URL in the address bar without reloading
+    try{ window.history.replaceState(null, '', rawHref); }catch(e){}
+  }
+
+  function getParam(href, key){
+    try{
+      const u = new URL(href);
+      return u.searchParams.get(key);
+    }catch(e){
+      return null;
+    }
+  }
+
+  const initialUrl = getParam(rawHref, 'url') || getParam(rawHref, 'm3u8') || getParam(rawHref, 'src');
+
+  if(initialUrl){
+    const decoded = decodeURIComponent(initialUrl);
+    loadSource(decoded, true);
+  } else {
+    showEmpty(true);
+    hideStatus();
+  }
+})();
+</script>
+</body>
+</html>
