@@ -164,7 +164,7 @@
     background:#71717a;
   }
   #status.error .dot{background:#ef4444;}
-  #status.ok .dot{background:#22c55e;}
+  #status.ok .dot{background:#22c55e;opacity:0}
 
   ::selection{background:#3f3f46;}
 </style>
@@ -223,6 +223,7 @@
 
   function loadSource(url, autoplay){
     if(!url) return;
+url = decodeURIComponent(url);
 url = url.replaceAll('$','');
     input.value = url;
     showEmpty(false);
