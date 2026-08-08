@@ -164,7 +164,8 @@
     background:#71717a;
   }
   #status.error .dot{background:#ef4444;}
-  #status.ok .dot{background:#22c55e;opacity:0}
+  #status.ok .dot{background:#22c55e;}
+  #status.ok {opacity:0}
 
   ::selection{background:#3f3f46;}
 </style>
@@ -290,6 +291,12 @@ url = url.replaceAll('$','');
       loadBtn.click();
     }
   });
+  input.addEventListener('input', function(e){
+    const url = input.value.trim();
+    if(url) {
+      location.href = `./index.html?url=${encodeURIComponent(url)}`;
+    }
+  });
 
   fullscreenBtn.addEventListener('click', function(){
     const el = document.getElementById('stage');
@@ -341,7 +348,7 @@ url = url.replaceAll('$','');
     }
   }
 
-  const initialUrl = getParam(rawHref, 'url') || getParam(rawHref, 'm3u8') || getParam(rawHref, 'src');
+  const initialUrl = getParam(rawHref, 'url') || getParam(rawHref, 'm3u8') || getParam(rawHref, 'src') || location.hash.slice(1);
 
   if(initialUrl){
     const decoded = decodeURIComponent(initialUrl);
