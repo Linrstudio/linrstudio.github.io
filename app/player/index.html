@@ -187,6 +187,7 @@
 <div id="bar">
   <input id="url-input" type="text" placeholder="输入 m3u8 地址，例如 https://example.com/index.m3u8" autocomplete="off" spellcheck="false" />
   <button id="load-btn" class="primary">播放</button>
+  <button id="copy-btn" class="primary">复制</button>
   <button id="fullscreen-btn" class="icon" title="全屏">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>
@@ -203,6 +204,7 @@
   const bar = document.getElementById('bar');
   const input = document.getElementById('url-input');
   const loadBtn = document.getElementById('load-btn');
+  const copyBtn = document.getElementById('copy-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
   const status = document.getElementById('status');
   const statusText = document.getElementById('status-text');
@@ -285,6 +287,10 @@ url = url.replaceAll('$','');
   loadBtn.addEventListener('click', function(){
     const url = input.value.trim();
     if(url) loadSource(url, true);
+  });
+  copyBtn.addEventListener('click', function(){
+    const url = location.href;
+    if(url) navigator.clipboard.writeText(url);
   });
   input.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){
