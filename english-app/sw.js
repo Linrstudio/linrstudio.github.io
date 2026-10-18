@@ -1,6 +1,6 @@
 /* English mirror service worker: HTML network-first (updates land immediately),
    static assets + audio cache-first for offline use. */
-const CACHE = 'en-mirror-gh-v4';
+const CACHE = 'en-mirror-gh-v5';
 const CORE = ['./', 'index.html', 'data.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const accept = req.headers.get('accept') || '';
-  const isDoc = req.mode === 'navigate' || accept.includes('text/html');
+  const isDoc = req.mode === 'navigate' || accept.includes('text/html') || new URL(req.url).pathname.endsWith('/data.js');
   if (isDoc) {
     e.respondWith(
       fetch(req)
