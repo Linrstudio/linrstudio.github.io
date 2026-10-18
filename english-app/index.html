@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>每日英语口语 · 镜像版</title>
+<meta name="theme-color" content="#f6f4ef">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f6f4ef; color: #22252a;
+    display: flex; flex-direction: column;
+    height: 100dvh; overflow: hidden;
+    padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 2px 8px;
+  }
+  .title { font-size: 13px; color: #8a8f98; letter-spacing: .02em; }
+  .title b { color: #555b64; font-weight: 600; }
+  .head-right { display: flex; align-items: center; gap: 10px; }
+  .counter { font-size: 12px; color: #9aa0a8; font-variant-numeric: tabular-nums; }
+  #nextBtn {
+    border: none; background: #22252a; color: #fff; font-size: 14px; font-weight: 600;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  }
+  #nextBtn:active { transform: scale(.96); }
+  main { flex: 1; display: flex; min-height: 0; }
+  .card {
+    flex: 1; background: #fff; border-radius: 20px;
+    box-shadow: 0 6px 24px rgba(30, 32, 40, .07);
+    padding: 22px 20px 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow: hidden;
+  }
+  .en { font-size: 27px; font-weight: 700; line-height: 1.25; letter-spacing: .01em; }
+  .zh { font-size: 16px; color: #4a4f57; }
+  .ipa { font-size: 15px; color: #6b7280; font-family: "Segoe UI", -apple-system, sans-serif; line-height: 1.45; word-break: break-word; }
+  .approx { font-size: 13px; color: #9aa0a8; line-height: 1.5; }
+  .approx strong { color: #6b7280; font-weight: 700; }
+  .usage {
+    background: #f6f4ef; border-radius: 12px; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .usage .line { font-size: 13px; line-height: 1.5; color: #4a4f57; font-weight: 400; }
+  .usage .sp { font-weight: 700; color: #8a8f98; margin-right: 6px; }
+  .note { font-size: 12.5px; color: #9aa0a8; line-height: 1.55; }
+  .spacer { flex: 1; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls button {
+    flex: 1; min-width: 70px; border: 1px solid #e4e1d9; background: #fff; color: #33373e;
+    font-size: 14px; padding: 11px 0; border-radius: 12px; cursor: pointer; font-weight: 500;
+  }
+  .controls button.active { background: #22252a; color: #fff; border-color: #22252a; }
+  .controls button:active { transform: scale(.97); }
+  .status { font-size: 12px; color: #b3b8bf; min-height: 16px; text-align: center; }
+  footer { padding: 8px 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="title"><b>每日英语口语</b> · 镜像版</div>
+  <div class="head-right">
+    <span class="counter" id="counter"></span>
+    <button id="nextBtn" type="button">下一句 →</button>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="en" id="en"></div>
+    <div class="zh" id="zh"></div>
+    <div class="ipa" id="ipa"></div>
+    <div class="approx" id="approx"></div>
+    <div class="usage" id="usage"></div>
+    <div class="note" id="note"></div>
+    <div class="spacer"></div>
+    <div class="controls">
+      <button id="playBtn" type="button">▶ 常速</button>
+      <button id="slowBtn" type="button">慢速</button>
+      <button id="stopBtn" type="button">停止</button>
+      <button id="loopBtn" type="button">循环：开</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+</main>
+<footer></footer>
+<audio id="player" preload="auto"></audio>
+<script src="data.js"></script>
+<script>
+(function () {
+  var items = window.EXPRESSIONS || [];
+  var idx = parseInt(localStorage.getItem('mirror-idx') || '0', 10);
+  if (isNaN(idx) || idx < 0 || idx >= items.length) idx = 0;
+  var loopOn = localStorage.getItem('mirror-loop') !== 'off';
+  var speed = 1;
+  var player = document.getElementById('player');
+  var statusEl = document.getElementById('status');
+  var loopBtn = document.getElementById('loopBtn');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function approxHtml(s) {
+    return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+  function current() { return items[idx]; }
+
+  function render() {
+    var e = current();
+    document.getElementById('en').textContent = e.text;
+    document.getElementById('zh').textContent = e.meaningZh;
+    document.getElementById('ipa').textContent = e.ipa;
+    document.getElementById('approx').innerHTML = approxHtml(e.approx);
+    document.getElementById('usage').innerHTML = e.usage.map(function (u) {
+      return '<div class="line"><span class="sp">' + esc(u[0]) + '</span>' + esc(u[1]) + '</div>';
+    }).join('');
+    document.getElementById('note').textContent = e.note;
+    document.getElementById('counter').textContent = (idx + 1) + ' / ' + items.length;
+    loopBtn.textContent = '循环：' + (loopOn ? '开' : '关');
+    loopBtn.classList.toggle('active', loopOn);
+    localStorage.setItem('mirror-idx', String(idx));
+  }
+
+  function stop() {
+    player.pause();
+    try { player.currentTime = 0; } catch (err) {}
+    statusEl.textContent = '';
+    document.getElementById('playBtn').classList.remove('active');
+    document.getElementById('slowBtn').classList.remove('active');
+  }
+
+  function play(rate) {
+    speed = rate;
+    var e = current();
+    if (player.getAttribute('src') !== e.audio) player.src = e.audio;
+    player.playbackRate = rate;
+    player.loop = loopOn;
+    var p = player.play();
+    if (p && p.catch) p.catch(function () { statusEl.textContent = '点一下播放按钮开始'; });
+    statusEl.textContent = '播放中 · ' + (rate === 1 ? '常速' : '慢速');
+    document.getElementById('playBtn').classList.toggle('active', rate === 1);
+    document.getElementById('slowBtn').classList.toggle('active', rate !== 1);
+  }
+
+  function next() {
+    stop();
+    idx = (idx + 1) % items.length;
+    render();
+    play(speed);
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', next);
+  document.getElementById('playBtn').addEventListener('click', function () { play(1); });
+  document.getElementById('slowBtn').addEventListener('click', function () { play(0.6); });
+  document.getElementById('stopBtn').addEventListener('click', stop);
+  loopBtn.addEventListener('click', function () {
+    loopOn = !loopOn;
+    player.loop = loopOn;
+    localStorage.setItem('mirror-loop', loopOn ? 'on' : 'off');
+    loopBtn.textContent = '循环：' + (loopOn ? '开' : '关');
+    loopBtn.classList.toggle('active', loopOn);
+  });
+  player.addEventListener('ended', function () { statusEl.textContent = ''; });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'ArrowRight') next(); });
+
+  render();
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
