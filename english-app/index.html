@@ -94,7 +94,7 @@
 <script src="data.js"></script>
 <script>
 (function () {
-  var items = window.EXPRESSIONS || [];
+  var items = (typeof EXPRESSIONS !== 'undefined') ? EXPRESSIONS : [];
   var idx = parseInt(localStorage.getItem('mirror-idx') || '0', 10);
   if (isNaN(idx) || idx < 0 || idx >= items.length) idx = 0;
   var loopOn = localStorage.getItem('mirror-loop') !== 'off';
