@@ -4,179 +4,252 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>每日英语口语 · 镜像版</title>
-<meta name="theme-color" content="#f6f4ef">
+<meta name="theme-color" content="#f5f7f8">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f6f4ef; color: #22252a;
-    display: flex; flex-direction: column;
-    height: 100dvh; overflow: hidden;
-    padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f7f8;
+    --surface: #ffffff;
+    --surface-2: #e9edf0;
+    --text: #17233c;
+    --dim: #5b6578;
+    --border: #ced5dc;
+    --accent: #b7e334;
+    --accent-ink: #17233c;
+    --coral: #ff6b5f;
+    --font-sans: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+    --font-serif: Georgia, "Times New Roman", serif;
   }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 2px 8px;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1422;
+      --surface: #17233c;
+      --surface-2: #202d46;
+      --text: #f4f7f8;
+      --dim: #aeb8c8;
+      --border: #35425a;
+      --accent: #c5ee49;
+      --accent-ink: #101827;
+      --coral: #ff8176;
+    }
   }
-  .title { font-size: 13px; color: #8a8f98; letter-spacing: .02em; }
-  .title b { color: #555b64; font-weight: 600; }
-  .head-right { display: flex; align-items: center; gap: 10px; }
-  .counter { font-size: 12px; color: #9aa0a8; font-variant-numeric: tabular-nums; }
-  #nextBtn {
-    border: none; background: #22252a; color: #fff; font-size: 14px; font-weight: 600;
-    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
+  body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+  button { font: inherit; color: inherit; }
+  button:focus-visible { outline: 3px solid color-mix(in srgb, var(--coral) 55%, transparent); outline-offset: 2px; }
+
+  .page-wrap { width: min(100%, 760px); margin: 0 auto; padding: max(10px, env(safe-area-inset-top)) 14px 16px; }
+  .topbar { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .eyebrow { margin: 0; color: var(--dim); font-size: 11px; line-height: 1.2; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .streak-line { margin: 3px 0 0; font-size: 14px; font-weight: 700; }
+
+  .hero-card { position: relative; overflow: hidden; margin-top: 6px; padding: 17px 18px 17px; border-radius: 22px 22px 9px 22px; background: var(--text); color: var(--bg); box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 18%, transparent); }
+  .hero-card::after { content: ""; position: absolute; right: -34px; top: 84px; width: 96px; height: 10px; background: var(--coral); transform: rotate(-12deg); }
+  .card-meta { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 10px; color: color-mix(in srgb, var(--bg) 70%, transparent); font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+  .card-position { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+  .card-next { min-height: 32px; padding: 5px 8px 5px 11px; border: 1px solid color-mix(in srgb, var(--bg) 30%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--bg) 10%, transparent); color: var(--bg); display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 900; letter-spacing: 0; cursor: pointer; }
+  .card-next svg { width: 17px; height: 17px; }
+  .card-next:active { background: color-mix(in srgb, var(--bg) 20%, transparent); }
+  .pill { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 9px; border-radius: 999px; font-size: 10px; line-height: 1; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); color: var(--text); }
+  .pill-lime { background: var(--accent); color: var(--accent-ink); }
+  .pill-coral { background: var(--coral); color: #17233c; }
+  .hero-card h1 { position: relative; z-index: 1; margin: 17px 0 8px; max-width: 92%; font-family: var(--font-serif); font-weight: 700; font-size: clamp(28px, 8.2vw, 42px); line-height: 1.08; letter-spacing: -.03em; }
+  .meaning { margin: 0 0 13px; color: color-mix(in srgb, var(--bg) 84%, transparent); font-size: 14px; line-height: 1.45; }
+  .sound-line { width: 100%; display: grid; gap: 4px; padding: 10px 0 8px; border: 0; border-top: 1px solid color-mix(in srgb, var(--bg) 22%, transparent); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+  .sound-line-label { color: color-mix(in srgb, var(--bg) 60%, transparent); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .sound-line strong { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; line-height: 1.3; }
+  .sound-line-values { display: grid; gap: 3px; }
+  .approx-reading { display: block; font-size: 12.5px; line-height: 1.35; font-weight: 400; letter-spacing: .04em; color: color-mix(in srgb, var(--bg) 68%, transparent); }
+  .approx-reading b { font-weight: 800; color: color-mix(in srgb, var(--bg) 97%, transparent); }
+  .note { margin: 0 0 13px; color: color-mix(in srgb, var(--bg) 78%, transparent); font-size: 12.5px; line-height: 1.5; }
+  .usage { position: relative; z-index: 1; margin: 0 0 13px; padding: 7px 10px; border: 1px solid color-mix(in srgb, var(--bg) 18%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--bg) 6%, transparent); }
+  .dialogue { display: grid; gap: 3px; }
+  .dialogue p { display: grid; grid-template-columns: 19px minmax(0, 1fr); gap: 5px; margin: 0; font-size: 13px; line-height: 1.35; font-weight: 400; color: color-mix(in srgb, var(--bg) 94%, transparent); }
+  .dialogue b { color: var(--coral); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; line-height: 1.4; }
+  .listen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .listen-button { height: 50px; min-width: 0; padding: 8px 9px; border: 1px solid color-mix(in srgb, var(--bg) 22%, transparent); border-radius: 10px; background: transparent; color: inherit; display: flex; align-items: center; gap: 7px; text-align: left; cursor: pointer; }
+  .listen-button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .listen-button > svg { flex: 0 0 auto; width: 18px; height: 18px; }
+  .listen-button span:not(.loop-mark) { min-width: 0; display: grid; }
+  .listen-button b, .listen-button small { white-space: nowrap; }
+  .listen-button b { font-size: 12px; }
+  .listen-button small { opacity: .68; font-size: 9px; }
+  .loop-button { justify-content: center; }
+  .loop-mark { flex: 0 0 auto; font-size: 20px; line-height: 1; }
+  .mirror-note { margin: 14px 0 0; text-align: center; color: var(--dim); font-size: 11px; letter-spacing: .04em; }
+
+  @media (min-width: 720px) {
+    .page-wrap { padding-inline: 28px; }
+    .hero-card { padding: 22px 24px; }
+    .hero-card h1 { max-width: 86%; font-size: clamp(32px, 4.5vw, 48px); }
   }
-  #nextBtn:active { transform: scale(.96); }
-  main { flex: 1; display: flex; min-height: 0; }
-  .card {
-    flex: 1; background: #fff; border-radius: 20px;
-    box-shadow: 0 6px 24px rgba(30, 32, 40, .07);
-    padding: 22px 20px 18px;
-    display: flex; flex-direction: column; gap: 10px;
-    overflow: hidden;
-  }
-  .en { font-size: 27px; font-weight: 700; line-height: 1.25; letter-spacing: .01em; }
-  .zh { font-size: 16px; color: #4a4f57; }
-  .ipa { font-size: 15px; color: #6b7280; font-family: "Segoe UI", -apple-system, sans-serif; line-height: 1.45; word-break: break-word; }
-  .approx { font-size: 13px; color: #9aa0a8; line-height: 1.5; }
-  .approx strong { color: #6b7280; font-weight: 700; }
-  .usage {
-    background: #f6f4ef; border-radius: 12px; padding: 10px 12px;
-    display: flex; flex-direction: column; gap: 5px;
-  }
-  .usage .line { font-size: 13px; line-height: 1.5; color: #4a4f57; font-weight: 400; }
-  .usage .sp { font-weight: 700; color: #8a8f98; margin-right: 6px; }
-  .note { font-size: 12.5px; color: #9aa0a8; line-height: 1.55; }
-  .spacer { flex: 1; }
-  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
-  .controls button {
-    flex: 1; min-width: 70px; border: 1px solid #e4e1d9; background: #fff; color: #33373e;
-    font-size: 14px; padding: 11px 0; border-radius: 12px; cursor: pointer; font-weight: 500;
-  }
-  .controls button.active { background: #22252a; color: #fff; border-color: #22252a; }
-  .controls button:active { transform: scale(.97); }
-  .status { font-size: 12px; color: #b3b8bf; min-height: 16px; text-align: center; }
-  footer { padding: 8px 0 10px; }
 </style>
 </head>
 <body>
-<header>
-  <div class="title"><b>每日英语口语</b> · 镜像版</div>
-  <div class="head-right">
-    <span class="counter" id="counter"></span>
-    <button id="nextBtn" type="button">下一句 →</button>
-  </div>
-</header>
-<main>
-  <section class="card">
-    <div class="en" id="en"></div>
-    <div class="zh" id="zh"></div>
-    <div class="ipa" id="ipa"></div>
-    <div class="approx" id="approx"></div>
-    <div class="usage" id="usage"></div>
-    <div class="note" id="note"></div>
-    <div class="spacer"></div>
-    <div class="controls">
-      <button id="playBtn" type="button">▶ 常速</button>
-      <button id="slowBtn" type="button">慢速</button>
-      <button id="stopBtn" type="button">停止</button>
-      <button id="loopBtn" type="button">循环：开</button>
-    </div>
-    <div class="status" id="status"></div>
-  </section>
-</main>
-<footer></footer>
-<audio id="player" preload="auto"></audio>
-<script src="data.js"></script>
-<script>
-(function () {
-  var items = (typeof EXPRESSIONS !== 'undefined') ? EXPRESSIONS : [];
-  var idx = parseInt(localStorage.getItem('mirror-idx') || '0', 10);
-  if (isNaN(idx) || idx < 0 || idx >= items.length) idx = 0;
-  var loopOn = localStorage.getItem('mirror-loop') !== 'off';
-  var speed = 1;
-  var player = document.getElementById('player');
-  var statusEl = document.getElementById('status');
-  var loopBtn = document.getElementById('loopBtn');
+  <main class="page-wrap">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">每日口语练习</p>
+        <p class="streak-line">听一遍，读一遍，再往前一小步。</p>
+      </div>
+    </header>
 
-  function esc(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    <article class="hero-card">
+      <div class="card-meta">
+        <span class="pill pill-lime" id="pill">每日精选</span>
+        <div class="card-position">
+          <span id="counter">1 / 22</span>
+          <button class="card-next" id="nextBtn" aria-label="切换到下一句">下一句 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <h1 id="en"></h1>
+      <p class="meaning" id="zh"></p>
+      <button class="sound-line" id="soundToggle" aria-label="隐藏连读提示">
+        <span class="sound-line-label">实际听感</span>
+        <span class="sound-line-values">
+          <strong id="ipa"></strong>
+          <span class="approx-reading" id="approx"></span>
+        </span>
+      </button>
+      <p class="note" id="note"></p>
+      <div class="usage" aria-label="用法对话"><div class="dialogue" id="usage"></div></div>
+      <div class="listen-grid">
+        <button class="listen-button" id="slowBtn" aria-pressed="false"></button>
+        <button class="listen-button" id="playBtn" aria-pressed="false"></button>
+        <button class="listen-button loop-button" id="loopBtn" aria-pressed="true"></button>
+      </div>
+    </article>
+    <p class="mirror-note">静态镜像版 · 22 句快照（2026-10-18）· 断网可练</p>
+  </main>
+  <audio id="player" preload="auto"></audio>
+  <script src="data.js"></script>
+  <script>
+  (function () {
+    var items = (typeof EXPRESSIONS !== 'undefined') ? EXPRESSIONS : [];
+    var player = document.getElementById('player');
+    var idx = parseInt(localStorage.getItem('mirror-idx') || '0', 10);
+    if (!(idx >= 0 && idx < items.length)) idx = 0;
+    var loopOn = localStorage.getItem('mirror-loop') !== '0';
+    var playing = null; // null | 'slow' | 'normal'
+    var lastRate = 1;
+    var showConnected = true;
+
+    var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+    var ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>';
+
+    function current() { return items[idx]; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function approxHtml(s) {
+      return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    }
+
+    function refreshButtons() {
+      var slow = document.getElementById('slowBtn');
+      var play = document.getElementById('playBtn');
+      var loop = document.getElementById('loopBtn');
+      slow.classList.toggle('active', playing === 'slow');
+      slow.setAttribute('aria-pressed', playing === 'slow' ? 'true' : 'false');
+      slow.innerHTML = (playing === 'slow' ? ICON_STOP : ICON_PLAY) +
+        '<span><b>' + (playing === 'slow' ? '停止' : '慢速') + '</b><small>' +
+        (playing === 'slow' ? '点此停止播放' : '同一录音降速') + '</small></span>';
+      play.classList.toggle('active', playing === 'normal');
+      play.setAttribute('aria-pressed', playing === 'normal' ? 'true' : 'false');
+      play.innerHTML = (playing === 'normal' ? ICON_STOP : ICON_PLAY) +
+        '<span><b>' + (playing === 'normal' ? '停止' : '常速') + '</b><small>' +
+        (playing === 'normal' ? '点此停止播放' : '听节奏') + '</small></span>';
+      loop.classList.toggle('active', loopOn);
+      loop.setAttribute('aria-pressed', loopOn ? 'true' : 'false');
+      loop.innerHTML = '<span class="loop-mark">↻</span><span><b>循环</b><small>' +
+        (loopOn ? '已开启' : '已关闭') + '</small></span>';
+    }
+
+    function render() {
+      var e = current();
+      if (!e) return;
+      var pill = document.getElementById('pill');
+      pill.textContent = e.origin === 'user' ? '我的表达' : '每日精选';
+      pill.className = 'pill ' + (e.origin === 'user' ? 'pill-coral' : 'pill-lime');
+      document.getElementById('counter').textContent = (idx + 1) + ' / ' + items.length;
+      document.getElementById('en').textContent = e.text;
+      document.getElementById('zh').textContent = e.meaningZh;
+      document.getElementById('ipa').textContent = showConnected ? e.ipa : '••••••••';
+      var approx = document.getElementById('approx');
+      approx.innerHTML = showConnected ? approxHtml(e.approx) : '';
+      approx.style.display = showConnected ? '' : 'none';
+      var note = document.getElementById('note');
+      note.textContent = e.note || '';
+      note.style.display = showConnected ? '' : 'none';
+      document.getElementById('soundToggle').setAttribute('aria-label', showConnected ? '隐藏连读提示' : '显示连读提示');
+      document.getElementById('usage').innerHTML = (e.usage || []).map(function (line) {
+        return '<p><b>' + esc(line[0]) + ':</b><span>' + esc(line[1]) + '</span></p>';
+      }).join('');
+      localStorage.setItem('mirror-idx', String(idx));
+      refreshButtons();
+    }
+
+    function stop() {
+      player.pause();
+      playing = null;
+      refreshButtons();
+    }
+    function play(rate) {
+      var e = current();
+      if (!e) return;
+      var name = rate === 1 ? 'normal' : 'slow';
+      if (playing === name) { stop(); return; }
+      if (player.getAttribute('src') !== e.audio) player.src = e.audio;
+      player.playbackRate = rate;
+      lastRate = rate;
+      player.loop = loopOn;
+      var p = player.play();
+      playing = name;
+      refreshButtons();
+      if (p && p.catch) p.catch(function () { playing = null; refreshButtons(); });
+    }
+    function next() {
+      if (!items.length) return;
+      idx = (idx + 1) % items.length;
+      render();
+      player.src = current().audio;
+      player.playbackRate = lastRate;
+      player.loop = loopOn;
+      var p = player.play();
+      playing = lastRate === 1 ? 'normal' : 'slow';
+      refreshButtons();
+      if (p && p.catch) p.catch(function () { playing = null; refreshButtons(); });
+    }
+
+    document.getElementById('playBtn').addEventListener('click', function () { play(1); });
+    document.getElementById('slowBtn').addEventListener('click', function () { play(0.68); });
+    document.getElementById('loopBtn').addEventListener('click', function () {
+      loopOn = !loopOn;
+      player.loop = loopOn;
+      localStorage.setItem('mirror-loop', loopOn ? '1' : '0');
+      refreshButtons();
     });
-  }
-  function approxHtml(s) {
-    return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  }
-  function current() { return items[idx]; }
+    document.getElementById('nextBtn').addEventListener('click', next);
+    document.getElementById('soundToggle').addEventListener('click', function () {
+      showConnected = !showConnected;
+      render();
+    });
+    player.addEventListener('ended', function () {
+      if (!loopOn) { playing = null; refreshButtons(); }
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowRight') next();
+    });
 
-  function render() {
-    var e = current();
-    document.getElementById('en').textContent = e.text;
-    document.getElementById('zh').textContent = e.meaningZh;
-    document.getElementById('ipa').textContent = e.ipa;
-    document.getElementById('approx').innerHTML = approxHtml(e.approx);
-    document.getElementById('usage').innerHTML = e.usage.map(function (u) {
-      return '<div class="line"><span class="sp">' + esc(u[0]) + '</span>' + esc(u[1]) + '</div>';
-    }).join('');
-    document.getElementById('note').textContent = e.note;
-    document.getElementById('counter').textContent = (idx + 1) + ' / ' + items.length;
-    loopBtn.textContent = '循环：' + (loopOn ? '开' : '关');
-    loopBtn.classList.toggle('active', loopOn);
-    localStorage.setItem('mirror-idx', String(idx));
-  }
-
-  function stop() {
-    player.pause();
-    try { player.currentTime = 0; } catch (err) {}
-    statusEl.textContent = '';
-    document.getElementById('playBtn').classList.remove('active');
-    document.getElementById('slowBtn').classList.remove('active');
-  }
-
-  function play(rate) {
-    speed = rate;
-    var e = current();
-    if (player.getAttribute('src') !== e.audio) player.src = e.audio;
-    player.playbackRate = rate;
-    player.loop = loopOn;
-    var p = player.play();
-    if (p && p.catch) p.catch(function () { statusEl.textContent = '点一下播放按钮开始'; });
-    statusEl.textContent = '播放中 · ' + (rate === 1 ? '常速' : '慢速');
-    document.getElementById('playBtn').classList.toggle('active', rate === 1);
-    document.getElementById('slowBtn').classList.toggle('active', rate !== 1);
-  }
-
-  function next() {
-    stop();
-    idx = (idx + 1) % items.length;
     render();
-    play(speed);
-  }
-
-  document.getElementById('nextBtn').addEventListener('click', next);
-  document.getElementById('playBtn').addEventListener('click', function () { play(1); });
-  document.getElementById('slowBtn').addEventListener('click', function () { play(0.6); });
-  document.getElementById('stopBtn').addEventListener('click', stop);
-  loopBtn.addEventListener('click', function () {
-    loopOn = !loopOn;
-    player.loop = loopOn;
-    localStorage.setItem('mirror-loop', loopOn ? 'on' : 'off');
-    loopBtn.textContent = '循环：' + (loopOn ? '开' : '关');
-    loopBtn.classList.toggle('active', loopOn);
-  });
-  player.addEventListener('ended', function () { statusEl.textContent = ''; });
-  document.addEventListener('keydown', function (ev) { if (ev.key === 'ArrowRight') next(); });
-
-  render();
-
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
-  }
-})();
-</script>
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  })();
+  </script>
 </body>
 </html>

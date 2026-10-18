@@ -1,4 +1,4 @@
-const CACHE = 'en-mirror-gh-v2';
+const CACHE = 'en-mirror-gh-v3';
 const CORE = ['./', 'index.html', 'data.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
