@@ -4,7 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="data:," />
+    <meta name="theme-color" content="#eef1ea" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Marble Game" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
     <title>弹珠游戏</title>
     <style>
       :root {
@@ -955,6 +962,14 @@
       requestAnimationFrame(function (ts) { lastTime = ts; requestAnimationFrame(loop); });
       // re-measure after layout settles (fonts / safe areas)
       setTimeout(resize, 60);
+    </script>
+    <script>
+      // PWA: register the service worker so the game works fully offline after the first visit.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+      }
     </script>
   </body>
 </html>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glass" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="25%" stop-color="#dff2f4"/>
+      <stop offset="60%" stop-color="#a8d4de"/>
+      <stop offset="100%" stop-color="#6fa8bc"/>
+    </radialGradient>
+    <clipPath id="ballClip"><circle cx="256" cy="262" r="148"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#eef1ea"/>
+  <g stroke="#d5dcd0" stroke-width="2">
+    <path d="M0 128 H512 M0 256 H512 M0 384 H512 M128 0 V512 M256 0 V512 M384 0 V512"/>
+  </g>
+  <circle cx="256" cy="262" r="196" fill="none" stroke="#8a978a" stroke-width="5"/>
+  <ellipse cx="256" cy="428" rx="130" ry="20" fill="#2c3428" opacity="0.15"/>
+  <circle cx="256" cy="262" r="148" fill="url(#glass)"/>
+  <g clip-path="url(#ballClip)">
+    <path d="M120 300 C 200 210, 300 340, 392 230 C 400 270, 380 330, 320 360 C 240 400, 150 360, 120 300 Z" fill="#e2572b" opacity="0.85"/>
+    <path d="M110 285 C 200 195, 305 325, 400 215 C 405 240, 395 262, 375 285 C 300 380, 180 350, 110 285 Z" fill="#f2a03d" opacity="0.8"/>
+    <path d="M150 180 C 220 240, 300 200, 370 260" fill="none" stroke="#2e9e77" stroke-width="20" stroke-linecap="round" opacity="0.65"/>
+  </g>
+  <circle cx="256" cy="262" r="148" fill="none" stroke="#5b87a0" stroke-width="4" opacity="0.6"/>
+  <ellipse cx="205" cy="185" rx="52" ry="30" fill="#ffffff" opacity="0.85" transform="rotate(-24 205 185)"/>
+  <circle cx="310" cy="330" r="14" fill="#ffffff" opacity="0.35"/>
+</svg>
