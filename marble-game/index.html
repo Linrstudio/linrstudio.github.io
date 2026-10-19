@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>弹珠游戏</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --paper: #eef1ea;
+        --paper-edge: #dfe4d8;
+        --panel: rgba(255, 255, 255, 0.72);
+        --panel-border: rgba(60, 80, 60, 0.14);
+        --ink: #2c3428;
+        --ink-soft: #6d7768;
+        --accent: #2e7d5b;
+        --bar-track: rgba(60, 80, 60, 0.12);
+        --btn: #ffffff;
+        --btn-ink: #2c3428;
+        --overlay: rgba(238, 241, 234, 0.82);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #1d211c;
+          --paper-edge: #12150f;
+          --panel: rgba(255, 255, 255, 0.06);
+          --panel-border: rgba(255, 255, 255, 0.12);
+          --ink: #e6ebdf;
+          --ink-soft: #9aa695;
+          --accent: #7fc9a4;
+          --bar-track: rgba(255, 255, 255, 0.14);
+          --btn: #2b3129;
+          --btn-ink: #e6ebdf;
+          --overlay: rgba(20, 24, 19, 0.85);
+        }
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { height: 100%; overscroll-behavior: none; }
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+        background: var(--paper-edge);
+        color: var(--ink);
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: none;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+      }
+      .app {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        max-width: 560px;
+        margin: 0 auto;
+        background: var(--paper);
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      /* ---------- HUD ---------- */
+      .hud {
+        padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 0 0 auto;
+      }
+      .stats {
+        display: flex;
+        gap: 8px;
+      }
+      .stat {
+        flex: 1;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 8px 0 7px;
+        text-align: center;
+      }
+      .stat .label {
+        font-size: 12px;
+        color: var(--ink-soft);
+        letter-spacing: 0.08em;
+      }
+      .stat .value {
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.25;
+        font-variant-numeric: tabular-nums;
+      }
+      .stat .value .dim { color: var(--ink-soft); font-weight: 500; font-size: 18px; }
+      .hud-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn {
+        appearance: none;
+        border: 1px solid var(--panel-border);
+        background: var(--btn);
+        color: var(--btn-ink);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 9px 16px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn:active { transform: scale(0.97); }
+      .hint {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--ink-soft);
+        text-align: right;
+      }
+      /* ---------- Stage ---------- */
+      .stage {
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        overscroll-behavior: none;
+      }
+      .version {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        z-index: 4;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        padding: 2px 8px;
+        pointer-events: none;
+      }
+      /* ---------- Power bar ---------- */
+      .power-wrap {
+        flex: 0 0 auto;
+        padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .power-label {
+        font-size: 12px;
+        color: var(--ink-soft);
+        letter-spacing: 0.08em;
+        flex: 0 0 auto;
+      }
+      .power-track {
+        flex: 1;
+        height: 14px;
+        border-radius: 999px;
+        background: var(--bar-track);
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+      }
+      .power-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #35b06f 0%, #8fbf3f 45%, #e8a13a 75%, #e05f2e 100%);
+        background-size: 300px 100%;
+        transition: width 40ms linear;
+      }
+      .power-num {
+        flex: 0 0 34px;
+        text-align: right;
+        font-size: 15px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      /* ---------- Settlement overlay ---------- */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: var(--overlay);
+        backdrop-filter: blur(3px);
+        z-index: 5;
+        padding: 20px;
+      }
+      .overlay.show { display: flex; }
+      .card {
+        background: var(--btn);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 28px 30px 24px;
+        text-align: center;
+        max-width: 320px;
+        width: 100%;
+        box-shadow: 0 18px 40px rgba(30, 45, 30, 0.18);
+      }
+      .card .result {
+        font-size: 30px;
+        font-weight: 800;
+        margin: 0 0 6px;
+      }
+      .card .detail {
+        font-size: 14px;
+        color: var(--ink-soft);
+        margin: 0 0 20px;
+        line-height: 1.6;
+      }
+      .card .btn {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+        padding: 11px 26px;
+        font-size: 15px;
+        border-radius: 999px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .card .btn { color: #12241a; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="hud">
+        <div class="stats">
+          <div class="stat">
+            <div class="label">击出弹珠</div>
+            <div class="value"><span id="outCount">0</span><span class="dim"> / 7</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">剩余机会</div>
+            <div class="value" id="shotsLeft">6</div>
+          </div>
+        </div>
+        <div class="hud-row">
+          <button class="btn" id="restartBtn" type="button">↻ 重新开始</button>
+          <div class="hint">在场地任意处按住向上拖拽瞄准<br />松手发射，把弹珠撞出圈外</div>
+        </div>
+      </header>
+
+      <div class="stage" id="stage">
+        <canvas id="game"></canvas>
+        <div class="version">V7</div>
+        <div class="overlay" id="overlay">
+          <div class="card">
+            <p class="result" id="resultTitle">全部击出！</p>
+            <p class="detail" id="resultDetail"></p>
+            <button class="btn" id="againBtn" type="button">再来一局</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="power-wrap">
+        <span class="power-label">力度</span>
+        <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
+        <span class="power-num" id="powerNum">0</span>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      /* ============ World constants (logical units) ============ */
+      var WORLD_W = 400;
+      var WORLD_H = 600;
+      var CIRCLE = { x: 200, y: 218, r: 138 };
+      var MARBLE_R = 25;
+      var SHOOTER_HOME = { x: 200, y: 512 };
+      var MAX_DRAG = 170;          // logical units for full power
+      var MAX_SPEED = 1560;        // units / second at full power
+      var MIN_DRAG = 12;           // below this, cancel the shot
+      var TOTAL_TARGETS = 7;
+      var TOTAL_SHOTS = 6;
+
+      /* Swirl palettes for the 7 target marbles + shooter */
+      var TARGET_STYLES = [
+        { base: "#cfe6dd", swirls: ["#d98a2b", "#7a4a16"] },
+        { base: "#d3e2ee", swirls: ["#57b84e", "#b8d94a"] },
+        { base: "#e3e6e8", swirls: ["#2b7fd9", "#37c4b1"] },
+        { base: "#e8e6df", swirls: ["#e2572b", "#f2b53a"] },
+        { base: "#d8ead9", swirls: ["#3fae5a", "#e2572b"] },
+        { base: "#d9e4ef", swirls: ["#2749c9", "#37a8c4"] },
+        { base: "#eee3da", swirls: ["#c93a2b", "#e88a3a"] }
+      ];
+      var SHOOTER_STYLE = { base: "#d7ecf2", swirls: ["#2ba8c9", "#7fd4e8"] };
+
+      /* ============ Canvas setup ============ */
+      var canvas = document.getElementById("game");
+      var ctx = canvas.getContext("2d");
+      var stage = document.getElementById("stage");
+      var view = { w: 0, h: 0, scale: 1, ox: 0, oy: 0, dpr: 1 };
+
+      function darkMode() {
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+
+      function resize() {
+        var rect = stage.getBoundingClientRect();
+        view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        view.w = rect.width;
+        view.h = rect.height;
+        canvas.width = Math.round(rect.width * view.dpr);
+        canvas.height = Math.round(rect.height * view.dpr);
+        view.scale = Math.min(rect.width / WORLD_W, rect.height / WORLD_H);
+        view.ox = (rect.width - WORLD_W * view.scale) / 2;
+        view.oy = (rect.height - WORLD_H * view.scale) / 2;
+      }
+      window.addEventListener("resize", resize);
+
+      function toWorld(clientX, clientY) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: (clientX - rect.left - view.ox) / view.scale,
+          y: (clientY - rect.top - view.oy) / view.scale
+        };
+      }
+
+      /* ============ Audio (tiny collision ticks) ============ */
+      var audioCtx = null;
+      function ensureAudio() {
+        if (!audioCtx) {
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (e) { audioCtx = null; }
+        }
+        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      }
+      function tick(strength) {
+        if (!audioCtx) return;
+        var t = audioCtx.currentTime;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1900 + Math.random() * 700, t);
+        osc.frequency.exponentialRampToValueAtTime(900, t + 0.05);
+        var v = Math.min(0.22, 0.03 + strength * 0.00035);
+        gain.gain.setValueAtTime(v, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.08);
+      }
+
+      /* ============ Game state ============ */
+      var targets = [];   // {x,y,vx,vy,style,counted,spin}
+      var shooter = null; // {x,y,vx,vy,style}
+      var shotsLeft = TOTAL_SHOTS;
+      var outCount = 0;
+      var state = "aim";  // aim | moving | returning | over
+      var drag = null;    // {pointerId, touchId, start:{x,y}, cur:{x,y}} — see input section
+      var returnAnim = null;
+
+      var outCountEl = document.getElementById("outCount");
+      var shotsLeftEl = document.getElementById("shotsLeft");
+      var powerFill = document.getElementById("powerFill");
+      var powerNum = document.getElementById("powerNum");
+      var overlay = document.getElementById("overlay");
+      var resultTitle = document.getElementById("resultTitle");
+      var resultDetail = document.getElementById("resultDetail");
+
+      function makeMarble(x, y, style) {
+        return { x: x, y: y, vx: 0, vy: 0, r: MARBLE_R, style: style, counted: false, spin: Math.random() * Math.PI * 2 };
+      }
+
+      function resetGame() {
+        targets = [];
+        // Hexagonal tight packing: 1 center + 6 around
+        var d = MARBLE_R * 2 * 0.99;
+        targets.push(makeMarble(CIRCLE.x, CIRCLE.y, TARGET_STYLES[0]));
+        for (var i = 0; i < 6; i++) {
+          var a = (Math.PI / 3) * i + Math.PI / 6;
+          targets.push(makeMarble(
+            CIRCLE.x + Math.cos(a) * d,
+            CIRCLE.y + Math.sin(a) * d,
+            TARGET_STYLES[i + 1]
+          ));
+        }
+        shooter = makeMarble(SHOOTER_HOME.x, SHOOTER_HOME.y, SHOOTER_STYLE);
+        shotsLeft = TOTAL_SHOTS;
+        outCount = 0;
+        state = "aim";
+        drag = null;
+        returnAnim = null;
+        overlay.classList.remove("show");
+        setPower(0);
+        syncHud();
+      }
+
+      function syncHud() {
+        outCountEl.textContent = outCount;
+        shotsLeftEl.textContent = shotsLeft;
+      }
+
+      function setPower(p) {
+        var pct = Math.round(p * 100);
+        powerFill.style.width = pct + "%";
+        powerNum.textContent = pct;
+      }
+
+      /* ============ Physics ============ */
+      var RESTITUTION = 0.94;   // marble-marble
+      var WALL_REST = 0.62;     // walls
+      var FRICTION = 0.55;      // exponential damping per second
+      var STOP_SPEED = 9;       // below this, snap to 0
+
+      function allBalls() {
+        var arr = targets.slice();
+        if (shooter) arr.push(shooter);
+        return arr;
+      }
+
+      function stepPhysics(dt) {
+        var balls = allBalls();
+        var i, j, b;
+        for (i = 0; i < balls.length; i++) {
+          b = balls[i];
+          if (b.vx === 0 && b.vy === 0) continue;
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          var damp = Math.exp(-FRICTION * dt);
+          b.vx *= damp;
+          b.vy *= damp;
+          // spin follows horizontal travel, just for looks
+          b.spin += b.vx * dt * 0.012;
+          // walls
+          if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * WALL_REST; }
+          if (b.x > WORLD_W - b.r) { b.x = WORLD_W - b.r; b.vx = -Math.abs(b.vx) * WALL_REST; }
+          if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * WALL_REST; }
+          if (b.y > WORLD_H - b.r) { b.y = WORLD_H - b.r; b.vy = -Math.abs(b.vy) * WALL_REST; }
+          if (Math.abs(b.vx) < STOP_SPEED && Math.abs(b.vy) < STOP_SPEED) {
+            if (Math.hypot(b.vx, b.vy) < STOP_SPEED) { b.vx = 0; b.vy = 0; }
+          }
+        }
+        // pairwise collisions, a couple of relaxation passes
+        for (var pass = 0; pass < 2; pass++) {
+          for (i = 0; i < balls.length; i++) {
+            for (j = i + 1; j < balls.length; j++) {
+              var a = balls[i], c = balls[j];
+              var dx = c.x - a.x, dy = c.y - a.y;
+              var dist = Math.hypot(dx, dy);
+              var minDist = a.r + c.r;
+              if (dist === 0) { dx = 1; dy = 0; dist = 1; }
+              if (dist < minDist) {
+                var nx = dx / dist, ny = dy / dist;
+                var overlap = (minDist - dist) / 2;
+                a.x -= nx * overlap; a.y -= ny * overlap;
+                c.x += nx * overlap; c.y += ny * overlap;
+                var rvx = c.vx - a.vx, rvy = c.vy - a.vy;
+                var rel = rvx * nx + rvy * ny;
+                if (rel < 0) {
+                  var impulse = -(1 + RESTITUTION) * rel / 2;
+                  a.vx -= impulse * nx; a.vy -= impulse * ny;
+                  c.vx += impulse * nx; c.vy += impulse * ny;
+                  if (pass === 0 && Math.abs(rel) > 60) tick(Math.abs(rel));
+                }
+              }
+            }
+          }
+        }
+      }
+
+      function anyMoving() {
+        var balls = allBalls();
+        for (var i = 0; i < balls.length; i++) {
+          if (balls[i].vx !== 0 || balls[i].vy !== 0) return true;
+        }
+        return false;
+      }
+
+      /* "Out" is a live status, not a latch: a target counts only while
+         its whole body is outside the ring. If it bounces or rolls back
+         inside, it is back in play immediately — the counter drops, it
+         renders solid again, and it keeps colliding like any other
+         marble. Win/lose are judged only in endShot(), once every
+         marble has come to rest. */
+      function checkCounted() {
+        var n = 0;
+        for (var i = 0; i < targets.length; i++) {
+          var t = targets[i];
+          var d = Math.hypot(t.x - CIRCLE.x, t.y - CIRCLE.y);
+          t.counted = d > CIRCLE.r + t.r;  // fully outside the ring
+          if (t.counted) n++;
+        }
+        if (n !== outCount) {
+          outCount = n;
+          syncHud();
+        }
+      }
+
+      function endShot() {
+        checkCounted();
+        if (outCount >= TOTAL_TARGETS) {
+          finishGame(true);
+          return;
+        }
+        if (shotsLeft <= 0) {
+          finishGame(false);
+          return;
+        }
+        // send shooter back to its home spot
+        state = "returning";
+        returnAnim = {
+          t: 0,
+          dur: 0.45,
+          fromX: shooter.x,
+          fromY: shooter.y
+        };
+      }
+
+      function finishGame(won) {
+        state = "over";
+        if (won) {
+          resultTitle.textContent = "全部击出！🎉";
+          resultDetail.innerHTML = "7 颗弹珠全部被你撞出圈外，<br />只用了 " + (TOTAL_SHOTS - shotsLeft) + " 次机会，漂亮！";
+        } else {
+          resultTitle.textContent = "就差一点";
+          resultDetail.innerHTML = "机会用完了，圈内还剩 " + (TOTAL_TARGETS - outCount) + " 颗弹珠。<br />调整一下力度和角度再试试。";
+        }
+        setTimeout(function () { overlay.classList.add("show"); }, 350);
+      }
+
+      /* ============ Main loop ============ */
+      var lastTime = 0;
+      function loop(ts) {
+        requestAnimationFrame(loop);
+        if (!lastTime) lastTime = ts;
+        var dt = Math.min((ts - lastTime) / 1000, 0.05);
+        lastTime = ts;
+
+        if (state === "moving") {
+          var sub = 4;
+          var sdt = dt / sub;
+          for (var s = 0; s < sub; s++) stepPhysics(sdt);
+          checkCounted();
+          if (!anyMoving()) endShot();
+        } else if (state === "returning" && returnAnim) {
+          returnAnim.t += dt;
+          var k = Math.min(returnAnim.t / returnAnim.dur, 1);
+          var ease = 1 - Math.pow(1 - k, 3);
+          shooter.x = returnAnim.fromX + (SHOOTER_HOME.x - returnAnim.fromX) * ease;
+          shooter.y = returnAnim.fromY + (SHOOTER_HOME.y - returnAnim.fromY) * ease;
+          if (k >= 1) {
+            shooter.x = SHOOTER_HOME.x;
+            shooter.y = SHOOTER_HOME.y;
+            shooter.vx = 0; shooter.vy = 0;
+            // nudge any target overlapping the home spot out of the way
+            for (var i = 0; i < targets.length; i++) {
+              var t = targets[i];
+              var dx = t.x - shooter.x, dy = t.y - shooter.y;
+              var dist = Math.hypot(dx, dy);
+              var minDist = t.r + shooter.r;
+              if (dist < minDist) {
+                if (dist === 0) { dx = 0; dy = -1; dist = 1; }
+                t.x = shooter.x + (dx / dist) * minDist;
+                t.y = shooter.y + (dy / dist) * minDist;
+                t.x = Math.max(t.r, Math.min(WORLD_W - t.r, t.x));
+                t.y = Math.max(t.r, Math.min(WORLD_H - t.r, t.y));
+              }
+            }
+            checkCounted();  // the nudge above may have moved a target across the line
+            returnAnim = null;
+            state = "aim";
+          }
+        }
+        draw();
+      }
+
+      /* ============ Drawing ============ */
+      function drawMarble(m, isShooter) {
+        var x = m.x, y = m.y, r = m.r;
+        // shadow
+        ctx.beginPath();
+        ctx.ellipse(x + r * 0.14, y + r * 0.30, r * 0.92, r * 0.78, 0, 0, Math.PI * 2);
+        ctx.fillStyle = darkMode() ? "rgba(0,0,0,0.45)" : "rgba(70,90,70,0.20)";
+        ctx.fill();
+
+        ctx.save();
+        // glass body
+        var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+        if (m.counted) {
+          g.addColorStop(0, "rgba(255,255,255,0.85)");
+          g.addColorStop(0.55, hexA(m.style.base, 0.55));
+          g.addColorStop(1, hexA(m.style.base, 0.35));
+        } else {
+          g.addColorStop(0, "rgba(255,255,255,0.95)");
+          g.addColorStop(0.45, hexA(m.style.base, 0.92));
+          g.addColorStop(1, hexA(shade(m.style.base, -18), 0.95));
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.clip();
+
+        // colored swirls (cat-eye ribbons)
+        ctx.globalAlpha = m.counted ? 0.45 : 0.9;
+        ctx.lineCap = "round";
+        var cols = m.style.swirls;
+        for (var i = 0; i < cols.length; i++) {
+          var off = (i - (cols.length - 1) / 2) * r * 0.30;
+          ctx.beginPath();
+          ctx.strokeStyle = cols[i];
+          ctx.lineWidth = r * 0.30;
+          ctx.moveTo(x + Math.cos(m.spin + 1.2) * r * 0.85 + off * 0.4, y - r * 0.95);
+          ctx.bezierCurveTo(
+            x + off - r * 0.25, y - r * 0.3,
+            x + off + r * 0.25, y + r * 0.3,
+            x + Math.cos(m.spin + 1.2) * r * 0.85 + off * 0.4, y + r * 0.95
+          );
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // bottom inner glow (light refraction)
+        var g2 = ctx.createRadialGradient(x, y + r * 0.75, r * 0.05, x, y + r * 0.75, r * 0.8);
+        g2.addColorStop(0, "rgba(255,255,255,0.35)");
+        g2.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = g2;
+        ctx.fill();
+        ctx.restore();
+
+        // rim
+        ctx.beginPath();
+        ctx.arc(x, y, r - 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = darkMode() ? "rgba(255,255,255,0.28)" : "rgba(90,110,90,0.30)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // specular highlight
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.36, y - r * 0.44, r * 0.20, r * 0.13, -0.6, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - r * 0.52, y - r * 0.18, r * 0.055, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fill();
+
+        if (isShooter && state === "aim" && !drag) {
+          // pulsing hint ring around the shooter
+          var pulse = 1 + Math.sin(performance.now() / 320) * 0.05;
+          ctx.beginPath();
+          ctx.arc(x, y, (r + 7) * pulse, 0, Math.PI * 2);
+          ctx.strokeStyle = darkMode() ? "rgba(127,201,164,0.55)" : "rgba(46,125,91,0.45)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      function hexA(hex, alpha) {
+        var n = parseInt(hex.slice(1), 16);
+        var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+      }
+      function shade(hex, amt) {
+        var n = parseInt(hex.slice(1), 16);
+        var r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amt));
+        var g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+        var b = Math.max(0, Math.min(255, (n & 255) + amt));
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      }
+
+      function draw() {
+        ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+        ctx.clearRect(0, 0, view.w, view.h);
+        var dark = darkMode();
+
+        // graph paper
+        ctx.fillStyle = dark ? "#232823" : "#f2f4ee";
+        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.save();
+        ctx.translate(view.ox, view.oy);
+        ctx.scale(view.scale, view.scale);
+
+        var minor = 20, major = 100;
+        ctx.lineWidth = 1 / view.scale;
+        ctx.strokeStyle = dark ? "rgba(160,180,160,0.10)" : "rgba(110,140,110,0.13)";
+        ctx.beginPath();
+        for (var gx = 0; gx <= WORLD_W; gx += minor) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
+        for (var gy = 0; gy <= WORLD_H; gy += minor) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
+        ctx.stroke();
+        ctx.strokeStyle = dark ? "rgba(160,180,160,0.18)" : "rgba(110,140,110,0.22)";
+        ctx.beginPath();
+        for (gx = 0; gx <= WORLD_W; gx += major) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
+        for (gy = 0; gy <= WORLD_H; gy += major) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
+        ctx.stroke();
+
+        // the ring
+        ctx.beginPath();
+        ctx.arc(CIRCLE.x, CIRCLE.y, CIRCLE.r, 0, Math.PI * 2);
+        ctx.strokeStyle = dark ? "rgba(230,235,220,0.55)" : "rgba(70,85,70,0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(CIRCLE.x, CIRCLE.y, CIRCLE.r, 0, Math.PI * 2);
+        ctx.fillStyle = dark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.35)";
+        ctx.fill();
+
+        // aim guide while dragging (push-to-aim): the dashed line points
+        // along the drag itself — drag up and it aims up toward the ring,
+        // drag up-left / up-right and it tilts that way. It only appears
+        // once the drag is upward-dominant; a downward drag shows nothing.
+        if (drag && state === "aim") {
+          var aim = getAim();
+          if (aim.dist >= 8 && aimValid(aim)) {
+            var dirX = aim.dx, dirY = aim.dy; // launch direction = drag direction
+            var len = 175 + aim.power * 235;
+            ctx.beginPath();
+            ctx.setLineDash([7, 8]);
+            ctx.moveTo(shooter.x + dirX * (MARBLE_R + 4), shooter.y + dirY * (MARBLE_R + 4));
+            ctx.lineTo(shooter.x + dirX * len, shooter.y + dirY * len);
+            ctx.strokeStyle = dark ? "rgba(230,235,220,0.75)" : "rgba(60,75,60,0.65)";
+            ctx.lineWidth = 2.4;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // target dot at the end
+            ctx.beginPath();
+            ctx.arc(shooter.x + dirX * len, shooter.y + dirY * len, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = dark ? "#e6ebdf" : "#3c4a3c";
+            ctx.fill();
+          }
+        }
+
+        // marbles: counted ones first (under), then active, shooter last
+        var i;
+        for (i = 0; i < targets.length; i++) if (targets[i].counted) drawMarble(targets[i], false);
+        for (i = 0; i < targets.length; i++) if (!targets[i].counted) drawMarble(targets[i], false);
+        if (shooter) {
+          var alpha = state === "returning" ? 0.55 : 1;
+          ctx.globalAlpha = alpha;
+          drawMarble(shooter, true);
+          ctx.globalAlpha = 1;
+        }
+
+        ctx.restore();
+      }
+
+      /* ============ Input: push up to aim, release to fire ============ */
+      /* V6 control model — push-to-aim (the pull-down slingshot is gone:
+         on the user's device a downward drag from the bottom marble is
+         claimed by the shell's pull-to-refresh / gesture layer and never
+         reaches the game, so downward aiming is unusable there by design).
+         The drag vector is current point − press point, and the launch
+         direction IS the drag direction: drag up → aim up toward the ring,
+         drag up-left / up-right → aim tilts that way. Distance = power.
+         Only an upward-dominant drag counts as aiming; a downward drag
+         aims nothing and releasing it cancels without spending a shot. */
+      function getAim() {
+        var dx = drag.cur.x - drag.start.x;
+        var dy = drag.cur.y - drag.start.y;
+        var dist = Math.hypot(dx, dy);
+        var capped = Math.min(dist, MAX_DRAG);
+        var power = capped / MAX_DRAG;
+        if (dist < 0.0001) return { dx: 0, dy: 0, power: 0, dist: 0 };
+        return { dx: dx / dist, dy: dy / dist, power: power, dist: dist };
+      }
+
+      /* A drag only aims when its upward component dominates: pointing up
+         (dy < 0) and steeper than ~37° from vertical, so up / up-left /
+         up-right drags aim, while sideways or downward drags do not. */
+      function aimValid(aim) {
+        return aim.dy < 0 && -aim.dy >= Math.abs(aim.dx) * 0.75;
+      }
+
+      /* One drag, two independent event channels (Pointer Events AND
+         Touch Events) feeding the same state. On real Android WebViews a
+         drag can get its pointer stream cancelled mid-gesture when the
+         browser/app gesture layer claims it; the old code treated that
+         pointercancel as "drag over" and killed the drag on the spot.
+         Touch events are a separate stream: while the finger is down
+         they keep the drag alive, and the shot fires on touchend. */
+      function applyDragPoint(p) {
+        drag.cur = p;
+        var aim = getAim();
+        if (!aimValid(aim)) {
+          // not an aiming drag (downward / sideways): no power, and the
+          // marble stays at its home spot
+          setPower(0);
+          shooter.x = SHOOTER_HOME.x;
+          shooter.y = SHOOTER_HOME.y;
+          return;
+        }
+        setPower(aim.power);
+        // the marble leans a little along the drag (same direction as the
+        // finger), well short of the full drag distance
+        var lean = Math.min(aim.dist, MAX_DRAG) * 0.35;
+        shooter.x = SHOOTER_HOME.x + aim.dx * lean;
+        shooter.y = SHOOTER_HOME.y + aim.dy * lean;
+      }
+
+      function finishDrag(cancelled) {
+        if (!drag) return;
+        var aim = getAim();
+        drag = null;
+        setPower(0);
+        if (cancelled || state !== "aim" || aim.dist < MIN_DRAG || aim.power <= 0.01 || !aimValid(aim)) {
+          // no shot taken: the marble settles back to its home spot
+          shooter.x = SHOOTER_HOME.x;
+          shooter.y = SHOOTER_HOME.y;
+          shooter.vx = 0;
+          shooter.vy = 0;
+          return;
+        }
+        // launch along the drag direction — the same way the aim line points
+        shooter.vx = aim.dx * aim.power * MAX_SPEED;
+        shooter.vy = aim.dy * aim.power * MAX_SPEED;
+        shotsLeft--;
+        syncHud();
+        state = "moving";
+      }
+
+      /* --- Pointer Events channel --- */
+      canvas.addEventListener("pointerdown", function (e) {
+        ensureAudio();
+        if (state !== "aim") return;
+        var p = toWorld(e.clientX, e.clientY);
+        if (drag) {
+          // touch channel started this drag first; adopt the pointer too
+          if (drag.pointerId === null) { drag.pointerId = e.pointerId; applyDragPoint(p); }
+          return;
+        }
+        // a press anywhere on the field starts the pull
+        drag = { pointerId: e.pointerId, touchId: null, start: p, cur: p };
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* best effort */ }
+        e.preventDefault();
+      });
+
+      canvas.addEventListener("pointermove", function (e) {
+        if (!drag || drag.pointerId === null || e.pointerId !== drag.pointerId) return;
+        applyDragPoint(toWorld(e.clientX, e.clientY));
+        e.preventDefault();
+      });
+
+      canvas.addEventListener("pointerup", function (e) {
+        if (!drag || drag.pointerId === null || e.pointerId !== drag.pointerId) return;
+        finishDrag(false);
+      });
+
+      canvas.addEventListener("pointercancel", function (e) {
+        if (!drag || drag.pointerId === null || e.pointerId !== drag.pointerId) return;
+        if (drag.touchId !== null) {
+          // Pointer stream was claimed mid-drag, but the finger is still
+          // down and its touch stream is alive: hand the drag over to the
+          // touch channel instead of killing it.
+          drag.pointerId = null;
+        } else {
+          finishDrag(true);
+        }
+      });
+
+      /* --- Touch Events channel (starts drags the pointer channel missed,
+             and takes over when the pointer stream dies mid-drag) --- */
+      function findTouch(list, id) {
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].identifier === id) return list[i];
+        }
+        return null;
+      }
+
+      canvas.addEventListener("touchstart", function (e) {
+        e.preventDefault();
+        ensureAudio();
+        if (state !== "aim" || e.changedTouches.length === 0) return;
+        var t = e.changedTouches[0];
+        var p = toWorld(t.clientX, t.clientY);
+        if (drag) {
+          if (drag.touchId === null) drag.touchId = t.identifier;
+          return;
+        }
+        // a press anywhere on the field starts the pull
+        drag = { pointerId: null, touchId: t.identifier, start: p, cur: p };
+      }, { passive: false });
+
+      canvas.addEventListener("touchmove", function (e) {
+        e.preventDefault();
+        if (!drag || drag.touchId === null) return;
+        var t = findTouch(e.changedTouches, drag.touchId);
+        if (!t) return;
+        applyDragPoint(toWorld(t.clientX, t.clientY));
+      }, { passive: false });
+
+      canvas.addEventListener("touchend", function (e) {
+        if (!drag || drag.touchId === null) return;
+        if (!findTouch(e.changedTouches, drag.touchId)) return;
+        if (drag.pointerId === null) {
+          // touch channel owns the ending (touch-started drag, or the
+          // pointer stream died earlier): releasing the finger fires.
+          finishDrag(false);
+        } else {
+          // pointer channel is alive and will finish on pointerup
+          drag.touchId = null;
+        }
+      });
+
+      canvas.addEventListener("touchcancel", function (e) {
+        if (!drag || drag.touchId === null) return;
+        if (!findTouch(e.changedTouches, drag.touchId)) return;
+        if (drag.pointerId === null) finishDrag(true);
+        else drag.touchId = null;
+      });
+
+      /* ============ Gesture lockdown: no pull-to-refresh / overscroll ============
+         The page is one fixed screen, so no touch may scroll or refresh it.
+         touch-action:none (CSS) covers pointer events; these non-passive
+         listeners are the belt-and-braces layer for browsers/webviews that
+         still try to claim the gesture (e.g. pull-to-refresh). */
+      document.addEventListener("touchmove", function (e) {
+        e.preventDefault();
+      }, { passive: false });
+      document.addEventListener("touchstart", function (e) {
+        // every touch is claimed by the page (buttons still get their
+        // click: they are filtered out here and handled normally)
+        if (e.target && e.target.closest && e.target.closest("button")) return;
+        e.preventDefault();
+      }, { passive: false });
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+      window.addEventListener("contextmenu", function (e) {
+        if (e.target === canvas) e.preventDefault();
+      });
+
+      /* ============ Buttons ============ */
+      document.getElementById("restartBtn").addEventListener("click", function () {
+        ensureAudio();
+        resetGame();
+      });
+      document.getElementById("againBtn").addEventListener("click", function () {
+        ensureAudio();
+        resetGame();
+      });
+
+      /* ============ Go ============ */
+      resize();
+      resetGame();
+      requestAnimationFrame(function (ts) { lastTime = ts; requestAnimationFrame(loop); });
+      // re-measure after layout settles (fonts / safe areas)
+      setTimeout(resize, 60);
+    </script>
+  </body>
+</html>
