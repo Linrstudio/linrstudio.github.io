@@ -4,7 +4,7 @@ var log = document.getElementById('log');
 function say(s){ log.textContent += '\n' + s; }
 var done=false;
 function finish(ok,msg){ if(done) return; done=true; document.title = ok?'WSS PASS':'WSS FAIL'; say((ok?'RESULT: PASS ':'RESULT: FAIL ')+msg); }
-setTimeout(function(){ finish(false,'timeout after 20s'); }, 20000);
+setTimeout(function(){ finish(false,'timeout after 75s'); }, 75000);
 try {
   var a = new WebSocket('wss://premierepop-server.onrender.com');
   var b = new WebSocket('wss://premierepop-server.onrender.com');
