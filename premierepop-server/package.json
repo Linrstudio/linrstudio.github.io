@@ -1,0 +1,1 @@
+{"dependencies":{},"description":"Zero-dependency WebSocket relay for PremierePop watch rooms (rooms, host sync, filtered danmaku/chat relay).","engines":{"node":">=18"},"license":"MIT","main":"server.js","name":"premierepop-server","private":true,"scripts":{"start":"node server.js","test":"node -e \"console.log('use repo root tests')\""},"version":"0.1.0"}
