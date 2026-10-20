@@ -1,0 +1,37 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>PremierePop WSS Test</title></head>
+<body><pre id="log">RUNNING</pre><script>
+var log = document.getElementById('log');
+function say(s){ log.textContent += '\n' + s; }
+var done=false;
+function finish(ok,msg){ if(done) return; done=true; document.title = ok?'WSS PASS':'WSS FAIL'; say((ok?'RESULT: PASS ':'RESULT: FAIL ')+msg); }
+setTimeout(function(){ finish(false,'timeout after 20s'); }, 20000);
+try {
+  var a = new WebSocket('wss://premierepop-server.onrender.com');
+  var b = new WebSocket('wss://premierepop-server.onrender.com');
+  var gotSync=false, gotDan=false;
+  b.onmessage = function(e){
+    var m; try { m = JSON.parse(e.data); } catch(_){ return; }
+    say('guest got: ' + m.kind);
+    if (m.kind==='sync' && m.time===77) gotSync=true;
+    if (m.kind==='danmaku' && m.item && m.item.text==='premiere night!') gotDan=true;
+    if (gotSync && gotDan) finish(true,'host sync + danmaku relayed to guest');
+  };
+  a.onopen = function(){ say('host socket open'); a.send(JSON.stringify({kind:'join', room:'TESTWS', name:'Host'}));
+    setTimeout(function(){
+      b.onopen = null;
+      if (b.readyState===1) start(); else b.addEventListener('open', start);
+    }, 300);
+  };
+  function start(){
+    say('guest socket open');
+    b.send(JSON.stringify({kind:'join', room:'TESTWS', name:'Guest'}));
+    setTimeout(function(){
+      a.send(JSON.stringify({kind:'sync', event:'play', time:77, playing:true}));
+      a.send(JSON.stringify({kind:'danmaku', item:{text:'premiere night!', time:77}}));
+      say('host sent sync + danmaku');
+    }, 500);
+  }
+  a.onerror = function(){ say('host socket error'); };
+  b.onerror = function(){ say('guest socket error'); };
+} catch(e){ finish(false, String(e)); }
+</script></body></html>
