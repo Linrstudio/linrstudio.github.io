@@ -1,6 +1,6 @@
 // Marble Game PWA service worker — offline-first for the whole game.
 // Bump CACHE_VERSION whenever the game files change so clients refresh.
-const CACHE_VERSION = 'marble-game-v8-pwa1';
+const CACHE_VERSION = 'marble-game-v8-pwa2';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -29,6 +29,20 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) {
     return;
   }
+  // Page navigations are network-first so game updates are never stuck
+  // behind a stale cached index.html; the cache is the offline fallback.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put('./index.html', copy));
+        }
+        return response;
+      }).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then((cached) => {
       if (cached) return cached;
@@ -38,13 +52,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
         }
         return response;
-      }).catch(() => {
-        // Offline and nothing cached for this URL: fall back to the game page for navigations.
-        if (request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-        return Response.error();
-      });
+      }).catch(() => Response.error());
     })
   );
 });
