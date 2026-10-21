@@ -257,6 +257,31 @@
         color: var(--ink-soft);
         line-height: 1.45;
       }
+      /* ---------- Custom background ---------- */
+      .btn.mini {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 10px;
+      }
+      .bg-box {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .bg-box .bg-title { font-size: 14px; font-weight: 700; }
+      .bg-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      .bg-note {
+        font-size: 12px;
+        color: var(--ink-soft);
+        margin: 0;
+        line-height: 1.45;
+      }
+      .bg-note:empty { display: none; }
       /* ---------- Stage ---------- */
       .stage {
         flex: 1 1 auto;
@@ -394,6 +419,15 @@
         </div>
         <div class="level-grid" id="levelGrid"></div>
         <button class="free-btn" id="freeBtn" type="button">自由模式<span>经典 7 珠 · 6 发 · 无限重开，不计星</span></button>
+        <div class="bg-box">
+          <div class="bg-title">场景背景</div>
+          <div class="bg-actions">
+            <button class="btn" id="bgPickBtn" type="button">自定义背景</button>
+            <button class="btn gone" id="bgResetBtn" type="button">恢复默认</button>
+          </div>
+          <p class="bg-note" id="bgNote"></p>
+        </div>
+        <input type="file" id="bgFile" accept="image/*" class="gone" />
       </div>
 
       <!-- ===== Game ===== -->
@@ -412,6 +446,7 @@
           <div class="hud-row">
             <button class="btn" id="restartBtn" type="button">↻ 重开</button>
             <button class="btn" id="levelsBtn" type="button">关卡</button>
+            <button class="btn mini" id="bgPickBtnGame" type="button">自定义背景</button>
             <div class="level-name"><span id="levelName">第 1 / 12 关</span><span class="extra gone" id="extraInfo"></span></div>
           </div>
           <div class="level-hint" id="levelHint"></div>
@@ -1321,25 +1356,41 @@
         ctx.clearRect(0, 0, view.w, view.h);
         var dark = darkMode();
 
-        // graph paper
-        ctx.fillStyle = dark ? "#232823" : "#f2f4ee";
-        ctx.fillRect(0, 0, view.w, view.h);
+        // background: a custom photo (cover-fit over the whole stage,
+        // no letterboxing, no distortion) when one is set; otherwise
+        // the default graph paper. Purely visual, bottom-most layer.
+        if (bgImg) {
+          var biw = bgImg.naturalWidth || bgImg.width;
+          var bih = bgImg.naturalHeight || bgImg.height;
+          if (biw > 0 && bih > 0) {
+            var bs = Math.max(view.w / biw, view.h / bih);
+            ctx.drawImage(bgImg, (view.w - biw * bs) / 2, (view.h - bih * bs) / 2, biw * bs, bih * bs);
+          }
+          // thin veil so marbles, ring and aim guide stay readable
+          ctx.fillStyle = dark ? "rgba(20,24,19,0.30)" : "rgba(238,241,234,0.25)";
+          ctx.fillRect(0, 0, view.w, view.h);
+        } else {
+          ctx.fillStyle = dark ? "#232823" : "#f2f4ee";
+          ctx.fillRect(0, 0, view.w, view.h);
+        }
         ctx.save();
         ctx.translate(view.ox, view.oy);
         ctx.scale(view.scale, view.scale);
 
-        var minor = 20, major = 100;
-        ctx.lineWidth = 1 / view.scale;
-        ctx.strokeStyle = dark ? "rgba(160,180,160,0.10)" : "rgba(110,140,110,0.13)";
-        ctx.beginPath();
-        for (var gx = 0; gx <= WORLD_W; gx += minor) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
-        for (var gy = 0; gy <= WORLD_H; gy += minor) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
-        ctx.stroke();
-        ctx.strokeStyle = dark ? "rgba(160,180,160,0.18)" : "rgba(110,140,110,0.22)";
-        ctx.beginPath();
-        for (gx = 0; gx <= WORLD_W; gx += major) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
-        for (gy = 0; gy <= WORLD_H; gy += major) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
-        ctx.stroke();
+        if (!bgImg) {
+          var minor = 20, major = 100;
+          ctx.lineWidth = 1 / view.scale;
+          ctx.strokeStyle = dark ? "rgba(160,180,160,0.10)" : "rgba(110,140,110,0.13)";
+          ctx.beginPath();
+          for (var gx = 0; gx <= WORLD_W; gx += minor) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
+          for (var gy = 0; gy <= WORLD_H; gy += minor) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
+          ctx.stroke();
+          ctx.strokeStyle = dark ? "rgba(160,180,160,0.18)" : "rgba(110,140,110,0.22)";
+          ctx.beginPath();
+          for (gx = 0; gx <= WORLD_W; gx += major) { ctx.moveTo(gx, 0); ctx.lineTo(gx, WORLD_H); }
+          for (gy = 0; gy <= WORLD_H; gy += major) { ctx.moveTo(0, gy); ctx.lineTo(WORLD_W, gy); }
+          ctx.stroke();
+        }
 
         // the ring
         ctx.beginPath();
@@ -1551,6 +1602,119 @@
         if (e.target === canvas) e.preventDefault();
       });
 
+      /* ============ Custom background photo ============
+         Purely visual: the picked picture is drawn cover-fit as the
+         bottom layer of the stage canvas (see draw()) and set as the
+         .app backdrop, so the level-select screen and the game share
+         it. Game logic never reads it. Before storing, the picture is
+         downscaled (long edge <= 1280, JPEG q0.85); if localStorage
+         still refuses it, one smaller retry (800 / q0.8), and if that
+         fails too the background applies to this session only. */
+      var BG_KEY = "marbleGameCustomBg";
+      var appEl = document.querySelector(".app");
+      var bgFileEl = document.getElementById("bgFile");
+      var bgResetBtn = document.getElementById("bgResetBtn");
+      var bgNoteEl = document.getElementById("bgNote");
+      var bgImg = null;          // decoded Image ready to draw, or null
+      var bgSessionOnly = false; // true when storage refused the picture
+
+      function bgNotify(msg) {
+        bgNoteEl.textContent = msg || "";
+        if (msg && !document.getElementById("gameScreen").classList.contains("gone")) flashHint(msg);
+      }
+
+      function refreshBgUI() {
+        bgResetBtn.classList.toggle("gone", !bgImg);
+      }
+
+      function applyCustomBg(dataUrl, imgEl, sessionOnly) {
+        bgImg = imgEl;
+        bgSessionOnly = !!sessionOnly;
+        if (dataUrl) appEl.style.backgroundImage = 'url("' + dataUrl + '")';
+        appEl.style.backgroundSize = "cover";
+        appEl.style.backgroundPosition = "center";
+        appEl.style.backgroundRepeat = "no-repeat";
+        refreshBgUI();
+      }
+
+      function clearCustomBg() {
+        try { localStorage.removeItem(BG_KEY); } catch (e) { /* ignore */ }
+        bgImg = null;
+        bgSessionOnly = false;
+        appEl.style.backgroundImage = "";
+        refreshBgUI();
+      }
+
+      function compressBg(img, maxEdge, quality) {
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        if (!w || !h) return null;
+        var s = Math.min(1, maxEdge / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(w * s));
+        c.height = Math.max(1, Math.round(h * s));
+        var g = c.getContext("2d");
+        g.fillStyle = "#ffffff"; // JPEG has no alpha: flatten onto white
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        return c.toDataURL("image/jpeg", quality);
+      }
+
+      function loadBgFromUrl(url, isObjectUrl) {
+        var img = new Image();
+        img.onload = function () {
+          if (isObjectUrl) { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }
+          var dataUrl = null, persisted = false;
+          try { dataUrl = compressBg(img, 1280, 0.85); } catch (e) { dataUrl = null; }
+          if (dataUrl) {
+            try { localStorage.setItem(BG_KEY, dataUrl); persisted = true; }
+            catch (e) {
+              try {
+                var smaller = compressBg(img, 800, 0.8);
+                localStorage.setItem(BG_KEY, smaller);
+                dataUrl = smaller;
+                persisted = true;
+              } catch (e2) { persisted = false; }
+            }
+          }
+          applyCustomBg(dataUrl, img, !persisted);
+          bgNotify(persisted ? "背景已更换" : "背景已更换（存储空间不足，仅本次打开生效）");
+        };
+        img.onerror = function () {
+          if (isObjectUrl) { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }
+          bgNotify("图片读取失败，背景未更改");
+        };
+        img.src = url;
+      }
+
+      bgFileEl.addEventListener("change", function () {
+        var f = bgFileEl.files && bgFileEl.files[0];
+        bgFileEl.value = ""; // allow re-picking the same file later
+        if (!f) return;
+        if (f.type && f.type.indexOf("image/") !== 0) {
+          bgNotify("这个文件不是图片，背景未更改");
+          return;
+        }
+        loadBgFromUrl(URL.createObjectURL(f), true);
+      });
+      document.getElementById("bgPickBtn").addEventListener("click", function () { bgFileEl.click(); });
+      document.getElementById("bgPickBtnGame").addEventListener("click", function () { bgFileEl.click(); });
+      bgResetBtn.addEventListener("click", function () {
+        clearCustomBg();
+        bgNotify("已恢复默认背景");
+      });
+
+      // restore a saved background on load
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem(BG_KEY); } catch (e) { stored = null; }
+        if (!stored) return;
+        var img = new Image();
+        img.onload = function () { applyCustomBg(stored, img, false); };
+        img.onerror = function () { try { localStorage.removeItem(BG_KEY); } catch (e) { /* ignore */ } };
+        img.src = stored;
+      })();
+
       /* ============ Screens: level select <-> game ============ */
       var selectScreen = document.getElementById("selectScreen");
       var gameScreen = document.getElementById("gameScreen");
@@ -1671,7 +1835,11 @@
         get shotsLeft() { return shotsLeft; },
         get progress() { return progress; },
         get mode() { return mode; },
-        get levelIndex() { return levelIndex; }
+        get levelIndex() { return levelIndex; },
+        setBgDataUrl: function (u) { loadBgFromUrl(u, false); },
+        clearBg: function () { clearCustomBg(); },
+        get hasCustomBg() { return !!bgImg; },
+        get bgSessionOnly() { return bgSessionOnly; }
       };
 
       /* ============ Go ============ */
@@ -1680,10 +1848,23 @@
       requestAnimationFrame(function (ts) { lastTime = ts; requestAnimationFrame(loop); });
     </script>
     <script>
-      // PWA: register the service worker so the game works fully offline after the first visit.
+      // PWA registration with proactive auto-update:
+      // check for a new service worker on load, on refocus and every 30 min;
+      // when a new worker takes control, reload once so updates apply without reinstalling.
       if ('serviceWorker' in navigator) {
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadController && !reloading) { reloading = true; window.location.reload(); }
+        });
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').catch(() => {});
+          navigator.serviceWorker.register('sw.js').then((reg) => {
+            reg.update().catch(() => {});
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') reg.update().catch(() => {});
+            });
+            setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+          }).catch(() => {});
         });
       }
     </script>
