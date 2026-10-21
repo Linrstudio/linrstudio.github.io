@@ -71,7 +71,20 @@
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
         touch-action: none;
         overscroll-behavior: none;
+        position: relative;
       }
+      /* custom photo backdrop: sits on the paper color, its CSS
+         opacity IS the user-set background opacity (default 30%) */
+      .bg-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        pointer-events: none;
+      }
+      .select-screen, .game-screen { position: relative; z-index: 1; }
       .gone { display: none !important; }
 
       /* ---------- Level select ---------- */
@@ -282,6 +295,28 @@
         line-height: 1.45;
       }
       .bg-note:empty { display: none; }
+      .bg-opacity-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .bg-opacity-row label {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .bg-opacity-row input[type="range"] {
+        flex: 1 1 auto;
+        min-width: 0;
+        accent-color: var(--accent);
+      }
+      .bg-opacity-val {
+        font-size: 13px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        min-width: 40px;
+        text-align: right;
+      }
       /* ---------- Stage ---------- */
       .stage {
         flex: 1 1 auto;
@@ -410,6 +445,7 @@
   </head>
   <body>
     <div class="app">
+      <div class="bg-layer" id="bgLayer"></div>
       <!-- ===== Level select ===== -->
       <div class="select-screen" id="selectScreen">
         <div class="sel-head">
@@ -424,6 +460,11 @@
           <div class="bg-actions">
             <button class="btn" id="bgPickBtn" type="button">自定义背景</button>
             <button class="btn gone" id="bgResetBtn" type="button">恢复默认</button>
+          </div>
+          <div class="bg-opacity-row gone" id="bgOpacityRow">
+            <label for="bgOpacity">背景透明度</label>
+            <input type="range" id="bgOpacity" min="10" max="100" step="5" value="30" />
+            <span class="bg-opacity-val" id="bgOpacityVal">30%</span>
           </div>
           <p class="bg-note" id="bgNote"></p>
         </div>
@@ -446,7 +487,6 @@
           <div class="hud-row">
             <button class="btn" id="restartBtn" type="button">↻ 重开</button>
             <button class="btn" id="levelsBtn" type="button">关卡</button>
-            <button class="btn mini" id="bgPickBtnGame" type="button">自定义背景</button>
             <div class="level-name"><span id="levelName">第 1 / 12 关</span><span class="extra gone" id="extraInfo"></span></div>
           </div>
           <div class="level-hint" id="levelHint"></div>
@@ -1359,16 +1399,22 @@
         // background: a custom photo (cover-fit over the whole stage,
         // no letterboxing, no distortion) when one is set; otherwise
         // the default graph paper. Purely visual, bottom-most layer.
+        // The photo is painted over the plain paper fill at the
+        // user-set opacity (bgOpacity %, default 30) — no extra veil,
+        // so 30% reads as a faint photo over paper, 100% as the photo
+        // at full strength.
         if (bgImg) {
+          ctx.fillStyle = dark ? "#232823" : "#f2f4ee";
+          ctx.fillRect(0, 0, view.w, view.h);
           var biw = bgImg.naturalWidth || bgImg.width;
           var bih = bgImg.naturalHeight || bgImg.height;
           if (biw > 0 && bih > 0) {
             var bs = Math.max(view.w / biw, view.h / bih);
+            ctx.save();
+            ctx.globalAlpha = bgOpacity / 100;
             ctx.drawImage(bgImg, (view.w - biw * bs) / 2, (view.h - bih * bs) / 2, biw * bs, bih * bs);
+            ctx.restore();
           }
-          // thin veil so marbles, ring and aim guide stay readable
-          ctx.fillStyle = dark ? "rgba(20,24,19,0.30)" : "rgba(238,241,234,0.25)";
-          ctx.fillRect(0, 0, view.w, view.h);
         } else {
           ctx.fillStyle = dark ? "#232823" : "#f2f4ee";
           ctx.fillRect(0, 0, view.w, view.h);
@@ -1604,44 +1650,79 @@
 
       /* ============ Custom background photo ============
          Purely visual: the picked picture is drawn cover-fit as the
-         bottom layer of the stage canvas (see draw()) and set as the
-         .app backdrop, so the level-select screen and the game share
-         it. Game logic never reads it. Before storing, the picture is
-         downscaled (long edge <= 1280, JPEG q0.85); if localStorage
-         still refuses it, one smaller retry (800 / q0.8), and if that
-         fails too the background applies to this session only. */
+         bottom layer of the stage canvas (see draw()) and shown on
+         the .bg-layer backdrop, so the level-select screen and the
+         game share it. Game logic never reads it. Before storing, the
+         picture is downscaled (long edge <= 1280, JPEG q0.85); if
+         localStorage still refuses it, one smaller retry (800 /
+         q0.8), and if that fails too the background applies to this
+         session only.
+         The picture's strength is bgOpacity (percent, 10–100,
+         default 30): the canvas paints paper first, then the photo
+         at that globalAlpha; the DOM layer uses the same value as
+         its CSS opacity. The percent persists in its own key, so a
+         stored picture from before this feature (no percent saved)
+         simply opens at the 30% default. Settings live only on the
+         level-select screen. */
       var BG_KEY = "marbleGameCustomBg";
-      var appEl = document.querySelector(".app");
+      var BG_OPACITY_KEY = "marbleGameBgOpacity";
+      var BG_DEFAULT_OPACITY = 30;
+      var bgLayerEl = document.getElementById("bgLayer");
       var bgFileEl = document.getElementById("bgFile");
       var bgResetBtn = document.getElementById("bgResetBtn");
       var bgNoteEl = document.getElementById("bgNote");
+      var bgOpacityRowEl = document.getElementById("bgOpacityRow");
+      var bgOpacityEl = document.getElementById("bgOpacity");
+      var bgOpacityValEl = document.getElementById("bgOpacityVal");
       var bgImg = null;          // decoded Image ready to draw, or null
       var bgSessionOnly = false; // true when storage refused the picture
+      var bgOpacity = BG_DEFAULT_OPACITY;
+      try {
+        var savedOpacity = parseInt(localStorage.getItem(BG_OPACITY_KEY), 10);
+        if (savedOpacity >= 10 && savedOpacity <= 100) bgOpacity = savedOpacity;
+      } catch (e) { /* storage unavailable: keep the default */ }
 
       function bgNotify(msg) {
         bgNoteEl.textContent = msg || "";
         if (msg && !document.getElementById("gameScreen").classList.contains("gone")) flashHint(msg);
       }
 
+      // push bgOpacity to the DOM layer, the slider and its readout
+      function syncBgOpacity() {
+        bgLayerEl.style.opacity = String(bgOpacity / 100);
+        bgOpacityEl.value = String(bgOpacity);
+        bgOpacityValEl.textContent = bgOpacity + "%";
+      }
+
+      function setBgOpacity(p) {
+        p = Math.round(Number(p) / 5) * 5;
+        if (!(p >= 10)) p = 10;
+        if (p > 100) p = 100;
+        bgOpacity = p;
+        syncBgOpacity();
+        try { localStorage.setItem(BG_OPACITY_KEY, String(p)); } catch (e) { /* session only */ }
+      }
+
       function refreshBgUI() {
         bgResetBtn.classList.toggle("gone", !bgImg);
+        bgOpacityRowEl.classList.toggle("gone", !bgImg);
+        syncBgOpacity();
       }
 
       function applyCustomBg(dataUrl, imgEl, sessionOnly) {
         bgImg = imgEl;
         bgSessionOnly = !!sessionOnly;
-        if (dataUrl) appEl.style.backgroundImage = 'url("' + dataUrl + '")';
-        appEl.style.backgroundSize = "cover";
-        appEl.style.backgroundPosition = "center";
-        appEl.style.backgroundRepeat = "no-repeat";
+        if (dataUrl) bgLayerEl.style.backgroundImage = 'url("' + dataUrl + '")';
         refreshBgUI();
       }
 
       function clearCustomBg() {
         try { localStorage.removeItem(BG_KEY); } catch (e) { /* ignore */ }
+        try { localStorage.removeItem(BG_OPACITY_KEY); } catch (e) { /* ignore */ }
         bgImg = null;
         bgSessionOnly = false;
-        appEl.style.backgroundImage = "";
+        bgOpacity = BG_DEFAULT_OPACITY;
+        bgLayerEl.style.backgroundImage = "";
         refreshBgUI();
       }
 
@@ -1698,7 +1779,7 @@
         loadBgFromUrl(URL.createObjectURL(f), true);
       });
       document.getElementById("bgPickBtn").addEventListener("click", function () { bgFileEl.click(); });
-      document.getElementById("bgPickBtnGame").addEventListener("click", function () { bgFileEl.click(); });
+      bgOpacityEl.addEventListener("input", function () { setBgOpacity(bgOpacityEl.value); });
       bgResetBtn.addEventListener("click", function () {
         clearCustomBg();
         bgNotify("已恢复默认背景");
@@ -1838,6 +1919,8 @@
         get levelIndex() { return levelIndex; },
         setBgDataUrl: function (u) { loadBgFromUrl(u, false); },
         clearBg: function () { clearCustomBg(); },
+        setBgOpacity: function (p) { setBgOpacity(p); },
+        get bgOpacity() { return bgOpacity; },
         get hasCustomBg() { return !!bgImg; },
         get bgSessionOnly() { return bgSessionOnly; }
       };
