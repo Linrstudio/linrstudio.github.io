@@ -23,6 +23,7 @@
         --ink: #2c3428;
         --ink-soft: #6d7768;
         --accent: #2e7d5b;
+        --star: #e8a13a;
         --bar-track: rgba(60, 80, 60, 0.12);
         --btn: #ffffff;
         --btn-ink: #2c3428;
@@ -37,6 +38,7 @@
           --ink: #e6ebdf;
           --ink-soft: #9aa695;
           --accent: #7fc9a4;
+          --star: #f2b53a;
           --bar-track: rgba(255, 255, 255, 0.14);
           --btn: #2b3129;
           --btn-ink: #e6ebdf;
@@ -57,6 +59,8 @@
         inset: 0;
         width: 100%;
       }
+      /* while the level-select menu is up, let it scroll instead */
+      body.selecting, body.selecting .app { touch-action: pan-y; }
       .app {
         height: 100dvh;
         display: flex;
@@ -67,6 +71,119 @@
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
         touch-action: none;
         overscroll-behavior: none;
+      }
+      .gone { display: none !important; }
+
+      /* ---------- Level select ---------- */
+      .select-screen {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        padding: calc(16px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .sel-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .sel-title { font-size: 22px; font-weight: 800; }
+      .sel-stars {
+        margin-left: auto;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--star);
+        font-variant-numeric: tabular-nums;
+      }
+      .version {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
+      .level-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .level-card {
+        appearance: none;
+        font: inherit;
+        text-align: left;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 10px 12px 9px;
+        cursor: pointer;
+        color: var(--ink);
+        min-height: 86px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .level-card:active { transform: scale(0.97); }
+      .level-card .num {
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+      }
+      .level-card .name { font-size: 13px; font-weight: 600; }
+      .level-card .stars {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        color: var(--star);
+        margin-top: auto;
+      }
+      .level-card .stars .off { color: var(--ink-soft); opacity: 0.45; }
+      .level-card.locked {
+        opacity: 0.55;
+        cursor: default;
+        align-items: flex-start;
+      }
+      .level-card.locked .lock {
+        margin-top: auto;
+        color: var(--ink-soft);
+        display: inline-flex;
+      }
+      .level-card.locked .lock svg { width: 15px; height: 15px; fill: currentColor; }
+      .free-btn {
+        appearance: none;
+        font: inherit;
+        background: var(--btn);
+        border: 1px dashed var(--panel-border);
+        color: var(--btn-ink);
+        border-radius: 16px;
+        padding: 13px 16px;
+        cursor: pointer;
+        text-align: left;
+        font-size: 15px;
+        font-weight: 700;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .free-btn:active { transform: scale(0.98); }
+      .free-btn span {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-soft);
+      }
+
+      /* ---------- Game screen ---------- */
+      .game-screen {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
       }
       /* ---------- HUD ---------- */
       .hud {
@@ -121,11 +238,24 @@
         gap: 6px;
       }
       .btn:active { transform: scale(0.97); }
-      .hint {
+      .level-name {
         margin-left: auto;
-        font-size: 12px;
-        color: var(--ink-soft);
+        font-size: 13px;
+        font-weight: 700;
         text-align: right;
+      }
+      .level-name .extra {
+        display: block;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--ink-soft);
+        margin-top: 1px;
+      }
+      .level-hint {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--ink-soft);
+        line-height: 1.45;
       }
       /* ---------- Stage ---------- */
       .stage {
@@ -144,19 +274,11 @@
         touch-action: none;
         overscroll-behavior: none;
       }
-      .version {
+      .stage .version {
         position: absolute;
         top: 8px;
         right: 10px;
         z-index: 4;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        color: var(--ink-soft);
-        background: var(--panel);
-        border: 1px solid var(--panel-border);
-        border-radius: 999px;
-        padding: 2px 8px;
         pointer-events: none;
       }
       /* ---------- Power bar ---------- */
@@ -213,7 +335,7 @@
         background: var(--btn);
         border: 1px solid var(--panel-border);
         border-radius: 20px;
-        padding: 28px 30px 24px;
+        padding: 26px 28px 22px;
         text-align: center;
         max-width: 320px;
         width: 100%;
@@ -222,8 +344,16 @@
       .card .result {
         font-size: 30px;
         font-weight: 800;
-        margin: 0 0 6px;
+        margin: 0 0 4px;
       }
+      .card .stars-big {
+        font-size: 26px;
+        letter-spacing: 0.22em;
+        color: var(--star);
+        margin: 2px 0 6px;
+        min-height: 32px;
+      }
+      .card .stars-big .off { color: var(--ink-soft); opacity: 0.35; }
       .card .detail {
         font-size: 14px;
         color: var(--ink-soft);
@@ -231,53 +361,84 @@
         line-height: 1.6;
       }
       .card .btn {
-        background: var(--accent);
-        color: #fff;
-        border-color: transparent;
-        padding: 11px 26px;
+        padding: 11px 22px;
         font-size: 15px;
         border-radius: 999px;
       }
+      .card .btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
       @media (prefers-color-scheme: dark) {
-        .card .btn { color: #12241a; }
+        .card .btn.primary { color: #12241a; }
+      }
+      .card .btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
       }
     </style>
   </head>
   <body>
     <div class="app">
-      <header class="hud">
-        <div class="stats">
-          <div class="stat">
-            <div class="label">击出弹珠</div>
-            <div class="value"><span id="outCount">0</span><span class="dim"> / 7</span></div>
-          </div>
-          <div class="stat">
-            <div class="label">剩余机会</div>
-            <div class="value" id="shotsLeft">6</div>
-          </div>
+      <!-- ===== Level select ===== -->
+      <div class="select-screen" id="selectScreen">
+        <div class="sel-head">
+          <div class="sel-title">选择关卡</div>
+          <div class="sel-stars" id="starTotal">★ 0 / 36</div>
+          <span class="version">V8</span>
         </div>
-        <div class="hud-row">
-          <button class="btn" id="restartBtn" type="button">↻ 重新开始</button>
-          <div class="hint">在场地任意处按住向上拖拽瞄准<br />松手发射，把弹珠撞出圈外</div>
-        </div>
-      </header>
-
-      <div class="stage" id="stage">
-        <canvas id="game"></canvas>
-        <div class="version">V7</div>
-        <div class="overlay" id="overlay">
-          <div class="card">
-            <p class="result" id="resultTitle">全部击出！</p>
-            <p class="detail" id="resultDetail"></p>
-            <button class="btn" id="againBtn" type="button">再来一局</button>
-          </div>
-        </div>
+        <div class="level-grid" id="levelGrid"></div>
+        <button class="free-btn" id="freeBtn" type="button">自由模式<span>经典 7 珠 · 6 发 · 无限重开，不计星</span></button>
       </div>
 
-      <div class="power-wrap">
-        <span class="power-label">力度</span>
-        <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
-        <span class="power-num" id="powerNum">0</span>
+      <!-- ===== Game ===== -->
+      <div class="game-screen gone" id="gameScreen">
+        <header class="hud">
+          <div class="stats">
+            <div class="stat">
+              <div class="label" id="outLabel">击出弹珠</div>
+              <div class="value"><span id="outCount">0</span><span class="dim" id="totalWrap"> / <span id="totalCount">7</span></span></div>
+            </div>
+            <div class="stat">
+              <div class="label">剩余机会</div>
+              <div class="value" id="shotsLeft">6</div>
+            </div>
+          </div>
+          <div class="hud-row">
+            <button class="btn" id="restartBtn" type="button">↻ 重开</button>
+            <button class="btn" id="levelsBtn" type="button">关卡</button>
+            <div class="level-name"><span id="levelName">第 1 / 12 关</span><span class="extra gone" id="extraInfo"></span></div>
+          </div>
+          <div class="level-hint" id="levelHint"></div>
+        </header>
+
+        <div class="stage" id="stage">
+          <canvas id="game"></canvas>
+          <div class="version">V8</div>
+          <div class="overlay" id="overlay">
+            <div class="card">
+              <p class="result" id="resultTitle">全部击出！</p>
+              <div class="stars-big" id="resultStars"></div>
+              <p class="detail" id="resultDetail"></p>
+              <button class="btn primary gone" id="nextBtn" type="button">下一关 →</button>
+              <div class="btn-row">
+                <button class="btn" id="againBtn" type="button">重玩本关</button>
+                <button class="btn" id="backBtn" type="button">关卡选择</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="power-wrap">
+          <span class="power-label">力度</span>
+          <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
+          <span class="power-num" id="powerNum">0</span>
+        </div>
       </div>
     </div>
 
@@ -287,16 +448,13 @@
       /* ============ World constants (logical units) ============ */
       var WORLD_W = 400;
       var WORLD_H = 600;
-      var CIRCLE = { x: 200, y: 218, r: 138 };
       var MARBLE_R = 25;
-      var SHOOTER_HOME = { x: 200, y: 512 };
       var MAX_DRAG = 170;          // logical units for full power
-      var MAX_SPEED = 1560;        // units / second at full power
+      var MAX_SPEED = 1560;        // shooter speed at full power
+      var MAX_BALL_SPEED = 2300;   // hard cap for every ball (bouncy gain safety)
       var MIN_DRAG = 12;           // below this, cancel the shot
-      var TOTAL_TARGETS = 7;
-      var TOTAL_SHOTS = 6;
 
-      /* Swirl palettes for the 7 target marbles + shooter */
+      /* Swirl palettes for normal target marbles + shooter + specials */
       var TARGET_STYLES = [
         { base: "#cfe6dd", swirls: ["#d98a2b", "#7a4a16"] },
         { base: "#d3e2ee", swirls: ["#57b84e", "#b8d94a"] },
@@ -304,9 +462,129 @@
         { base: "#e8e6df", swirls: ["#e2572b", "#f2b53a"] },
         { base: "#d8ead9", swirls: ["#3fae5a", "#e2572b"] },
         { base: "#d9e4ef", swirls: ["#2749c9", "#37a8c4"] },
-        { base: "#eee3da", swirls: ["#c93a2b", "#e88a3a"] }
+        { base: "#eee3da", swirls: ["#c93a2b", "#e88a3a"] },
+        { base: "#e6ddf0", swirls: ["#7a3ac9", "#c93a8a"] },
+        { base: "#f0ead2", swirls: ["#b8860b", "#e2572b"] },
+        { base: "#d2ecec", swirls: ["#0b7a8c", "#3ac9b8"] },
+        { base: "#f3dde3", swirls: ["#c93a5e", "#e88ab0"] },
+        { base: "#e2ecd2", swirls: ["#5e8c0b", "#b8d94a"] }
       ];
       var SHOOTER_STYLE = { base: "#d7ecf2", swirls: ["#2ba8c9", "#7fd4e8"] };
+      var HEAVY_STYLE = { base: "#585f68", swirls: ["#23262b", "#9aa4ae"] };
+      var GOLD_STYLE = { base: "#f6d67c", swirls: ["#d9930d", "#fff3b0"] };
+      var BOUNCY_STYLE = { base: "#ffd9c2", swirls: ["#ff5a1f", "#ffb03a"] };
+      var BLACK_STYLE = { base: "#17171a", swirls: [] };
+
+      /* ============ Level data ============
+         Coordinates are absolute world units around the default ring
+         centre (200, 218). Types: normal | heavy | bouncy | gold.
+         Black (forbidden) marbles and obstacles are listed separately:
+         neither is a target and neither counts toward the total. */
+      var CX = 200, CY = 218;
+      function pt(x, y, type, r) {
+        var o = { x: x, y: y, type: type || "normal" };
+        if (r) o.r = r; // per-marble radius override (level 6's smaller wall marbles)
+        return o;
+      }
+      function ringPts(n, rad, phaseDeg) {
+        var arr = [];
+        for (var i = 0; i < n; i++) {
+          var a = (Math.PI * 2 * i) / n + (phaseDeg || 0) * Math.PI / 180;
+          arr.push(pt(CX + Math.cos(a) * rad, CY + Math.sin(a) * rad));
+        }
+        return arr;
+      }
+      function hexPts() { // 1 centre + 6 around, tight packing
+        var arr = [pt(CX, CY)];
+        var d = MARBLE_R * 2 * 0.99;
+        for (var i = 0; i < 6; i++) {
+          var a = (Math.PI / 3) * i + Math.PI / 6;
+          arr.push(pt(CX + Math.cos(a) * d, CY + Math.sin(a) * d));
+        }
+        return arr;
+      }
+      function hexWithBouncyBottom() { // hex pack whose lowest marble is the hidden bouncy one
+        var arr = hexPts();
+        for (var i = 0; i < arr.length; i++) {
+          if (Math.abs(arr[i].x - CX) < 1 && arr[i].y > CY) arr[i].type = "bouncy";
+        }
+        return arr;
+      }
+
+      var LEVELS = [
+        { name: "经典花心", shots: 6, circleR: 138,
+          hint: "把 7 颗弹珠全部撞出圈外，通关时剩的发数越多，星越高。",
+          targets: hexPts(), blacks: [], obstacles: [] },
+        { name: "小花", shots: 5, circleR: 118,
+          hint: "圆圈更小、只有 5 颗珠，试试一发带走两颗。",
+          targets: [pt(CX, CY)].concat(ringPts(4, 50, 45)), blacks: [], obstacles: [] },
+        { name: "圆环阵", shots: 6, circleR: 138,
+          hint: "空心环阵：打穿一角，靠连锁把整圈带出去。",
+          targets: ringPts(8, 66, 0), blacks: [], obstacles: [] },
+        { name: "双团", shots: 6, circleR: 138,
+          hint: "左右两簇，先想好打哪边、往哪个方向带。",
+          targets: [
+            pt(140, CY), pt(140, CY + 50), pt(90, CY), pt(140, CY - 50),
+            pt(260, CY), pt(260, CY + 50), pt(310, CY), pt(260, CY - 50)
+          ], blacks: [], obstacles: [] },
+        { name: "大圆散点", shots: 7, circleR: 158,
+          hint: "圆更大、珠子分散，每一颗都要处理到位。",
+          targets: [
+            pt(200, 120), pt(130, 160), pt(275, 155), pt(160, 225), pt(245, 230),
+            pt(200, 300), pt(120, 270), pt(290, 285), pt(200, 180)
+          ], blacks: [], obstacles: [] },
+        { name: "一字墙", shots: 6, circleR: 158,
+          hint: "大圆里横排成墙，正面硬撞效果差，试试打两端。",
+          // Wall marbles are smaller (r 20) and spaced 44 apart, centred
+          // on ±132: neighbours keep a ~4-unit gap (no overlap) and the
+          // end marbles' outer edge reaches only 132 + 20 = 152 < 158,
+          // so the whole wall starts fully inside the ring.
+          targets: [-132, -88, -44, 0, 44, 88, 132].map(function (dx) { return pt(CX + dx, CY, "normal", 20); }),
+          blacks: [], obstacles: [] },
+        { name: "障碍初现", shots: 6, circleR: 138,
+          hint: "灰色障碍石固定不动、永远撞不走：绕开它，或借它反弹。",
+          targets: hexPts(), blacks: [], obstacles: [{ x: 200, y: 320 }] },
+        { name: "重珠登场", shots: 6, circleR: 138,
+          hint: "深色重珠约是普通珠 3 倍重：蓄满力、正中它才推得动。",
+          targets: [pt(CX, CY, "heavy")].concat(ringPts(6, 62, 30)),
+          blacks: [], obstacles: [{ x: 140, y: 295 }] },
+        { name: "隐藏弹力", shots: 6, circleR: 138,
+          hint: "有一颗超级弹力珠混在里面，外表完全看不出来——撞到它你就知道了。",
+          targets: hexWithBouncyBottom().concat([pt(200, 112)]), blacks: [], obstacles: [] },
+        { name: "禁撞黑珠", shots: 6, circleR: 138,
+          hint: "黑珠只有被主珠在圈内直接撞到，才会让圈内多出 2 颗新珠；别的珠子碰到它没事，黑珠被撞出圈后就安全了、随便撞。",
+          targets: hexPts().concat([pt(200, 112)]), blacks: [{ x: 288, y: 272 }], obstacles: [] },
+        { name: "只打金珠", shots: 6, circleR: 138, variant: "gold",
+          hint: "目标只有一个：把金珠撞出圈。金珠就摆在珠团最前面、正对着你，直射就能打到；普通珠出圈不判负，会被送回圈内。",
+          // Gold sits exposed at the front edge of the cluster (nearest
+          // the shooter at the bottom), with a clear straight lane from
+          // the launch spot. The 7 normal marbles half-surround it from
+          // behind and the sides — nobody blocks the direct shot, and
+          // every pair keeps >= 50 units centre distance (no overlap).
+          targets: [
+            pt(200, 302, "gold"),
+            pt(152, 258), pt(248, 258), pt(200, 240),
+            pt(136, 204), pt(264, 204), pt(172, 164), pt(228, 164)
+          ],
+          blacks: [], obstacles: [] },
+        { name: "决赛大阵", shots: 7, circleR: 150,
+          hint: "12 颗大阵 + 障碍石 + 一颗隐藏弹力珠，综合考试。",
+          targets: [pt(CX, CY)].concat(hexWithBouncyBottom().slice(1), ringPts(5, 102, -30)),
+          blacks: [], obstacles: [{ x: 118, y: 148 }] }
+      ];
+      var FREE_LEVEL = { name: "自由模式", shots: 6, circleR: 138,
+        hint: "经典 7 珠 · 6 发，随便练手，无限重开。",
+        targets: null, blacks: [], obstacles: [] }; // targets filled from LEVELS[0]
+
+      /* ============ Progress (localStorage; in-memory fallback) ============ */
+      var progress = { unlocked: 1, stars: {} };
+      try {
+        var saved = JSON.parse(localStorage.getItem("marbleGameV8Progress") || "null");
+        if (saved && typeof saved.unlocked === "number" && saved.stars) progress = saved;
+      } catch (e) { /* storage unavailable: progress lives in memory only */ }
+      function saveProgress() {
+        try { localStorage.setItem("marbleGameV8Progress", JSON.stringify(progress)); } catch (e) { /* ignore */ }
+      }
 
       /* ============ Canvas setup ============ */
       var canvas = document.getElementById("game");
@@ -320,6 +598,7 @@
 
       function resize() {
         var rect = stage.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
         view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
         view.w = rect.width;
         view.h = rect.height;
@@ -349,14 +628,15 @@
         }
         if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
       }
-      function tick(strength) {
+      function tick(strength, low) {
         if (!audioCtx) return;
         var t = audioCtx.currentTime;
         var osc = audioCtx.createOscillator();
         var gain = audioCtx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(1900 + Math.random() * 700, t);
-        osc.frequency.exponentialRampToValueAtTime(900, t + 0.05);
+        var f0 = low ? 320 : 1900 + Math.random() * 700;
+        osc.frequency.setValueAtTime(f0, t);
+        osc.frequency.exponentialRampToValueAtTime(low ? 140 : 900, t + 0.05);
         var v = Math.min(0.22, 0.03 + strength * 0.00035);
         gain.gain.setValueAtTime(v, t);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
@@ -366,52 +646,109 @@
       }
 
       /* ============ Game state ============ */
-      var targets = [];   // {x,y,vx,vy,style,counted,spin}
-      var shooter = null; // {x,y,vx,vy,style}
-      var shotsLeft = TOTAL_SHOTS;
-      var outCount = 0;
-      var state = "aim";  // aim | moving | returning | over
-      var drag = null;    // {pointerId, touchId, start:{x,y}, cur:{x,y}} — see input section
-      var returnAnim = null;
+      var mode = "level";            // "level" | "free"
+      var levelIndex = 0;            // current level (mode === "level")
+      var cfg = LEVELS[0];           // active level config
+      var circle = { x: CX, y: CY, r: 138 };
+      var homePos = { x: 200, y: 512 };
+      var variant = "normal";        // "normal" | "gold"
 
+      var targets = [];    // countable marbles: {…, type, counted, revealed}
+      var blacks = [];     // forbidden marbles (movable, not targets)
+      var obstacles = [];  // fixed stones {x, y, r}
+      var shooter = null;
+      var shotsLeft = 6;
+      var outCount = 0;    // normal mode: targets out · gold mode: normal marbles out
+      var goldOut = false;
+      var state = "aim";   // aim | moving | returning | over
+      var movingTime = 0;  // seconds spent in "moving" (watchdog below)
+      var drag = null;
+      var returnAnim = null;
+      var styleCursor = 0; // cycles TARGET_STYLES for spawned marbles
+
+      var outLabelEl = document.getElementById("outLabel");
       var outCountEl = document.getElementById("outCount");
+      var totalWrapEl = document.getElementById("totalWrap");
+      var totalCountEl = document.getElementById("totalCount");
       var shotsLeftEl = document.getElementById("shotsLeft");
+      var levelNameEl = document.getElementById("levelName");
+      var extraInfoEl = document.getElementById("extraInfo");
+      var levelHintEl = document.getElementById("levelHint");
       var powerFill = document.getElementById("powerFill");
       var powerNum = document.getElementById("powerNum");
       var overlay = document.getElementById("overlay");
       var resultTitle = document.getElementById("resultTitle");
+      var resultStars = document.getElementById("resultStars");
       var resultDetail = document.getElementById("resultDetail");
+      var nextBtn = document.getElementById("nextBtn");
+      var againBtn = document.getElementById("againBtn");
 
-      function makeMarble(x, y, style) {
-        return { x: x, y: y, vx: 0, vy: 0, r: MARBLE_R, style: style, counted: false, spin: Math.random() * Math.PI * 2 };
+      var TYPE_DEF = {
+        normal: { r: MARBLE_R, m: 1 },
+        heavy:  { r: 34, m: 3 },
+        bouncy: { r: MARBLE_R, m: 1 },
+        gold:   { r: MARBLE_R, m: 1 },
+        black:  { r: MARBLE_R, m: 1 }
+      };
+
+      function makeBall(x, y, type, rOverride) {
+        var def = TYPE_DEF[type] || TYPE_DEF.normal;
+        var style;
+        if (type === "heavy") style = HEAVY_STYLE;
+        else if (type === "gold") style = GOLD_STYLE;
+        else if (type === "black") style = BLACK_STYLE;
+        else style = TARGET_STYLES[styleCursor++ % TARGET_STYLES.length]; // bouncy looks normal on purpose
+        return {
+          x: x, y: y, vx: 0, vy: 0, r: rOverride || def.r, m: def.m, type: type,
+          style: style, counted: false, revealed: false, armed: true,
+          bornAt: 0, spin: Math.random() * Math.PI * 2
+        };
       }
 
-      function resetGame() {
-        targets = [];
-        // Hexagonal tight packing: 1 center + 6 around
-        var d = MARBLE_R * 2 * 0.99;
-        targets.push(makeMarble(CIRCLE.x, CIRCLE.y, TARGET_STYLES[0]));
-        for (var i = 0; i < 6; i++) {
-          var a = (Math.PI / 3) * i + Math.PI / 6;
-          targets.push(makeMarble(
-            CIRCLE.x + Math.cos(a) * d,
-            CIRCLE.y + Math.sin(a) * d,
-            TARGET_STYLES[i + 1]
-          ));
-        }
-        shooter = makeMarble(SHOOTER_HOME.x, SHOOTER_HOME.y, SHOOTER_STYLE);
-        shotsLeft = TOTAL_SHOTS;
+      function loadLevel() {
+        circle = { x: CX, y: CY, r: cfg.circleR };
+        homePos = { x: cfg.shooterX || 200, y: 512 };
+        variant = cfg.variant || "normal";
+        styleCursor = 0;
+        targets = (cfg.targets || LEVELS[0].targets).map(function (p) { return makeBall(p.x, p.y, p.type, p.r); });
+        blacks = (cfg.blacks || []).map(function (p) { return makeBall(p.x, p.y, "black"); });
+        obstacles = (cfg.obstacles || []).map(function (o) { return { x: o.x, y: o.y, r: 30 }; });
+        shooter = makeBall(homePos.x, homePos.y, "normal");
+        shooter.style = SHOOTER_STYLE;
+        shotsLeft = cfg.shots;
         outCount = 0;
+        goldOut = false;
         state = "aim";
+        movingTime = 0;
         drag = null;
         returnAnim = null;
         overlay.classList.remove("show");
         setPower(0);
+        // HUD framing for this level
+        if (mode === "free") levelNameEl.textContent = "自由模式";
+        else levelNameEl.textContent = "第 " + (levelIndex + 1) + " / 12 关 · " + cfg.name;
+        if (typeof hintTimer !== "undefined" && hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+        levelHintEl.textContent = cfg.hint;
+        if (variant === "gold") {
+          outLabelEl.textContent = "金珠";
+          totalWrapEl.style.display = "none";
+        } else {
+          outLabelEl.textContent = "击出弹珠";
+          totalWrapEl.style.display = "";
+        }
         syncHud();
       }
 
       function syncHud() {
-        outCountEl.textContent = outCount;
+        if (variant === "gold") {
+          outCountEl.textContent = goldOut ? "已出圈" : "在圈内";
+          extraInfoEl.textContent = "普通珠出圈 " + outCount + "（会被送回圈内）";
+          extraInfoEl.classList.remove("gone");
+        } else {
+          outCountEl.textContent = outCount;
+          totalCountEl.textContent = targets.length;
+          extraInfoEl.classList.add("gone");
+        }
         shotsLeftEl.textContent = shotsLeft;
       }
 
@@ -422,20 +759,36 @@
       }
 
       /* ============ Physics ============ */
-      var RESTITUTION = 0.94;   // marble-marble
-      var WALL_REST = 0.62;     // walls
-      var FRICTION = 0.55;      // exponential damping per second
-      var STOP_SPEED = 9;       // below this, snap to 0
+      var RESTITUTION = 0.94;    // marble-marble
+      var BOUNCY_REST = 1.3;     // any collision involving the bouncy marble
+      var WALL_REST = 0.62;      // walls
+      var FRICTION = 0.55;       // exponential damping per second
+      var STOP_SPEED = 9;        // below this, snap to 0
 
       function allBalls() {
-        var arr = targets.slice();
+        var arr = targets.concat(blacks);
         if (shooter) arr.push(shooter);
         return arr;
+      }
+
+      function clampSpeed(b) {
+        var s = Math.hypot(b.vx, b.vy);
+        if (s > MAX_BALL_SPEED) {
+          b.vx *= MAX_BALL_SPEED / s;
+          b.vy *= MAX_BALL_SPEED / s;
+        }
       }
 
       function stepPhysics(dt) {
         var balls = allBalls();
         var i, j, b;
+        // Remember where each black marble was when this step began.
+        // The spawn gate judges the position at contact start; without
+        // this, the collision solver's positional correction (which
+        // runs before the trigger hook below) could shove a black
+        // marble that was sitting just outside the ring a few units
+        // inward and make an outside impact count as inside.
+        for (i = 0; i < blacks.length; i++) { blacks[i].px = blacks[i].x; blacks[i].py = blacks[i].y; }
         for (i = 0; i < balls.length; i++) {
           b = balls[i];
           if (b.vx === 0 && b.vy === 0) continue;
@@ -444,18 +797,43 @@
           var damp = Math.exp(-FRICTION * dt);
           b.vx *= damp;
           b.vy *= damp;
-          // spin follows horizontal travel, just for looks
           b.spin += b.vx * dt * 0.012;
-          // walls
-          if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * WALL_REST; }
-          if (b.x > WORLD_W - b.r) { b.x = WORLD_W - b.r; b.vx = -Math.abs(b.vx) * WALL_REST; }
-          if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * WALL_REST; }
-          if (b.y > WORLD_H - b.r) { b.y = WORLD_H - b.r; b.vy = -Math.abs(b.vy) * WALL_REST; }
-          if (Math.abs(b.vx) < STOP_SPEED && Math.abs(b.vy) < STOP_SPEED) {
-            if (Math.hypot(b.vx, b.vy) < STOP_SPEED) { b.vx = 0; b.vy = 0; }
+          // walls — the bouncy marble gains energy here too (e = 1.3,
+          // same as its ball collisions); clampSpeed caps the result
+          var wr = b.type === "bouncy" ? BOUNCY_REST : WALL_REST;
+          if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * wr; }
+          if (b.x > WORLD_W - b.r) { b.x = WORLD_W - b.r; b.vx = -Math.abs(b.vx) * wr; }
+          if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * wr; }
+          if (b.y > WORLD_H - b.r) { b.y = WORLD_H - b.r; b.vy = -Math.abs(b.vy) * wr; }
+          clampSpeed(b);
+          if (Math.hypot(b.vx, b.vy) < STOP_SPEED) { b.vx = 0; b.vy = 0; }
+        }
+        // fixed obstacles: infinite mass, balls bounce off, stone never moves
+        for (i = 0; i < balls.length; i++) {
+          b = balls[i];
+          for (j = 0; j < obstacles.length; j++) {
+            var o = obstacles[j];
+            var odx = b.x - o.x, ody = b.y - o.y;
+            var od = Math.hypot(odx, ody);
+            var omin = b.r + o.r;
+            if (od === 0) { odx = 0; ody = -1; od = 1; }
+            if (od < omin) {
+              var onx = odx / od, ony = ody / od;
+              b.x = o.x + onx * omin;
+              b.y = o.y + ony * omin;
+              var vn = b.vx * onx + b.vy * ony;
+              if (vn < 0) {
+                var oe = b.type === "bouncy" ? BOUNCY_REST : RESTITUTION;
+                b.vx -= (1 + oe) * vn * onx;
+                b.vy -= (1 + oe) * vn * ony;
+                if (b.type === "bouncy") b.revealed = true;
+                clampSpeed(b);
+                if (Math.abs(vn) > 60) tick(Math.abs(vn));
+              }
+            }
           }
         }
-        // pairwise collisions, a couple of relaxation passes
+        // pairwise collisions, mass-weighted, a couple of relaxation passes
         for (var pass = 0; pass < 2; pass++) {
           for (i = 0; i < balls.length; i++) {
             for (j = i + 1; j < balls.length; j++) {
@@ -466,15 +844,28 @@
               if (dist === 0) { dx = 1; dy = 0; dist = 1; }
               if (dist < minDist) {
                 var nx = dx / dist, ny = dy / dist;
-                var overlap = (minDist - dist) / 2;
-                a.x -= nx * overlap; a.y -= ny * overlap;
-                c.x += nx * overlap; c.y += ny * overlap;
+                var ima = 1 / a.m, imb = 1 / c.m, imSum = ima + imb;
+                var overlap = minDist - dist;
+                a.x -= nx * overlap * (ima / imSum); a.y -= ny * overlap * (ima / imSum);
+                c.x += nx * overlap * (imb / imSum); c.y += ny * overlap * (imb / imSum);
                 var rvx = c.vx - a.vx, rvy = c.vy - a.vy;
                 var rel = rvx * nx + rvy * ny;
                 if (rel < 0) {
-                  var impulse = -(1 + RESTITUTION) * rel / 2;
-                  a.vx -= impulse * nx; a.vy -= impulse * ny;
-                  c.vx += impulse * nx; c.vy += impulse * ny;
+                  var e = (a.type === "bouncy" || c.type === "bouncy") ? BOUNCY_REST : RESTITUTION;
+                  var impulse = -(1 + e) * rel / imSum;
+                  a.vx -= impulse * ima * nx; a.vy -= impulse * ima * ny;
+                  c.vx += impulse * imb * nx; c.vy += impulse * imb * ny;
+                  clampSpeed(a);
+                  clampSpeed(c);
+                  if (a.type === "bouncy") a.revealed = true;
+                  if (c.type === "bouncy") c.revealed = true;
+                  // Forbidden black marble: only a direct collision with
+                  // the shooter (the player's marble) reaches this hook,
+                  // and it spawns only if the impact is inside the ring.
+                  // Target-marble hits and chain reactions never reach
+                  // it because neither body is the shooter.
+                  if (a === shooter && c.type === "black") noteBlackShooterHit(c);
+                  else if (c === shooter && a.type === "black") noteBlackShooterHit(a);
                   if (pass === 0 && Math.abs(rel) > 60) tick(Math.abs(rel));
                 }
               }
@@ -493,53 +884,209 @@
 
       /* "Out" is a live status, not a latch: a target counts only while
          its whole body is outside the ring. If it bounces or rolls back
-         inside, it is back in play immediately — the counter drops, it
-         renders solid again, and it keeps colliding like any other
-         marble. Win/lose are judged only in endShot(), once every
-         marble has come to rest. */
+         inside, it is back in play immediately — the counter drops and
+         it keeps colliding like any other marble. Win/lose are judged
+         only in endShot(), once every marble has come to rest. */
       function checkCounted() {
-        var n = 0;
+        var n = 0, g = false;
         for (var i = 0; i < targets.length; i++) {
           var t = targets[i];
-          var d = Math.hypot(t.x - CIRCLE.x, t.y - CIRCLE.y);
-          t.counted = d > CIRCLE.r + t.r;  // fully outside the ring
-          if (t.counted) n++;
+          var d = Math.hypot(t.x - circle.x, t.y - circle.y);
+          t.counted = d > circle.r + t.r;  // fully outside the ring
+          if (t.type === "gold") g = t.counted;
+          else if (t.counted) n++;
         }
-        if (n !== outCount) {
+        if (variant === "gold") {
+          if (n !== outCount || g !== goldOut) { outCount = n; goldOut = g; syncHud(); }
+        } else if (n !== outCount) {
           outCount = n;
           syncHud();
         }
       }
 
+      /* ---- Forbidden black marble: spawning needs BOTH of these, in
+         the same impact:
+         (1) a direct collision between the shooter (the player's
+             marble) and the black marble — the pairwise-collision hook
+             in stepPhysics calls noteBlackShooterHit(). A target marble
+             slamming into it, a chain reaction knocking it into other
+             marbles, or the black marble sliding into a target marble
+             never triggers.
+         (2) the impact happens while the black marble's centre is
+             still inside the ring. If the black marble has already
+             been knocked out of the ring, a direct shooter hit out
+             there spawns nothing.
+         The contact is judged once, on its first frame; after that it
+         stays disarmed until the shooter has fully separated from it,
+         and a fresh direct hit is judged again by the position then. ---- */
+      function updateBlackArming() {
+        if (!blacks.length || !shooter) return;
+        for (var i = 0; i < blacks.length; i++) {
+          var bk = blacks[i];
+          if (bk.armed) continue;
+          var d = Math.hypot(shooter.x - bk.x, shooter.y - bk.y);
+          if (d > bk.r + shooter.r + 1.5) bk.armed = true;
+        }
+      }
+
+      function noteBlackShooterHit(bk) {
+        if (!bk.armed) return;
+        // The contact is judged once, on its first frame: disarm now so
+        // the rest of this contact can neither re-judge nor re-trigger.
+        // A fresh direct hit after full separation re-arms above and is
+        // judged again by the position at that moment.
+        bk.armed = false;
+        // Position gate, on top of the direct-hit rule: the impact must
+        // happen while the black marble's centre is still inside the
+        // ring. Once the black marble has been knocked out of the ring,
+        // the shooter may hit it out there freely — nothing spawns.
+        // Judged by the position recorded at the start of this physics
+        // step (bk.px/bk.py), i.e. where the marble was when the
+        // contact began, before the solver's separation push.
+        var gx = typeof bk.px === "number" ? bk.px : bk.x;
+        var gy = typeof bk.py === "number" ? bk.py : bk.y;
+        var d = Math.hypot(gx - circle.x, gy - circle.y);
+        if (d > circle.r) return;
+        spawnFromBlack();
+      }
+
+      function findSpawnSpot() {
+        var balls = allBalls();
+        for (var attempt = 0; attempt < 300; attempt++) {
+          var ang = Math.random() * Math.PI * 2;
+          var rad = Math.sqrt(Math.random()) * (circle.r - MARBLE_R - 4);
+          var x = circle.x + Math.cos(ang) * rad;
+          var y = circle.y + Math.sin(ang) * rad;
+          var ok = true;
+          for (var i = 0; i < balls.length; i++) {
+            if (Math.hypot(balls[i].x - x, balls[i].y - y) < balls[i].r + MARBLE_R + 3) { ok = false; break; }
+          }
+          if (ok) {
+            for (var j = 0; j < obstacles.length; j++) {
+              if (Math.hypot(obstacles[j].x - x, obstacles[j].y - y) < obstacles[j].r + MARBLE_R + 3) { ok = false; break; }
+            }
+          }
+          if (ok) return { x: x, y: y };
+        }
+        return null;
+      }
+
+      function spawnFromBlack() {
+        var added = 0;
+        for (var k = 0; k < 2; k++) {
+          var spot = findSpawnSpot();
+          if (!spot) break;
+          var nb = makeBall(spot.x, spot.y, "normal");
+          nb.bornAt = performance.now();
+          targets.push(nb);
+          added++;
+        }
+        if (added > 0) {
+          tick(300, true);
+          checkCounted(); // refreshes the HUD total (targets.length grew)
+          syncHud();
+        }
+      }
+
+      /* Gold variant only: normal marbles that settled outside the
+         ring are NOT a loss. Each one is placed back at a clear spot
+         fully inside the ring (same spot finder the black marble's
+         spawns use, so it can never overlap an existing marble), the
+         counter refreshes, and play continues. */
+      function returnOutNormals() {
+        var moved = 0;
+        for (var i = 0; i < targets.length; i++) {
+          var t = targets[i];
+          if (t.type === "gold" || !t.counted) continue;
+          var spot = findSpawnSpot();
+          if (!spot) continue;
+          t.x = spot.x;
+          t.y = spot.y;
+          t.vx = 0;
+          t.vy = 0;
+          t.bornAt = performance.now(); // reuse the spawn ring flash
+          moved++;
+        }
+        if (moved > 0) {
+          checkCounted();
+          syncHud();
+          flashHint("普通珠出圈，被送回圈内");
+        }
+      }
+
+      var hintTimer = null;
+      function flashHint(msg) {
+        levelHintEl.textContent = msg;
+        if (hintTimer) clearTimeout(hintTimer);
+        hintTimer = setTimeout(function () {
+          levelHintEl.textContent = cfg.hint;
+          hintTimer = null;
+        }, 2600);
+      }
+
       function endShot() {
         checkCounted();
-        if (outCount >= TOTAL_TARGETS) {
-          finishGame(true);
-          return;
-        }
-        if (shotsLeft <= 0) {
-          finishGame(false);
-          return;
+        if (variant === "gold") {
+          // Gold wins first: if the gold marble and normal marbles
+          // leave the ring on the same shot, the level is cleared and
+          // no normal marble is sent back.
+          if (goldOut) { finishGame(true); return; }
+          if (shotsLeft <= 0) { finishGame(false, "noShots"); return; }
+          if (outCount > 0) returnOutNormals();
+        } else {
+          if (outCount >= targets.length) { finishGame(true); return; }
+          if (shotsLeft <= 0) { finishGame(false, "noShots"); return; }
         }
         // send shooter back to its home spot
         state = "returning";
-        returnAnim = {
-          t: 0,
-          dur: 0.45,
-          fromX: shooter.x,
-          fromY: shooter.y
-        };
+        returnAnim = { t: 0, dur: 0.45, fromX: shooter.x, fromY: shooter.y };
       }
 
-      function finishGame(won) {
+      function starsFor(shotsRemaining) {
+        // clear = 1 star, +1 if a shot remains, +1 more if 2+ remain
+        return 1 + (shotsRemaining >= 1 ? 1 : 0) + (shotsRemaining >= 2 ? 1 : 0);
+      }
+
+      function starString(n) {
+        var s = "";
+        for (var i = 0; i < 3; i++) s += i < n ? "★" : "☆";
+        return s;
+      }
+
+      function finishGame(won, reason) {
         state = "over";
-        if (won) {
+        var earned = 0;
+        if (won && mode === "level") {
+          earned = starsFor(shotsLeft);
+          var prev = progress.stars[levelIndex] || 0;
+          if (earned > prev) progress.stars[levelIndex] = earned;
+          if (levelIndex + 1 < LEVELS.length) {
+            progress.unlocked = Math.max(progress.unlocked, levelIndex + 2);
+          }
+          saveProgress();
+        }
+        if (variant === "gold") {
+          if (won) {
+            resultTitle.textContent = "金珠出圈！";
+            resultDetail.innerHTML = "金珠被你干净地送出圈外，<br />还剩 " + shotsLeft + " 次机会，漂亮！";
+          } else {
+            resultTitle.textContent = "就差一点";
+            resultDetail.innerHTML = "机会用完了，金珠还停在圈内，没能出圈。<br />普通珠出圈不判负、会被送回圈内——放心冲着金珠打。";
+          }
+        } else if (won) {
           resultTitle.textContent = "全部击出！🎉";
-          resultDetail.innerHTML = "7 颗弹珠全部被你撞出圈外，<br />只用了 " + (TOTAL_SHOTS - shotsLeft) + " 次机会，漂亮！";
+          resultDetail.innerHTML = targets.length + " 颗弹珠全部被你撞出圈外，<br />只用了 " + (cfg.shots - shotsLeft) + " 次机会，漂亮！";
         } else {
           resultTitle.textContent = "就差一点";
-          resultDetail.innerHTML = "机会用完了，圈内还剩 " + (TOTAL_TARGETS - outCount) + " 颗弹珠。<br />调整一下力度和角度再试试。";
+          resultDetail.innerHTML = "机会用完了，圈内还剩 " + (targets.length - outCount) + " 颗弹珠。<br />调整一下力度和角度再试试。";
         }
+        resultStars.innerHTML = (won && mode === "level")
+          ? starString(earned).split("").map(function (ch) {
+              return ch === "★" ? "★" : '<span class="off">☆</span>';
+            }).join("")
+          : "";
+        nextBtn.classList.toggle("gone", !(won && mode === "level" && levelIndex + 1 < LEVELS.length));
+        againBtn.textContent = mode === "free" ? "再来一局" : "重玩本关";
         setTimeout(function () { overlay.classList.add("show"); }, 350);
       }
 
@@ -555,21 +1102,34 @@
           var sub = 4;
           var sdt = dt / sub;
           for (var s = 0; s < sub; s++) stepPhysics(sdt);
+          movingTime += dt;
+          if (movingTime > 12) {
+            // watchdog: a super-bouncy marble can keep re-energising off
+            // the walls; if a shot ever runs abnormally long, bleed its
+            // energy off so the turn always settles. Normal shots rest
+            // in a few seconds, so this never fires in real play.
+            var bleed = Math.exp(-3 * dt);
+            var wb = allBalls();
+            for (var wi = 0; wi < wb.length; wi++) { wb[wi].vx *= bleed; wb[wi].vy *= bleed; }
+          }
+          updateBlackArming();
           checkCounted();
-          if (!anyMoving()) endShot();
+          if (!anyMoving()) { movingTime = 0; endShot(); }
         } else if (state === "returning" && returnAnim) {
           returnAnim.t += dt;
           var k = Math.min(returnAnim.t / returnAnim.dur, 1);
           var ease = 1 - Math.pow(1 - k, 3);
-          shooter.x = returnAnim.fromX + (SHOOTER_HOME.x - returnAnim.fromX) * ease;
-          shooter.y = returnAnim.fromY + (SHOOTER_HOME.y - returnAnim.fromY) * ease;
+          shooter.x = returnAnim.fromX + (homePos.x - returnAnim.fromX) * ease;
+          shooter.y = returnAnim.fromY + (homePos.y - returnAnim.fromY) * ease;
           if (k >= 1) {
-            shooter.x = SHOOTER_HOME.x;
-            shooter.y = SHOOTER_HOME.y;
+            shooter.x = homePos.x;
+            shooter.y = homePos.y;
             shooter.vx = 0; shooter.vy = 0;
-            // nudge any target overlapping the home spot out of the way
-            for (var i = 0; i < targets.length; i++) {
-              var t = targets[i];
+            // nudge any marble overlapping the home spot out of the way
+            var balls = allBalls();
+            for (var i = 0; i < balls.length; i++) {
+              var t = balls[i];
+              if (t === shooter) continue;
               var dx = t.x - shooter.x, dy = t.y - shooter.y;
               var dist = Math.hypot(dx, dy);
               var minDist = t.r + shooter.r;
@@ -586,29 +1146,59 @@
             state = "aim";
           }
         }
-        draw();
+        if (!document.getElementById("gameScreen").classList.contains("gone")) draw();
       }
 
       /* ============ Drawing ============ */
+      function hexA(hex, alpha) {
+        var n = parseInt(hex.slice(1), 16);
+        var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+      }
+      function shade(hex, amt) {
+        var n = parseInt(hex.slice(1), 16);
+        var r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amt));
+        var g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+        var b = Math.max(0, Math.min(255, (n & 255) + amt));
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      }
+
       function drawMarble(m, isShooter) {
         var x = m.x, y = m.y, r = m.r;
+        var st = (m.type === "bouncy" && m.revealed) ? BOUNCY_STYLE : m.style;
         // shadow
         ctx.beginPath();
         ctx.ellipse(x + r * 0.14, y + r * 0.30, r * 0.92, r * 0.78, 0, 0, Math.PI * 2);
         ctx.fillStyle = darkMode() ? "rgba(0,0,0,0.45)" : "rgba(70,90,70,0.20)";
         ctx.fill();
 
+        // revealed bouncy marble: warm glow halo so it reads at a glance
+        if (m.type === "bouncy" && m.revealed) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, r + 5, 0, Math.PI * 2);
+          ctx.shadowColor = "rgba(255,90,20,0.9)";
+          ctx.shadowBlur = 20;
+          ctx.fillStyle = "rgba(255,110,30,0.35)";
+          ctx.fill();
+          ctx.restore();
+        }
+
         ctx.save();
-        // glass body
+        // glass / metal body
         var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
-        if (m.counted) {
+        if (m.type === "black") {
+          g.addColorStop(0, "#4a4a52");
+          g.addColorStop(0.5, "#17171a");
+          g.addColorStop(1, "#050506");
+        } else if (m.counted) {
           g.addColorStop(0, "rgba(255,255,255,0.85)");
-          g.addColorStop(0.55, hexA(m.style.base, 0.55));
-          g.addColorStop(1, hexA(m.style.base, 0.35));
+          g.addColorStop(0.55, hexA(st.base, 0.55));
+          g.addColorStop(1, hexA(st.base, 0.35));
         } else {
           g.addColorStop(0, "rgba(255,255,255,0.95)");
-          g.addColorStop(0.45, hexA(m.style.base, 0.92));
-          g.addColorStop(1, hexA(shade(m.style.base, -18), 0.95));
+          g.addColorStop(0.45, hexA(st.base, 0.92));
+          g.addColorStop(1, hexA(shade(st.base, -18), 0.95));
         }
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -616,10 +1206,10 @@
         ctx.fill();
         ctx.clip();
 
-        // colored swirls (cat-eye ribbons)
+        // colored swirls (cat-eye ribbons); the black marble has none
         ctx.globalAlpha = m.counted ? 0.45 : 0.9;
         ctx.lineCap = "round";
-        var cols = m.style.swirls;
+        var cols = st.swirls;
         for (var i = 0; i < cols.length; i++) {
           var off = (i - (cols.length - 1) / 2) * r * 0.30;
           ctx.beginPath();
@@ -645,22 +1235,42 @@
         ctx.fill();
         ctx.restore();
 
-        // rim
+        // rim — the forbidden marble gets an unmistakable red edge
         ctx.beginPath();
         ctx.arc(x, y, r - 0.5, 0, Math.PI * 2);
-        ctx.strokeStyle = darkMode() ? "rgba(255,255,255,0.28)" : "rgba(90,110,90,0.30)";
-        ctx.lineWidth = 1.2;
+        if (m.type === "black") {
+          ctx.strokeStyle = "#e0483e";
+          ctx.lineWidth = 2.6;
+        } else if (m.type === "heavy") {
+          ctx.strokeStyle = darkMode() ? "rgba(220,228,235,0.5)" : "rgba(40,45,50,0.55)";
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = darkMode() ? "rgba(255,255,255,0.28)" : "rgba(90,110,90,0.30)";
+          ctx.lineWidth = 1.2;
+        }
         ctx.stroke();
 
         // specular highlight
         ctx.beginPath();
         ctx.ellipse(x - r * 0.36, y - r * 0.44, r * 0.20, r * 0.13, -0.6, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.fillStyle = m.type === "black" ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.95)";
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x - r * 0.52, y - r * 0.18, r * 0.055, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.fill();
+
+        // freshly spawned marble (from the black one): expanding ring
+        if (m.bornAt) {
+          var age = (performance.now() - m.bornAt) / 450;
+          if (age < 1) {
+            ctx.beginPath();
+            ctx.arc(x, y, r + 4 + age * 18, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(224,72,62," + (0.75 * (1 - age)).toFixed(3) + ")";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+          }
+        }
 
         if (isShooter && state === "aim" && !drag) {
           // pulsing hint ring around the shooter
@@ -675,17 +1285,35 @@
         }
       }
 
-      function hexA(hex, alpha) {
-        var n = parseInt(hex.slice(1), 16);
-        var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-        return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
-      }
-      function shade(hex, amt) {
-        var n = parseInt(hex.slice(1), 16);
-        var r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amt));
-        var g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
-        var b = Math.max(0, Math.min(255, (n & 255) + amt));
-        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      function drawObstacle(o) {
+        var dark = darkMode();
+        // shadow
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.r * 0.14, o.y + o.r * 0.30, o.r * 0.92, o.r * 0.78, 0, 0, Math.PI * 2);
+        ctx.fillStyle = dark ? "rgba(0,0,0,0.45)" : "rgba(70,90,70,0.22)";
+        ctx.fill();
+        // stone body
+        var g = ctx.createRadialGradient(o.x - o.r * 0.35, o.y - o.r * 0.4, o.r * 0.1, o.x, o.y, o.r);
+        g.addColorStop(0, dark ? "#8d9291" : "#b9bdbc");
+        g.addColorStop(0.55, dark ? "#626866" : "#929897");
+        g.addColorStop(1, dark ? "#434847" : "#767c7a");
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        // speckles (deterministic per stone)
+        ctx.fillStyle = dark ? "rgba(0,0,0,0.25)" : "rgba(60,65,60,0.22)";
+        var seeds = [[-0.3, -0.1], [0.25, 0.3], [0.05, -0.45], [-0.15, 0.5]];
+        for (var i = 0; i < seeds.length; i++) {
+          ctx.beginPath();
+          ctx.arc(o.x + seeds[i][0] * o.r, o.y + seeds[i][1] * o.r, o.r * 0.09, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.r - 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = dark ? "rgba(255,255,255,0.22)" : "rgba(50,60,50,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
 
       function draw() {
@@ -715,23 +1343,26 @@
 
         // the ring
         ctx.beginPath();
-        ctx.arc(CIRCLE.x, CIRCLE.y, CIRCLE.r, 0, Math.PI * 2);
+        ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2);
         ctx.strokeStyle = dark ? "rgba(230,235,220,0.55)" : "rgba(70,85,70,0.55)";
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(CIRCLE.x, CIRCLE.y, CIRCLE.r, 0, Math.PI * 2);
+        ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2);
         ctx.fillStyle = dark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.35)";
         ctx.fill();
 
-        // aim guide while dragging (push-to-aim): the dashed line points
-        // along the drag itself — drag up and it aims up toward the ring,
-        // drag up-left / up-right and it tilts that way. It only appears
-        // once the drag is upward-dominant; a downward drag shows nothing.
+        // obstacles sit inside the ring, under the marbles
+        var i;
+        for (i = 0; i < obstacles.length; i++) drawObstacle(obstacles[i]);
+
+        // aim guide while dragging (push-to-aim, unchanged since V6):
+        // the dashed line points along the drag itself and only appears
+        // for an upward-dominant drag.
         if (drag && state === "aim") {
           var aim = getAim();
           if (aim.dist >= 8 && aimValid(aim)) {
-            var dirX = aim.dx, dirY = aim.dy; // launch direction = drag direction
+            var dirX = aim.dx, dirY = aim.dy;
             var len = 175 + aim.power * 235;
             ctx.beginPath();
             ctx.setLineDash([7, 8]);
@@ -741,7 +1372,6 @@
             ctx.lineWidth = 2.4;
             ctx.stroke();
             ctx.setLineDash([]);
-            // target dot at the end
             ctx.beginPath();
             ctx.arc(shooter.x + dirX * len, shooter.y + dirY * len, 4.5, 0, Math.PI * 2);
             ctx.fillStyle = dark ? "#e6ebdf" : "#3c4a3c";
@@ -749,9 +1379,10 @@
           }
         }
 
-        // marbles: counted ones first (under), then active, shooter last
-        var i;
+        // marbles: counted ones first (under), then the black marble,
+        // then active targets, shooter last
         for (i = 0; i < targets.length; i++) if (targets[i].counted) drawMarble(targets[i], false);
+        for (i = 0; i < blacks.length; i++) drawMarble(blacks[i], false);
         for (i = 0; i < targets.length; i++) if (!targets[i].counted) drawMarble(targets[i], false);
         if (shooter) {
           var alpha = state === "returning" ? 0.55 : 1;
@@ -763,16 +1394,13 @@
         ctx.restore();
       }
 
-      /* ============ Input: push up to aim, release to fire ============ */
-      /* V6 control model — push-to-aim (the pull-down slingshot is gone:
-         on the user's device a downward drag from the bottom marble is
-         claimed by the shell's pull-to-refresh / gesture layer and never
-         reaches the game, so downward aiming is unusable there by design).
-         The drag vector is current point − press point, and the launch
-         direction IS the drag direction: drag up → aim up toward the ring,
-         drag up-left / up-right → aim tilts that way. Distance = power.
-         Only an upward-dominant drag counts as aiming; a downward drag
-         aims nothing and releasing it cancels without spending a shot. */
+      /* ============ Input: push up to aim, release to fire ============
+         (V6/V7 model, unchanged) Push-to-aim: the drag vector is
+         current point − press point, and the launch direction IS the
+         drag direction. Only an upward-dominant drag aims; a downward
+         drag aims nothing and releasing it cancels without a shot.
+         Two event channels (Pointer + Touch) feed the same drag state
+         so a pointer stream claimed mid-gesture hands over to touch. */
       function getAim() {
         var dx = drag.cur.x - drag.start.x;
         var dy = drag.cur.y - drag.start.y;
@@ -783,37 +1411,23 @@
         return { dx: dx / dist, dy: dy / dist, power: power, dist: dist };
       }
 
-      /* A drag only aims when its upward component dominates: pointing up
-         (dy < 0) and steeper than ~37° from vertical, so up / up-left /
-         up-right drags aim, while sideways or downward drags do not. */
       function aimValid(aim) {
         return aim.dy < 0 && -aim.dy >= Math.abs(aim.dx) * 0.75;
       }
 
-      /* One drag, two independent event channels (Pointer Events AND
-         Touch Events) feeding the same state. On real Android WebViews a
-         drag can get its pointer stream cancelled mid-gesture when the
-         browser/app gesture layer claims it; the old code treated that
-         pointercancel as "drag over" and killed the drag on the spot.
-         Touch events are a separate stream: while the finger is down
-         they keep the drag alive, and the shot fires on touchend. */
       function applyDragPoint(p) {
         drag.cur = p;
         var aim = getAim();
         if (!aimValid(aim)) {
-          // not an aiming drag (downward / sideways): no power, and the
-          // marble stays at its home spot
           setPower(0);
-          shooter.x = SHOOTER_HOME.x;
-          shooter.y = SHOOTER_HOME.y;
+          shooter.x = homePos.x;
+          shooter.y = homePos.y;
           return;
         }
         setPower(aim.power);
-        // the marble leans a little along the drag (same direction as the
-        // finger), well short of the full drag distance
         var lean = Math.min(aim.dist, MAX_DRAG) * 0.35;
-        shooter.x = SHOOTER_HOME.x + aim.dx * lean;
-        shooter.y = SHOOTER_HOME.y + aim.dy * lean;
+        shooter.x = homePos.x + aim.dx * lean;
+        shooter.y = homePos.y + aim.dy * lean;
       }
 
       function finishDrag(cancelled) {
@@ -822,18 +1436,17 @@
         drag = null;
         setPower(0);
         if (cancelled || state !== "aim" || aim.dist < MIN_DRAG || aim.power <= 0.01 || !aimValid(aim)) {
-          // no shot taken: the marble settles back to its home spot
-          shooter.x = SHOOTER_HOME.x;
-          shooter.y = SHOOTER_HOME.y;
+          shooter.x = homePos.x;
+          shooter.y = homePos.y;
           shooter.vx = 0;
           shooter.vy = 0;
           return;
         }
-        // launch along the drag direction — the same way the aim line points
         shooter.vx = aim.dx * aim.power * MAX_SPEED;
         shooter.vy = aim.dy * aim.power * MAX_SPEED;
         shotsLeft--;
         syncHud();
+        movingTime = 0;
         state = "moving";
       }
 
@@ -843,11 +1456,9 @@
         if (state !== "aim") return;
         var p = toWorld(e.clientX, e.clientY);
         if (drag) {
-          // touch channel started this drag first; adopt the pointer too
           if (drag.pointerId === null) { drag.pointerId = e.pointerId; applyDragPoint(p); }
           return;
         }
-        // a press anywhere on the field starts the pull
         drag = { pointerId: e.pointerId, touchId: null, start: p, cur: p };
         try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* best effort */ }
         e.preventDefault();
@@ -867,17 +1478,13 @@
       canvas.addEventListener("pointercancel", function (e) {
         if (!drag || drag.pointerId === null || e.pointerId !== drag.pointerId) return;
         if (drag.touchId !== null) {
-          // Pointer stream was claimed mid-drag, but the finger is still
-          // down and its touch stream is alive: hand the drag over to the
-          // touch channel instead of killing it.
-          drag.pointerId = null;
+          drag.pointerId = null; // touch channel takes over the drag
         } else {
           finishDrag(true);
         }
       });
 
-      /* --- Touch Events channel (starts drags the pointer channel missed,
-             and takes over when the pointer stream dies mid-drag) --- */
+      /* --- Touch Events channel --- */
       function findTouch(list, id) {
         for (var i = 0; i < list.length; i++) {
           if (list[i].identifier === id) return list[i];
@@ -895,7 +1502,6 @@
           if (drag.touchId === null) drag.touchId = t.identifier;
           return;
         }
-        // a press anywhere on the field starts the pull
         drag = { pointerId: null, touchId: t.identifier, start: p, cur: p };
       }, { passive: false });
 
@@ -911,11 +1517,8 @@
         if (!drag || drag.touchId === null) return;
         if (!findTouch(e.changedTouches, drag.touchId)) return;
         if (drag.pointerId === null) {
-          // touch channel owns the ending (touch-started drag, or the
-          // pointer stream died earlier): releasing the finger fires.
           finishDrag(false);
         } else {
-          // pointer channel is alive and will finish on pointerup
           drag.touchId = null;
         }
       });
@@ -928,16 +1531,18 @@
       });
 
       /* ============ Gesture lockdown: no pull-to-refresh / overscroll ============
-         The page is one fixed screen, so no touch may scroll or refresh it.
-         touch-action:none (CSS) covers pointer events; these non-passive
-         listeners are the belt-and-braces layer for browsers/webviews that
-         still try to claim the gesture (e.g. pull-to-refresh). */
+         The game screen is one fixed screen, so no touch may scroll or
+         refresh it. The level-select screen is exempt: it is a menu and
+         is allowed to scroll (its own touch-action: pan-y applies). */
+      function inSelect(el) {
+        return !!(el && el.closest && el.closest("#selectScreen"));
+      }
       document.addEventListener("touchmove", function (e) {
+        if (inSelect(e.target)) return;
         e.preventDefault();
       }, { passive: false });
       document.addEventListener("touchstart", function (e) {
-        // every touch is claimed by the page (buttons still get their
-        // click: they are filtered out here and handled normally)
+        if (inSelect(e.target)) return;
         if (e.target && e.target.closest && e.target.closest("button")) return;
         e.preventDefault();
       }, { passive: false });
@@ -946,22 +1551,133 @@
         if (e.target === canvas) e.preventDefault();
       });
 
+      /* ============ Screens: level select <-> game ============ */
+      var selectScreen = document.getElementById("selectScreen");
+      var gameScreen = document.getElementById("gameScreen");
+      var levelGrid = document.getElementById("levelGrid");
+      var starTotalEl = document.getElementById("starTotal");
+      var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3H9z"/></svg>';
+
+      function renderSelect() {
+        var total = 0, i;
+        for (i = 0; i < LEVELS.length; i++) total += progress.stars[i] || 0;
+        starTotalEl.textContent = "★ " + total + " / " + (LEVELS.length * 3);
+        levelGrid.innerHTML = "";
+        for (i = 0; i < LEVELS.length; i++) {
+          (function (idx) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            var unlocked = idx < progress.unlocked;
+            var s = progress.stars[idx] || 0;
+            if (unlocked) {
+              btn.className = "level-card";
+              var starsHtml = "";
+              for (var k = 0; k < 3; k++) starsHtml += k < s ? "★" : '<span class="off">☆</span>';
+              btn.innerHTML = '<span class="num">' + (idx + 1) + '</span>' +
+                '<span class="name">' + LEVELS[idx].name + '</span>' +
+                '<span class="stars">' + starsHtml + '</span>';
+              btn.addEventListener("click", function () { ensureAudio(); startLevel(idx); });
+            } else {
+              btn.className = "level-card locked";
+              btn.disabled = true;
+              btn.innerHTML = '<span class="num">' + (idx + 1) + '</span>' +
+                '<span class="name">' + LEVELS[idx].name + '</span>' +
+                '<span class="lock">' + LOCK_SVG + '</span>';
+            }
+            levelGrid.appendChild(btn);
+          })(i);
+        }
+      }
+
+      function showSelect() {
+        renderSelect();
+        gameScreen.classList.add("gone");
+        selectScreen.classList.remove("gone");
+        document.body.classList.add("selecting");
+      }
+
+      function startLevel(idx) {
+        mode = "level";
+        levelIndex = idx;
+        cfg = LEVELS[idx];
+        selectScreen.classList.add("gone");
+        gameScreen.classList.remove("gone");
+        document.body.classList.remove("selecting");
+        resize();
+        loadLevel();
+      }
+
+      function startFree() {
+        mode = "free";
+        cfg = FREE_LEVEL;
+        selectScreen.classList.add("gone");
+        gameScreen.classList.remove("gone");
+        document.body.classList.remove("selecting");
+        resize();
+        loadLevel();
+      }
+
       /* ============ Buttons ============ */
       document.getElementById("restartBtn").addEventListener("click", function () {
         ensureAudio();
-        resetGame();
+        loadLevel();
       });
-      document.getElementById("againBtn").addEventListener("click", function () {
+      document.getElementById("levelsBtn").addEventListener("click", function () {
         ensureAudio();
-        resetGame();
+        showSelect();
+      });
+      againBtn.addEventListener("click", function () {
+        ensureAudio();
+        loadLevel();
+      });
+      document.getElementById("backBtn").addEventListener("click", function () {
+        ensureAudio();
+        showSelect();
+      });
+      nextBtn.addEventListener("click", function () {
+        ensureAudio();
+        if (levelIndex + 1 < LEVELS.length) startLevel(levelIndex + 1);
+      });
+      document.getElementById("freeBtn").addEventListener("click", function () {
+        ensureAudio();
+        startFree();
       });
 
+      /* ============ Debug / test handle ============ */
+      window.__marbleGame = {
+        LEVELS: LEVELS,
+        startLevel: startLevel,
+        startFree: startFree,
+        showSelect: showSelect,
+        fire: function (dx, dy, power) {
+          if (state !== "aim" || !shooter) return false;
+          var len = Math.hypot(dx, dy) || 1;
+          shooter.vx = (dx / len) * power * MAX_SPEED;
+          shooter.vy = (dy / len) * power * MAX_SPEED;
+          shotsLeft--;
+          syncHud();
+          movingTime = 0;
+          state = "moving";
+          return true;
+        },
+        get targets() { return targets; },
+        get blacks() { return blacks; },
+        get obstacles() { return obstacles; },
+        get shooter() { return shooter; },
+        get circle() { return circle; },
+        get state() { return state; },
+        get outCount() { return outCount; },
+        get goldOut() { return goldOut; },
+        get shotsLeft() { return shotsLeft; },
+        get progress() { return progress; },
+        get mode() { return mode; },
+        get levelIndex() { return levelIndex; }
+      };
+
       /* ============ Go ============ */
-      resize();
-      resetGame();
+      loadLevel(); // have a valid board behind the select screen
+      showSelect();
       requestAnimationFrame(function (ts) { lastTime = ts; requestAnimationFrame(loop); });
-      // re-measure after layout settles (fonts / safe areas)
-      setTimeout(resize, 60);
     </script>
     <script>
       // PWA: register the service worker so the game works fully offline after the first visit.
