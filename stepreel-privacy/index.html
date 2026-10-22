@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — StepReel</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1c2333; background: #f6f7fb; line-height: 1.65; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 36px 0 8px; }
+  p, li { font-size: 15.5px; }
+  ul { padding-left: 22px; }
+  .updated { color: #68707f; font-size: 14px; margin: 0 0 24px; }
+  .short { background: #eceaff; border: 1px solid #d5cfff; border-radius: 10px; padding: 14px 18px; }
+  code { background: #eceef3; border-radius: 4px; padding: 1px 5px; font-size: 13.5px; }
+  a { color: #4b3fd6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy Policy for StepReel</h1>
+  <p class="updated">Last updated: October 22, 2026</p>
+
+  <p>StepReel ("the extension") is a Chrome extension published by xiaogezi ("we", "us") that records web flows and turns them into demo videos. This policy explains what the extension handles and — just as importantly — what it never does.</p>
+
+  <p class="short"><strong>The short version: everything stays on your device.</strong> The extension has no servers, no accounts, and no analytics. It does not transmit your data anywhere, to us or to anyone else.</p>
+
+  <h2>What the extension stores, and where</h2>
+  <p>When you record a flow, the extension stores the following <strong>locally in your browser</strong> (in the extension's IndexedDB database and extension local storage on your device):</p>
+  <ul>
+    <li><strong>Per-step page snapshots</strong> — the HTML/CSS content of the pages you record, captured at each step so the flow can be replayed and rendered into a video.</li>
+    <li><strong>Structured action records</strong> — for each step: what you interacted with (element identifiers such as selectors and accessible names), the element's position on the page, and the value you entered, selected, or toggled.</li>
+    <li><strong>Your organization and edits</strong> — project and flow names, step titles and order, and your demo-data mapping (the replacement values you enter in the editor).</li>
+    <li><strong>Validation results</strong> — when you run "Re-validate", the per-step verdicts (ok / changed / missing / unverifiable) and the time of the run.</li>
+    <li><strong>Small preferences</strong> — e.g. your last-used flow and chosen video style.</li>
+  </ul>
+  <p>None of this leaves your device. There is no StepReel server to send it to.</p>
+
+  <h2>Sensitive fields are never stored with their values</h2>
+  <p>The recorder detects sensitive fields — password fields, fields with password or payment-card autocomplete attributes, and fields whose name or ID indicates a password, CVV/CVC, or card number — and treats them specially <strong>by design</strong>:</p>
+  <ul>
+    <li>the field's value is <strong>never saved</strong> (the step stores only a "sensitive" marker);</li>
+    <li>any such value is <strong>scrubbed out of the page snapshot before the snapshot is saved</strong>;</li>
+    <li>sensitive values <strong>never appear</strong> in the demo-data mapping table.</li>
+  </ul>
+  <p>One honest caveat: a snapshot captures what a page displays. If a page prints sensitive information as ordinary page content, that content becomes part of the local snapshot you chose to record. Only record pages you are comfortable storing on your own device, and delete flows you no longer need.</p>
+
+  <h2>What the extension does not do</h2>
+  <ul>
+    <li>It does <strong>not</strong> collect analytics, usage statistics, or crash reports.</li>
+    <li>It does <strong>not</strong> create accounts or require sign-in.</li>
+    <li>It does <strong>not</strong> sell, rent, share, or transfer your data to any third party — there is no transfer of any kind, because nothing is transmitted off your device.</li>
+    <li>It does <strong>not</strong> inject ads or modify the pages you visit. Its content script only observes your interactions on pages <strong>while you are recording</strong>, in order to build the steps you asked for.</li>
+    <li>It contains <strong>no remotely hosted code</strong>: every script it runs ships inside the extension package (including a bundled, unmodified copy of the open-source mp4-muxer library, MIT-licensed, used locally to assemble MP4 files).</li>
+  </ul>
+
+  <h2>Pages the extension opens on your behalf</h2>
+  <p>Two features open recorded pages <strong>in your own browser, at your request</strong>: "Re-validate" re-opens a recorded page to check whether its elements changed, and video export re-renders your recorded snapshots to capture frames. These are ordinary page visits from your browser — the visited site sees a normal page load from you, exactly as if you had opened the page yourself. The extension adds nothing to those requests and receives nothing from them beyond what your browser needs to display the page to the extension's own local checks.</p>
+  <p>Exported videos and JSON files are generated entirely on your device and saved through your browser's standard download mechanism, only when you click export.</p>
+
+  <h2>Your control and deletion</h2>
+  <ul>
+    <li>Delete any flow from the extension's library at any time; its steps, snapshots, mappings, and validation results are deleted with it.</li>
+    <li>Uninstalling the extension, or clearing the extension's data via <code>chrome://extensions</code>, removes <strong>all</strong> locally stored recordings and settings. Because nothing exists anywhere else, deletion is complete and immediate.</li>
+  </ul>
+
+  <h2>Why the extension asks for its permissions</h2>
+  <ul>
+    <li><strong>Access to pages you record (all URLs)</strong> — you choose which sites to record; your product could be on any domain, so the recorder must be allowed to run where you point it.</li>
+    <li><strong>Tabs / active tab</strong> — to find the tab you are recording, keep recording across full-page navigations, open the editor and video pages, and capture frames of your snapshots when rendering a video.</li>
+    <li><strong>Scripting</strong> — to run the recorder on pages you record and to re-check elements when you re-validate a flow.</li>
+    <li><strong>Storage</strong> — to keep your recordings and preferences in your browser, on your device only.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>StepReel is a developer/productivity tool not directed at children under 13, and it collects no personal information from anyone, including children.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If a future version changes how data is handled, we will update this page (and the "Last updated" date) before or with the release of that version.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: 520xiaogezi@gmail.com</p>
+</main>
+</body>
+</html>
