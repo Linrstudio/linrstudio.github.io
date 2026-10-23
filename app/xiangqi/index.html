@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#263e35"><meta name="description" content="楚河汉界，一盘好棋。可离线游玩的中国象棋小游戏。">
+<meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>楚河 · 中国象棋</title><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header><a class="brand" href="./"><span class="seal">棋</span><span>楚河 <small>CHU HE</small></span></a><span class="eyebrow">一盘好棋，慢慢来。</span><button id="install" hidden>安装到桌面</button></header>
+<main>
+<section class="intro"><p class="eyebrow">中国象棋 / XIANGQI</p><h1>方寸之间，<br>自有天地。</h1><p>落子有声，进退有度。<br>与朋友对弈，或向电脑讨教一局。</p><div class="features"><span>离线可玩</span><span>自动存档</span><span>无需登录</span></div></section>
+<section class="game" aria-label="中国象棋游戏">
+<div class="game-top"><div><span class="side-dot black"></span><strong>黑方</strong><span id="black-role" class="muted">电脑</span></div><span id="step" class="pill">第 0 手</span></div>
+<div class="board-frame"><div id="board" class="board" role="group" aria-label="象棋棋盘，黑方在上，红方在下"></div></div>
+<div class="game-bottom"><div><span class="side-dot red"></span><strong>红方</strong><span class="muted">你执红先行</span></div><span id="save-state" class="muted">本地保存</span></div>
+</section>
+<aside class="panel"><div class="panel-title"><span class="eyebrow">对弈室</span><span id="network" class="connection">在线</span></div><h2 id="status" role="status" aria-live="polite">红方行棋</h2><p id="message" class="muted">点选棋子，再点选落点。</p>
+<label for="mode">对弈模式</label><select id="mode"><option value="ai">人机对弈 · 入门电脑</option><option value="local">好友对弈 · 同屏双人</option></select>
+<div class="actions"><button id="undo">悔棋</button><button id="new" class="primary">重新开局</button></div><button id="sound" class="text-button" aria-pressed="false">落子音效：关</button>
+<div class="history"><h3>对局记录 <small id="move-count">0 手</small></h3><ol id="moves"><li class="empty">棋局未启，静候落子。</li></ol></div>
+<details><summary>玩法与安装</summary><p>点击己方棋子，圆点为合法落点。支持蹩马腿、塞象眼、炮隔子吃子、将帅不照面；被将军须应将，无棋可走判负。</p><p>休闲规则：同一局面三次出现，或连续 120 手不吃子，自动和棋；不裁定竞赛长将、长捉。</p><p>首次联网打开完成缓存后可离线游玩。支持安装的浏览器会显示安装按钮；iPhone 可在 Safari 分享菜单中选“添加到主屏幕”。</p><p>存档仅在此设备浏览器保存。更换模式会重新开局。</p></details>
+</aside>
+</main><footer>楚河汉界 · 乐在棋中 <span>原生制作 / 无广告 / 无追踪</span></footer>
+<dialog id="confirm"><h2>重新开局？</h2><p>当前棋局将被替换，无法恢复。</p><div class="actions"><button id="cancel-new">继续对弈</button><button id="confirm-new" class="primary">开始新局</button></div></dialog>
+<script type="module" src="./app.js"></script>
+</body></html>

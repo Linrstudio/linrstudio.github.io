@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "楚河 · 中国象棋",
+  "short_name": "楚河象棋",
+  "description": "可离线游玩的中国象棋，支持入门人机与同屏双人对弈。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ea",
+  "theme_color": "#263e35",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"./icons/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}
