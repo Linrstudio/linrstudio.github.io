@@ -1,0 +1,23 @@
+{
+  "name": "threejs-learning",
+  "version": "1.0.0",
+  "description": "Three Lab 中文 Three.js 分级课程与实时实验",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "python3 -m http.server 8080",
+    "test": "node tests/smoke.mjs"
+  },
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.64.1"
+  },
+  "private": true
+}

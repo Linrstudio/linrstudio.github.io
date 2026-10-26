@@ -1,0 +1,5 @@
+node_modules/
+build-meta.json
+test-results/
+playwright-report/
+.DS_Store
