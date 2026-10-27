@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f7f2">
+  <meta name="description" content="用交互式依赖图、任务缓存模拟器和高频面试题，掌握 Monorepo 的工作区、构建与发布。">
+  <title>Monorepo Field Guide · 可视化工程课</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到课程内容</a>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Monorepo Field Guide 首页">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span><b>FIELD GUIDE</b><small>前端工程可视化课</small></span>
+    </a>
+    <nav class="top-links" aria-label="主导航">
+      <a href="#map">课程地图</a><a href="#interview">面试题</a>
+      <a class="top-cta" href="#playground">开始实验 <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="pulse"></span> MONOREPO · FROM MODEL TO PRACTICE</p>
+        <h1>把多个项目，<br>放进一张<span class="underlined">可理解的地图</span>。</h1>
+        <p class="hero-lede">从 workspace 到任务缓存，用一张依赖图看清代码如何共享、变更如何传播，再把答案带进面试。</p>
+        <div class="hero-actions"><a class="button primary" href="#map">开始 8 分钟导览 <span>↓</span></a><a class="button secondary" href="#interview">先刷面试题 <span>↗</span></a></div>
+        <div class="hero-meta"><span><b>04</b> 个学习站点</span><span><b>15</b> 道高频题</span><span><b>02</b> 个可玩实验</span></div>
+      </div>
+      <div class="hero-window" aria-label="Monorepo 项目目录示意">
+        <div class="window-top"><div class="window-dots"><i></i><i></i><i></i></div><span>acme-platform / workspace</span><span class="window-status">● HEALTHY</span></div>
+        <div class="repo-preview">
+          <div class="tree-row root-row"><span class="tree-caret">⌄</span><span class="folder-icon">▰</span><b>acme-platform</b><small>monorepo</small></div>
+          <div class="tree-branch">
+            <div class="tree-row"><span class="tree-caret">⌄</span><span class="folder-icon">▰</span><b>apps</b><small>可运行应用</small></div>
+            <div class="tree-leaf"><span class="file-icon">◩</span><span>storefront</span><em>React</em></div>
+            <div class="tree-leaf"><span class="file-icon">◩</span><span>admin</span><em>Vue</em></div>
+            <div class="tree-row"><span class="tree-caret">⌄</span><span class="folder-icon mint">▰</span><b>packages</b><small>共享能力</small></div>
+            <div class="tree-leaf"><span class="package-icon">◇</span><span>ui</span><em>@acme/ui</em></div>
+            <div class="tree-leaf"><span class="package-icon">◇</span><span>tokens</span><em>@acme/tokens</em></div>
+          </div>
+        </div>
+        <div class="window-foot"><span><i class="status-dot"></i> workspace 已连接</span><span>共享 ≠ 耦合</span></div>
+        <div class="hero-note"><span>01 / REPO MAP</span><b>一个仓库，多个边界清晰的包</b></div>
+      </div>
+    </section>
+
+    <section class="concept-band" aria-label="课程主旨"><div class="wrap band-inner"><span>先记住一件事</span><p>Monorepo 不是“把所有代码塞一起”——<b>它是让多个项目在同一仓库中协作，并用工具管理依赖、边界和任务。</b></p><a href="#mental-model">拆开看 <span>↓</span></a></div></section>
+
+    <section class="wrap map-intro" id="map">
+      <div><p class="eyebrow">YOUR ROUTE / 01—04</p><h2>一条从目录到交付的学习路线</h2><p class="section-lede">跟着变更走：先建立心智模型，再看依赖图如何告诉 CI“该做什么”。</p></div>
+      <div class="progress-box"><div><span>本地学习进度</span><strong id="progress-label">0 / 4</strong></div><div class="progress-track"><span id="progress-fill"></span></div><small>进度只保存在当前浏览器</small></div>
+    </section>
+
+    <div class="wrap lesson-layout">
+      <aside class="lesson-nav" aria-label="章节导航">
+        <div class="nav-title">学习路线 <span>4 STOPS</span></div>
+        <a class="lesson-link is-current" href="#mental-model" data-nav="mental-model"><span>01</span><span>先搭好心智模型<small>Monorepo vs. Multirepo</small></span><i>↗</i></a>
+        <a class="lesson-link" href="#workspaces" data-nav="workspaces"><span>02</span><span>让包真正协作<small>Workspace 与依赖边界</small></span><i>↗</i></a>
+        <a class="lesson-link" href="#graph" data-nav="graph"><span>03</span><span>让变更沿图传播<small>依赖图与 affected</small></span><i>↗</i></a>
+        <a class="lesson-link" href="#playground" data-nav="playground"><span>04</span><span>只重跑需要的任务<small>缓存与 CI</small></span><i>↗</i></a>
+        <div class="nav-tip"><span>TIP</span><p>每节末尾点「我掌握了」记录进度；按自己的节奏来。</p></div>
+      </aside>
+
+      <div class="lessons">
+        <section class="lesson-card" id="mental-model" data-lesson="mental-model">
+          <div class="lesson-heading"><div><p class="eyebrow">01 / THE MODEL</p><h2>Monorepo 解决的是协作摩擦</h2></div><span class="lesson-number">01</span></div>
+          <p class="lesson-copy">它不等于微前端，也不会自动让架构变好。价值在于：把相关项目放在一起后，能用统一工具共享代码、检查边界、协调测试与发布；代价则是仓库体积、权限隔离和 CI 编排要认真设计。</p>
+          <div class="compare-grid">
+            <article class="compare-card multi"><div class="compare-label"><span class="mini-icon">⇢</span><b>Multirepo</b><small>一个项目一个仓库</small></div><div class="repo-stack"><span>web-app <i>repo</i></span><span>design-system <i>repo</i></span><span>api-client <i>repo</i></span></div><p>跨项目改动常要同步 PR、版本与发布节奏；边界隔离更直观。</p></article>
+            <article class="compare-card mono"><div class="compare-label"><span class="mini-icon">⌘</span><b>Monorepo</b><small>多个项目一个仓库</small></div><div class="mono-stack"><span class="stack-root">acme-platform <i>repo</i></span><div><span>apps/web</span><span>packages/ui</span><span>packages/sdk</span></div></div><p>原子化跨包变更更容易；需要工具帮助控制边界、任务和权限。</p></article>
+          </div>
+          <div class="takeaway"><span>要点</span><p>选择仓库策略时，比较的是团队协作、权限与发布需求，不是“哪种架构更高级”。</p></div>
+          <button class="complete-button" data-complete="mental-model">我掌握了 <span>✓</span></button>
+        </section>
+
+        <section class="lesson-card" id="workspaces" data-lesson="workspaces">
+          <div class="lesson-heading"><div><p class="eyebrow">02 / WORKSPACES</p><h2>Workspace 让本地包像依赖一样被管理</h2></div><span class="lesson-number">02</span></div>
+          <p class="lesson-copy">Workspace 是包管理器提供的工作区能力：在一个仓库中发现多个 package，并用包名连接它们。它解决“怎么安装和链接”，不等于完整的任务编排或发布方案。</p>
+          <div class="code-example"><div class="code-top"><span><i></i><i></i><i></i> pnpm-workspace.yaml</span><span>示意</span></div><pre><code>packages:
+  - "apps/*"
+  - "packages/*"
+
+# packages/ui/package.json
+{
+  "name": "@acme/ui",
+  "dependencies": {
+    "@acme/tokens": "workspace:*"
+  }
+}</code></pre><div class="code-caption"><span>↳</span> <code>workspace:*</code> 表示解析到本仓库中的工作区包；发布时的转换行为依包管理器而定。</div></div>
+          <div class="callout-grid"><div><span class="callout-icon">↗</span><b>依赖要显式声明</b><p>不要依赖“刚好被 hoist 到顶层”的包；每个 package 应声明自己直接 import 的依赖。</p></div><div><span class="callout-icon">⌁</span><b>共享也要有边界</b><p>用 lint、CODEOWNERS 或 Nx 边界规则约束允许的依赖方向，避免 packages 变成杂物间。</p></div></div>
+          <div class="takeaway"><span>工具分工</span><p>pnpm / Yarn 管 workspace 与安装；Nx / Turborepo 等提供任务图、缓存等编排能力。实际功能随版本与配置而异。</p></div>
+          <button class="complete-button" data-complete="workspaces">我掌握了 <span>✓</span></button>
+        </section>
+
+        <section class="lesson-card" id="graph" data-lesson="graph">
+          <div class="lesson-heading"><div><p class="eyebrow">03 / DEPENDENCY GRAPH</p><h2>改一个包，哪些项目需要跟着检查？</h2></div><span class="lesson-number">03</span></div>
+          <p class="lesson-copy">真实仓库中的依赖图由工具从配置和代码中构建。下图是可点击的教学模型：选一个变更节点，观察它的<strong>反向依赖者</strong>——也就是可能受影响的消费者。</p>
+          <div class="graph-panel">
+            <div class="graph-toolbar"><span><i class="status-dot"></i> acme-platform · 项目图</span><span class="graph-legend"><i></i> 变更源 <i class="legend-affected"></i> 可能受影响 <span class="graph-direction">箭头：消费方 → 依赖方</span></span></div>
+            <div class="graph-scroll"><div class="dependency-graph" role="group" aria-label="可点击的 Monorepo 项目依赖关系图">
+              <svg class="edges" viewBox="0 0 660 250" aria-hidden="true"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#90a69a"></path></marker></defs><path class="edge" d="M175 72 C230 72 238 115 295 115"></path><path class="edge" d="M175 186 C230 186 238 140 295 140"></path><path class="edge" d="M175 72 C310 20 430 25 490 104"></path><path class="edge" d="M425 128 L490 128"></path></svg>
+              <button class="graph-node app-node" data-node="web" style="--x:28px;--y:44px"><small>APP</small><b>storefront</b><span>apps/storefront</span></button>
+              <button class="graph-node app-node" data-node="admin" style="--x:28px;--y:158px"><small>APP</small><b>admin</b><span>apps/admin</span></button>
+              <button class="graph-node package-node" data-node="ui" style="--x:295px;--y:92px"><small>PACKAGE</small><b>@acme/ui</b><span>packages/ui</span></button>
+              <button class="graph-node package-node" data-node="tokens" style="--x:490px;--y:92px"><small>PACKAGE</small><b>@acme/tokens</b><span>packages/tokens</span></button>
+            </div></div>
+            <div class="graph-result"><div><small>选择变更</small><select id="change-source" aria-label="选择发生变更的项目"><option value="tokens">packages/tokens</option><option value="ui">packages/ui</option><option value="web">apps/storefront</option><option value="admin">apps/admin</option></select></div><p id="impact-copy" aria-live="polite"></p></div>
+          </div>
+          <div class="takeaway"><span>affected</span><p>affected 通常表示“与变更相关、值得重跑的项目或任务”；具体算法取决于基线、依赖图、Git diff 和工具配置。</p></div>
+          <button class="complete-button" data-complete="graph">我掌握了 <span>✓</span></button>
+        </section>
+
+        <section class="lesson-card" id="playground" data-lesson="playground">
+          <div class="lesson-heading"><div><p class="eyebrow">04 / TASKS & CACHE</p><h2>从“全都重跑”到“只跑有变化的任务”</h2></div><span class="lesson-number">04</span></div>
+          <p class="lesson-copy">任务图描述 build / test / lint 之间的先后依赖；缓存用任务输入和配置生成 key。输入不变时可复用输出——但如果缓存 key 漏掉重要输入，就可能错误命中。</p>
+          <div class="simulator">
+            <div class="sim-controls"><label for="sim-source">模拟修改文件</label><select id="sim-source"><option value="tokens">packages/tokens/src/colors.ts</option><option value="ui">packages/ui/src/Button.tsx</option><option value="web">apps/storefront/src/page.tsx</option><option value="admin">apps/admin/src/page.tsx</option><option value="docs">docs/guide.md（与应用构建无关）</option></select><button class="button primary" id="run-build">运行示例构建 <span>▶</span></button><button class="reset-button" id="reset-build" type="button">重置</button><p class="sim-note">这是确定性教学模拟；不会执行 shell 命令。</p></div>
+            <div class="task-view"><div class="task-summary"><span id="run-label">等待运行</span><span id="run-count">选择文件后开始</span></div><div class="task-list" id="task-list" aria-live="polite">
+              <div class="task-row" data-task="tokens"><span class="task-state">·</span><code>tokens:build</code><small>packages/tokens</small><b>—</b></div>
+              <div class="task-row" data-task="ui"><span class="task-state">·</span><code>ui:build</code><small>depends on tokens</small><b>—</b></div>
+              <div class="task-row" data-task="web"><span class="task-state">·</span><code>storefront:build</code><small>depends on ui</small><b>—</b></div>
+              <div class="task-row" data-task="admin"><span class="task-state">·</span><code>admin:build</code><small>depends on ui</small><b>—</b></div>
+              <div class="task-row" data-task="docs"><span class="task-state">·</span><code>docs:build</code><small>not connected</small><b>—</b></div>
+            </div><div class="cache-legend"><span><i class="cache-dot hit"></i>缓存命中</span><span><i class="cache-dot miss"></i>需要执行</span><span><i class="cache-dot skip"></i>不受影响</span></div></div>
+          </div>
+          <div class="interview-inline"><span class="quote-mark">“</span><p><b>面试表达：</b>“我会先根据变更文件和项目依赖图确定 affected 范围，再按任务依赖顺序执行；缓存 key 覆盖源码、锁文件、环境变量和配置等有效输入。”</p></div>
+          <button class="complete-button" data-complete="playground">我掌握了 <span>✓</span></button>
+        </section>
+
+        <section class="lesson-card release-card" id="release">
+          <div class="lesson-heading"><div><p class="eyebrow">DELIVERY / RELEASE</p><h2>发布策略没有唯一答案</h2></div><span class="lesson-number">↗</span></div>
+          <div class="release-steps"><div><span>01</span><b>定版本策略</b><p>固定版本（fixed）便于协同升级；独立版本（independent）适合包的节奏差异，但需要更多发布管理。</p></div><div><span>02</span><b>记录变更意图</b><p>Changesets 一类工具可把包变更与 semver 意图关联；团队要明确 breaking change 和发布门槛。</p></div><div><span>03</span><b>只发该发的包</b><p>按变更集合计算待发包，生成 changelog，再通过 CI 校验、审批与发布。</p></div></div>
+          <div class="callout warn"><b>常见误区：</b>“用了 Monorepo 就必须所有包同版本”并不成立；选择要看消费者、兼容承诺和发布流程。</div>
+        </section>
+
+        <section class="quiz-card" id="quiz">
+          <div class="quiz-head"><div><p class="eyebrow">QUICK CHECK / 90 SEC</p><h2>用 3 道题检查理解</h2></div><span class="quiz-count" id="quiz-count">01 / 03</span></div>
+          <div id="quiz-content" aria-live="polite"></div>
+        </section>
+
+        <section class="interview-section" id="interview">
+          <div class="section-head"><div><p class="eyebrow">INTERVIEW DECK / 15 QUESTIONS</p><h2>面试高频题：从概念到取舍</h2><p class="section-lede">按基础、依赖、构建、治理筛选。先自己组织回答，再展开参考要点与追问。</p></div></div>
+          <div class="filter-row" role="group" aria-label="按类别筛选面试题"><button class="filter-chip active" data-filter="all">全部 <span>15</span></button><button class="filter-chip" data-filter="basics">基础 <span>3</span></button><button class="filter-chip" data-filter="deps">依赖与边界 <span>4</span></button><button class="filter-chip" data-filter="build">构建与缓存 <span>5</span></button><button class="filter-chip" data-filter="release">CI 与发布 <span>3</span></button></div>
+          <div class="question-list" id="question-list"></div>
+          <div class="interview-note"><span>回答框架</span><p>先讲定义，再讲机制；结合一个真实变更说明收益；最后主动说出成本、边界和验证方式。</p></div>
+        </section>
+
+        <section class="closing-card"><div><p class="eyebrow">NEXT STEP</p><h2>从自己的仓库开始画图</h2><p>标出应用、共享包和依赖箭头，再挑一个文件变化，问：哪些任务需要重跑？</p></div><a class="button secondary" href="#top">回到顶部 ↑</a></section>
+      </div>
+    </div>
+  </main>
+  <footer class="footer wrap"><a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><b>FIELD GUIDE</b><small>前端工程可视化课</small></span></a><p>Monorepo 可视化教学 Demo · 静态网页 · 本地交互不执行真实构建</p><a href="#interview">继续刷题 ↑</a></footer>
+</body>
+</html>
