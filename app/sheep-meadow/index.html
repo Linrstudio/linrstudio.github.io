@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6f1e7">
+  <meta name="description" content="画一个圈，变出一只羊。在小河环绕的草地上，陪小羊吃草、奔跑、跳跃，享受一点慢悠悠的快乐。">
+  <title>圈一只羊 · 一点慢悠悠的快乐</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23e5eccf'/%3E%3Cpath d='M21 42v9m20-9v9' stroke='%23404f43' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M46 30a12 12 0 0 0-12-16 12 12 0 0 0-18 10 12 12 0 0 0 1 22h25a10 10 0 0 0 4-16' fill='%23fffdf0'/%3E%3Cellipse cx='46' cy='33' rx='9' ry='12' fill='%23404f43'/%3E%3Ccircle cx='49' cy='30' r='1.6' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M15 31v8m16-8v8"/><path class="wool" d="M34 20c2-7-6-12-11-8-7-5-14 2-11 8-7 3-5 13 2 13h18c7 0 9-10 2-13Z"/><ellipse cx="34" cy="24" rx="6" ry="8"/><circle class="eye" cx="36" cy="22" r="1"/></svg></span><div><div class="eyebrow">MEADOW MOMENTS</div><h1>圈一只羊</h1></div></div>
+    <p class="top-note">画个圈，让小小的快乐发生。</p>
+    <button class="reset-btn" id="resetBtn" type="button"><span aria-hidden="true">↻</span> 重置草地</button>
+  </header>
+  <main class="layout">
+    <section class="stage-card" aria-label="小羊草地">
+      <div class="canvas-wrap"><canvas id="meadow" aria-label="互动草地：按住画闭合圈召唤小羊，轻点小羊后选择动作。"></canvas><div class="toast" id="toast">在草地上画一个圈吧</div><div class="field-tag" aria-hidden="true"><span></span> 一片慢悠悠的草地</div></div>
+      <div class="stage-footer"><span class="hint-dot" aria-hidden="true"></span><span id="drawHint">按住并绕一圈，新的羊会从圈心出现</span><span class="capacity" id="capacity">5 / 40 只</span></div>
+    </section>
+    <aside class="side-panel" aria-label="牧场与小羊动作">
+      <div class="count-card"><div class="mini-label">OUR LITTLE FLOCK</div><div class="count-row"><strong id="sheepCount">5</strong><span>位草地居民<small>吃吃草，发发呆，晒晒太阳</small></span><span class="sun-mark" aria-hidden="true">☼</span></div></div>
+      <section class="selected-card" id="selectedCard" aria-label="选中的小羊"><div class="selected-head"><span class="sheep-chip" aria-hidden="true">✦</span><div><b id="selectedName">还没有选中</b><small id="selectedState">轻点草地上的一只羊</small></div></div><div class="actions" id="actions" aria-label="羊的动作" hidden><button type="button" data-action="jump" disabled><span aria-hidden="true">↗</span> 跳一跳</button><button type="button" data-action="run" disabled><span aria-hidden="true">»</span> 跑起来</button><button type="button" data-action="rest" disabled><span aria-hidden="true">☾</span> 趴一会</button><button type="button" data-action="graze" disabled><span aria-hidden="true">♧</span> 吃草</button></div></section>
+      <div class="info-card"><div class="card-title"><span class="small-leaf" aria-hidden="true">❧</span> 今日的草地</div><p id="statusText" role="status" aria-live="polite">风吹过矮草，羊群慢悠悠地找着嫩叶。</p><div class="legend"><span><i class="legend-swatch grass"></i>柔软草地</span><span><i class="legend-swatch river"></i>清凉小河</span></div></div>
+      <div class="help-card"><span class="sticker">HOW TO PLAY</span><h2>留一点时间，给小小的快乐。</h2><div class="guide-row"><span>01</span><p><b>画个圈</b>手指或鼠标绕一圈，迎接新朋友</p></div><div class="guide-row"><span>02</span><p><b>点点羊</b>邀请它跳跃、奔跑，或躺着发呆</p></div><p class="help-foot">圈到河面也没关系，它会在附近的草地出现。</p></div>
+      <div class="tip-bottom">不计时，不打分。和小羊一起慢下来。</div>
+    </aside>
+  </main>
+  <footer class="page-footer"><span>一点慢悠悠的快乐</span><span>画圈生羊 · 点击互动 · 最多 40 只</span></footer>
+  <script src="game.js"></script>
+</body>
+</html>
