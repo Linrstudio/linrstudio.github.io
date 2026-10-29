@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangChain 30 天实战课：从小白到 AI Agent 开发</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:12px 0}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.done{color:#0a7a42;font-weight:bold} .soon{color:#888}
+ol{padding-left:20px} li{margin:8px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<h1>LangChain 30 天实战课</h1>
+<p><span class="tag">从小白到 AI Agent 开发</span> <span class="tag">每天一课</span></p>
+<p>这不是只讲 API 的课。每一课都有同一套结构：<strong>核心解释 → 代码示例 → 小测验 → 面试题与答案 → 加分项</strong>，最后落到一个能放进简历的项目上。目标岗是 <strong>AI 应用落地 / Agent 前端 / Agent 工具链</strong>，不对标 LLM 基建岗。</p>
+<div class="note">
+<p><strong>学习路线（和 1 个月速成计划同一张表）</strong><br>
+第 1 周：LangChain 核心 → 第 2 周：Mini Cursor → 第 3 周：RAG + 深圳天气 Agent → 第 4 周：Computer Use + 上线加固 → 最后 2 天：面试模拟</p>
+<p><strong>今天进度：Day 1 已上线</strong>，其余每天更新一课。先从 Day 1 开始，不用跳着看。</p>
+</div>
+
+<h2>第 1 周：LangChain 核心</h2>
+<ol>
+<li><a href="day01.html"><strong>Day 1：LangChain 是什么？最小链跑起来</strong></a> <span class="done">● 已上线</span></li>
+<li>Day 2：PromptTemplate / ChatPromptTemplate / FewShot <span class="soon">（明日更新）</span></li>
+<li>Day 3：ChatModel、消息类型、temperature 与 Token</li>
+<li>Day 4：OutputParser 与 Structured Output</li>
+<li>Day 5：手写 Tool Calling 循环（不依赖黑盒）</li>
+<li>Day 6：Memory：模型为什么“失忆”，记忆怎么做预算</li>
+<li>Day 7：LangGraph 入门 + LangSmith 追踪 + 第 1 周复盘</li>
+</ol>
+
+<h2>第 2 周：Mini Cursor</h2>
+<ol start="8">
+<li>Day 8：代码 Agent 的架构：索引、对话、改代码、跑测试</li>
+<li>Day 9：仓库索引与代码检索</li>
+<li>Day 10：文件工具与 diff 预览：改之前先给人看</li>
+<li>Day 11：命令白名单与测试闭环</li>
+<li>Day 12：上下文预算与多文件编辑</li>
+<li>Day 13：Mini Cursor Web 界面（前端主场）</li>
+<li>Day 14：复盘：模糊需求、改错代码、失败案例怎么讲</li>
+</ol>
+
+<h2>第 3 周：RAG + 深圳天气 Agent</h2>
+<ol start="15">
+<li>Day 15：RAG 全链路：一张图讲清切分、向量、检索、生成</li>
+<li>Day 16：切分与 Embedding：按标题切为什么比固定长度好</li>
+<li>Day 17：向量库与检索：TopK 怎么选</li>
+<li>Day 18：重排、引用与防幻觉</li>
+<li>Day 19：RAG 评测集：命中率、引用准确率、幻觉率</li>
+<li>Day 20：工具路由 + 深圳天气工具（Open-Meteo，免 Key）</li>
+<li>Day 21：混合问答 Agent：RAG 和工具怎么一起调</li>
+</ol>
+
+<h2>第 4 周：Computer Use + 上线加固</h2>
+<ol start="22">
+<li>Day 22：Computer Use 概念与安全边界</li>
+<li>Day 23：Playwright 本地工具：截图、点击、输入</li>
+<li>Day 24：元素定位不准时的重试与兜底</li>
+<li>Day 25：人工确认、审计日志与回滚</li>
+<li>Day 26：成本、延迟、重试与降级</li>
+<li>Day 27：上线清单：评测、观测、灰度、回滚</li>
+<li>Day 28：三个项目整合，写进简历的讲法</li>
+</ol>
+
+<h2>面试冲刺</h2>
+<ol start="29">
+<li>Day 29：项目深挖 + 系统设计：客服 Agent 怎么设计</li>
+<li>Day 30：模拟面试：手写工具循环 + 错题复盘</li>
+</ol>
+
+<h2>每课的固定结构</h2>
+<div class="card">
+<p>1. <strong>核心解释</strong>：先讲概念和一张心智地图，不堆 API。<br>
+2. <strong>代码示例</strong>：能直接跑的最小代码，关键行有注释。<br>
+3. <strong>小测验</strong>：当页可点、可判分，答完再看解析。<br>
+4. <strong>面试题与答案</strong>：按“面试官想听的点”写，不是背诵版。<br>
+5. <strong>加分项</strong>：生产视角、上线视角、简历讲法。</p>
+</div>
+<p class="note">配套代码在学习计划的脚手架里：第 1 周对应 <code>agent-core</code>（手写循环 + LangGraph 版）。课程网页只讲思路和用法，动手跑代码用脚手架。</p>
+<p><a href="day01.html">→ 开始 Day 1 →</a></p>
+</body>
+</html>

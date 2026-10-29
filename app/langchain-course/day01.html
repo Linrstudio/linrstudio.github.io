@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 1：LangChain 是什么？最小链跑起来 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 1 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 1：LangChain 是什么？最小链跑起来</h1>
+<p>学完这一课，你要能做到三件事：说清 LangChain 是干嘛的、写出最小链、讲清它和单次调模型的区别。先记住结论，再看细节。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 一句话：LangChain 不是大模型，是胶水</h3>
+<p>大模型负责思考和生成，LangChain 负责编排：提示词怎么拼、什么时候调模型、模型的结果往哪送、什么时候调工具、历史怎么带。它就像前端框架：不替你写业务逻辑，只帮你把组件、状态、接口组织起来。</p>
+<h3>2. 三个容易混的名字</h3>
+<ul>
+<li><strong>LangChain</strong>：编排框架，就是这门课的主角。</li>
+<li><strong>LangGraph</strong>：基于图的编排方式，适合流程复杂、要分支、要人工介入的 Agent，第 7 天讲。</li>
+<li><strong>LangSmith</strong>：调试和观测平台，能看到每一步发了什么、回了什么、烧了多少 Token，排障时用。</li>
+</ul>
+<h3>3. 核心就 7 块，先记住分工</h3>
+<ul>
+<li><strong>模型 ChatModel</strong>：消息进、消息出，不是字符串进出。</li>
+<li><strong>提示词 Prompt</strong>：带变量的模板，System 定规则，Human 给问题。</li>
+<li><strong>输出解析器 OutputParser</strong>：把模型消息转成你要的形状：文本、JSON、Pydantic 对象。</li>
+<li><strong>LCEL 与 Runnable</strong>：<code>prompt | llm | parser</code> 里的 <code>|</code>，把有统一接口的零件串起来。</li>
+<li><strong>工具 Tool</strong>：带名字和描述的函数，模型看了描述自己决定调不调。</li>
+<li><strong>记忆 Memory</strong>：模型本身无记忆，每次调用都要把历史重新发过去，记忆就是你帮它保管的那份清单。</li>
+<li><strong>检索器 Retriever</strong>：先查资料再回答，解决模型不知道、会编造的问题，第 3 周讲。</li>
+</ul>
+<h3>4. LCEL 的 <code>|</code> 到底是什么</h3>
+<p>它是把多个 Runnable 串成一条链，前一步输出就是后一步输入。<code>|</code> 只是先组装，<code>invoke</code> 时才真正从头执行。所有零件都有 <code>invoke / batch / stream</code>，所以可以互换、可以单测某一步、可以用 <code>stream</code> 做打字机效果。中间任何一步抛异常，整条链就向外抛，不会悄悄跳过；另一个常见坑是类型对不上，比如 prompt 输出 PromptValue，下一环却按纯字符串处理。</p>
+<h3>5. ChatModel 和老式 LLM 的区别</h3>
+<p>老式 LLM 是字符串进、字符串出。ChatModel 是消息进、消息出：<code>SystemMessage / HumanMessage / AIMessage / ToolMessage</code>，角色是分开的。Agent 必须用它，因为工具调用就藏在 <code>AIMessage.tool_calls</code> 里，工具结果要以 <code>ToolMessage</code> 的形式、带着对应的 <code>tool_call_id</code> 回填，字符串模型做不到这套往返。</p>
+<div class="warn"><strong>小白最容易踩的坑：</strong>现在 LangChain 是分包的：<code>langchain-core</code> 是核心，<code>langchain-openai</code> 是 OpenAI 对接，<code>langgraph</code> 另装。老教程的导入路径很多已经变了，抄代码报错先查版本和导入路径，别先怀疑自己。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：最小链（Day 1 的骨架，必须会默写）</h3>
+<pre><code>from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+prompt = ChatPromptTemplate.from_template("把 {topic} 讲给小白听，一句话")
+chain = prompt | llm | StrOutputParser()
+
+print(chain.invoke({"topic": "LangChain"}))</code></pre>
+<p>三步分别是：填变量拼成消息、发给模型、把模型消息里的文本抠出来。注意三点：模板里的 <code>{topic}</code> 和 <code>invoke</code> 传的键名必须对上；<code>StrOutputParser</code> 的 S、O、P 都大写，Python 名字大小写敏感；<code>invoke</code> 返回的就是解析后的字符串。</p>
+<h3>示例 2：Structured Output（让模型稳定输出结构）</h3>
+<pre><code>from pydantic import BaseModel, Field
+
+class TaskBreakdown(BaseModel):
+    goal: str = Field(description="用户目标，一句话")
+    steps: list[str] = Field(description="拆解步骤，3-5 条")
+    risks: list[str] = Field(description="可能失败的点")
+
+structured = llm.with_structured_output(TaskBreakdown)
+result = structured.invoke("帮我把'给博客加一个深色模式开关'拆解成开发任务")
+print(result.model_dump_json(indent=2, ensure_ascii=False))</code></pre>
+<p>以前是让模型输出 JSON，再用正则抠代码块、<code>json.loads</code> 解析，模型一加解释、多一个逗号就全崩。现在是把 Pydantic 结构当 schema 交给模型，返回校验过的对象。但它也不是万能：schema 太复杂、描述不清时仍会校验失败，处理顺序是：看错误 → 带错误让模型重试 → 反复失败再改 schema / prompt → 最后才换模型。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 的 <code>topic</code> 换成“鸽子”，跑一遍。<br>
+2. 把示例 2 的 <code>TaskBreakdown</code> 加一个 <code>deadline</code> 字段，再在 prompt 里明确让它给截止日期，看看模型会不会编一个日期——如果会，把字段改成可选，这就是防编造的第一课。<br>
+3. 故意把 <code>invoke</code> 的键写错一个字母，看报错信息，记住 KeyError 长什么样。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. <code>prompt | llm | parser</code> 里，<code>|</code> 是干嘛的？</strong></p>
+<button data-i="0">只是把三个函数写在一行，依次调用</button>
+<button data-i="1">把 Runnable 串成链，前一步输出就是后一步输入，invoke 时才执行</button>
+<button data-i="2">表示“或”，三者任选其一执行</button>
+<div class="ans">解析：选 B。它组装的是一条 RunnableSequence，invoke 时才从头执行，而且所有零件共享 invoke / batch / stream 接口。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>2. 模板里有 <code>{goal}</code>，调用时没传 <code>goal</code>，会怎样？</strong></p>
+<button data-i="0">格式化时报 KeyError</button>
+<button data-i="1">自动把 goal 当成空字符串</button>
+<button data-i="2">模型自己猜一个 goal 出来</button>
+<div class="ans">解析：选 A。事前校验 input_variables 或用 partial 给默认值才是正解，try/except 只能当最后一道防线。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>3. 为什么 Agent 必须用 ChatModel，而不是字符串进出的老 LLM？</strong></p>
+<button data-i="0">因为 ChatModel 更便宜</button>
+<button data-i="1">因为 ChatModel 回答更长</button>
+<button data-i="2">因为工具调用藏在 AIMessage.tool_calls 里，工具结果要以 ToolMessage 回填</button>
+<div class="ans">解析：选 C。消息类型和往返结构才是关键，价格和长度都不是决定因素。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. Structured Output 校验失败，第一反应应该是？</strong></p>
+<button data-i="0">马上换一个更贵的模型</button>
+<button data-i="1">看错误，把错误告诉模型让它重出一版</button>
+<button data-i="2">直接把异常甩给用户</button>
+<div class="ans">解析：选 B。很多失败只是一时手滑，重试就过了；反复同一种失败，才是 schema 或 prompt 本身有问题，那时再改 schema。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>5. Agent 场景 temperature 一般放多少？为什么？</strong></p>
+<button data-i="0">0 到 0.3，为的是稳定、可复现、工具参数不漂移</button>
+<button data-i="1">0.9 到 1.0，为的是更有创造力</button>
+<button data-i="2">随便放多少都一样，模型输出本来就是确定的</button>
+<div class="ans">解析：选 A。注意：0 最稳，0.3 仍带一点随机性；而且 0 也不等于 100% 可复现，模型版本和硬件也可能带来细微差别。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>6. 需求只是“输入一句话，调一次模型，返回翻译”，要不要上 LangChain？</strong></p>
+<button data-i="0">要，所有模型调用都必须用 LangChain</button>
+<button data-i="1">不用，直接调官方 SDK 更干净；多步、工具、记忆、分支齐了才上框架</button>
+<button data-i="2">要，因为不用 LangChain 就不算 Agent 开发</button>
+<div class="ans">解析：选 B。LangChain 的价值在编排，不在单次调用，能说出这个取舍，面试时比把它吹成万能框架可信得多。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：LangChain 和 LangGraph 本质区别是什么？什么时候不用 LangGraph？</summary>
+<p>LangChain 是通用编排框架，LangGraph 是基于图的编排：状态放进 State，每一步是节点，条件边决定走向，天然支持断点续跑、人工介入、并行分支。简单循环够用就别上图，流程复杂、要人工确认、可观测性要求高时，图才值。</p>
+</details>
+<details><summary>Q2：Agent 死循环一般是哪几种原因？你怎么防？</summary>
+<p>常见三种：工具选错反复调同一个工具、工具参数一直错、模型不认工具结果一直重试。防法三层：步数上限、工具异常转成 ToolMessage 让模型纠错而不是崩溃、运行日志留轨迹复盘。第 5 天的手写循环就是按这三层写的。</p>
+</details>
+<details><summary>Q3：Tool Calling 失败（参数错、超时、返回空）分别怎么处理？</summary>
+<p>参数错：把校验错误回填给模型，让它纠正参数再调；超时：设超时 + 有限次重试，仍失败就降级或报给用户；返回空：当成一次失败结果回填，别当成成功继续往下编。共同原则是：工具失败是模型的输入，不是整个 Agent 的崩溃理由。</p>
+</details>
+<details><summary>Q4：RAG 和微调怎么选？（Day 1 先建立直觉，第 3 周展开）</summary>
+<p>知识常变、需要引用出处、数据量少时选 RAG；知识稳定、要内化成模型风格或能力、且有足够高质量数据时再考虑微调。面试时先给这个判断框架，再谈细节。</p>
+</details>
+<details><summary>Q5：你怎么证明 Agent 变好了，而不是感觉变好了？</summary>
+<p>先建离线评测集，固定一批任务和预期结果，每次改动都跑一遍，记成功率、步数、Token 消耗、工具调用次数；线上再抽查真实轨迹、按失败原因分类。只说“试了几个例子都挺好”是最弱的回答。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>核心循环确实就是“模型决策 → 调工具 → 结果回填 → 再决策”这几行，但上线要在外面包上入口校验、状态落库、工具白名单、大小模型路由、成本告警、LangSmith 观测、评测集和回滚。先把发动机搞懂，再一层层往外包，才是真实的上线路径。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 LangChain”，写“手写过 Tool Calling 循环，含步数上限、工具异常回填、运行日志，LangGraph 版支持断点与人工确认节点”。前者是背诵，后者是证据。</p>
+<p><strong>明日预告：</strong>Day 2 讲 PromptTemplate、ChatPromptTemplate、FewShot，重点是 FewShot 的文本版和对话版怎么选，以及样例拼进提示词后模型实际看到了什么。</p>
+</div>
+
+<div class="nav">
+<span><a href="index.html">← 课程首页</a></span>
+<span>Day 2 明日更新 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
