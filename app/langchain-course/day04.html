@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4：OutputParser 与 Structured Output | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 4 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 4：OutputParser 与 Structured Output</h1>
+<p>模型输出的是文本，程序要的是数据。这一课讲的就是中间那座桥：解析器怎么把文本变成可靠的数据，结构化输出和普通解析到底差在哪，校验失败时正确的处理顺序是什么。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 为什么一定要有解析器</h3>
+<p>没有解析器时，常见做法是让模型输出 JSON，再用正则抠 <code>```json</code> 代码块、<code>json.loads</code> 解析。模型一加解释、多一个逗号、少一个括号、字段名写错一个字母，整条链就崩了。解析器的价值不是“多一个步骤”，而是把“模型输出不可靠”这个事实变成可处理、可重试、可兜底的工程问题。</p>
+<h3>2. 三条路线，一张表分清</h3>
+<table>
+<tr><th>路线</th><th>怎么工作</th><th>可靠性</th><th>适合什么时候</th></tr>
+<tr><td>StrOutputParser</td><td>把 AIMessage 里的文本抠出来</td><td>高（只取文本）</td><td>只要一段话，不用结构</td></tr>
+<tr><td>JsonOutputParser / PydanticOutputParser</td><td>把格式要求写进提示词，再硬解析模型吐出来的文本</td><td>中</td><td>模型不支持原生结构化模式时，或要兼容老模型时</td></tr>
+<tr><td>with_structured_output</td><td>把 Pydantic 结构当 schema 交给模型，走原生结构化模式或工具调用</td><td>最高</td><td>输出要被程序严格消费时，优先选它</td></tr>
+</table>
+<p>关键区别记住一句：<strong>PydanticOutputParser 是“提示词里写格式要求 + 事后解析”，with_structured_output 是“模型层面按 schema 出”</strong>。前者是引导，后者是约束，面试时能说出这个区别，就比只会说“用 Pydantic”高一档。</p>
+<h3>3. PydanticOutputParser 的正确用法：格式要求必须进提示词</h3>
+<p>用 PydanticOutputParser 时，光定义模型是不够的，还要把 <code>parser.get_format_instructions()</code> 放进提示词，模型才知道要按什么格式出。常见写法是用 <code>partial_variables</code> 把格式要求预填进模板，调用时只传业务变量。漏了这一步，模型根本不知道你要 JSON，解析当然会失败——这不是模型的问题，是提示词缺了一块。</p>
+<h3>4. Schema 怎么设计才不容易失败</h3>
+<ul>
+<li><strong>字段描述写清楚</strong>：每个字段的 Field description 就是给模型看的说明书，含糊的描述等于没写。</li>
+<li><strong>必填项越少越好</strong>：模型拿不到的信息就别设必填，否则它只能编一个来填，编造就是这么来的；拿不到的字段设成可选。</li>
+<li><strong>类型越简单越好</strong>：字符串、数字、字符串列表、枚举，远比深嵌套对象、联合类型稳定；复杂结构先拆成两步出。</li>
+<li><strong>别把业务校验全压给模型</strong>：格式对了不代表业务对了，下游还要做业务规则校验，比如日期是否在合理范围、金额是否为正数。</li>
+</ul>
+<h3>5. 校验失败时，正确的处理顺序</h3>
+<p>Day 1 考过这道题，今天把它钉死：<strong>看错误 → 把错误告诉模型让它重出一版 → 反复同一种失败再改 schema / prompt → 最后才换模型</strong>。很多失败只是一时手滑，重试就过了；反复同一种失败，才说明 schema 要求的东西 prompt 里根本没给，或者字段设成了模型拿不到的必填项，那时再改 schema。直接把异常甩给用户、或者一上来就换更贵的模型，都是最差的两个选择。</p>
+<div class="warn"><strong>容易踩的坑：</strong>解析失败时把原始输出扔掉。原始输出是定位问题的唯一证据：到底是格式错、字段错、还是模型根本没理解任务，看原始输出一眼就知道。生产里要把原始输出记进日志，再重试或兜底，别只记一句“解析失败”。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Str 与 Json 解析器（已实测）</h3>
+<pre><code>from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+
+print(StrOutputParser().parse("hi"))        # hi
+print(JsonOutputParser().parse('{"a": 1}')) # {'a': 1}</code></pre>
+<h3>示例 2：PydanticOutputParser，格式要求必须进提示词（已实测解析部分）</h3>
+<pre><code>from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+from pydantic import BaseModel, Field
+
+class Task(BaseModel):
+    goal: str = Field(description="目标，一句话")
+    steps: list[str] = Field(description="步骤")
+
+parser = PydanticOutputParser(pydantic_object=Task)
+
+# 关键一步：把格式要求放进提示词，模型才知道按什么格式出
+prompt = PromptTemplate(
+    template="把下面的需求拆解成任务。\n{format_instructions}\n需求：{input}",
+    input_variables=["input"],
+    partial_variables={"format_instructions": parser.get_format_instructions()},
+)
+chain = prompt | llm | parser
+
+# 本地实测（不调模型）：合法 JSON 能解析，缺必填字段会报 OutputParserException
+print(parser.parse('{"goal": "加深色模式", "steps": ["加开关", "存偏好"]}'))
+# goal='加深色模式' steps=['加开关', '存偏好']</code></pre>
+<h3>示例 3：with_structured_output，优先选这条路线</h3>
+<pre><code>structured = llm.with_structured_output(Task)
+result = structured.invoke("帮我把'给博客加一个深色模式开关'拆解成开发任务")
+print(result.model_dump_json(indent=2, ensure_ascii=False))
+# 返回的就是校验过的 Task 对象，不用自己解析文本</code></pre>
+<p>注意：它也不是万能。模型不支持该模式、schema 太复杂、描述不清时，仍可能校验失败；而且它只保证格式，不保证业务正确，下游的业务校验不能省。</p>
+<h3>示例 4：校验失败的重试骨架（概念代码，逻辑就是处理顺序）</h3>
+<pre><code>for attempt in range(3):
+    try:
+        result = chain.invoke({"input": user_input})
+        break
+    except Exception as e:
+        # 把错误告诉模型，让它按错误重出一版，而不是直接崩掉
+        user_input = f"上一次输出校验失败，错误是：{e}。请按格式重新输出。"
+else:
+    # 重试 3 次还失败：降级处理，比如返回兜底文案、记日志、转人工
+    result = None</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 不用调模型，分别跑示例 2 的合法 JSON 和缺字段 JSON，对照 OutputParserException 的报错信息。<br>
+2. 把 Task 的 steps 从必填改成可选（给默认值），再想想：什么情况下该必填、什么情况下该可选？<br>
+3. 给 Task 加一个 deadline 字段，先不改 prompt，只改模型，看模型会不会编一个日期；再把字段改成可选，对比两次行为——这就是 Day 1 留下的防编造练习。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. 解析器是干嘛的？</strong></p>
+<button data-i="0">让模型回答得更长</button>
+<button data-i="1">把模型输出的文本变成程序可用的数据，并处理格式不可靠的问题</button>
+<button data-i="2">给模型换一个更贵的版本</button>
+<div class="ans">解析：选 B。没有解析器，模型一加解释、多一个逗号，整条链就崩了。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. PydanticOutputParser 和 with_structured_output 的根本区别是？</strong></p>
+<button data-i="0">一个免费，一个收费</button>
+<button data-i="1">两个完全一样，只是名字不同</button>
+<button data-i="2">前者是提示词里写格式要求 + 事后解析，后者是模型层面按 schema 出</button>
+<div class="ans">解析：选 C。前者是引导，后者是约束；输出要被严格消费时优先选后者。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 用 PydanticOutputParser 时，最容易漏的一步是？</strong></p>
+<button data-i="0">没把 get_format_instructions() 放进提示词，模型根本不知道要按什么格式出</button>
+<button data-i="1">没给模型起名字</button>
+<button data-i="2">没设置 temperature</button>
+<div class="ans">解析：选 A。光定义模型不够，格式要求必须进提示词，常用 partial_variables 预填。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 校验失败，第一反应应该是？</strong></p>
+<button data-i="0">马上换更贵的模型</button>
+<button data-i="1">看错误，把错误告诉模型让它重出一版</button>
+<button data-i="2">直接把异常甩给用户</button>
+<div class="ans">解析：选 B。反复同一种失败，才是 schema 或 prompt 本身有问题，那时再改 schema。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 模型拿不到的信息，字段应该怎么设？</strong></p>
+<button data-i="0">设成必填，逼它想办法</button>
+<button data-i="1">删掉这个字段，永远不要</button>
+<button data-i="2">设成可选，否则它只能编一个来填</button>
+<div class="ans">解析：选 C。必填项越少越好，拿不到的字段设可选，是防编造的基本功。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 解析失败时，原始输出该怎么处理？</strong></p>
+<button data-i="0">记进日志，再重试或兜底，别只记一句“解析失败”</button>
+<button data-i="1">直接扔掉，反正重试会重新生成</button>
+<button data-i="2">发给用户看，让用户自己判断</button>
+<div class="ans">解析：选 A。原始输出是定位问题的唯一证据：格式错、字段错、还是根本没理解任务，看它一眼就知道。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：为什么不用正则抠 JSON，非要用解析器 / 结构化输出？</summary>
+<p>正则只能处理你预想到的格式，模型输出是不可靠的：加解释、多逗号、少括号、字段名写错，都会让正则全崩。解析器把格式问题变成可校验、可重试、可兜底的工程问题；结构化输出更进一步，让模型层面按 schema 出，稳定性最高。</p>
+</details>
+<details><summary>Q2：模型返回了多余字段，Pydantic 默认怎么处理？什么时候要严格拒绝？</summary>
+<p>默认会忽略多余字段，只校验你定义的字段。下游对字段有严格要求、或者多余字段可能意味着模型理解错了任务时，才考虑严格模式；大多数业务场景，忽略多余字段 + 校验必填字段就够了，别为了严格而严格。</p>
+</details>
+<details><summary>Q3：Schema 太复杂时，失败率为什么会上升？怎么拆？</summary>
+<p>模型一次要同时满足的约束越多，出错面就越大。拆法是：先出简单结构，再分步补细节；或者把复杂对象拆成两步出，第一步出骨架，第二步填细节。一次只让模型做一件事，是结构化输出最实用的经验。</p>
+</details>
+<details><summary>Q4：结构化输出通过了校验，是不是就代表结果一定对？</summary>
+<p>不是。校验只保证格式，不保证业务正确：日期可能在合理范围外，金额可能是负数，任务步骤可能根本不可行。格式校验之后，还要做业务规则校验，这是两层不同的防线，不能互相替代。</p>
+</details>
+<details><summary>Q5：提示词改了、模型换了，解析器要怎么回归？</summary>
+<p>准备一组固定测试输入和预期结构，改一次就跑一遍，对比解析成功率和字段准确率；同时把原始输出记下来，失败时能定位是提示词、schema 还是模型的问题。改动不跑回归，等于在生产环境碰运气。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Schema 也要版本管理，字段改名、改必填、改类型都可能破坏下游；新增字段先设可选，跑一段时间确认没问题再收紧。解析失败率、重试次数、兜底触发率都要进监控，突然上升往往意味着提示词或模型变了。</p>
+<p><strong>简历讲法：</strong>别写“会用 Pydantic”，写“用 with_structured_output 做过任务拆解的结构化输出，必填项收敛、可选字段防编造，校验失败按‘看错误—带错误重试—改 schema’的顺序处理，原始输出记日志可复盘”。前者是名词，后者是流程。</p>
+<p><strong>明日预告：</strong>Day 5 讲手写 Tool Calling 循环：不依赖 AgentExecutor 黑盒，把“模型决策 → 调工具 → 结果回填 → 再决策”这 4 步彻底讲透，也是咱们脚手架 loop.py 的核心。</p>
+</div>
+
+<div class="nav">
+<span><a href="day03.html">← Day 3</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>Day 5 明日更新 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
