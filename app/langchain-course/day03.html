@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 3：ChatModel、消息、temperature 与 Token | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 3 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 3：ChatModel、消息、temperature 与 Token</h1>
+<p>Day 1 说了“消息进、消息出”，Day 2 说了“提示词怎么拼”，今天把中间那个模型彻底讲透：消息有哪几种、温度到底改了什么、Token 到底怎么算。Agent 的成本、稳定性和上限，基本都由这一课决定。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. ChatModel：一句话定义</h3>
+<p>ChatModel 的输入是一串消息，输出是一条 <code>AIMessage</code>。它和老式 LLM 的根本区别不在“更聪明”，而在接口：消息带角色，角色带优先级和往返结构，工具调用、记忆、历史都活在这个结构里。换模型时，只要新模型也是 ChatModel，<code>prompt | llm | parser</code> 这条链本身不用重写——但 Token 编码、工具支持、价格要重新测，不能假设完全一样。</p>
+<h3>2. 消息类型表（必须背下来）</h3>
+<table>
+<tr><th>消息</th><th>谁发的</th><th>干嘛的</th></tr>
+<tr><td>SystemMessage</td><td>开发者</td><td>角色、规则、边界，优先级最高，用户不能覆盖</td></tr>
+<tr><td>HumanMessage</td><td>用户</td><td>当前问题和输入，可能含注入攻击，要当数据防</td></tr>
+<tr><td>AIMessage</td><td>模型</td><td>模型的回答，里面可能藏着 tool_calls</td></tr>
+<tr><td>ToolMessage</td><td>你的代码</td><td>工具执行结果，必须带和 tool_call 相同的 tool_call_id 回填</td></tr>
+</table>
+<p>少一条 ToolMessage、或 id 对不上，下一次调模型就会因为对话状态不合法而报错。Day 5 的手写循环，就是靠这条规则把“模型—工具”往返串起来的。</p>
+<h3>3. temperature：到底改了什么</h3>
+<p>temperature 管的是“采样有多随机”。0 是每次都选概率最高的词，最稳、最适合 Agent；0 到 0.3 是低随机区间，工具参数、执行路径不容易漂移，评测结果才可比；0.7 到 1.0 适合头脑风暴、文案多版本，越往上越发散、越容易编造。</p>
+<p>两个修正点，面试时很加分：第一，0 最稳，0.3 仍带一点随机性，不能说整个 0 到 0.3 都同样可复现；第二，0 也不等于 100% 可复现，模型版本、硬件、并行计算都可能带来细微差别，有些模型支持传 <code>seed</code> 提高复现率，但也不是绝对保证。正确说法是“温度 0 大幅提高稳定性、可比性”，而不是“一定能复现”。</p>
+<p>还有一个配套参数 <code>top_p</code>：它管候选词的范围，只在概率累积到 top_p 时才采样。temperature 接近 0 时，top_p 的影响基本可以忽略；调创造力时，一般只动其中一个，别两个一起乱调，否则出了问题不知道是谁的锅。</p>
+<h3>4. Token：Agent 的钱和上限都在这里</h3>
+<ul>
+<li><strong>什么都算 Token</strong>：System 指令、历史消息、工具描述、工具返回结果、模型输出，全都算进上下文，不是只有用户问题算。</li>
+<li><strong>上下文窗口是上限</strong>：一次调用能带的消息总量不能超过模型的上下文窗口，超了就报错或被截断，第 6 天的记忆预算就是为了解决这个问题。</li>
+<li><strong>粗算 vs 精算</strong>：粗算用字符数除以 4，中文尤其不准，只能做预算估算；精算用 tokenizer（比如 GPT 家族的 cl100k），不同模型编码不一样，换模型要重新算。</li>
+<li><strong>成本看 usage_metadata</strong>：真实调用返回的 <code>AIMessage.usage_metadata</code> 里有输入输出 Token 数，做评测和成本统计时直接读它，别自己估。</li>
+<li><strong>max_tokens 管的是输出</strong>：它限制模型一次最多输出多少，不是限制输入；防模型没完没了，也防账单失控。</li>
+</ul>
+<h3>5. 流式输出：chunk 不是完整消息</h3>
+<p><code>stream</code> 吐出来的是 <code>AIMessageChunk</code>，也就是 Token 流，前端要自己拼起来才是完整回答，体感延迟一下就下来了，但总生成时间没变。工具调用时更要小心，chunk 里的 tool_call 也是分片的，得按 id 拼好再执行，不能收到一片就调一次。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只算用户问题的 Token，不算历史和工具结果，是 Agent 成本失控最常见的起点。一次任务走 5 步，每步都把完整历史再发一遍，Token 是按步数累积的，不是按问题算一次。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：消息长什么样（已实测，不用 Key）</h3>
+<pre><code>from langchain_core.messages import SystemMessage, HumanMessage
+
+messages = [
+    SystemMessage(content="你是一个助手"),
+    HumanMessage(content="深圳今天天气怎么样？"),
+]
+for m in messages:
+    print(m.type, ":", m.content)
+# 输出：
+# system : 你是一个助手
+# human : 深圳今天天气怎么样？</code></pre>
+<h3>示例 2：ChatOpenAI 的常用参数</h3>
+<pre><code>from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
+
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0,      # Agent 场景：稳，优先选 0 到 0.3
+    max_tokens=500,     # 限制本次输出上限，防没完没了
+    timeout=30,         # 单次调用超时，配合重试和降级
+    max_retries=2,      # 限流、抖动时自动重试几次
+)
+chain = prompt | llm | StrOutputParser()
+print(chain.invoke({"topic": "LangChain"}))</code></pre>
+<p>注意：<code>timeout</code> 和 <code>max_retries</code> 不是装饰，真实调用会遇到超时和 429 限流，没有它们，Agent 一抖就全崩。第 1 周脚手架的循环里，模型调用失败也要留轨迹返回，而不是直接抛给用户。</p>
+<h3>示例 3：Token 怎么算（已实测）</h3>
+<pre><code>import tiktoken
+
+# 粗算：字符数 / 4，只做预算估算，中文尤其不准
+text = "把 LangChain 讲给小白听，一句话"
+print(len(text), round(len(text) / 4))  # 21 个字符，约 5 个 Token
+
+# 精算：按模型的编码算，换模型要换编码
+enc = tiktoken.get_encoding("cl100k_base")
+print(len(enc.encode("Hello, LangChain! 你好")))  # 8</code></pre>
+<p>精算结果 8 是按 cl100k 编码算的，只对用这个编码的模型家族有参考意义。真实账单以返回的 <code>usage_metadata</code> 为准：输入 Token、输出 Token、总 Token 都在里面，脚手架的 <code>runs/log.jsonl</code> 记的就是它。</p>
+<h3>示例 4：两个温度的对比写法（概念示例）</h3>
+<pre><code>llm_stable = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm_creative = ChatOpenAI(model="gpt-4o-mini", temperature=0.9)
+# 同一个 prompt，分别跑两遍：
+# temperature=0：两次输出高度一致，适合工具调用、评测、改代码
+# temperature=0.9：两次输出明显不同，适合头脑风暴、文案多版本</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 不用调模型，只拼消息：用示例 1 的方式拼出 System + Human + 一条 ToolMessage，检查 tool_call_id 有没有对应上。<br>
+2. 用示例 3 的方法，分别算一段中文和一段英文的粗算与精算 Token，对比误差，记住“中文粗算最不准”。<br>
+3. 把示例 2 的 max_tokens 从 500 改成 20，再跑一次（需要 Key 时先不跑，改完记住：它限制的是输出，不是输入）。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. ChatModel 的输入和输出分别是什么？</strong></p>
+<button data-i="0">字符串进、字符串出</button>
+<button data-i="1">消息列表进、一条 AIMessage 出</button>
+<button data-i="2">JSON 进、JSON 出</button>
+<div class="ans">解析：选 B。消息带角色，工具调用、记忆、历史都活在这个结构里。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>2. ToolMessage 漏了 tool_call_id，或者 id 对不上，会怎样？</strong></p>
+<button data-i="0">下一次调模型时因对话状态不合法而报错</button>
+<button data-i="1">模型会自动猜一个 id 补上</button>
+<button data-i="2">没影响，模型只看文本内容</button>
+<div class="ans">解析：选 A。每一次 tool_call 都必须有一条相同 id 的 ToolMessage 回填，这是配对凭证，不是流水号。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>3. temperature=0 意味着什么？</strong></p>
+<button data-i="0">模型完全不思考，直接返回模板</button>
+<button data-i="1">模型一定能 100% 复现两次输出</button>
+<button data-i="2">每次都选概率最高的词，最稳，但不等于绝对可复现</button>
+<div class="ans">解析：选 C。0 最稳，0.3 仍带一点随机；模型版本、硬件也可能带来细微差别。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 一次 Agent 调用，哪些东西算 Token？</strong></p>
+<button data-i="0">只有用户问题算</button>
+<button data-i="1">System、历史、工具描述、工具结果、模型输出全都算</button>
+<button data-i="2">只有模型输出算</button>
+<div class="ans">解析：选 B。多步任务每步都把完整历史再发一遍，Token 是按步数累积的。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>5. max_tokens 限制的是什么？</strong></p>
+<button data-i="0">本次输出的上限</button>
+<button data-i="1">本次输入的上限</button>
+<button data-i="2">整个会话的 Token 总量</button>
+<div class="ans">解析：选 A。输入上限是上下文窗口，输出上限才是 max_tokens，别混了。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>6. stream 吐出来的是什么？前端该怎么处理？</strong></p>
+<button data-i="0">一条完整消息，直接显示就行</button>
+<button data-i="1">一个错误对象，需要重试</button>
+<button data-i="2">一片片 AIMessageChunk，要自己拼起来才是完整回答</button>
+<div class="ans">解析：选 C。工具调用的 chunk 更要按 id 拼好再执行，不能收到一片就调一次。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Agent 的 temperature 为什么一般放 0 到 0.3？</summary>
+<p>工具调用、规划、改代码要的是稳定、可复现、评测可比，温度高会让工具参数和执行路径漂移，循环更容易跑偏。发散任务才调高，而且一般只动 temperature 或 top_p 其中一个，别两个一起乱调。</p>
+</details>
+<details><summary>Q2：上下文窗口超了，你怎么处理？</summary>
+<p>先算账：看 usage 和历史长度，确认是历史太长、工具结果太大，还是 System 太啰嗦。再按第 6 天的策略处理：保留 System 和最近几轮，中间折叠成摘要，工具结果只保留关键字段。直接截断旧消息是最糙的做法，容易丢掉用户目标。</p>
+</details>
+<details><summary>Q3：粗算 Token 和精算 Token，生产里各用在哪？</summary>
+<p>粗算（字符数 / 4）只做事前预算和触发折叠的阈值；精算（tokenizer）做单次调用的估算；真实账单和评测以 usage_metadata 为准。三者分工不同，混用就会在成本和上限上翻车。</p>
+</details>
+<details><summary>Q4：换了一个模型，链不用重写，但还要测什么？</summary>
+<p>四样：Token 编码和上下文窗口、工具调用支持程度、输出格式稳定性、价格和延迟。接口一样不代表行为一样，换模型必须跑一遍评测集对比，不能只凭感觉。</p>
+</details>
+<details><summary>Q5：流式输出时，工具调用的 chunk 怎么处理才不出错？</summary>
+<p>按 tool_call 的 id 和索引累积参数片段，拼完整了再执行，执行完再以 ToolMessage 回填。收到一片就调一次、或把多个 chunk 的参数混在一起，是流式 Agent 最常见的 bug。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>给每个任务设 Token 预算和成本告警，简单问题走便宜小模型、复杂问题走好模型，主模型挂了自动切备用，超时和 429 要有有限次重试和降级。成本失控往往不是单次调用贵，而是死循环把历史一遍遍重发。</p>
+<p><strong>简历讲法：</strong>别写“了解 temperature”，写“Agent 温度固定在 0 到 0.3，配合 max_tokens、超时、重试和 usage_metadata 做成本统计，换模型时跑评测集对比 Token 与格式稳定性”。前者是名词，后者是工程习惯。</p>
+<p><strong>明日预告：</strong>Day 4 讲 OutputParser 与 Structured Output：PydanticOutputParser 和 with_structured_output 到底差在哪，校验失败时正确的处理顺序是什么。</p>
+</div>
+
+<div class="nav">
+<span><a href="day02.html">← Day 2</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>Day 4 明日更新 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
