@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5：手写 Tool Calling 循环（不依赖黑盒） | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 5 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 5：手写 Tool Calling 循环（不依赖黑盒）</h1>
+<p>前面四天讲的都是“一次调用”：提示词进去、结果出来。今天开始讲 Agent 的核心——模型自己决定要不要调工具、调哪个、结果回来后怎么办。这一课不依赖 AgentExecutor，把循环的每一步都摊开写，就是你脚手架里 <code>agent-core/agent_core/loop.py</code> 的 <code>run_agent</code>。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 循环就 4 步，面试要能口述</h3>
+<table>
+<tr><th>步骤</th><th>做什么</th><th>关键点</th></tr>
+<tr><td>① 绑工具</td><td><code>llm.bind_tools(tools)</code></td><td>不绑，模型输出里就不会有 tool_calls，只能输出文本</td></tr>
+<tr><td>② 模型决策</td><td>把完整 history 发给模型</td><td>模型回 AIMessage：要么带 tool_calls，要么是最终文本</td></tr>
+<tr><td>③ 执行并回填</td><td>按 tool_call 逐个执行工具</td><td>结果必须包成 ToolMessage 追加回 history</td></tr>
+<tr><td>④ 再决策或收尾</td><td>回到第 ② 步</td><td>没有 tool_calls 就收尾；跑满上限就返回 max_steps</td></tr>
+</table>
+<p>记住这句口头禅：<strong>模型决策 → 调工具 → 结果回填 → 再决策</strong>。Agent 不是一个更聪明的模型，而是一个让模型能反复“看结果再决定”的循环。</p>
+<h3>2. 工具调用的三种消息，分工不能乱</h3>
+<ul>
+<li><strong>HumanMessage</strong>：用户的原始问题，是循环的起点。</li>
+<li><strong>AIMessage（带 tool_calls）</strong>：模型本轮的决策。tool_calls 里的每一项是一个字典：<code>{"name": 工具名, "args": 参数字典, "id": 本次调用的编号}</code>。</li>
+<li><strong>ToolMessage</strong>：工具的执行结果。最关键的一点是 <code>tool_call_id</code> 必须和那次 tool_call 的 <code>id</code> 一模一样，模型才能把“结果”对应回“它刚才调的那一次工具”。id 对不上会报错——这是你 10 月 29 日小考第 3 题答对过的点：漏回填 ToolMessage，下一步调用会因 tool_call 未配对而报错。</li>
+</ul>
+<p>还有一个容易忽略的细节：<strong>模型本轮的 AIMessage 本身也要追加进 history</strong>，下一轮模型才能看到它自己刚才调了什么工具。不追加，模型就等于失忆，会反复调同一个工具。</p>
+<h3>3. 一轮可以调多个工具</h3>
+<p>模型一轮的 tool_calls 是个列表，不是单个。所以执行那一步是 for 循环：逐个执行、逐个回填。你的 <code>run_agent</code> 里就是这么写的——<code>result.tool_calls</code> 累计的是执行次数，不是轮数。</p>
+<h3>4. 三条底线：工具报错不崩、未知工具不崩、死循环有上限</h3>
+<p>这是脚手架离线测试 3/3 PASS 验证过的三条线，也是面试时最能体现工程意识的地方：</p>
+<ul>
+<li><strong>工具执行抛异常 → 转成 ToolMessage 发回给模型</strong>，让模型自己纠错或换工具，而不是让整个循环崩掉。工具的输入永远不可信，模型给的参数也要当成不可信输入处理。</li>
+<li><strong>工具名不在列表里 → 同样回一条“未知工具”的 ToolMessage</strong>，继续循环，不崩。</li>
+<li><strong>模型一直调工具 → 步数上限兜底</strong>。<code>max_steps</code> 跑满后返回 <code>status="max_steps"</code>，而不是报错，更不是死循环。调用方看到这个状态就知道是“被上限拦住了”，而不是“模型坏了”，可以据此决定是否继续追问、换策略，或者把已走过的轨迹拿去复盘。</li>
+</ul>
+<div class="warn"><strong>容易踩的坑：</strong>把 history 直接传给循环、让循环在上面追加。你的 <code>run_agent</code> 里第一句就是 <code>history = list(messages)</code>——复制一份再追加，避免污染调用方的数据。另一个坑：把模型调用失败也当成普通异常往外抛；正确做法是返回 <code>status="error"</code> 并保留轨迹，复盘时才有东西可看。</div>
+<h3>5. 手写循环 vs AgentExecutor，选哪个</h3>
+<p>AgentExecutor 是 LangChain 封装好的黑盒：传 llm、tools、prompt 就能跑，省事，但中间每一步发生了什么、失败时卡在哪一步，你看不见。手写循环的价值恰恰是“每一步都看得见”：面试能口述流程，出问题能定位到某一步，步数、Token、工具调用次数都能自己记进日志（你的脚手架就有 <code>runs/log.jsonl</code>）。结论和 Day 3 的小考结论一致：<strong>单步简单调用不用框架，反复调工具才需要循环，流程分支与人工确认才上 LangGraph</strong>——Day 7 会讲后者。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：循环骨架（就是 loop.py 的 run_agent，注释精简版）</h3>
+<pre><code>from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+def run_agent(llm, tools, messages, max_steps: int = 5):
+    tools_by_name = {t.name: t for t in tools}
+    llm_with_tools = llm.bind_tools(tools)  # ① 绑工具
+    history = list(messages)  # 复制一份，不污染调用方
+
+    for step in range(1, max_steps + 1):
+        response = llm_with_tools.invoke(history)  # ② 模型决策
+        history.append(response)  # 模型自己的回复也要追加
+
+        calls = getattr(response, "tool_calls", None) or []
+        if not calls:  # 没有 tool_calls = 模型给出最终答案
+            return {"status": "done", "final_text": response.content}
+
+        for call in calls:  # ③ 一轮可能调多个工具，逐个执行
+            func = tools_by_name.get(call.get("name", ""))
+            if func is None:
+                history.append(ToolMessage(
+                    content=f"未知工具: {call.get('name', '')}",
+                    tool_call_id=call.get("id", "")))
+                continue
+            try:
+                output = func.invoke(call.get("args", {}) or {})
+            except Exception as exc:
+                output = f"工具执行失败: {exc}"  # 工具报错不崩，转成消息回填
+            # ④ 结果回填：tool_call_id 必须和这次调用的 id 一致
+            history.append(ToolMessage(content=str(output),
+                                       tool_call_id=call.get("id", "")))
+    return {"status": "max_steps"}  # 跑满上限，不是报错</code></pre>
+<h3>示例 2：演示工具 calculator（已实测，ast 安全求值、不用 eval）</h3>
+<pre><code>from langchain_core.tools import tool
+
+@tool
+def calculator(expression: str) -> str:
+    """计算一个算术表达式，例如 '37*41'。只支持数字和 + - * / ()。"""
+    # 内部用 ast 解析，只允许数字和 + - * / ()，非法输入返回错误文本而非抛异常
+    ...
+
+# 本地实测（不调模型）：calculator.invoke({"expression": "37*41"}) = "1517"
+# 非法输入如 "1/0 + abc" 返回 "计算失败: ..." 文本，循环照样能继续</code></pre>
+<p>安全点值得单独记一句：calculator 不用 eval，是因为工具的输入来自模型、不可信——ast 只放行数字和四则运算，别的节点一律拒绝。这是面试可讲的安全点。</p>
+<h3>示例 3：离线怎么验证循环（不用 Key，Fake 模型按剧本出牌）</h3>
+<pre><code># tests/test_loop.py 的思路：FakeLLM 的 bind_tools 返回自己，
+# invoke 按调用次数依次返回剧本里的消息
+# 剧本 1：先调 calculator(37*41)，再给最终答案 "结果是 1517"
+# 剧本 2：算非法表达式，工具报错回填后模型仍能收尾
+# 剧本 3：模型一直调工具，循环在 max_steps 停下，状态是 max_steps
+# 运行：python -m tests.test_loop —— 3/3 PASS</code></pre>
+<h3>动手任务（15 分钟）</h3>
+<div class="card">
+<p>1. 在脚手架里把 max_steps 从 5 改成 2，跑剧本 3，看状态是不是 max_steps、轨迹里是不是正好 2 轮。<br>
+2. 给 DEMO_TOOLS 加一个你自己的工具（比如查今天星期几），只改 tools 列表，不改 loop.py——验证“第 2 周换文件工具、第 3 周换 RAG/天气工具时，循环不用改”这个设计。<br>
+3. 故意把 ToolMessage 的 tool_call_id 写错一次，看模型下一步会报什么错——这个错，面试时能当场讲清楚。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. bind_tools 是干嘛的？</strong></p>
+<button data-i="0">让模型回答得更礼貌</button>
+<button data-i="1">把工具绑到模型上，之后模型输出里才会有 tool_calls 字段</button>
+<button data-i="2">把工具的代码发给用户看</button>
+<div class="ans">解析：选 B。不绑，模型只能输出文本，循环根本启动不了。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>2. 模型怎么告诉循环“我要调工具”？</strong></p>
+<button data-i="0">回一个带 tool_calls 的 AIMessage，里面有工具名、参数和调用 id</button>
+<button data-i="1">在文本里写“请帮我调用某某工具”</button>
+<button data-i="2">直接自己执行工具</button>
+<div class="ans">解析：选 A。模型只决策、不执行；执行是循环里按 tool_call 逐个做的。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>3. ToolMessage 的 tool_call_id 写错了会怎样？</strong></p>
+<button data-i="0">没关系，模型能猜出来</button>
+<button data-i="1">循环会自动跳过这条结果</button>
+<button data-i="2">模型无法把结果对应回那次调用，下一步会因 tool_call 未配对而报错</button>
+<div class="ans">解析：选 C。id 配对是硬约束，不是可选项——这也是小考第 3 题的考点。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 工具执行抛了异常，循环应该？</strong></p>
+<button data-i="0">立刻崩掉，把异常甩给用户</button>
+<button data-i="1">把错误转成 ToolMessage 回填给模型，让它纠错或换工具</button>
+<button data-i="2">假装工具成功了，编一个结果</button>
+<div class="ans">解析：选 B。工具报错是模型的纠错输入，不是崩溃理由——离线测试第 2 条就是这条线。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>5. 模型一直调工具停不下来，循环怎么兜底？</strong></p>
+<button data-i="0">max_steps 跑满后返回 status="max_steps"，保留轨迹供复盘</button>
+<button data-i="1">一直跑到模型自己停</button>
+<button data-i="2">直接杀掉进程</button>
+<div class="ans">解析：选 A。max_steps 不是报错，是明确的状态：调用方知道是“被上限拦住了”，而不是“模型坏了”。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>6. 手写循环相比 AgentExecutor 最大的好处是？</strong></p>
+<button data-i="0">代码更短</button>
+<button data-i="1">跑得更快</button>
+<button data-i="2">每一步都看得见：流程能口述、失败能定位、步数和 Token 能自己记日志</button>
+<div class="ans">解析：选 C。省事选黑盒，要讲清楚、要排障、要记日志时，手写循环才拿得出手。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：口述一遍 Tool Calling 循环的完整流程。</summary>
+<p>绑工具 → 把完整 history 发给模型 → 模型回 AIMessage：带 tool_calls 就逐个执行工具、把结果包成 ToolMessage（tool_call_id 必须配对）追加回 history，再调模型；没有 tool_calls 就是最终答案，收尾。跑满 max_steps 返回 max_steps 状态，保留轨迹。</p>
+</details>
+<details><summary>Q2：为什么模型自己的 AIMessage 也要追加进 history？</summary>
+<p>不追加，下一轮模型就看不到自己刚才调了什么工具，等于失忆，会反复调同一个工具。history 必须是完整轨迹：用户问题、模型决策、工具结果，一步都不能少。</p>
+</details>
+<details><summary>Q3：工具结果回填时，id 配对错了会发生什么？怎么排障？</summary>
+<p>模型无法把结果对应回那次调用，下一步会因 tool_call 未配对而报错。排障时先看轨迹：每条 ToolMessage 的 tool_call_id 是否和上一条 AIMessage 里对应 tool_call 的 id 一致，错一位都不行。</p>
+</details>
+<details><summary>Q4：工具报错、未知工具、模型调用失败，三者的处理有什么区别？</summary>
+<p>前两者都转成 ToolMessage 回填，让模型自己纠错，循环不崩；模型调用失败是循环本身的问题，返回 status="error" 并保留轨迹，不伪装成工具结果。区分“工具层面的失败”和“循环层面的失败”，是这段代码最值得讲的设计。</p>
+</details>
+<details><summary>Q5：什么时候用手写循环，什么时候用 AgentExecutor / LangGraph？</summary>
+<p>单步简单调用不用框架；反复调工具、要讲清流程、要记日志排障时用手写循环；流程出现分支、要人工确认、要状态管理时上 LangGraph。选型看的是“流程复杂度”，不是“工具新旧”。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>步数、工具调用次数、Token 用量、max_steps 触发率都要进日志和监控；max_steps 频繁触发往往意味着提示词没给模型“收尾”的信号，或者工具设计让模型走进了死胡同——先查提示词和工具描述，再调上限。</p>
+<p><strong>简历讲法：</strong>别写“会用 AgentExecutor”，写“手写 Tool Calling 循环：bind_tools 决策、ToolMessage 按 id 回填、工具异常与未知工具转消息不崩、max_steps 兜底并保留轨迹，离线 Fake 模型测试 3/3 通过”。前者是名词，后者是可验证的工程。</p>
+<p><strong>明日预告：</strong>Day 6 讲 Memory：模型为什么“失忆”，记忆怎么做预算——正好接上脚手架 memory.py 的“超预算保留 System + 最近 6 条、旧消息折叠为摘要标记”。</p>
+</div>
+
+<div class="nav">
+<span><a href="day04.html">← Day 4</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>Day 6 明日更新 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
