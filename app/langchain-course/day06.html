@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 6：Memory：模型为什么“失忆”，记忆怎么做预算 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 6 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 6：Memory：模型为什么“失忆”，记忆怎么做预算</h1>
+<p>模型每次调用都是失忆的，这句话 Day 1 就讲过，今天把它变成可落地的方案：记忆到底是什么、三种处理方式怎么选、预算怎么定、摘要会丢什么、怎么和提示词接起来。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 先钉死一个事实：记忆不在模型里，在你手里</h3>
+<p>模型本身不保存会话，每次调用都要把历史消息重新发过去。所谓记忆，就是你帮它保管、挑选、压缩的那份历史清单。记忆做得好不好，不取决于模型多聪明，取决于你每次发过去的那份清单里，有没有保留该保留的、压缩了该压缩的、丢掉了可以丢的。</p>
+<h3>2. 三种处理方式，一张表分清</h3>
+<table>
+<tr><th>方式</th><th>怎么做</th><th>优点</th><th>代价</th></tr>
+<tr><td>全量保留（Buffer）</td><td>历史原样全发</td><td>什么都不丢，最准</td><td>越聊越贵，迟早超上下文窗口</td></tr>
+<tr><td>滑动窗口（Window）</td><td>只保留最近 N 轮，旧的直接丢掉</td><td>简单、成本可控</td><td>会丢掉早期目标、关键决策</td></tr>
+<tr><td>摘要（Summary）</td><td>旧消息先摘要成一条，再带着摘要往下聊</td><td>关键信息还在，成本可控</td><td>摘要会失真，细节会被磨平</td></tr>
+</table>
+<p>生产里最常用的是组合：<strong>System 保留 + 最近 N 轮全量 + 中间折叠成摘要</strong>。这就是咱们脚手架 <code>memory.py</code> 的思路，也是今天代码示例要跑通的方案。</p>
+<h3>3. 预算怎么定：三个数字要显式配置</h3>
+<ul>
+<li><strong>总预算</strong>：一次调用最多带多少字符 / Token，超过就触发折叠，不能等爆了再处理。</li>
+<li><strong>保留窗口</strong>：至少保留最近几轮，保证当前话题不断。</li>
+<li><strong>触发点</strong>：到预算才折叠，而不是每轮都摘要——摘要本身也要花 Token 和时间，没必要每轮都做。</li>
+</ul>
+<p>粗算用字符数除以 4，精算用 tokenizer，真实账单看 usage_metadata，这三者的分工 Day 3 已经讲过，今天直接用起来。</p>
+<h3>4. 摘要会丢什么，要提前想好</h3>
+<p>摘要最容易丢的是三样东西：具体数字、否定信息（“不要 X”）、时间顺序。缓解办法是：摘要里强制保留“已确认的目标、已排除的选项、关键数字”，而不是让模型自由发挥写一段漂亮话。摘要模板本身也要写清楚，这和提示词设计是一个道理。</p>
+<h3>5. 记忆怎么和提示词接起来</h3>
+<p>Day 2 讲过 <code>MessagesPlaceholder("history")</code>：提示词里留一个插槽，调用时把记忆处理后的消息列表插进去。顺序永远是：System 在最前，摘要 / 折叠标记在中间，最近几轮在后，新问题在最后。顺序错了，模型先看到旧摘要、后看到新问题，理解就会乱。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只截断、不摘要，还截断了 System 和最近几轮。System 一丢，模型连角色和规则都没了；最近几轮一丢，当前话题就断了。截断的正确姿势是：System 永远保留，最近 N 轮永远保留，能动的只有中间那段。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：脚手架的 SimpleMemory，组合策略（概念与 scaffold 一致）</h3>
+<pre><code>from langchain_core.messages import SystemMessage, HumanMessage
+from agent_core.memory import SimpleMemory
+
+# max_chars：总预算；keep_recent：至少保留最近几条
+memory = SimpleMemory(max_chars=4000, keep_recent=6)
+memory.add(SystemMessage(content="你是一个助手"))
+memory.add(HumanMessage(content="我的目标是做一个 Agent 项目"))
+# ... 对话进行中，每轮都 add ...
+messages = memory.get_messages()
+# get_messages 的规则：
+# 1. 总量没超预算：原样返回
+# 2. 超了：System 保留 + 中间折叠成一条摘要占位 + 最近 6 条保留
+# 3. 折叠标记会告诉模型“此处有省略”，而不是悄悄删掉</code></pre>
+<p>注意：脚手架里的折叠目前是占位标记，不是真的调模型做摘要。生产里把占位换成一次摘要调用，就是完整的 Summary 方案；先跑通占位版，再升级摘要版，步骤不要一次全上。</p>
+<h3>示例 2：和提示词接起来（Day 2 的插槽，今天用起来）</h3>
+<pre><code>from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个助手"),
+    MessagesPlaceholder("history"),
+    ("human", "{input}"),
+])
+
+messages = prompt.format_messages(
+    history=memory.get_messages(),  # 记忆处理后的清单，直接插进插槽
+    input="继续刚才的话题",
+)
+chain = prompt | llm | StrOutputParser()</code></pre>
+<h3>示例 3：小预算演示折叠（本地实测逻辑，调小预算才能一眼看到）</h3>
+<pre><code># 把预算故意调小，才能在演示里看到折叠触发：
+# SimpleMemory(max_chars=30, keep_recent=2)，加 1 条 System + 4 条 Human 后，
+# get_messages 返回：System + 折叠标记 + 最近 2 条
+# 生产里把 30 换回 4000，逻辑完全一样，只是触发点更晚</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 用脚手架的 SimpleMemory，把 max_chars 从 4000 改到 100，再加 10 条消息，看折叠什么时候触发、保留了哪几条。<br>
+2. 写一条摘要模板，要求必须保留“目标、已排除选项、关键数字”三项，再想想：如果摘要丢了否定信息（“不要 X”），后面会发生什么？<br>
+3. 把 get_messages 的结果拼进 MessagesPlaceholder，打印最终消息列表，检查 System 是不是在最前、新问题是不是在最后。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. 模型为什么会“失忆”？</strong></p>
+<button data-i="0">因为模型记性不好，需要经常提醒</button>
+<button data-i="1">因为模型本身不保存会话，每次调用都要把历史重新发过去</button>
+<button data-i="2">因为历史消息会被自动删掉</button>
+<div class="ans">解析：选 B。记忆不在模型里，在你每次发过去的那份历史清单里。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. 全量保留、滑动窗口、摘要，各自最大的代价是什么？</strong></p>
+<button data-i="0">都一样，没有代价</button>
+<button data-i="1">全量最便宜，摘要最贵</button>
+<button data-i="2">全量越聊越贵、窗口会丢早期信息、摘要会失真</button>
+<div class="ans">解析：选 C。生产里用组合：System 保留 + 最近 N 轮全量 + 中间折叠成摘要。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 超预算折叠时，哪些东西必须保留？</strong></p>
+<button data-i="0">System 和最近 N 轮，能动的只有中间那段</button>
+<button data-i="1">只保留第一条，其他全删</button>
+<button data-i="2">只保留最后一条，其他全删</button>
+<div class="ans">解析：选 A。System 一丢，角色和规则都没了；最近几轮一丢，当前话题就断了。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 摘要最容易丢的三样东西是？</strong></p>
+<button data-i="0">标点、空格、换行</button>
+<button data-i="1">具体数字、否定信息、时间顺序</button>
+<button data-i="2">用户名、头像、时间戳</button>
+<div class="ans">解析：选 B。摘要模板要强制保留“目标、已排除选项、关键数字”，而不是自由发挥写漂亮话。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 记忆处理后的清单，怎么拼进提示词？</strong></p>
+<button data-i="0">拼进 System 指令里</button>
+<button data-i="1">直接拼成一段文本发给模型</button>
+<button data-i="2">通过 MessagesPlaceholder 插进指定位置，System 在前、新问题在后</button>
+<div class="ans">解析：选 C。顺序永远是 System 在前、摘要在中间、最近几轮在后、新问题在最后。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 预算应该什么时候触发折叠？</strong></p>
+<button data-i="0">到预算才触发，而不是每轮都摘要</button>
+<button data-i="1">每轮都摘要，越勤越好</button>
+<button data-i="2">从来不触发，等超了再报错</button>
+<div class="ans">解析：选 A。摘要本身也要花 Token 和时间，没必要每轮都做；到预算才折叠，成本才可控。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Buffer、Window、Summary，你会怎么选？</summary>
+<p>短对话用 Buffer 全量保留；长对话用 Window + Summary 组合：System 保留、最近 N 轮全量、中间折叠成摘要。选型的依据是会话长度、成本预算、早期信息有多重要，三者缺一不可，只说“用摘要”是不够的。</p>
+</details>
+<details><summary>Q2：摘要失真了，你怎么发现、怎么缓解？</summary>
+<p>发现靠评测：准备一批长对话，摘要前后分别跑同一批问题，对比答案有没有变。缓解靠摘要模板：强制保留目标、已排除选项、关键数字，否定信息和时间顺序单独列出来，别让模型自由发挥。</p>
+</details>
+<details><summary>Q3：多用户并发时，记忆怎么隔离？</summary>
+<p>记忆必须按会话 / 用户隔离，不能共用一份历史清单。LangGraph 里用 thread_id 区分会话，checkpoint 按 thread 存状态；自己写循环时，也要按会话 ID 分开存，串会话是生产事故，不是小 bug。</p>
+</details>
+<details><summary>Q4：Token 预算和记忆预算是什么关系？</summary>
+<p>记忆预算是 Token 预算的一部分：一次调用的总 Token 里，System、历史、工具描述、工具结果、输出都要算。记忆预算定得太大，留给工具结果和输出的空间就没了；定得太小，模型又记不住上下文。两者要一起算，不能各算各的。</p>
+</details>
+<details><summary>Q5：记忆里要不要存工具结果？</summary>
+<p>要，但要挑着存。工具结果是模型下一步决策的依据，全删了模型就不知道上一步查到了什么；全留着又会把上下文撑爆。做法是：关键结果保留原文，次要结果只保留摘要或关键字段，和历史消息用同一套预算管。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>记忆要落库，不能只放内存；会话、用户、时间戳都要记，出了问题能按会话复盘。摘要调用本身也要记成本和耗时，别让“省 Token 的摘要”反而烧掉更多钱。</p>
+<p><strong>简历讲法：</strong>别写“会用 Memory”，写“做过 System 保留 + 最近 N 轮 + 中间摘要的组合记忆，预算显式配置，摘要模板强制保留目标、已排除选项和关键数字”。前者是名词，后者是可追问的方案。</p>
+<p><strong>明日预告：</strong>Day 7 讲 LangGraph 入门 + LangSmith 追踪 + 第 1 周复盘：把手写循环画成图，加上 checkpoint 持久化，再用追踪把第 1 周所有概念串起来。</p>
+</div>
+
+<div class="nav">
+<span><a href="day05.html">← Day 5</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span><a href="day07.html">Day 7 →</a></span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

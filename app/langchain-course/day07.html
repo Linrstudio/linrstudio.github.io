@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 7：LangGraph 入门 + LangSmith 追踪 + 第 1 周复盘 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 7 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 7：LangGraph 入门 + LangSmith 追踪 + 第 1 周复盘</h1>
+<p>第 1 周的最后一课，不讲新 API，讲怎么把前 6 天串起来：手写循环画成图，图加上持久化，再用追踪把所有问题定位到某一步。学完这一课，第 1 周就算闭环了。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. LangGraph 到底是什么：一张图，就是一个状态机</h3>
+<p>LangGraph 把 Agent 的执行过程画成一张图：<strong>State</strong> 是图里流转的状态（对咱们来说就是消息列表），<strong>Node</strong> 是图里的一个步骤（比如调模型、执行工具），<strong>Edge</strong> 是步骤之间的走向，<strong>条件边</strong>是“按条件决定下一步去哪”。</p>
+<p>咱们脚手架的图只有两个节点，结构是：</p>
+<pre><code>call_model --(有 tool_call)--> tools --(回填结果)--> call_model
+call_model --(无 tool_call)--> END</code></pre>
+<p>对照 Day 5 的手写循环看：节点就是循环里的一步，条件边就是循环里的 if，状态就是循环里一直追加的 history。图没有换掉循环，只是把循环画成了可以可视化、可以断点、可以分支的形式。</p>
+<h3>2. 什么时候用图，什么时候用循环</h3>
+<table>
+<tr><th>场景</th><th>选什么</th><th>为什么</th></tr>
+<tr><td>简单工具循环，几步就完</td><td>手写循环</td><td>简单直接，调试成本低</td></tr>
+<tr><td>流程有分支、要并行、要人工介入</td><td>LangGraph</td><td>分支和介入在图里是原生概念，循环里要自己写状态机</td></tr>
+<tr><td>要断点续跑、要持久化、要回放</td><td>LangGraph + Checkpoint</td><td>检查点就是图的断点，循环里断了只能重跑</td></tr>
+</table>
+<p>面试时这句很关键：<strong>简单循环够用就别上图，流程一复杂、要人工介入、可观测性要求高时，图就值了</strong>。把图吹成万能，和把循环说成过时，都是减分说法。</p>
+<h3>3. Checkpoint：图的断点和持久化</h3>
+<p>Checkpoint 就是把图执行到某一步的状态存下来，下次可以从断点继续，而不是重跑全程。按会话隔离靠 <code>thread_id</code>：同一个 thread_id 就是同一个会话，不同 thread 就是不同会话，串会话是生产事故。本地演示用 <code>MemorySaver</code>（存在内存里），生产用数据库版的检查点，原理一样，只是存储位置不同。</p>
+<p>人工介入（Human-in-the-loop）也是在这个框架里实现的：在工具节点前再插一个确认节点，危险操作先停下来等人确认，确认后才继续。这就是第 4 周 Computer Use 安全底线的图版本，今天先记住位置，动手放在第 4 周。</p>
+<h3>4. LangSmith 追踪：出了问题，先看轨迹再改代码</h3>
+<p>LangSmith 不用改业务代码：设好环境变量 <code>LANGSMITH_TRACING=true</code>、<code>LANGSMITH_API_KEY</code>、<code>LANGSMITH_PROJECT</code>，每次调用的轨迹就会被记下来：哪一步的提示词被拼错了、模型回了什么、工具参数长什么样、烧了多少 Token、每步花了多久。</p>
+<p>排障的正确顺序永远是：<strong>先看轨迹，定位到某一步，再改那一步</strong>。小白最常见的调试方式是反复改提示词碰运气，正确方式是先看轨迹，再改出问题那一步。没有追踪的 Agent，出了问题只能靠用户截图猜。</p>
+<h3>5. 第 1 周复盘：一张表收束</h3>
+<table>
+<tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
+<tr><td>Day 1</td><td>最小链</td><td>LangChain 是胶水，不是模型；链是 Runnable 串起来的</td></tr>
+<tr><td>Day 2</td><td>提示词与 FewShot</td><td>System 定规则、Human 给问题，FewShot 是贴样例学格式</td></tr>
+<tr><td>Day 3</td><td>模型与 Token</td><td>消息进消息出，温度 0 最稳，Token 按步数累积</td></tr>
+<tr><td>Day 4</td><td>解析与结构化输出</td><td>引导 vs 约束，校验失败先重试、再改 schema</td></tr>
+<tr><td>Day 5</td><td>手写工具循环</td><td>模型决策 → 调工具 → 结果回填 → 再决策，步数上限防死循环</td></tr>
+<tr><td>Day 6</td><td>记忆</td><td>System 保留 + 最近 N 轮 + 中间摘要，预算显式配置</td></tr>
+<tr><td>Day 7</td><td>图与追踪</td><td>循环画成图，检查点做断点，追踪定位到某一步</td></tr>
+</table>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：脚手架的图版循环（和 Day 5 的手写版对照看）</h3>
+<pre><code>from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from typing import TypedDict, Annotated
+
+class AgentState(TypedDict):
+    # add_messages 的意思是：节点返回的新消息追加到旧消息列表，而不是覆盖
+    messages: Annotated[list, add_messages]
+
+def call_model(state):
+    return {"messages": [llm.bind_tools(tools).invoke(state["messages"])]}
+
+graph = StateGraph(AgentState)
+graph.add_node("call_model", call_model)
+graph.add_node("tools", ToolNode(tools))
+graph.set_entry_point("call_model")
+graph.add_conditional_edges("call_model", tools_condition)
+graph.add_edge("tools", "call_model")
+app = graph.compile()</code></pre>
+<p>对照 Day 5 的循环：<code>call_model</code> 就是循环里调模型那一步，<code>tools</code> 就是执行工具那一步，<code>tools_condition</code> 就是“有没有 tool_call”的那个 if，<code>tools → call_model</code> 这条边就是“结果回填后再调模型”。</p>
+<h3>示例 2：加上 Checkpoint，断点续跑（本地实测）</h3>
+<pre><code>from langgraph.checkpoint.memory import MemorySaver
+
+app = graph.compile(checkpointer=MemorySaver())
+state = app.invoke(
+    {"messages": [HumanMessage(content="算 37*41")]},
+    config={"configurable": {"thread_id": "t1"}},
+)
+# 本地实测（Fake 模型）：最终回答是“图版结果是 1517”，
+# 按 thread_id 查状态，消息列表里有 4 条（问题、工具调用、工具结果、最终回答）
+# 换一个 thread_id，就是另一个会话，状态互不干扰</code></pre>
+<p>注意：MemorySaver 只存在内存里，进程一重启就没了，生产要换数据库版检查点。演示时用它够了，原理和生产版一样：状态按 thread_id 存，断了从断点续。</p>
+<h3>示例 3：LangSmith 追踪，不用改业务代码（环境变量版）</h3>
+<pre><code># 在 .env 里设好，业务代码不用改：
+# LANGSMITH_TRACING=true
+# LANGSMITH_API_KEY=你的 Key（别写进代码、别提交到 Git）
+# LANGSMITH_PROJECT=langchain-course-week1
+# 之后每次调用，LangSmith 里就能看到完整轨迹：
+# 提示词、模型输出、工具调用、工具结果、Token、耗时，一步不少</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 对照 Day 5 的 loop.py 和今天的图版代码，逐行指出：循环里的哪一步对应图里的哪个节点、哪条边。<br>
+2. 把示例 2 的 thread_id 从 t1 换成 t2 再跑一次，确认两个会话的状态互不干扰。<br>
+3. 回顾第 1 周：不看复盘表，试着按 Day 1 到 Day 7 的顺序，每课说出一句核心，再对照表格补缺口——补不上的那课，就是下周开始前要重看的一课。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. LangGraph 里的 State、Node、Edge 各是什么？</strong></p>
+<button data-i="0">State 是数据库，Node 是模型，Edge 是网络</button>
+<button data-i="1">State 是流转的状态，Node 是一个步骤，Edge 是步骤之间的走向</button>
+<button data-i="2">三个都是模型的不同名字</button>
+<div class="ans">解析：选 B。图就是一个状态机：状态流转、节点执行、边决定走向，条件边按条件选下一步。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. 手写循环和 LangGraph，什么时候该选图？</strong></p>
+<button data-i="0">永远选图，循环已经过时了</button>
+<button data-i="1">永远选循环，图太复杂没必要</button>
+<button data-i="2">流程有分支、要并行、要人工介入、要断点续跑时选图，简单循环够用就别上图</button>
+<div class="ans">解析：选 C。简单循环够用就别上图，复杂了、要介入、可观测性要求高时，图才值。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. Checkpoint 是干嘛的？</strong></p>
+<button data-i="0">把图执行到某一步的状态存下来，断了可以从断点继续</button>
+<button data-i="1">给图加速，让它跑得更快</button>
+<button data-i="2">给模型换一个更好的版本</button>
+<div class="ans">解析：选 A。按 thread_id 隔离会话，不同 thread 就是不同会话，串会话是生产事故。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. Agent 出了问题，正确的排障顺序是？</strong></p>
+<button data-i="0">反复改提示词，碰运气直到变好</button>
+<button data-i="1">先看 LangSmith 轨迹，定位到某一步，再改那一步</button>
+<button data-i="2">直接换一个更贵的模型</button>
+<div class="ans">解析：选 B。轨迹里有提示词、模型输出、工具调用、工具结果、Token、耗时，定位不到步骤就别动手改。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. add_messages 是干嘛的？</strong></p>
+<button data-i="0">把消息列表清空</button>
+<button data-i="1">把消息列表倒序</button>
+<button data-i="2">节点返回的新消息追加到旧消息列表，而不是覆盖</button>
+<div class="ans">解析：选 C。没有它，节点一返回，历史就被覆盖了，循环根本跑不起来。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 人工介入（Human-in-the-loop）在图里怎么实现？</strong></p>
+<button data-i="0">在工具节点前再插一个确认节点，危险操作先停下来等人确认</button>
+<button data-i="1">把模型温度调到 0</button>
+<button data-i="2">把工具全部删掉</button>
+<div class="ans">解析：选 A。这是第 4 周 Computer Use 安全底线的图版本，今天先记住位置，动手放在第 4 周。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：LangChain 和 LangGraph 本质区别是什么？</summary>
+<p>LangChain 是通用编排，LangGraph 是基于图的编排：状态、节点、条件边、检查点都是原生概念。简单循环用 LangChain 就够，流程复杂、要分支、要人工介入、要断点续跑时，LangGraph 才值。说清楚取舍，比把任何一方吹成万能都可信。</p>
+</details>
+<details><summary>Q2：图执行到一半断了，怎么续跑？</summary>
+<p>靠 Checkpoint：状态按 thread_id 存下来，下次用同一个 thread_id 从断点继续，而不是重跑全程。本地演示用 MemorySaver，生产换数据库版检查点，原理一样，只是存储位置不同。</p>
+</details>
+<details><summary>Q3：Agent 失败了，你先看什么？</summary>
+<p>先看 LangSmith 轨迹：模型发了什么、调了哪个工具、工具参数对不对、工具回了什么、哪一步开始偏的。定位到某一步再改那一步，不要先换模型、不要反复改提示词碰运气。</p>
+</details>
+<details><summary>Q4：第 1 周学完，你能做出什么？还缺什么？</summary>
+<p>能做出：最小链、提示词与 FewShot、结构化输出、手写工具循环、组合记忆、图版循环加检查点。还缺的是：真实项目里的工具设计、检索与评测、Computer Use 的安全边界，这些正是第 2 到第 4 周的内容。面试时能这样分层讲，比罗列 API 可信得多。</p>
+</details>
+<details><summary>Q5：为什么不用 AgentExecutor，一开始就要手写循环？</summary>
+<p>因为面试和排障都要看清循环：模型出 tool_call、你执行、结果回填、再决策。黑盒跑通了也不知道哪一步出了问题，手写循环每一步都看得见，出了问题能定位到某一步，图版也只是把同一循环画出来而已。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>图上线后，检查点、追踪、评测集是三件套：检查点管断点续跑，追踪管排障定位，评测集管改动回归。缺任何一件，上线后的 Agent 都是“跑起来了，但出问题不知道、改动不知道变好变坏”。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 LangGraph”，写“把手写工具循环画成 LangGraph 图，节点是调模型和执行工具，条件边决定是否继续，检查点按 thread_id 做断点续跑，LangSmith 追踪定位到某一步”。前者是名词，后者是可追问的架构。</p>
+<p><strong>下周预告：</strong>第 2 周进 Mini Cursor：代码 Agent 的架构、仓库索引、文件工具与 diff 预览、命令白名单与测试闭环。第 1 周的循环、记忆、图，全部会在 Mini Cursor 里复用。</p>
+</div>
+
+<div class="nav">
+<span><a href="day06.html">← Day 6</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>第 2 周：Mini Cursor →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
