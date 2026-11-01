@@ -4,7 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" href="data:," />
+    <meta name="theme-color" content="#f6f3ea" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Marble Tetris" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
     <title>弹珠俄罗斯方块</title>
     <style>
       :root {
@@ -1723,6 +1730,27 @@
           ensureAudio: ensureAudio
         };
       })();
+    </script>
+    <script>
+      // PWA registration with proactive auto-update:
+      // check for a new service worker on load, on refocus and every 30 min;
+      // when a new worker takes control, reload once so updates apply without reinstalling.
+      if ('serviceWorker' in navigator) {
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadController && !reloading) { reloading = true; window.location.reload(); }
+        });
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then((reg) => {
+            reg.update().catch(() => {});
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') reg.update().catch(() => {});
+            });
+            setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+          }).catch(() => {});
+        });
+      }
     </script>
   </body>
 </html>
