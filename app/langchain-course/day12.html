@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 12：上下文预算与多文件编辑 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 12 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 12：上下文预算与多文件编辑</h1>
+<p>单文件改对了，多文件一改就乱，问题基本出在两个地方：上下文预算没分好、改文件的顺序没排好。今天把这两件事定下来。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 预算要分账，不能一锅算</h3>
+<p>一次调用的总 Token 里，System、历史、检索结果、工具结果、输出都要算。正确做法是先分账、再装填：给每一类定一个上限，装填时按优先级来，超了就按优先级截断，而不是等爆了再整体砍。Day 6 的记忆预算是同一个道理，今天把它扩到整个代码任务上。</p>
+<table>
+<tr><th>类别</th><th>优先级</th><th>超了怎么办</th></tr>
+<tr><td>System（规则、角色）</td><td>最高，永远保留</td><td>不截断，System 本身就要写短</td></tr>
+<tr><td>当前任务 + 最新 diff</td><td>高</td><td>不截断，这是本轮要做的事</td></tr>
+<tr><td>检索到的文件</td><td>中</td><td>按相关度排序，超了就只留 TopN</td></tr>
+<tr><td>历史对话、旧测试结果</td><td>低</td><td>先摘要、再截断，最后才丢</td></tr>
+<tr><td>输出预留</td><td>必须预留</td><td>不预留，模型写到一半就断了</td></tr>
+</table>
+<h3>2. 多文件编辑的顺序：先共享、后依赖、再调用方</h3>
+<p>一个需求改三个文件，顺序不能乱：<strong>先改共享的类型、常量、接口</strong>，再改依赖这些共享部分的模块，最后改调用方。顺序反了，调用方改完发现接口变了，又要返工；更糟的是，测试在中间跑了一次，报的错是“接口对不上”，其实是顺序错了，不是代码错了。</p>
+<h3>3. 每改一个文件，要不要跑一次测试</h3>
+<p>看改动性质：共享接口改了，马上跑一次相关测试，接口对不上早发现；只是调用方内部逻辑改了，可以攒到最后一起跑。原则是：<strong>接口变了就早测，内部改动可以晚测</strong>。每次都全量跑，慢；最后才跑一次，错在哪一步都不知道。早测和晚测的取舍，问的是“这次改动会不会影响别人”，不是“测试跑得快不快”。</p>
+<h3>4. diff 怎么合：一个任务，一份 diff 清单</h3>
+<p>多文件改完，人确认时看的应该是一份按文件分组的 diff 清单：每个文件改了哪、怎么改，一目了然。不能每个文件各确认一次、确认完就忘——人要确认的是“整个任务的改动”，不是“某个文件的改动”。确认后落盘也要按同一份清单来，Day 10 的“预览和落盘共用同一份 diff”在这里同样适用。</p>
+<div class="warn"><strong>容易踩的坑：</strong>检索结果塞太多文件，预算被文件吃光，留给输出的空间没了，模型写 diff 写到一半就断了。预算分账时，输出预留要先扣出来，不能等装完文件再看还剩多少。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：预算分账，按优先级装填（本地实测）</h3>
+<pre><code>budget = 4000
+system_cost = 500
+output_reserve = 500
+# 先扣掉 System 和输出预留，剩下的才是给检索文件的
+available = budget - system_cost - output_reserve  # 3000
+files = [("types.py", 800), ("a.py", 1500), ("b.py", 2000)]  # 已按相关度排好序
+used, picked = system_cost + output_reserve, []
+for name, cost in files:
+    if used + cost <= budget:
+        picked.append(name); used += cost
+
+# 本地实测：picked = ['types.py', 'a.py']，used = 3300
+# b.py 没装下，不是丢了，是预算不够——要它，就得先把相关度低的换掉，或者摘要后再装</code></pre>
+<h3>示例 2：多文件编辑顺序（概念代码，先看顺序）</h3>
+<pre><code># 需求：给计算器加一个取余运算，涉及 3 个文件
+order = [
+    "1. types.py：先加共享的类型 / 接口（别人依赖它）",
+    "2. calc.py：再实现取余逻辑（依赖 types.py）",
+    "3. main.py：最后改调用方（依赖 calc.py）",
+]
+# 每步的检查点：
+# types.py 改完 → 跑一次相关测试，接口对不上早发现
+# calc.py 改完 → 跑一次单元测试
+# main.py 改完 → 跑一次端到端测试，整个任务才算完</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一个你熟悉的三文件需求，按“先共享、后依赖、再调用方”排一次顺序，再反过来排一次，对比测试报错会在哪一步出现。<br>
+2. 给你的任务定一份预算分账表：System、当前任务、检索文件、历史、输出预留各占多少？输出预留为什么要先扣？<br>
+3. 想一个检索文件太多、预算被吃光的场景：你会先摘要、还是先砍相关度低的？为什么？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. 上下文预算应该怎么管？</strong></p>
+<button data-i="0">一锅算，爆了再整体砍</button>
+<button data-i="1">先分账、再按优先级装填，超了按优先级截断</button>
+<button data-i="2">不用管，模型自己会省</button>
+<div class="ans">解析：选 B。System 最高、当前任务高、检索文件按相关度、历史先摘要再截断、输出必须预留。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. 多文件编辑的正确顺序是？</strong></p>
+<button data-i="0">先调用方，再依赖，再共享</button>
+<button data-i="1">哪个文件小先改哪个</button>
+<button data-i="2">先共享的类型、接口，再改依赖模块，最后改调用方</button>
+<div class="ans">解析：选 C。顺序反了，调用方改完发现接口变了，又要返工，测试报错还会误导你以为是代码错了。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 输出预留为什么要先扣出来？</strong></p>
+<button data-i="0">不预留，模型写 diff 写到一半就断了</button>
+<button data-i="1">为了让预算表好看</button>
+<button data-i="2">为了让模型写得更短</button>
+<div class="ans">解析：选 A。检索文件塞太多、预算被吃光，留给输出的空间没了，diff 写一半就断了。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 共享接口改了，应该什么时候跑测试？</strong></p>
+<button data-i="0">攒到最后一起跑</button>
+<button data-i="1">马上跑一次相关测试，接口对不上早发现</button>
+<button data-i="2">不跑，等人来测</button>
+<div class="ans">解析：选 B。原则是接口变了就早测，内部改动可以晚测；问的是“会不会影响别人”，不是“跑得快不快”。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 多文件改完，人确认时应该看什么？</strong></p>
+<button data-i="0">每个文件各确认一次，确认完就忘</button>
+<button data-i="1">只看第一个文件</button>
+<button data-i="2">一份按文件分组的 diff 清单：整个任务的改动，一目了然</button>
+<div class="ans">解析：选 C。人要确认的是整个任务的改动，不是某个文件的改动；落盘也要按同一份清单来。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 检索文件装不下时，应该先做什么？</strong></p>
+<button data-i="0">先把相关度低的换掉，或者摘要后再装，而不是硬塞</button>
+<button data-i="1">把预算调大，直到装下为止</button>
+<button data-i="2">把输出预留砍掉，腾地方给文件</button>
+<div class="ans">解析：选 A。预算不是无限的，装不下说明检索太宽或文件太碎，要收紧、摘要，而不是挪用输出预留。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：上下文预算怎么分账？</summary>
+<p>先分账、再按优先级装填：System 最高永远保留，当前任务和最新 diff 高，检索文件按相关度取 TopN，历史先摘要再截断，输出预留先扣出来。超了按优先级截断，不是一锅算、爆了再整体砍。</p>
+</details>
+<details><summary>Q2：多文件编辑，顺序为什么重要？</summary>
+<p>先共享、后依赖、再调用方：接口先定，依赖接口的模块再改，调用方最后改。顺序反了，调用方改完发现接口变了要返工，测试报错还会误导你以为是代码错了，其实是顺序错了。</p>
+</details>
+<details><summary>Q3：每改一个文件都要跑测试吗？</summary>
+<p>看改动性质：接口变了就早测，内部改动可以晚测。每次都全量跑，慢；最后才跑一次，错在哪一步都不知道。取舍问的是“会不会影响别人”，不是“跑得快不快”。</p>
+</details>
+<details><summary>Q4：diff 清单为什么要按文件分组？</summary>
+<p>人确认的是整个任务的改动，不是某个文件的改动。按文件分组的清单，一眼看出每个文件改了哪、怎么改；确认后落盘也按同一份清单，预览和落盘才不会对不上。</p>
+</details>
+<details><summary>Q5：预算不够时，你会先砍哪类？</summary>
+<p>先砍优先级低的：历史先摘要再截断，检索文件按相关度换掉低的。System 和输出预留不砍——System 一砍规则就没了，输出预留一砍 diff 就写不完。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>多文件任务上线前，先问三个问题：预算分账表有没有输出预留？改动顺序是不是先共享后调用方？diff 清单是不是一份、按文件分组？三问有一个答不上来，任务就容易在中间乱掉。</p>
+<p><strong>简历讲法：</strong>别写“做过多文件编辑”，写“预算先分账、按优先级装填、输出预留先扣；多文件按先共享、后依赖、再调用方改，接口变了就早测，diff 按文件分组一次确认”。前者是名词，后者是可追问的流程。</p>
+<p><strong>明日预告：</strong>Day 13 讲 Mini Cursor Web 界面：你的前端主场——需求输入、diff 预览、确认按钮、测试结果，这四个界面元素怎么排、状态机怎么走。</p>
+</div>
+
+<div class="nav">
+<span><a href="day11.html">← Day 11</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span><a href="day13.html">Day 13 →</a></span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

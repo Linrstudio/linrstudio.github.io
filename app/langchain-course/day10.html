@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 10：文件工具与 diff 预览：改之前先给人看 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 10 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 10：文件工具与 diff 预览：改之前先给人看</h1>
+<p>Day 8 定了规矩，Day 9 定了检索，今天落到文件工具本身：read_file 怎么读指定范围、write_patch 的 diff 怎么生成、人确认后才落盘的流程怎么走、路径安全怎么守。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 读文件：只读范围，不读全文</h3>
+<p>read_file 的参数应该是路径 + 起止行号，而不是只有路径。大文件一次读全文，既烧 Token 又把模型带偏；读指定范围，模型看到的是检索定位到的那一段。行号从 1 开始还是从 0 开始，要在工具描述里写死，模型按描述传参，工具按描述解析——描述和实现不一致，行号就永远对不上。</p>
+<h3>2. 改文件：先生成 diff，再谈落盘</h3>
+<p>write_patch 的正确流程是三步：<strong>① 生成 diff 预览 → ② 人确认 → ③ 按 diff 落盘</strong>。diff 只展示改动行，没改的行不出现，人一眼就能看出改了哪、怎么改。直接整文件重写的问题 Day 8 讲过：会悄悄丢掉边界条件和注释里的约定，diff 只改写明的地方，丢东西的面小得多。</p>
+<h3>3. 落盘前要校验：diff 和文件现状对得上吗</h3>
+<p>人确认 diff 到真正落盘之间，文件可能被别人改过。落盘前要校验 diff 里的“旧内容”还在不在文件里：对不上就停下来、重新生成 diff，不要硬套。硬套旧 diff 到新文件上，改错位置还不自知，是最难排障的一类 bug。</p>
+<h3>4. 路径安全：工具不能走出仓库</h3>
+<p>模型传来的路径可能是 <code>../etc/passwd</code>，也可能是绝对路径。文件工具必须先把路径解析到仓库根目录下：解析后的路径不在仓库内，一律拒绝。路径校验要在读和写两个工具里都做，只做一个，另一个就是后门。</p>
+<div class="warn"><strong>容易踩的坑：</strong>diff 预览和落盘用两套逻辑。预览时算的是一种 diff，落盘时又是另一种替换，结果人确认的和实际落盘的不一样。预览和落盘必须共用同一份 diff 计算，确认的是什么，落的就是什么。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：读指定范围 + 路径守卫（本地实测）</h3>
+<pre><code>from pathlib import Path
+
+ROOT = Path("/repo").resolve()
+
+def safe_path(path: str) -> Path:
+    # 解析后必须还在仓库根目录下，否则拒绝：挡住 ../ 和绝对路径
+    target = (ROOT / path).resolve()
+    if not str(target).startswith(str(ROOT)):
+        raise ValueError(f"拒绝访问仓库外路径：{path}")
+    return target
+
+def read_file(path: str, start: int, end: int) -> str:
+    lines = safe_path(path).read_text().splitlines(True)
+    return "".join(lines[start - 1:end])  # 行号从 1 开始，描述里要写死
+
+# 本地实测：safe_path("src/a.py") 通过，safe_path("../etc/passwd") 被拒绝
+# read_file 读 lines[1:3]，正好是第 2、3 行，不多不少</code></pre>
+<h3>示例 2：diff 预览，确认后才落盘（本地实测）</h3>
+<pre><code>import difflib
+
+def preview_diff(old: str, new: str) -> str:
+    return "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True)))
+
+def apply_patch(path: str, old: str, new: str, confirmed: bool) -> str:
+    if not confirmed:
+        return preview_diff(old, new)  # 没确认，只返回 diff，不写盘
+    current = safe_path(path).read_text()
+    if old not in current:
+        return "停下：文件现状已变，diff 里的旧内容对不上，请重新生成 diff"
+    safe_path(path).write_text(current.replace(old, new, 1))
+    return "已落盘"
+
+# 本地实测：preview_diff 只输出改动行
+# old="a=1\nb=2\n"，new="a=1\nb=3\n" → 只显示 -b=2 / +b=3，没改的 a=1 只做上下文</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给 agent-core 写一个 read_file：参数是路径、起止行号，行号从 1 开始，路径先过 safe_path 再读。<br>
+2. 写一个 apply_patch：confirmed 为 False 时只返回 diff，为 True 时先校验旧内容在不在，再落盘；故意把文件现状改掉一次，看校验能不能拦住。<br>
+3. 想一个 diff 预览和落盘不一致的场景：预览算的 diff 和落盘用的替换逻辑不一样时，人确认的和实际落盘的会差在哪？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. read_file 应该怎么读？</strong></p>
+<button data-i="0">一次读整个文件，越全越好</button>
+<button data-i="1">按路径 + 起止行号只读指定范围</button>
+<button data-i="2">只读第一行</button>
+<div class="ans">解析：选 B。读全文烧 Token 还带偏模型，读指定范围才是检索定位到的那一段。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. write_patch 的正确流程是？</strong></p>
+<button data-i="0">直接写盘，事后给人看结果</button>
+<button data-i="1">先写盘，再生成 diff 补看</button>
+<button data-i="2">先生成 diff 预览 → 人确认 → 按 diff 落盘</button>
+<div class="ans">解析：选 C。diff 只展示改动行，人一眼看出改了哪；整文件重写会悄悄丢细节。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 落盘前为什么要校验旧内容还在不在？</strong></p>
+<button data-i="0">因为确认到落盘之间文件可能被别人改过，硬套旧 diff 会改错位置</button>
+<button data-i="1">为了让流程看起来严谨</button>
+<button data-i="2">为了拖慢速度</button>
+<div class="ans">解析：选 A。对不上就停下来、重新生成 diff，不要硬套。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 路径安全怎么做？</strong></p>
+<button data-i="0">相信模型传来的路径，不用校验</button>
+<button data-i="1">解析后必须还在仓库根目录下，否则拒绝；读和写两个工具都要做</button>
+<button data-i="2">只校验读，不校验写</button>
+<div class="ans">解析：选 B。只做一个，另一个就是后门；../ 和绝对路径都要挡住。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. diff 预览和落盘最容易出什么问题？</strong></p>
+<button data-i="0">diff 太长，人看不完</button>
+<button data-i="1">diff 太短，信息不够</button>
+<button data-i="2">预览和落盘用两套逻辑，人确认的和实际落盘的不一样</button>
+<div class="ans">解析：选 C。预览和落盘必须共用同一份 diff 计算，确认的是什么，落的就是什么。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 行号从 1 开始还是从 0 开始，关键是什么？</strong></p>
+<button data-i="0">关键是工具描述里写死、实现按描述解析，两者一致</button>
+<button data-i="1">关键是一定要用 0 开始</button>
+<button data-i="2">关键是让模型自己猜</button>
+<div class="ans">解析：选 A。描述和实现不一致，行号就永远对不上；从几开始是约定，不是真理。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：为什么改代码要用 diff，而不是整文件重写？</summary>
+<p>整文件重写会悄悄丢掉边界条件、注释里的约定这些没注意到的逻辑；diff 只改写明的地方，丢东西的面小、出了问题好定位、好回滚。预览和落盘共用同一份 diff，确认的是什么，落的就是什么。</p>
+</details>
+<details><summary>Q2：diff 确认后、落盘前，文件被别人改了怎么办？</summary>
+<p>落盘前校验 diff 里的旧内容还在不在：对不上就停下来、重新生成 diff，不要硬套。硬套旧 diff 到新文件上，改错位置还不自知，是最难排障的一类 bug。</p>
+</details>
+<details><summary>Q3：文件工具的路径安全怎么讲？</summary>
+<p>把路径解析到仓库根目录下，解析后不在仓库内的一律拒绝；读和写两个工具都要做，只做一个就是后门。../ 和绝对路径是测试时必问的两个用例。</p>
+</details>
+<details><summary>Q4：read_file 为什么要限制范围？</summary>
+<p>上下文预算：大文件一次读全文烧 Token 还带偏模型。检索定位到某一段，read_file 就只读那一段；行号约定写在工具描述里，模型按描述传参。</p>
+</details>
+<details><summary>Q5：diff 预览给人看时，应该展示什么、不展示什么？</summary>
+<p>展示改动行和少量上下文，没改的行不出现。人一眼看出改了哪、怎么改，才是“改之前先给人看”的意义；把全文贴出来，人根本看不出改动在哪。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>文件工具上线前，先跑三个用例：../ 能不能出去、确认前会不会写盘、文件现状变了能不能拦住。三个有一个没过，就别让它碰真实仓库。</p>
+<p><strong>简历讲法：</strong>别写“做过文件工具”，写“read_file 按行号读指定范围、路径解析后必须在仓库内，write_patch 先出 diff 预览、经人确认、落盘前校验旧内容对得上才写”。前者是名词，后者是可追问的流程。</p>
+<p><strong>明日预告：</strong>Day 11 讲命令白名单与测试闭环：白名单为什么不能只做前缀匹配、测试不过怎么贴回给模型再改、步数上限怎么防死循环。</p>
+</div>
+
+<div class="nav">
+<span><a href="day09.html">← Day 9</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span><a href="day11.html">Day 11 →</a></span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

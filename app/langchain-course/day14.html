@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 14：复盘：模糊需求、改错代码、失败案例怎么讲 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 14 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 14：复盘：模糊需求、改错代码、失败案例怎么讲</h1>
+<p>第 2 周的最后一课，不讲新工具，讲怎么复盘：模糊需求怎么问、改错代码怎么定位、失败案例怎么讲才不像在甩锅。学完这一课，第 2 周就算闭环了，下周进 RAG 和深圳天气 Agent。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 第 2 周复盘：一张表收束</h3>
+<table>
+<tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
+<tr><td>Day 8</td><td>代码 Agent 架构</td><td>检索 → plan → diff 确认 → 测试，循环还是第 1 周那个循环</td></tr>
+<tr><td>Day 9</td><td>仓库索引与检索</td><td>函数级倒排索引，关键词与向量混合，短名单 + TopK 上限</td></tr>
+<tr><td>Day 10</td><td>文件工具与 diff</td><td>读指定范围、路径守卫、diff 预览确认、落盘前校验旧内容</td></tr>
+<tr><td>Day 11</td><td>命令白名单与测试闭环</td><td>不用 shell、拒绝元字符、参数精确匹配，报错贴回、步数上限 5 步</td></tr>
+<tr><td>Day 12</td><td>预算与多文件编辑</td><td>预算先分账、输出预留先扣，先共享、后依赖、再调用方</td></tr>
+<tr><td>Day 13</td><td>Web 界面</td><td>状态由后端决定、前端只画，流式先步骤后全文，确认带版本号</td></tr>
+<tr><td>Day 14</td><td>复盘</td><td>模糊先问、改错先分层、失败先讲原因再讲改法</td></tr>
+</table>
+<h3>2. 模糊需求：先问澄清问题，而不是瞎猜</h3>
+<p>“把这个页面改好看点”——好看是指配色、布局、还是动效？改给谁看？有没有不能动的品牌色？Agent 应该先问 2 到 3 个澄清问题，而不是直接开改。问澄清问题不是“不会做”，是“把不确定性从代码里挪到对话里”：代码里猜错了，改完要返工；对话里问清了，改一次就对。问的时候要给选项，不要只问开放式问题——“配色往冷色还是暖色走？”比“你想要什么风格？”好答得多。</p>
+<h3>3. 改错代码：先分层定位，再动手改</h3>
+<pre><code>改错了，先问五层：
+1. 检索层：名单里有没有正确文件？没有 → 回检索
+2. 读取层：读的范围对不对？不对 → 重读指定范围
+3. diff 层：diff 写对没有？不对 → 重写 diff，不落盘
+4. 测试层：测试本身有没有问题？有 → 先修测试，再谈代码
+5. 需求层：需求本身说清没有？没有 → 回去问澄清问题
+# 定位到哪一层，就改哪一层；没定位就动手，等于在原错误上再叠一个错误</code></pre>
+<h3>4. 失败案例怎么讲：原因 → 改法 → 证据，三段式</h3>
+<p>面试讲失败案例，最忌两种讲法：只讲“最后成功了”（失败被藏起来了）和只讲“都怪模型 / 都怪需求”（甩锅）。可信的讲法是三段式：<strong>① 原因</strong>：哪一层出了问题，用什么证据定位的；<strong>② 改法</strong>：改了哪一层、为什么改这一层；<strong>③ 证据</strong>：改完之后，测试第几次过的、diff 长什么样、步数是多少。原因、改法、证据齐了，失败案例就成了“会排障”的证明，而不是黑历史。</p>
+<div class="warn"><strong>容易踩的坑：</strong>复盘时只复盘成功任务。成功任务复盘不出护栏，失败任务才暴露护栏缺在哪：白名单没挡住、diff 没校验、预算没预留——这些都是失败任务先告诉你的。复盘清单里，失败任务至少要占一半。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：澄清问题模板（概念代码，先看形状）</h3>
+<pre><code># 模糊需求进来时，Agent 先输出澄清问题，而不是直接出 diff：
+# 需求：“把这个页面改好看点”
+# 澄清问题 1：配色往冷色还是暖色走？（给选项，不问开放式）
+# 澄清问题 2：布局是改间距，还是改整体结构？（给选项）
+# 澄清问题 3：有没有不能动的品牌色 / 字体？（给边界）
+# 人答完，Agent 再出 plan、再出 diff——顺序不能反</code></pre>
+<h3>示例 2：分层定位清单（照着查，不要凭感觉）</h3>
+<pre><code># 改错代码时，按这个清单从上往下查，查到哪一层停在哪一层：
+# 1. 检索名单里有没有正确文件？ → 没有：回 Day 9 检索
+# 2. 读的范围对不对？ → 不对：回 Day 10 读指定范围
+# 3. diff 写对没有？ → 不对：重写 diff，不落盘
+# 4. 测试本身有没有问题？ → 有：先修测试，再谈代码
+# 5. 需求本身说清没有？ → 没有：回去问澄清问题
+# 查完清单还定位不到，再说“模型不行”——没查清单就说模型不行，是甩锅</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一个你做过的失败任务，按“原因 → 改法 → 证据”三段式写一遍：原因定位到哪一层？改了哪一层？改完测试第几次过的？<br>
+2. 拿“把这个页面改好看点”这个模糊需求，写出 3 个带选项的澄清问题，再写出如果不问、直接开改，会返工在哪一步。<br>
+3. 对照第 2 周复盘表，不看表，试着按 Day 8 到 Day 14 的顺序，每课说出一句核心，再对照表格补缺口——补不上的那课，就是下周开始前要重看的一课。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. 模糊需求来了，Agent 应该先做什么？</strong></p>
+<button data-i="0">直接开改，改完再让人看</button>
+<button data-i="1">先问 2 到 3 个带选项的澄清问题，再出 plan、再出 diff</button>
+<button data-i="2">直接拒绝，说需求不清做不了</button>
+<div class="ans">解析：选 B。问澄清问题是把不确定性从代码里挪到对话里，代码里猜错了要返工，对话里问清了改一次就对。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. 改错代码时，应该先做什么？</strong></p>
+<button data-i="0">马上再改一次，改到对为止</button>
+<button data-i="1">直接换一个更贵的模型</button>
+<button data-i="2">先分层定位：检索、读取、diff、测试、需求，定位到哪一层改哪一层</button>
+<div class="ans">解析：选 C。没定位就动手，等于在原错误上再叠一个错误。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 失败案例面试时应该怎么讲？</strong></p>
+<button data-i="0">三段式：原因（哪一层、用何证据定位）→ 改法（改哪一层、为什么）→ 证据（测试第几次过、diff、步数）</button>
+<button data-i="1">只讲最后成功了，失败藏起来</button>
+<button data-i="2">只讲都怪模型、都怪需求</button>
+<div class="ans">解析：选 A。原因、改法、证据齐了，失败案例就成了“会排障”的证明，而不是黑历史。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 澄清问题为什么要给选项？</strong></p>
+<button data-i="0">为了让问题看起来专业</button>
+<button data-i="1">因为带选项的问题比开放式问题好答得多，人答得快、答得准</button>
+<button data-i="2">为了让 Agent 少干活</button>
+<div class="ans">解析：选 B。“配色往冷色还是暖色走？”比“你想要什么风格？”好答得多。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 复盘清单里，失败任务应该占多少？</strong></p>
+<button data-i="0">越少越好，最好全是成功任务</button>
+<button data-i="1">无所谓，随便挑几个</button>
+<button data-i="2">至少一半：成功任务复盘不出护栏，失败任务才暴露护栏缺在哪</button>
+<div class="ans">解析：选 C。白名单没挡住、diff 没校验、预算没预留，都是失败任务先告诉你的。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 第 2 周结束时，你能拿出什么可演示的东西？</strong></p>
+<button data-i="0">一个 mini-cursor：对着真实小项目改 3 个真实需求，每个任务 diff 可审、测试能跑、步骤 ≤5 步</button>
+<button data-i="1">一堆工具函数的罗列</button>
+<button data-i="2">一个跑通一次的演示视频</button>
+<div class="ans">解析：选 A。面试讲的时候按任务讲：需求是什么、检索找对没有、diff 长什么样、测试第几次过的——比罗列工具名可信得多。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：需求模糊时，你的 Agent 为什么不直接改？</summary>
+<p>因为代码里猜错了要返工，对话里问清了改一次就对。Agent 先问 2 到 3 个带选项的澄清问题，把不确定性从代码里挪到对话里，再出 plan、再出 diff——顺序不能反。</p>
+</details>
+<details><summary>Q2：改错代码时，你怎么定位？</summary>
+<p>分层定位：检索名单有没有正确文件、读的范围对不对、diff 写对没有、测试本身有没有问题、需求本身说清没有。定位到哪一层改哪一层，没查清单就说“模型不行”是甩锅。</p>
+</details>
+<details><summary>Q3：讲一个你做过的失败案例。</summary>
+<p>用三段式：原因（哪一层、用何证据定位）→ 改法（改哪一层、为什么改这一层）→ 证据（测试第几次过的、diff 长什么样、步数是多少）。原因、改法、证据齐了，失败案例就是“会排障”的证明。</p>
+</details>
+<details><summary>Q4：第 2 周学完，你能做出什么？还缺什么？</summary>
+<p>能做出：mini-cursor 的架构、索引与检索、文件工具与 diff、命令白名单与测试闭环、预算与多文件编辑、Web 界面。还缺的是：检索与评测的系统方法、真实项目的工具设计、Computer Use 的安全边界，这些正是第 3 到第 4 周的内容。</p>
+</details>
+<details><summary>Q5：为什么复盘时失败任务至少要占一半？</summary>
+<p>成功任务复盘不出护栏，失败任务才暴露护栏缺在哪：白名单没挡住、diff 没校验、预算没预留。复盘只看成功任务，护栏的缺口就永远补不上。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>第 2 周收尾时，先问三个问题：mini-cursor 能改 3 个真实需求吗？每个任务 diff 可审、测试能跑、步骤 ≤5 步吗？失败任务的复盘清单写了吗？三问有一个答不上来，第 2 周就不算闭环。</p>
+<p><strong>简历讲法：</strong>别写“做过 Mini Cursor”，写“对着真实小项目改 3 个真实需求：检索先行、diff 预览经人确认才落盘、测试闭环、步骤上限 5 步，失败按检索、读取、diff、测试、需求五层定位”。前者是名词，后者是可追问的项目。</p>
+<p><strong>下周预告：</strong>第 3 周进 RAG + 深圳天气 Agent：文档怎么切块、向量怎么存、检索怎么评测、天气工具怎么接 Open-Meteo、混合问题怎么路由。第 2 周的循环、预算、测试闭环，全部会在第 3 周复用。</p>
+</div>
+
+<div class="nav">
+<span><a href="day13.html">← Day 13</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>第 3 周：RAG + 深圳天气 Agent →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

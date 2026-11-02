@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 13：Mini Cursor Web 界面（前端主场） | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 13 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 13：Mini Cursor Web 界面（前端主场）</h1>
+<p>第 2 周的前端主场：Agent 再厉害，没有界面，人也看不见它在干什么。今天讲 Mini Cursor 的 Web 界面：四个界面元素怎么排、状态机怎么走、流式输出怎么接、确认按钮为什么不能只是好看。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 四个界面元素，按任务顺序排</h3>
+<table>
+<tr><th>元素</th><th>干什么</th><th>对应 Agent 的哪一步</th></tr>
+<tr><td>需求输入框</td><td>人写需求，点开始</td><td>任务开始，检索、plan</td></tr>
+<tr><td>进度 / 步骤条</td><td>显示现在走到哪一步了</td><td>检索 → plan → diff → 测试</td></tr>
+<tr><td>diff 预览区</td><td>按文件分组展示 diff，改动行高亮</td><td>改之前先给人看</td></tr>
+<tr><td>确认 / 拒绝按钮 + 测试结果区</td><td>人点头才落盘，落盘后跑测试、结果贴出来</td><td>确认落盘、测试闭环</td></tr>
+</table>
+<p>顺序就是任务顺序：输入在上、进度在中、diff 在下、确认和结果在最后。人一眼看出“现在到哪了、下一步要我干什么”，就是好界面；人要到处找“现在是不是该我点了”，就是坏界面。</p>
+<h3>2. 状态机：界面状态和 Agent 状态是同一份</h3>
+<pre><code>idle（等输入） → running（检索、plan、生成 diff）
+  → awaiting_confirm（diff 已出，等人确认）
+  → confirmed（已落盘，跑测试）
+  → done（测试通过） / failed（测试不过，报错贴回）
+  → running（再改一轮）……步数到上限 → stopped（停下来给人看）</code></pre>
+<p>关键点：界面不能自己编状态。按钮能不能点、进度条到哪了，都由后端返回的状态决定；前端只是把状态画出来。前端自己维护一份“以为的状态”，和后端真实状态一脱节，按钮点下去没反应、或者重复落盘，都是这么来的。</p>
+<h3>3. 流式输出：先给步骤，再给全文</h3>
+<p>Agent 跑起来要几十秒，人不能对着空白等。流式输出的顺序是：先推步骤（“正在检索…”、“正在生成 diff…”），再推 diff 全文，最后推测试结果。步骤先到，人知道它在干活；全文后到，人再细看。顺序反了，人先看到一堆 diff、不知道现在到哪了，体验就乱了。</p>
+<h3>4. 确认按钮：不是好看，是护栏</h3>
+<p>确认按钮的职责是：点下去，才触发落盘；没点，diff 只能看、不能写。实现上要做到两点：<strong>① 确认要带任务 ID 和 diff 版本号</strong>，防止人确认的是旧 diff、落的是新 diff；<strong>② 确认后按钮要置灰、不可重复点</strong>，防止重复落盘。Day 10 的“预览和落盘共用同一份 diff”在这里就是：前端传回的版本号，必须和后端生成 diff 时的版本号一致。</p>
+<div class="warn"><strong>容易踩的坑：</strong>把测试结果只写“通过 / 失败”两个字。失败时要贴全：哪个测试、哪一行、期望值和实际值——Day 11 讲过，报错是下一轮的输入，界面上只写“失败了”，人（和模型）都不知道下一步该改哪。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：状态机，界面状态由后端决定（概念代码，先看形状）</h3>
+<pre><code># 后端返回的状态，前端只负责画，不自己编状态
+STATES = ["idle", "running", "awaiting_confirm", "confirmed", "done", "failed", "stopped"]
+
+# 前端按状态决定按钮能不能点：
+# idle → 开始按钮可点；running → 开始按钮置灰，显示步骤条
+# awaiting_confirm → 确认 / 拒绝按钮可点；confirmed → 按钮置灰，显示测试中
+# done / failed / stopped → 显示结果，开始按钮恢复可点（新任务）</code></pre>
+<h3>示例 2：确认请求要带任务 ID 和 diff 版本号（概念代码）</h3>
+<pre><code># 前端点确认时发给后端：
+# POST /api/confirm { task_id: "t1", diff_version: 3 }
+# 后端校验：diff_version 和生成 diff 时的版本号一致，才落盘；
+# 不一致 → 返回“diff 已过期，请重新生成”，不落盘
+# 确认后按钮置灰，不可重复点，防止重复落盘</code></pre>
+<h3>示例 3：流式输出的顺序（概念代码）</h3>
+<pre><code># 后端按这个顺序推，前端按这个顺序画：
+# 1. { type: "step", text: "正在检索相关文件…" }
+# 2. { type: "step", text: "正在生成 diff 预览…" }
+# 3. { type: "diff", files: [ { path: "calc.py", diff: "..." } ] }
+# 4. { type: "test", passed: false, output: "哪个测试、哪一行、期望值、实际值" }
+# 步骤先到、全文后到，人先知道在干活，再细看 diff</code></pre>
+<p>注意：示例都是“形状代码”，不是可直接跑的完整前后端——第 2 周动手时，先按这个形状搭页面和接口，再接真实 Agent；形状先对，细节后补，不跳步。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 画一张 Mini Cursor 的页面草图：输入框、步骤条、diff 区、确认按钮、测试结果区各放哪？为什么是这个顺序？<br>
+2. 写出状态机的 7 个状态，再写出每个状态下“开始、确认、拒绝”三个按钮分别是可点还是置灰。<br>
+3. 想一个确认按钮的坑：人确认的是旧 diff、落的是新 diff时，会发生什么？版本号校验怎么拦住它？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. Mini Cursor 界面的四个元素，应该按什么顺序排？</strong></p>
+<button data-i="0">按好看程度排</button>
+<button data-i="1">按任务顺序排：输入 → 进度 → diff → 确认和测试结果</button>
+<button data-i="2">按开发顺序排</button>
+<div class="ans">解析：选 B。顺序就是任务顺序，人一眼看出“现在到哪了、下一步要我干什么”。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. 界面状态应该由谁决定？</strong></p>
+<button data-i="0">前端自己维护一份状态</button>
+<button data-i="1">后端和前端各维护一份，互相同步</button>
+<button data-i="2">后端返回的状态，前端只负责画，不自己编状态</button>
+<div class="ans">解析：选 C。前端自己编状态，和后端真实状态一脱节，按钮点下去没反应、重复落盘都是这么来的。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 流式输出应该先推什么？</strong></p>
+<button data-i="0">先推步骤（正在检索…、正在生成 diff…），再推 diff 全文，最后推测试结果</button>
+<button data-i="1">先推 diff 全文，再推步骤</button>
+<button data-i="2">等全部跑完，一次性全推出来</button>
+<div class="ans">解析：选 A。步骤先到，人知道它在干活；全文后到，人再细看；等全部跑完，人对着空白等几十秒。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 确认按钮为什么要带任务 ID 和 diff 版本号？</strong></p>
+<button data-i="0">为了让请求看起来专业</button>
+<button data-i="1">防止人确认的是旧 diff、落的是新 diff；版本号不一致就不落盘</button>
+<button data-i="2">为了让后端跑得更快</button>
+<div class="ans">解析：选 B。Day 10 的“预览和落盘共用同一份 diff”在这里就是版本号校验。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 确认后，按钮应该怎么办？</strong></p>
+<button data-i="0">保持可点，随时可以再点</button>
+<button data-i="1">隐藏起来</button>
+<button data-i="2">置灰、不可重复点，防止重复落盘</button>
+<div class="ans">解析：选 C。重复落盘会把同一份 diff 写两遍，出了问题都不知道是哪一次写的。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 测试失败时，界面上应该展示什么？</strong></p>
+<button data-i="0">贴全：哪个测试、哪一行、期望值和实际值</button>
+<button data-i="1">只写“失败了”两个字</button>
+<button data-i="2">什么都不展示，等人自己去查</button>
+<div class="ans">解析：选 A。报错是下一轮的输入，只写“失败了”，人（和模型）都不知道下一步该改哪。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Agent 的界面，状态应该放在哪？</summary>
+<p>后端。界面状态和 Agent 状态是同一份，前端只负责画，不自己编状态。前端自己维护一份“以为的状态”，和后端真实状态一脱节，按钮没反应、重复落盘都是这么来的。</p>
+</details>
+<details><summary>Q2：确认按钮怎么做，才不是摆设？</summary>
+<p>点下去才触发落盘，没点只能看不能写；请求带任务 ID 和 diff 版本号，版本号不一致就不落盘；确认后按钮置灰、不可重复点。三点缺一，确认就只是好看。</p>
+</details>
+<details><summary>Q3：流式输出的顺序为什么重要？</summary>
+<p>先推步骤、再推全文、最后推结果：步骤先到，人知道它在干活；全文后到，人再细看。顺序反了，人先看到一堆 diff、不知道现在到哪了，体验就乱了。</p>
+</details>
+<details><summary>Q4：前端主场，你的优势怎么讲？</summary>
+<p>按任务顺序排界面：输入、进度、diff、确认、结果；状态由后端决定、前端只画；流式先步骤后全文；确认带版本号防旧 diff 落盘。讲清这四点，比说“我会 React”可信得多。</p>
+</details>
+<details><summary>Q5：测试结果区，最容易被忽略的是什么？</summary>
+<p>失败时的完整信息：哪个测试、哪一行、期望值和实际值。只写“通过 / 失败”两个字，失败时人（和模型）都不知道下一步该改哪，测试闭环就断在界面上了。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>界面上线前，先跑三个用例：后端状态变了，前端按钮能不能跟着变？确认旧 diff 会不会被版本号拦住？重复点确认会不会重复落盘？三个有一个没过，界面就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过 Agent 前端”，写“界面按任务顺序排，状态由后端决定、前端只画，流式先步骤后全文，确认带任务 ID 和 diff 版本号、确认后置灰防重复落盘”。前者是名词，后者是可追问的界面架构。</p>
+<p><strong>明日预告：</strong>Day 14 讲第 2 周复盘：模糊需求怎么问澄清问题、改错代码怎么讲、失败案例怎么讲才不像在甩锅。</p>
+</div>
+
+<div class="nav">
+<span><a href="day12.html">← Day 12</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span><a href="day14.html">Day 14 →</a></span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

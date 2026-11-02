@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 11：命令白名单与测试闭环 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 11 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 11：命令白名单与测试闭环</h1>
+<p>Day 8 给了白名单的形状，Day 10 给了 diff 的流程，今天把命令这道关讲透：白名单为什么不能只做前缀匹配、测试不过怎么贴回给模型再改、步数上限怎么防死循环。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 前缀匹配的漏洞：先承认 Day 8 的简化版不够</h3>
+<p>Day 8 的示例用的是前缀匹配：命令以白名单某一项开头就放行。这个版本有个洞：<code>pytest; rm -rf /</code> 是以 <code>pytest</code> 开头的，前缀匹配会放行，shell 一执行，分号后面的命令也跟着跑了。所以前缀匹配只能当演示，生产版必须升级，承认简化版的边界，是这课最重要的一点。</p>
+<h3>2. 生产版白名单：三条规则一起上</h3>
+<ul>
+<li><strong>不用 shell</strong>：用参数列表（argv）执行，不走 shell，<code>;</code>、<code>|</code>、<code>&amp;</code> 就没有“拼接命令”的语义了。</li>
+<li><strong>拒绝元字符</strong>：命令字符串里出现 <code>;</code>、<code>|</code>、<code>&amp;</code>、<code>$</code>、反引号，一律拒绝，哪怕前面是白名单命令。</li>
+<li><strong>精确匹配参数列表</strong>：解析后的参数元组必须在白名单集合里，<code>pytest -q</code> 在白名单里，<code>pytest --cov</code> 就不在——多一个参数也是另一个命令。</li>
+</ul>
+<p>三条缺一不可：只不用 shell，模型还能传危险参数；只拒绝元字符，前缀匹配还是会放行多余参数；只精确匹配，不拒绝元字符，shell 注入还是能进来。</p>
+<h3>3. 超时：命令不能无限跑</h3>
+<p>测试挂住了、死循环了，Agent 不能跟着等一辈子。每个命令都要设超时，超时就杀掉、把“超时”当成一次失败结果贴回给模型。超时时间写在配置里，不写进提示词——提示词是给模型看的，超时是给执行器看的，两者别混。</p>
+<h3>4. 测试闭环：报错不是失败，是下一轮的输入</h3>
+<pre><code>改代码 → 跑测试 → 测试不过
+  → 把报错原文贴回给模型（不要只贴“失败了”三个字）
+  → 模型再改 → 再跑测试
+  → 测过为止，或者步数到上限停下来给人看</code></pre>
+<p>报错贴回时要给全：哪个测试、哪一行、期望值和实际值各是什么。只贴“测试失败”，模型只能瞎猜；贴全了，模型才知道改哪。贴回的报错也要算进上下文预算，太长的报错要截断关键部分，不能全文塞。</p>
+<h3>5. 步数上限：测试循环也会死循环</h3>
+<p>改 → 测 → 再改 → 再测，和第 1 周的工具循环一样需要上限。第 2 周验收写着“步骤 ≤5 步”：超了就停下来给人看——是测试本身有问题，还是检索一直找错地方，还是需求说不清。停下来定位，比一直烧 Token 瞎改强。</p>
+<div class="warn"><strong>容易踩的坑：</strong>测试过了就以为代码对了。测试只覆盖了它写的那几条用例，没覆盖的边界还是可能错。测试是验收标准，不是正确性证明；面试时把这句讲清，比说“测试过了就是对了”可信得多。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：生产版白名单（本地实测）</h3>
+<pre><code>import shlex
+
+ALLOWED = {("pytest",), ("pytest", "-q"), ("npm", "test"), ("tsc", "--noEmit")}
+
+def allowed(cmd: str) -> bool:
+    # 1. 拒绝 shell 元字符：; | & $ 反引号，一律不进执行器
+    if any(c in cmd for c in ";|&$`"):
+        return False
+    try:
+        parts = tuple(shlex.split(cmd))
+    except ValueError:
+        return False
+    # 2. 参数列表必须精确在白名单里：多一个参数也是另一个命令
+    return parts in ALLOWED
+
+# 本地实测：pytest -q → 通过；pytest → 通过；npm test → 通过
+# git push → 拒绝；pytest; rm -rf / → 拒绝；pytest --cov → 拒绝（不在白名单里）</code></pre>
+<p>注意：这个示例只做了“放行判断”，真实执行要接 subprocess 且 shell=False、设超时，今天先把判断做对，执行细节按这个判断接。</p>
+<h3>示例 2：测试闭环骨架（步数上限 + 报错贴回）</h3>
+<pre><code>MAX_STEPS = 5
+
+def run_task(patch_fn, run_tests):
+    for step in range(1, MAX_STEPS + 1):
+        patch_fn()                    # 模型改代码，出 diff、确认、落盘
+        result = run_tests()          # 跑白名单里的测试命令，带超时
+        if result.passed:
+            return f"第 {step} 步：测试通过，任务完成"
+        # 测试不过：把报错原文贴回给模型，下一轮再改
+        # 报错太长时截断关键部分，不要全文塞进上下文
+    return "步数到上限：停下来给人看，不要继续瞎改"
+
+# 本地实测逻辑：第 2 步测试通过时，循环在第 2 步返回，不会跑满 5 步</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在纸上跑示例 1：<code>pytest -q</code>、<code>pytest; rm -rf /</code>、<code>pytest --cov</code>、<code>npm test</code> 各自是放行还是拒绝？为什么 <code>pytest --cov</code> 必须拒绝？<br>
+2. 写一个 run_task 的变体：超时也算一次失败，超时结果贴回给模型时要写清“超时、命令、超时秒数”三项。<br>
+3. 找一个你写过的测试失败：把“只说失败了”和“贴全报错”两种贴回方式各写一遍，对比模型（或你自己）第二次改的时候，信息差在哪。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="2">
+<p><strong>1. Day 8 的前缀匹配白名单，有什么洞？</strong></p>
+<button data-i="0">没有洞，够用了</button>
+<button data-i="1">洞是速度太慢</button>
+<button data-i="2">pytest; rm -rf / 以 pytest 开头，前缀匹配会放行，shell 会把分号后的命令也执行了</button>
+<div class="ans">解析：选 C。前缀匹配只能当演示，生产版必须升级，这是本课最重要的一点。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>2. 生产版白名单的三条规则是？</strong></p>
+<button data-i="0">不用 shell + 拒绝元字符 + 参数列表精确匹配，三条一起上</button>
+<button data-i="1">只用前缀匹配就够了</button>
+<button data-i="2">只拒绝 rm 一个命令就够了</button>
+<div class="ans">解析：选 A。三条缺一不可：只做一条，另外两条路还是通的。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>3. pytest --cov 为什么必须拒绝？</strong></p>
+<button data-i="0">因为它跑得慢</button>
+<button data-i="1">因为它不在白名单集合里，多一个参数也是另一个命令</button>
+<button data-i="2">因为它不是测试命令</button>
+<div class="ans">解析：选 B。白名单是参数元组的精确集合，不在集合里的就是另一个命令。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>4. 测试不过时，报错应该怎么贴回给模型？</strong></p>
+<button data-i="0">只贴“测试失败了”四个字</button>
+<button data-i="1">不贴报错，让模型自己猜</button>
+<button data-i="2">贴全：哪个测试、哪一行、期望值和实际值，太长时截断关键部分</button>
+<div class="ans">解析：选 C。只贴“失败了”，模型只能瞎猜；贴全了，模型才知道改哪。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>5. 命令为什么要设超时？</strong></p>
+<button data-i="0">测试挂住、死循环时，Agent 不能跟着等一辈子；超时算一次失败贴回</button>
+<button data-i="1">为了让测试跑得更快</button>
+<button data-i="2">为了省电</button>
+<div class="ans">解析：选 A。超时时间写在配置里，不写进提示词，提示词和执行器配置别混。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>6. 步数到上限还没过测试，应该怎么办？</strong></p>
+<button data-i="0">继续改，直到改过为止</button>
+<button data-i="1">停下来给人看：是测试本身有问题，还是检索找错地方，还是需求说不清</button>
+<button data-i="2">把测试删掉，让它“通过”</button>
+<div class="ans">解析：选 B。停下来定位比一直烧 Token 瞎改强；删测试是作弊，不是验收。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：命令白名单只做前缀匹配，够吗？</summary>
+<p>不够。pytest; rm -rf / 以 pytest 开头，前缀匹配会放行。生产版要三条一起上：不用 shell、拒绝元字符、参数列表精确匹配。面试时先承认简化版的边界，再讲生产版，比一开始就说“我的白名单很安全”可信。</p>
+</details>
+<details><summary>Q2：测试闭环里，报错贴回时要注意什么？</summary>
+<p>贴全关键信息：哪个测试、哪一行、期望值和实际值；太长时截断关键部分，不要全文塞进上下文。报错是下一轮的输入，不是失败的宣告。</p>
+</details>
+<details><summary>Q3：超时怎么处理？</summary>
+<p>每个命令设超时，超时就杀掉、把“超时”当成一次失败结果贴回，写清超时、命令、超时秒数三项。超时时间是执行器配置，不写进提示词。</p>
+</details>
+<details><summary>Q4：测试过了，能不能说代码就是对的？</summary>
+<p>不能。测试只覆盖了它写的那几条用例，没覆盖的边界还是可能错。测试是验收标准，不是正确性证明；讲清这句，比说“测试过了就是对了”可信得多。</p>
+</details>
+<details><summary>Q5：步数上限 5 步，是怎么定的？</summary>
+<p>不是真理，是验收约定：一个任务最多走 5 步，超了就停下来给人看。定上限的依据是成本和定位：一直改下去烧 Token 不说，还掩盖了“检索错了、需求不清、测试本身有问题”这些真正的原因。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>命令工具上线前，先跑五个用例：白名单内、白名单外、前缀注入（;）、多余参数、超时。五个有一个没过，就别让它碰真实机器。</p>
+<p><strong>简历讲法：</strong>别写“做过命令白名单”，写“白名单不用 shell、拒绝元字符、参数列表精确匹配；测试闭环把报错原文贴回、步数上限 5 步，超时算一次失败”。前者是名词，后者是可追问的护栏。</p>
+<p><strong>明日预告：</strong>Day 12 讲上下文预算与多文件编辑：预算怎么分给 System、历史、检索结果和输出，多文件编辑按什么顺序改、每改一个要不要跑一次测试。</p>
+</div>
+
+<div class="nav">
+<span><a href="day10.html">← Day 10</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span><a href="day12.html">Day 12 →</a></span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
