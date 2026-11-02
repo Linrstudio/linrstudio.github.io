@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 9：仓库索引与代码检索 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 9 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 9：仓库索引与代码检索</h1>
+<p>Day 8 说了“先检索、再读文件”，今天讲检索本身：索引到底存什么、关键词索引和向量索引怎么选、检索没找对时怎么发现、怎么和第 1 周的工具循环接起来。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 索引是什么：一份“代码地图”，不是代码本身</h3>
+<p>索引不存全部代码原文，存的是能快速定位的线索：文件路径、函数名、类名、符号定义位置、调用关系、文件摘要。检索时先查地图、拿到短名单，再按名单读文件。没有索引，Agent 只能靠猜文件名、或把仓库全塞给模型——前者找不全，后者 Token 爆了还容易找偏。</p>
+<h3>2. 索引的粒度：文件、函数、块，三档怎么选</h3>
+<table>
+<tr><th>粒度</th><th>存什么</th><th>适合什么时候</th></tr>
+<tr><td>文件级</td><td>文件路径 + 摘要</td><td>仓库小、文件少，先定位文件</td></tr>
+<tr><td>函数 / 类级</td><td>每个函数、类的名字和位置</td><td>最常用：改代码基本都落到某个函数上</td></tr>
+<tr><td>代码块级</td><td>按逻辑块切分的小段</td><td>大文件、长函数，需要精确定位到某一段</td></tr>
+</table>
+<p>Mini Cursor 起步用函数级就够了：改代码的单位基本是函数，文件级太粗、块级太碎。粒度越细，索引越大、维护成本越高，不要一上来就追求最细。</p>
+<h3>3. 关键词索引 vs 向量索引，怎么选</h3>
+<table>
+<tr><th>方式</th><th>擅长</th><th>不擅长</th></tr>
+<tr><td>关键词索引（倒排）</td><td>精确名字：函数名、变量名、错误码，找得又快又准</td><td>同义不同名：用户说“算钱”，代码里叫“结算”，关键词对不上</td></tr>
+<tr><td>向量索引（语义）</td><td>语义相近：用户说“算钱”，能找到“结算”相关的代码</td><td>精确名字容易被语义相近但不对的代码挤掉，需要 Embedding 和向量库</td></tr>
+</table>
+<p>生产里最常用的是混合：先用关键词把精确命中的排前面，再用向量补语义相关的，最后按相关度合并去重。只用一种，都会在另一类问题上翻车。面试时说出“混合检索”四个字，再讲清各自补什么短板，就比只说一种可信得多。</p>
+<h3>4. 检索结果怎么给模型：短名单 + 定位，不给全文</h3>
+<p>检索返回给模型的应该是：文件路径、函数名、行号、一两行摘要，最多再加一小段关键代码。模型按名单读文件时，用 read_file 只读指定范围，不要一次读整个大文件。名单长度也要设上限，比如 Top 5，超过就说明检索太宽、要收紧关键词或加过滤条件。</p>
+<h3>5. 检索没找对，怎么发现</h3>
+<p>三个信号，出现一个就要怀疑检索：模型读了名单里的文件还说“找不到相关代码”；模型改的文件和需求明显不沾边；测试报错指向的文件根本不在名单里。处理办法不是让模型继续猜，而是回到检索这一步：换关键词、放宽到文件级、补一个向量检索、或者直接问用户“你说的是哪个模块”。检索错了还往下走，diff 和测试全是白做功。</p>
+<div class="warn"><strong>容易踩的坑：</strong>索引过期。代码改了、索引没更新，检索给的还是旧位置，模型按旧位置读文件、改代码，改完发现对不上。索引必须跟着代码走：文件一改就更新，或者至少在检索前校验一次位置还在不在。过期索引比没有索引更坑人，因为它给的是“看起来对”的错误答案。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：函数级倒排索引，最小实现（本地实测）</h3>
+<pre><code>import re
+
+files = {
+    "calc.py": "def add(a, b):\n    return a + b\n\ndef mul(a, b):\n    return a * b\n",
+    "main.py": "from calc import add\nprint(add(1, 2))\n",
+}
+
+index = {}
+for path, text in files.items():
+    for name in re.findall(r"def (\w+)", text):
+        index.setdefault(name, []).append(path)
+
+print(index)            # {'add': ['calc.py'], 'mul': ['calc.py']}
+print(index.get("add")) # ['calc.py']：搜 add，先定位到 calc.py，再读文件</code></pre>
+<p>这就是关键词索引的骨架：函数名 → 文件列表。真实项目里还要存行号、类名、调用关系，但骨架不变：先建“名字 → 位置”的映射，检索时按名字查映射，不用全文扫描。</p>
+<h3>示例 2：检索工具怎么接进 Agent 循环</h3>
+<pre><code># search_code 是 Day 8 五个工具里的一个，它的职责只有一件事：
+# 输入关键词，输出短名单；读文件、改代码是另外两个工具的事
+def search_code(keyword, top_k=5):
+    """返回 [(文件路径, 函数名, 行号)] 这样的短名单，不返回全文。"""
+    ...
+
+# Agent 循环里的顺序永远是：
+# search_code("add") → 拿到 ['calc.py'] → read_file("calc.py", 1, 10) → 再决定改什么
+# 顺序反了（先读文件再检索），就等于没有索引。</code></pre>
+<h3>示例 3：混合检索的思路（概念代码，先看形状）</h3>
+<pre><code>def hybrid_search(query, top_k=5):
+    keyword_hits = keyword_search(query)   # 精确名字，排前面
+    vector_hits = vector_search(query)     # 语义相关，补同义不同名
+    # 合并去重：精确命中优先，语义命中补位，总数不超过 top_k
+    seen, merged = set(), []
+    for hit in keyword_hits + vector_hits:
+        if hit not in seen and len(merged) < top_k:
+            seen.add(hit); merged.append(hit)
+    return merged</code></pre>
+<p>注意：示例 3 的 vector_search 需要 Embedding 和向量库，第 3 周 RAG 会系统讲，今天先记住混合的形状——精确在前、语义补位、总数有上限。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿第 1 周的 agent-core，手工给它建一份函数级索引：列出每个函数名和所在文件，再用“calculator”这个词搜一次，看能不能定位到 tools.py。<br>
+2. 想一个同义不同名的例子（比如用户说“算钱”，代码里叫“结算”），写出关键词索引会怎么失败、向量索引会怎么补上。<br>
+3. 给 search_code 定一个 TopK：Top 3 和 Top 10 各有什么代价？为什么 Day 8 说“名单长度要设上限”？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="1">
+<p><strong>1. 索引存的是什么？</strong></p>
+<button data-i="0">全部代码原文，一字不差</button>
+<button data-i="1">能快速定位的线索：路径、函数名、位置、摘要</button>
+<button data-i="2">模型的权重</button>
+<div class="ans">解析：选 B。索引是代码地图，不是代码本身；检索先查地图拿短名单，再按名单读文件。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>2. Mini Cursor 起步，索引粒度优先选哪档？</strong></p>
+<button data-i="0">文件级，因为最简单</button>
+<button data-i="1">代码块级，因为最精确</button>
+<button data-i="2">函数 / 类级，因为改代码基本落到某个函数上</button>
+<div class="ans">解析：选 C。文件级太粗、块级太碎，函数级是最常用的起步粒度。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>3. 关键词索引最擅长什么？最不擅长什么？</strong></p>
+<button data-i="0">擅长精确名字，不擅长同义不同名</button>
+<button data-i="1">擅长语义相近，不擅长精确名字</button>
+<button data-i="2">什么都擅长，没有短板</button>
+<div class="ans">解析：选 A。用户说“算钱”、代码里叫“结算”，关键词就对不上，这时要向量索引补位。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>4. 检索结果应该怎么给模型？</strong></p>
+<button data-i="0">把所有相关文件全文都发过去</button>
+<button data-i="1">给短名单：路径、函数名、行号、摘要，模型按名单读指定范围</button>
+<button data-i="2">只给一个文件名，其他让模型猜</button>
+<div class="ans">解析：选 B。名单长度也要设上限，比如 Top 5，超过就说明检索太宽、要收紧。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>5. 检索没找对，有哪些信号？</strong></p>
+<button data-i="0">模型回答得特别快</button>
+<button data-i="1">模型一次就改对了</button>
+<button data-i="2">模型说找不到、改的文件不沾边、报错文件不在名单里</button>
+<div class="ans">解析：选 C。出现信号要回到检索这一步换关键词、放宽粒度、补向量检索，而不是让模型继续猜。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>6. 索引过期会怎样？</strong></p>
+<button data-i="0">检索给的是旧位置，模型按旧位置改代码，改完对不上；过期索引比没有索引更坑</button>
+<button data-i="1">没影响，模型会自动纠正</button>
+<button data-i="2">只会让检索变慢一点</button>
+<div class="ans">解析：选 A。索引必须跟着代码走：文件一改就更新，或检索前校验位置还在不在。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：关键词索引和向量索引，你会怎么选？</summary>
+<p>混合：关键词把精确命中排前面，向量补语义相关的，最后合并去重、总数设上限。只用关键词，同义不同名会漏；只用向量，精确名字容易被语义相近但不对的代码挤掉。选型的依据是问题类型，不是哪个更新就用哪个。</p>
+</details>
+<details><summary>Q2：检索结果 TopK 怎么定？</summary>
+<p>看任务和上下文预算：TopK 太小会漏关键文件，太大又会把无关文件塞给模型、烧 Token 还带偏。起步 Top 5，跑评测集看命中率和 Token 消耗，再调。TopK 不是拍脑袋定的，是评测调出来的。</p>
+</details>
+<details><summary>Q3：大仓库的索引怎么做增量更新？</summary>
+<p>全量重建只适合小仓库；大仓库要增量：文件一改只更新改动的文件和受影响的调用关系，或者按文件哈希判断有没有变，没变的跳过。增量更新的核心是“别每次都全量扫”，否则仓库一大，索引更新本身就成了负担。</p>
+</details>
+<details><summary>Q4：检索和 RAG 的检索，是一回事吗？</summary>
+<p>思路一样，都是“先查、再答”，但对象不同：这里查的是代码结构（函数、调用关系），RAG 查的是文档内容（段落、知识）。代码检索更看重精确名字和结构，向量只是补充；文档检索更看重语义，关键词只是补充。主次是反的。</p>
+</details>
+<details><summary>Q5：检索找对了，但模型还是改错了，问题可能在哪？</summary>
+<p>先分层定位：是检索名单里根本没有正确文件，还是名单对了但模型读错了范围，还是 diff 写错了，还是测试本身有问题。分层定位比笼统说“模型不行”有用得多，也是 Day 8 五工具分工干净的价值。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>索引是基础设施，不是临时工具：要有更新机制、过期校验、命中率监控。检索命中率掉了，先查索引是不是过期了、再查查询词是不是变了，别一上来就怪模型。</p>
+<p><strong>简历讲法：</strong>别写“做过代码检索”，写“给 Mini Cursor 做了函数级倒排索引，检索返回路径、函数名、行号的短名单，TopK 设上限，关键词与向量混合检索，索引过期时先校验位置再读文件”。前者是名词，后者是可追问的方案。</p>
+<p><strong>明日预告：</strong>Day 10 讲文件工具与 diff 预览：read_file 怎么读指定范围、write_patch 的 diff 怎么生成、人确认后才落盘的流程怎么走。</p>
+</div>
+
+<div class="nav">
+<span><a href="day08.html">← Day 8</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>Day 10 明日更新 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

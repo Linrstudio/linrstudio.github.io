@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 8：代码 Agent 的架构：索引、对话、改代码、跑测试 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 8 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 8：代码 Agent 的架构：索引、对话、改代码、跑测试</h1>
+<p>第 2 周的第一课，不写完整 Mini Cursor，先把它的骨架讲清：一个代码 Agent 其实就是第 1 周那个工具循环，换了一套工具、加了两道关卡——改之前先给人看 diff，改之后必须跑测试验算。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 一张图：代码 Agent 的主循环</h3>
+<pre><code>用户需求
+  → 检索：先在仓库索引里找相关文件（不是全量塞给模型）
+  → 出 plan：改哪几个文件、每个文件改什么，先说清楚
+  → 出 diff：改之前先生成 diff 预览，给人确认
+  → 确认后落盘：只改 diff 里写明的部分
+  → 跑测试：白名单里的命令，测试过了才算完成
+  → 测试不过：把报错贴回给模型，再走一轮（步数有上限）</code></pre>
+<p>对照第 1 周：检索、读文件、改代码、跑命令，全是工具；模型还是做决策，工具还是干活。变的是工具集和关卡，不是循环本身。</p>
+<h3>2. 为什么不能全量塞文件：上下文是有预算的</h3>
+<p>第 1 周 Day 6 讲过记忆预算，这里是同一个道理，换到代码上：一个仓库几百个文件，全塞进去 Token 爆了不说，模型还会在无关文件里“找”答案，越找越偏。所以正确顺序永远是：<strong>先检索、再读文件</strong>——检索给“可能相关”的短名单，模型只读名单里的文件。Day 9 会专门讲索引和检索怎么做，今天先记住顺序。</p>
+<h3>3. 五个工具，分工要干净</h3>
+<table>
+<tr><th>工具</th><th>干什么</th><th>不干什么</th></tr>
+<tr><td>list_files</td><td>列出仓库结构，让模型知道有什么</td><td>不读内容</td></tr>
+<tr><td>search_code</td><td>按关键词/函数名找相关位置</td><td>不直接改代码</td></tr>
+<tr><td>read_file</td><td>读指定文件的指定范围</td><td>不一次读整个大文件</td></tr>
+<tr><td>write_patch</td><td>生成 diff 预览，确认后才落盘</td><td>不直接整文件重写</td></tr>
+<tr><td>run_command</td><td>跑白名单里的命令，如测试</td><td>不跑白名单外的任意命令</td></tr>
+</table>
+<p>分工干净的好处：出了问题能定位到某一步——是检索没找对、还是 diff 写错了、还是测试本身就不过。工具一锅烩，排障就只能靠猜。</p>
+<h3>4. 两道关卡，是 Mini Cursor 和“让模型直接改代码”的区别</h3>
+<p><strong>第一道：改之前先出 plan + diff，给人确认。</strong>模型先说“改哪、怎么改”，生成 diff 预览，人点头了才落盘。没这道关，模型改错一个地方，你都不知道它改了什么，更没法回滚。</p>
+<p><strong>第二道：改之后必须跑测试，测试是验收标准。</strong>模型说“改好了”不算数，测试过了才算。测试不过就把报错原样贴回给模型再改一轮——这就是第 2 周验收里“测试能跑”的意思。Day 11 会讲命令白名单和测试闭环的细节。</p>
+<div class="warn"><p><strong>容易翻车的点：</strong>别让模型直接输出整文件覆盖。整文件重写会悄悄丢掉没注意到的逻辑（比如一个边界条件、一个注释里的约定），diff 只改写明的地方，丢东西的面小得多，出了问题也好回滚。这就是计划里那句“为什么不直接让模型输出整文件”的答案。</p></div>
+<h3>5. 步数上限：代码 Agent 也会死循环</h3>
+<p>测试不过 → 再改 → 再测，这个循环和第 1 周的工具循环一样需要上限。第 2 周的验收标准里写着“步骤 ≤5 步”，意思就是：一个任务最多走 5 步，超了就停下来给人看——是需求本身说不清，还是检索一直找错地方，停下来比一直烧 Token 瞎改强。模糊需求时 Agent 该问澄清问题而不是瞎猜，Day 14 复盘会专门讲这个取舍。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：五个工具的骨架（示意，先看形状，不接真实模型）</h3>
+<pre><code># 工具只是函数，模型通过 bind_tools 调用它们，和第 1 周的 calculator 工具没有本质区别
+TOOLS = ["list_files", "search_code", "read_file", "write_patch", "run_command"]
+
+def list_files(path="."):
+    """列出目录结构，只给名字和层级，不给内容。"""
+    ...
+
+def search_code(keyword):
+    """在索引里找 keyword 出现的文件和行号，返回短名单。"""
+    ...
+
+def read_file(path, start, end):
+    """只读指定范围，拒绝一次读整个大文件。"""
+    ...
+
+def write_patch(path, old, new):
+    """先生成 diff 预览返回给人，确认后才落盘——这一步今天只返回 diff，不写盘。"""
+    ...
+
+def run_command(cmd):
+    """只放行白名单里的命令，其余一律拒绝。见示例 2。"""
+    ...</code></pre>
+<h3>示例 2：白名单 + diff 预览，两个护栏的最小实现（本地实测）</h3>
+<pre><code>ALLOWED = ("npm test", "tsc", "git diff", "pytest")
+
+def run_command(cmd):
+    # 白名单是前缀匹配：命令必须以白名单里的某一项开头，否则拒绝执行
+    if not any(cmd.startswith(a) for a in ALLOWED):
+        return f"拒绝执行：{cmd} 不在白名单里"
+    return f"放行：{cmd}（这里接真实执行）"
+
+import difflib
+def preview_diff(old, new):
+    # diff 预览：只展示改动行，人确认后才落盘
+    return "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True)))
+
+# 本地实测结果：
+# run_command("npm test") → 放行；run_command("rm -rf /") → 拒绝执行
+# preview_diff 只输出改动的那几行，没改的行不会出现在 diff 里</code></pre>
+<p>注意：示例 2 的 run_command 在课程页面里是“放行判断”演示，真实执行要接 subprocess 并设超时，第 2 周动手时再补——护栏的形状先对，执行细节后补，不跳步。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿你自己的一个小项目（或第 1 周的 agent-core），写一句话需求，比如“给计算器工具加一个取余运算”，按本课主循环手写一遍 plan：先列出要检索的关键词、再列出要读的文件、最后写出 diff 预览长什么样——不动代码，只写 plan。<br>
+2. 对照示例 2，在纸上跑两遍：run_command("pytest") 放行还是拒绝？run_command("git push") 呢？为什么后者必须拒绝？<br>
+3. 想一个模糊需求（比如“把这个页面改好看点”），写出 Agent 应该先问的 2 个澄清问题，而不是直接开改——这是 Day 14 要讲的取舍，今天先练手感。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+
+<div class="q" data-answer="2">
+<p><strong>1. 代码 Agent 的主循环，第一步应该是什么？</strong></p>
+<button data-i="0">直接让模型输出整文件覆盖</button>
+<button data-i="1">直接跑测试</button>
+<button data-i="2">先在仓库索引里检索，找到相关文件再读</button>
+<div class="ans">解析：选 C。先检索、再读文件，全量塞文件既烧 Token 又容易让模型在无关文件里找错答案。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>2. write_patch 为什么要先出 diff 预览、等人确认才落盘？</strong></p>
+<button data-i="0">让人先看到改了哪、怎么改，改错了好发现、好回滚</button>
+<button data-i="1">为了让 diff 看起来专业</button>
+<button data-i="2">为了拖慢速度</button>
+<div class="ans">解析：选 A。没这道关，模型改错地方你都不知道它改了什么。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>3. run_command 的白名单是干嘛的？</strong></p>
+<button data-i="0">让模型想跑什么就跑什么</button>
+<button data-i="1">只放行测试、检查这类命令，白名单外的命令一律拒绝</button>
+<button data-i="2">给命令加速</button>
+<div class="ans">解析：选 B。任意命令等于把机器交给模型，白名单是安全底线，Day 11 会展开讲。</div>
+</div>
+
+<div class="q" data-answer="2">
+<p><strong>4. 为什么不让模型直接输出整文件？</strong></p>
+<button data-i="0">整文件输出速度太慢</button>
+<button data-i="1">整文件输出 Token 太少</button>
+<button data-i="2">整文件重写会悄悄丢掉边界条件等细节，diff 只改写明的地方、面小得多</button>
+<div class="ans">解析：选 C。丢东西的面和回滚的难度，是选 diff 而不是整文件覆盖的真正原因。</div>
+</div>
+
+<div class="q" data-answer="0">
+<p><strong>5. 测试在代码 Agent 里是什么角色？</strong></p>
+<button data-i="0">验收标准：模型说改好了不算，测试过了才算</button>
+<button data-i="1">可选项，有时间再跑</button>
+<button data-i="2">只是给人看的摆设</button>
+<div class="ans">解析：选 A。测试不过就把报错贴回给模型再改一轮，这就是测试闭环。</div>
+</div>
+
+<div class="q" data-answer="1">
+<p><strong>6. 一个任务改了 5 步还没过测试，应该怎么办？</strong></p>
+<button data-i="0">继续烧 Token 瞎改，直到改过为止</button>
+<button data-i="1">停下来给人看：是需求说不清，还是检索一直找错地方</button>
+<button data-i="2">直接把测试删掉，让它“通过”</button>
+<div class="ans">解析：选 B。步数上限就是防死循环的，停下来定位问题，比一直改强；删测试是作弊，不是验收。</div>
+</div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：代码 Agent 的上下文怎么组织？全量塞文件为什么不行？</summary>
+<p>先检索、再读文件：索引给“可能相关”的短名单，模型只读名单里的文件。全量塞文件 Token 爆了不说，模型还会在无关文件里找答案，越找越偏。上下文预算和第 1 周的记忆预算是同一个道理。</p>
+</details>
+<details><summary>Q2：改错代码时，你的 Agent 怎么发现并回滚？</summary>
+<p>两道关卡：改之前 diff 预览给人确认，改错的面本身就小；改之后跑测试，测试不过就是发现，报错贴回再改。回滚靠 diff：只改写明的地方，没改的行原样不动，出了问题按 diff 往回撤就行。</p>
+</details>
+<details><summary>Q3：为什么 Mini Cursor 不直接让模型输出整文件？</summary>
+<p>整文件重写会悄悄丢掉边界条件、注释里的约定这些没注意到的逻辑。diff 只改写明的地方，丢东西的面小、出了问题好定位、好回滚。面试时把“面小、好回滚”讲清，比只说“更安全”可信。</p>
+</details>
+<details><summary>Q4：第 1 周的循环、记忆、图，在 Mini Cursor 里分别复用在哪？</summary>
+<p>循环是主循环本身：检索 → plan → diff → 测试 → 再改；记忆是上下文预算：只读检索到的文件，不全量塞；图是流程有分支时的形态：比如“测试不过”走回改代码那一步，“人没确认”停在确认节点，都是条件边。不是新学一套，是旧骨架换工具。</p>
+</details>
+<details><summary>Q5：第 2 周结束时，你能拿出什么可演示的东西？</summary>
+<p>一个 mini-cursor：对着一个真实小项目，能改 3 个真实需求（加功能、修 Bug、重构），每个任务 diff 可审、测试能跑、步骤 ≤5 步。面试讲的时候按任务讲：需求是什么、检索找对没有、diff 长什么样、测试第几次过的——比罗列工具名可信得多。</p>
+</details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>代码 Agent 上线前，先问三个问题：改之前人看没看 diff？改之后测试跑没跑？命令白名单外的路堵没堵？三问有一个答不上来，就别让它碰真实仓库。</p>
+<p><strong>简历讲法：</strong>别写“做过代码 Agent”，写“给代码 Agent 定了五工具分工：检索先行、diff 预览经人确认才落盘、跑测试做验收、白名单外的命令拒绝、步骤上限 5 步防死循环”。前者是名词，后者是可追问的架构。</p>
+<p><strong>下周预告：</strong>Day 9 讲仓库索引与代码检索：索引到底存什么、关键词索引和向量索引怎么选、检索没找对时怎么发现。</p>
+</div>
+
+<div class="nav">
+<span><a href="day07.html">← Day 7</a> &nbsp; <a href="index.html">课程首页</a></span>
+<span>Day 9 →</span>
+</div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
