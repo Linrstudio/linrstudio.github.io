@@ -176,7 +176,7 @@ state = app.invoke(
 <p>能做出：最小链、提示词与 FewShot、结构化输出、手写工具循环、组合记忆、图版循环加检查点。还缺的是：真实项目里的工具设计、检索与评测、Computer Use 的安全边界，这些正是第 2 到第 4 周的内容。面试时能这样分层讲，比罗列 API 可信得多。</p>
 </details>
 <details><summary>Q5：为什么不用 AgentExecutor，一开始就要手写循环？</summary>
-<p>因为面试和排障都要看清循环：模型出 tool_call、你执行、结果回填、再决策。黑盒跑通了也不知道哪一步出了问题，手写循环每一步都看得见，出了问题能定位到某一步，图版也只是把同一循环画出来而已。</p>
+<p>因为面试和排障都要看清循环：模型出 tool_call、你执行、结果回填、再决策。黑盒跑通了也不知道哪一步出了问题，手写循环每一步都看得见，出了问题能定位到某一步，图版也只是把同一循环画出来而已。另注意：AgentExecutor 是旧版 API，LangChain 1.x 已删除；要现成工厂时用 <code>from langchain.agents import create_agent</code>，不要再抄旧教程的 AgentExecutor，也不要用已废弃的 <code>langgraph.prebuilt.create_react_agent</code>。</p>
 </details>
 
 <h2>五、加分项</h2>

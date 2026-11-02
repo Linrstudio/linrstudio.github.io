@@ -27,7 +27,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <body>
 <p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 5 / 30</span> <span class="tag">约 60 分钟</span></p>
 <h1>Day 5：手写 Tool Calling 循环（不依赖黑盒）</h1>
-<p>前面四天讲的都是“一次调用”：提示词进去、结果出来。今天开始讲 Agent 的核心——模型自己决定要不要调工具、调哪个、结果回来后怎么办。这一课不依赖 AgentExecutor，把循环的每一步都摊开写，就是你脚手架里 <code>agent-core/agent_core/loop.py</code> 的 <code>run_agent</code>。</p>
+<p>前面四天讲的都是“一次调用”：提示词进去、结果出来。今天开始讲 Agent 的核心——模型自己决定要不要调工具、调哪个、结果回来后怎么办。这一课不依赖 AgentExecutor（旧版，LangChain 1.x 已删除），把循环的每一步都摊开写，就是你脚手架里 <code>agent-core/agent_core/loop.py</code> 的 <code>run_agent</code>。</p>
 
 <h2>一、核心解释</h2>
 <h3>1. 循环就 4 步，面试要能口述</h3>
@@ -57,7 +57,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 </ul>
 <div class="warn"><strong>容易踩的坑：</strong>把 history 直接传给循环、让循环在上面追加。你的 <code>run_agent</code> 里第一句就是 <code>history = list(messages)</code>——复制一份再追加，避免污染调用方的数据。另一个坑：把模型调用失败也当成普通异常往外抛；正确做法是返回 <code>status="error"</code> 并保留轨迹，复盘时才有东西可看。</div>
 <h3>5. 手写循环 vs AgentExecutor，选哪个</h3>
-<p>AgentExecutor 是 LangChain 封装好的黑盒：传 llm、tools、prompt 就能跑，省事，但中间每一步发生了什么、失败时卡在哪一步，你看不见。手写循环的价值恰恰是“每一步都看得见”：面试能口述流程，出问题能定位到某一步，步数、Token、工具调用次数都能自己记进日志（你的脚手架就有 <code>runs/log.jsonl</code>）。结论和 Day 3 的小考结论一致：<strong>单步简单调用不用框架，反复调工具才需要循环，流程分支与人工确认才上 LangGraph</strong>——Day 7 会讲后者。</p>
+<p>AgentExecutor 是旧版 LangChain 封装好的黑盒：传 llm、tools、prompt 就能跑，省事，但中间每一步发生了什么、失败时卡在哪一步，你看不见。<strong>版本注意：LangChain 1.x 里 AgentExecutor 已经被删了，<code>from langchain.agents import AgentExecutor</code> 会报 ImportError；新版对应的工厂是 <code>from langchain.agents import create_agent</code>，而 LangGraph 里的 <code>create_react_agent</code> 也已标记为废弃、指向同一个 create_agent。</strong>所以本课不依赖它，手写循环才是不会随版本失效的骨架。手写循环的价值恰恰是“每一步都看得见”：面试能口述流程，出问题能定位到某一步，步数、Token、工具调用次数都能自己记进日志（你的脚手架就有 <code>runs/log.jsonl</code>）。结论和 Day 3 的小考结论一致：<strong>单步简单调用不用框架，反复调工具才需要循环，流程分支与人工确认才上 LangGraph</strong>——Day 7 会讲后者。</p>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：循环骨架（就是 loop.py 的 run_agent，注释精简版）</h3>
@@ -183,13 +183,13 @@ def calculator(expression: str) -> str:
 <p>前两者都转成 ToolMessage 回填，让模型自己纠错，循环不崩；模型调用失败是循环本身的问题，返回 status="error" 并保留轨迹，不伪装成工具结果。区分“工具层面的失败”和“循环层面的失败”，是这段代码最值得讲的设计。</p>
 </details>
 <details><summary>Q5：什么时候用手写循环，什么时候用 AgentExecutor / LangGraph？</summary>
-<p>单步简单调用不用框架；反复调工具、要讲清流程、要记日志排障时用手写循环；流程出现分支、要人工确认、要状态管理时上 LangGraph。选型看的是“流程复杂度”，不是“工具新旧”。</p>
+<p>单步简单调用不用框架；反复调工具、要讲清流程、要记日志排障时用手写循环；流程出现分支、要人工确认、要状态管理时上 LangGraph。选型看的是“流程复杂度”，不是“工具新旧”。另注意：AgentExecutor 是旧版 API，LangChain 1.x 已删除，不要再按旧教程抄 <code>from langchain.agents import AgentExecutor</code>；要现成工厂时用 <code>from langchain.agents import create_agent</code>。</p>
 </details>
 
 <h2>五、加分项</h2>
 <div class="card">
 <p><strong>生产视角：</strong>步数、工具调用次数、Token 用量、max_steps 触发率都要进日志和监控；max_steps 频繁触发往往意味着提示词没给模型“收尾”的信号，或者工具设计让模型走进了死胡同——先查提示词和工具描述，再调上限。</p>
-<p><strong>简历讲法：</strong>别写“会用 AgentExecutor”，写“手写 Tool Calling 循环：bind_tools 决策、ToolMessage 按 id 回填、工具异常与未知工具转消息不崩、max_steps 兜底并保留轨迹，离线 Fake 模型测试 3/3 通过”。前者是名词，后者是可验证的工程。</p>
+<p><strong>简历讲法：</strong>别写“会用 AgentExecutor”（1.x 已删），写“手写 Tool Calling 循环：bind_tools 决策、ToolMessage 按 id 回填、工具异常与未知工具转消息不崩、max_steps 兜底并保留轨迹，离线 Fake 模型测试 3/3 通过”。前者是名词，后者是可验证的工程。</p>
 <p><strong>明日预告：</strong>Day 6 讲 Memory：模型为什么“失忆”，记忆怎么做预算——正好接上脚手架 memory.py 的“超预算保留 System + 最近 6 条、旧消息折叠为摘要标记”。</p>
 </div>
 

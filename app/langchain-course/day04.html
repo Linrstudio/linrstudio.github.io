@@ -178,7 +178,7 @@ else:
 <div class="card">
 <p><strong>生产视角：</strong>Schema 也要版本管理，字段改名、改必填、改类型都可能破坏下游；新增字段先设可选，跑一段时间确认没问题再收紧。解析失败率、重试次数、兜底触发率都要进监控，突然上升往往意味着提示词或模型变了。</p>
 <p><strong>简历讲法：</strong>别写“会用 Pydantic”，写“用 with_structured_output 做过任务拆解的结构化输出，必填项收敛、可选字段防编造，校验失败按‘看错误—带错误重试—改 schema’的顺序处理，原始输出记日志可复盘”。前者是名词，后者是流程。</p>
-<p><strong>明日预告：</strong>Day 5 讲手写 Tool Calling 循环：不依赖 AgentExecutor 黑盒，把“模型决策 → 调工具 → 结果回填 → 再决策”这 4 步彻底讲透，也是咱们脚手架 loop.py 的核心。</p>
+<p><strong>明日预告：</strong>Day 5 讲手写 Tool Calling 循环：不依赖旧版 AgentExecutor 黑盒（LangChain 1.x 已删除），把“模型决策 → 调工具 → 结果回填 → 再决策”这 4 步彻底讲透，也是咱们脚手架 loop.py 的核心。</p>
 </div>
 
 <div class="nav">
