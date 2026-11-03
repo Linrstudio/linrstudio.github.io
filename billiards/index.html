@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg" />
-    <title>台球游戏</title>
+    <title data-i18n="title">Billiards</title>
     <style>
       :root {
         --bg: #ece9e2;
@@ -322,6 +322,10 @@
         .hint { display: none; }
         .message { min-height: 32px; }
       }
+      .lang-row { display: flex; justify-content: flex-end; flex: none; margin-bottom: 6px; }
+      .safety { flex: none; margin-top: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 11px; font-size: 12px; line-height: 1.6; color: var(--ink-soft); }
+      .safety b { color: var(--ink); }
+      .safety span + span::before { content: " · "; }
       @media (max-width: 640px) {
         .page { padding: 8px 8px calc(6px + env(safe-area-inset-bottom, 0px)); }
         .hint { display: none; }
@@ -339,21 +343,25 @@
   <body>
     <div class="page">
       <div class="topbar">
-        <div class="seg" id="modeSeg" role="group" aria-label="游戏模式">
-          <button id="modeSolo" class="on" type="button">单人 · 对战电脑</button>
-          <button id="modeDuo" type="button">双人 · 同屏对战</button>
+        <div class="seg" id="modeSeg" role="group" data-i18n-aria="mode_aria" aria-label="Game mode">
+          <button id="modeSolo" class="on" type="button" data-i18n="mode_solo">Solo · vs Computer</button>
+          <button id="modeDuo" type="button" data-i18n="mode_duo">2 Players · Same Screen</button>
         </div>
       </div>
+      <div class="lang-row"><div class="seg" id="langSeg" role="group" aria-label="Language / 语言">
+        <button id="langZh" type="button">中文</button>
+        <button id="langEn" type="button">EN</button>
+      </div></div>
 
       <div class="scoreboard">
         <div class="pcard active" id="card0">
-          <div class="who"><span class="turn-dot"></span><span id="name0">你</span><span class="group-label" id="group0">花色未定</span></div>
-          <div class="tray" id="tray0"><span class="empty-note">尚未进球</span></div>
+          <div class="who"><span class="turn-dot"></span><span id="name0" data-i18n="name_you">You</span><span class="group-label" id="group0" data-i18n="group_undecided">Group not set</span></div>
+          <div class="tray" id="tray0"><span class="empty-note" data-i18n="tray_empty">No balls pocketed yet</span></div>
         </div>
         <div class="vs">VS</div>
         <div class="pcard" id="card1">
-          <div class="who"><span class="turn-dot"></span><span id="name1">电脑</span><span class="group-label" id="group1">花色未定</span></div>
-          <div class="tray" id="tray1"><span class="empty-note">尚未进球</span></div>
+          <div class="who"><span class="turn-dot"></span><span id="name1" data-i18n="name_cpu">Computer</span><span class="group-label" id="group1" data-i18n="group_undecided">Group not set</span></div>
+          <div class="tray" id="tray1"><span class="empty-note" data-i18n="tray_empty">No balls pocketed yet</span></div>
         </div>
       </div>
 
@@ -361,18 +369,18 @@
         <div class="table-box" id="tableBox">
         <canvas id="table" width="560" height="920"></canvas>
         <div class="overlay" id="startOverlay">
-          <h2>台球对局</h2>
-          <p>在台面上拖动来瞄准，按住「击球」蓄力、松手出杆。先进球的一方确定花色（全色 / 花色），打完自己的球后再击入 8 号球获胜。</p>
+          <h2 data-i18n="start_title">8-Ball Pool</h2>
+          <p data-i18n="start_desc">Drag on the table to aim, hold Shoot to charge, release to strike. The first player to pocket a ball takes that group (solids / stripes); clear your group, then pocket the 8 ball to win.</p>
           <div class="row">
-            <button class="btn primary" id="startSolo" type="button">单人 · 对战电脑</button>
-            <button class="btn" id="startDuo" type="button">双人 · 同屏对战</button>
+            <button class="btn primary" id="startSolo" type="button" data-i18n="mode_solo">Solo · vs Computer</button>
+            <button class="btn" id="startDuo" type="button" data-i18n="mode_duo">2 Players · Same Screen</button>
           </div>
         </div>
         <div class="overlay hidden" id="winOverlay">
-          <h2 id="winTitle">你赢了！</h2>
+          <h2 id="winTitle" data-i18n="win_you">You Win!</h2>
           <p id="winText"></p>
           <div class="row">
-            <button class="btn primary" id="againBtn" type="button">再来一局</button>
+            <button class="btn primary" id="againBtn" type="button" data-i18n="again">Play Again</button>
           </div>
         </div>
         </div>
@@ -380,22 +388,140 @@
 
       <div class="controls">
         <div class="aim-btns">
-          <button id="aimLeft" type="button" aria-label="向左微调瞄准">◀</button>
-          <button id="aimRight" type="button" aria-label="向右微调瞄准">▶</button>
+          <button id="aimLeft" type="button" data-i18n-aria="aim_left" aria-label="Fine-tune aim left">◀</button>
+          <button id="aimRight" type="button" data-i18n-aria="aim_right" aria-label="Fine-tune aim right">▶</button>
         </div>
         <div class="power-zone">
-          <div class="power-label"><span>力度</span><span id="powerPct">0%</span></div>
+          <div class="power-label"><span data-i18n="power">Power</span><span id="powerPct">0%</span></div>
           <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
         </div>
-        <button id="shootBtn" type="button">按住蓄力 · 击球</button>
+        <button id="shootBtn" type="button" data-i18n="shoot_hold">Hold to charge · Shoot</button>
       </div>
 
-      <div class="message" id="message">选择模式开始对局。拖动台面瞄准，按住击球键蓄力出杆。</div>
-      <p class="hint">玩法要点：拖动手指（或鼠标）在台面上移动即可转动瞄准线，虚线尽头是母球的预计撞击点；◀ ▶ 可精细微调角度。按住「击球」蓄力、松手出杆；轻点一下则以中等力度直接击球。母球落袋算犯规，对方获得全场自由球（拖动母球摆放位置）。</p>
+      <div class="message" id="message" data-i18n="msg_initial">Choose a mode to start. Drag on the table to aim, hold the Shoot button to charge.</div>
+      <p class="hint" data-i18n="hint">How to play: drag a finger (or mouse) on the table to rotate the aim line; the end of the dashed line is the cue ball's predicted contact point. ◀ ▶ fine-tune the angle. Hold Shoot to charge and release to strike; a quick tap shoots at medium power. Pocketing the cue ball is a foul — your opponent gets ball in hand anywhere on the table (drag the cue ball into place).</p>
+      <footer class="safety"><b data-i18n="safety_title">About & Safety Notes</b><br><span data-i18n="safety_age">Rated E for Everyone: no violence, no gambling, no chat.</span><span data-i18n="safety_pay">No in-app purchases, no loot boxes, no real-money gambling.</span><span data-i18n="safety_privacy">No personal data is collected; scores are stored only in your browser.</span><span data-i18n="safety_photo">Photosensitivity note: this game has no flashing effects; stop and rest immediately if you feel discomfort.</span></footer>
     </div>
 
     <script>
       "use strict";
+      /* ================= i18n ================= */
+      /* Language priority: ?lang= param > localStorage > browser language.
+         Every user-visible string lives in I18N; game code must use t()/fmt(). */
+      var I18N = {
+        zh: {
+          title: "台球游戏", mode_aria: "游戏模式",
+          mode_solo: "单人 · 对战电脑", mode_duo: "双人 · 同屏对战",
+          name_you: "你", name_cpu: "电脑", name_p1: "玩家一", name_p2: "玩家二",
+          group_undecided: "花色未定", group_solid: "全色球", group_stripe: "花色球",
+          tray_empty: "尚未进球", tray_wait: "等待定花色", tray_cleared: "已清台，可打 8 号",
+          start_title: "台球对局",
+          start_desc: "在台面上拖动来瞄准，按住「击球」蓄力、松手出杆。先进球的一方确定花色（全色 / 花色），打完自己的球后再击入 8 号球获胜。",
+          again: "再来一局",
+          aim_left: "向左微调瞄准", aim_right: "向右微调瞄准",
+          power: "力度",
+          shoot_hold: "按住蓄力 · 击球", shoot_place: "先拖动母球摆位", shoot_charging: "蓄力中……松手击球",
+          msg_initial: "选择模式开始对局。拖动台面瞄准，按住击球键蓄力出杆。",
+          hint: "玩法要点：拖动手指（或鼠标）在台面上移动即可转动瞄准线，虚线尽头是母球的预计撞击点；◀ ▶ 可精细微调角度。按住「击球」蓄力、松手出杆；轻点一下则以中等力度直接击球。母球落袋算犯规，对方获得全场自由球（拖动母球摆放位置）。",
+          msg_start_solo: "对局开始，由<b>你</b>开球。拖动台面瞄准，按住「击球」蓄力，松手出杆！",
+          msg_start_duo: "对局开始，由<b>玩家一</b>开球。拖动台面瞄准，按住「击球」蓄力，松手出杆！",
+          msg_foul: "犯规：母球落袋！{p} 获得自由球——先拖动母球摆好位置，再瞄准击球。",
+          msg_continue: "{p} 进球，继续击球！",
+          msg_assigned: "{p} 进球，花色已定：{p}打{g}，继续击球！",
+          msg_opp_ball: "打进了对方的球，不计分。轮到 {p}。",
+          msg_no_pocket: "没有进球，轮到 {p}。",
+          msg_placed: "母球已摆好。拖动台面瞄准，按住「击球」蓄力出杆！",
+          msg_ai_aim: "电脑正在瞄准……",
+          win_you: "你赢了！", win_cpu: "电脑获胜", win_duo: "{p} 获胜！",
+          reason_cleared: "打完本组球后顺利击入 8 号球",
+          reason_early8: "{p} 提前击入 8 号球",
+          reason_early8_foul: "{p} 提前击入 8 号球，且母球落袋",
+          safety_title: "关于与安全提示",
+          safety_age: "适合所有年龄（Rated E for Everyone）：无暴力、无赌博、无聊天功能。",
+          safety_pay: "无内购、无开箱抽奖、无真钱赌博。",
+          safety_privacy: "不收集任何个人数据；分数只存在你的浏览器本地。",
+          safety_photo: "光敏性提示：本游戏无闪烁特效；如感不适请立即停止并休息。"
+        },
+        en: {
+          title: "Billiards", mode_aria: "Game mode",
+          mode_solo: "Solo · vs Computer", mode_duo: "2 Players · Same Screen",
+          name_you: "You", name_cpu: "Computer", name_p1: "Player 1", name_p2: "Player 2",
+          group_undecided: "Group not set", group_solid: "Solids", group_stripe: "Stripes",
+          tray_empty: "No balls pocketed yet", tray_wait: "Waiting for groups", tray_cleared: "Cleared — you may shoot the 8 ball",
+          start_title: "8-Ball Pool",
+          start_desc: "Drag on the table to aim, hold Shoot to charge, release to strike. The first player to pocket a ball takes that group (solids / stripes); clear your group, then pocket the 8 ball to win.",
+          again: "Play Again",
+          aim_left: "Fine-tune aim left", aim_right: "Fine-tune aim right",
+          power: "Power",
+          shoot_hold: "Hold to charge · Shoot", shoot_place: "Drag the cue ball into place first", shoot_charging: "Charging… release to shoot",
+          msg_initial: "Choose a mode to start. Drag on the table to aim, hold the Shoot button to charge.",
+          hint: "How to play: drag a finger (or mouse) on the table to rotate the aim line; the end of the dashed line is the cue ball's predicted contact point. ◀ ▶ fine-tune the angle. Hold Shoot to charge and release to strike; a quick tap shoots at medium power. Pocketing the cue ball is a foul — your opponent gets ball in hand anywhere on the table (drag the cue ball into place).",
+          msg_start_solo: "Game on! <b>You</b> break. Drag to aim, hold Shoot to charge, release to strike!",
+          msg_start_duo: "Game on! <b>Player 1</b> breaks. Drag to aim, hold Shoot to charge, release to strike!",
+          msg_foul: "Foul: cue ball pocketed! {p} gets ball in hand — drag the cue ball into place, then aim and shoot.",
+          msg_continue: "{p} pocketed a ball — shoot again!",
+          msg_assigned: "{p} pocketed a ball — groups set: {p} takes {g}. Shoot again!",
+          msg_opp_ball: "That was the opponent's ball — no score. {p}'s turn.",
+          msg_no_pocket: "No ball pocketed. {p}'s turn.",
+          msg_placed: "Cue ball placed. Drag to aim, hold Shoot to charge!",
+          msg_ai_aim: "Computer is aiming…",
+          win_you: "You Win!", win_cpu: "Computer Wins", win_duo: "{p} Wins!",
+          reason_cleared: "Cleared the group and pocketed the 8 ball",
+          reason_early8: "{p} pocketed the 8 ball too early",
+          reason_early8_foul: "{p} pocketed the 8 ball too early, plus a cue-ball foul",
+          safety_title: "About & Safety Notes",
+          safety_age: "Rated E for Everyone: no violence, no gambling, no chat.",
+          safety_pay: "No in-app purchases, no loot boxes, no real-money gambling.",
+          safety_privacy: "No personal data is collected; scores are stored only in your browser.",
+          safety_photo: "Photosensitivity note: this game has no flashing effects; stop and rest immediately if you feel discomfort."
+        }
+      };
+      var LANG = (function () {
+        try {
+          var q = new URLSearchParams(location.search).get("lang");
+          if (q === "zh" || q === "en") return q;
+          var s = localStorage.getItem("billiards-lang");
+          if (s === "zh" || s === "en") return s;
+        } catch (e) {}
+        return (navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en";
+      })();
+      function t(key) {
+        var d = I18N[LANG] || I18N.en;
+        if (d[key] !== undefined) return d[key];
+        return I18N.en[key] !== undefined ? I18N.en[key] : key;
+      }
+      function fmt(str, params) {
+        params = params || {};
+        return str.replace(/\{(\w+)\}/g, function (m, k) { return params[k] !== undefined ? params[k] : m; });
+      }
+      function winTitleFor(w) {
+        if (state.mode === "solo") return w === 0 ? t("win_you") : t("win_cpu");
+        return fmt(t("win_duo"), { p: playerName(w) });
+      }
+      function applyLang() {
+        document.title = t("title");
+        document.documentElement.lang = LANG === "zh" ? "zh-CN" : "en";
+        document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
+        document.querySelectorAll("[data-i18n-aria]").forEach(function (el) { el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"))); });
+        document.getElementById("langZh").classList.toggle("on", LANG === "zh");
+        document.getElementById("langEn").classList.toggle("on", LANG === "en");
+        updateHUD();
+        updateShootBtn();
+        if (state.lastMsg) setMessage(fmt(t(state.lastMsg.key), state.lastMsg.params));
+        if (state.phase === "over" && state.lastWin) {
+          document.getElementById("winTitle").textContent = winTitleFor(state.lastWin.winner);
+          document.getElementById("winText").textContent = fmt(t(state.lastWin.reasonKey), state.lastWin.params) + (LANG === "zh" ? "。" : ".");
+        }
+      }
+      function setLang(lang) {
+        LANG = lang;
+        try { localStorage.setItem("billiards-lang", lang); } catch (e) {}
+        var u = new URL(location.href);
+        u.searchParams.set("lang", lang);
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+        applyLang();
+      }
+
       /* ================= 常量与状态 ================= */
       var LW = 560, LH = 920;               // 逻辑画布尺寸（竖向桌面，略矮胖以便手机上球更大）
       var RAIL = 46;                        // 边框宽
@@ -435,7 +561,9 @@
         cueDown: false,
         winner: null,
         aiTimer: null,
-        msg: ""
+        msg: "",
+        lastMsg: null,
+        lastWin: null
       };
 
       function ballGroup(n) { return n === 8 ? "eight" : (n < 8 ? "solid" : "stripe"); }
@@ -525,17 +653,15 @@
         document.querySelector(".topbar").classList.add("hidden");
         document.getElementById("modeSolo").classList.toggle("on", mode === "solo");
         document.getElementById("modeDuo").classList.toggle("on", mode === "duo");
-        document.getElementById("name0").textContent = mode === "solo" ? "你" : "玩家一";
-        document.getElementById("name1").textContent = mode === "solo" ? "电脑" : "玩家二";
-        setMessage(mode === "solo"
-          ? "对局开始，由<b>你</b>开球。拖动台面瞄准，按住「击球」蓄力，松手出杆！"
-          : "对局开始，由<b>玩家一</b>开球。拖动台面瞄准，按住「击球」蓄力，松手出杆！");
+        document.getElementById("name0").textContent = mode === "solo" ? t("name_you") : t("name_p1");
+        document.getElementById("name1").textContent = mode === "solo" ? t("name_cpu") : t("name_p2");
+        setMsg(mode === "solo" ? "msg_start_solo" : "msg_start_duo");
         updateHUD();
       }
 
       function playerName(p) {
-        if (state.mode === "solo") return p === 0 ? "你" : "电脑";
-        return p === 0 ? "玩家一" : "玩家二";
+        if (state.mode === "solo") return p === 0 ? t("name_you") : t("name_cpu");
+        return p === 0 ? t("name_p1") : t("name_p2");
       }
 
       /* ================= 物理 ================= */
@@ -638,8 +764,8 @@
         // 8 号球处理
         if (pocketed.indexOf(8) >= 0) {
           var cleared = state.groups[shooter] && remainingOf(shooter) === 0;
-          if (cleared && !foul) { gameOver(shooter, "打完本组球后顺利击入 8 号球"); }
-          else { gameOver(other, playerName(shooter) + " 提前击入 8 号球" + (foul ? "，且母球落袋" : "")); }
+          if (cleared && !foul) { gameOver(shooter, "reason_cleared", {}); }
+          else { gameOver(other, foul ? "reason_early8_foul" : "reason_early8", { p: playerName(shooter) }); }
           return;
         }
 
@@ -662,14 +788,13 @@
           state.turn = other;
           state.ballInHand = true;
           placeCueDefault();
-          setMessage("犯规：母球落袋！" + playerName(other) + " 获得自由球——先拖动母球摆好位置，再瞄准击球。");
+          setMsg("msg_foul", { p: playerName(other) });
         } else if (continueTurn) {
-          setMessage(playerName(shooter) + " 进球" + (justAssigned ? "，花色已定：" + playerName(shooter) + "打" + groupCN(state.groups[shooter]) : "") + "，继续击球！");
+          if (justAssigned) setMsg("msg_assigned", { p: playerName(shooter), g: groupName(state.groups[shooter]) });
+          else setMsg("msg_continue", { p: playerName(shooter) });
         } else {
           state.turn = other;
-          setMessage(pocketed.length > 0 && !justAssigned
-            ? "打进了对方的球，不计分。轮到 " + playerName(other) + "。"
-            : "没有进球，轮到 " + playerName(other) + "。");
+          setMsg(pocketed.length > 0 && !justAssigned ? "msg_opp_ball" : "msg_no_pocket", { p: playerName(other) });
         }
 
         state.phase = "aim";
@@ -678,15 +803,14 @@
         maybeAI();
       }
 
-      function groupCN(g) { return g === "solid" ? "全色球" : g === "stripe" ? "花色球" : ""; }
+      function groupName(g) { return g === "solid" ? t("group_solid") : g === "stripe" ? t("group_stripe") : ""; }
 
-      function gameOver(winner, reason) {
+      function gameOver(winner, reasonKey, params) {
         state.phase = "over";
         state.winner = winner;
-        document.getElementById("winTitle").textContent = state.mode === "solo"
-          ? (winner === 0 ? "你赢了！" : "电脑获胜")
-          : playerName(winner) + " 获胜！";
-        document.getElementById("winText").textContent = reason + "。";
+        state.lastWin = { winner: winner, reasonKey: reasonKey, params: params || {} };
+        document.getElementById("winTitle").textContent = winTitleFor(winner);
+        document.getElementById("winText").textContent = fmt(t(reasonKey), params || {}) + (LANG === "zh" ? "。" : ".");
         document.getElementById("winOverlay").classList.remove("hidden");
         // 对局结束，恢复顶栏与模式选择，方便切换单人/双人再开一局
         document.getElementById("modeSeg").classList.remove("hidden");
@@ -779,7 +903,7 @@
 
       function maybeAI() {
         if (state.mode === "solo" && state.turn === 1 && state.phase === "aim") {
-          setMessage("电脑正在瞄准……");
+          setMsg("msg_ai_aim");
           state.aiTimer = setTimeout(aiTakeTurn, 550);
         }
       }
@@ -1022,6 +1146,7 @@
       /* ================= HUD / 控件 ================= */
       var msgEl = document.getElementById("message");
       function setMessage(html) { msgEl.innerHTML = html; }
+      function setMsg(key, params) { state.lastMsg = { key: key, params: params || {} }; setMessage(fmt(t(key), params || {})); }
 
       function miniBallHTML(n) {
         var c = BALL_COLORS[n];
@@ -1033,18 +1158,18 @@
         for (var p = 0; p < 2; p++) {
           document.getElementById("card" + p).classList.toggle("active", state.turn === p && state.phase !== "over");
           var g = state.groups[p];
-          document.getElementById("group" + p).textContent = g ? groupCN(g) : "花色未定";
+          document.getElementById("group" + p).textContent = g ? groupName(g) : t("group_undecided");
           var tray = document.getElementById("tray" + p);
           var mine = state.balls.filter(function (b) {
             return b.pocketed && g && ballGroup(b.n) === g;
           }).map(function (b) { return b.n; }).sort(function (a, b2) { return a - b2; });
           if (!g) {
             var anyDown = state.balls.filter(function (b) { return b.pocketed; });
-            tray.innerHTML = anyDown.length ? '<span class="empty-note">等待定花色</span>' : '<span class="empty-note">尚未进球</span>';
+            tray.innerHTML = anyDown.length ? '<span class="empty-note">' + t("tray_wait") + '</span>' : '<span class="empty-note">' + t("tray_empty") + '</span>';
           } else if (state.phase === "over" || remainingOf(p) === 0) {
-            tray.innerHTML = mine.map(miniBallHTML).join("") + '<span class="empty-note">已清台，可打 8 号</span>';
+            tray.innerHTML = mine.map(miniBallHTML).join("") + '<span class="empty-note">' + t("tray_cleared") + '</span>';
           } else {
-            tray.innerHTML = mine.length ? mine.map(miniBallHTML).join("") : '<span class="empty-note">尚未进球</span>';
+            tray.innerHTML = mine.length ? mine.map(miniBallHTML).join("") : '<span class="empty-note">' + t("tray_empty") + '</span>';
           }
         }
         updateShootBtn();
@@ -1054,7 +1179,7 @@
         var btn = document.getElementById("shootBtn");
         var humanTurn = state.mode === "duo" || state.turn === 0;
         btn.disabled = !(state.phase === "aim" && humanTurn && !state.ballInHand);
-        btn.textContent = state.ballInHand && humanTurn && state.phase === "aim" ? "先拖动母球摆位" : "按住蓄力 · 击球";
+        btn.textContent = state.ballInHand && humanTurn && state.phase === "aim" ? t("shoot_place") : t("shoot_hold");
       }
 
       function updatePowerUI() {
@@ -1128,7 +1253,7 @@
         if (draggingCue) {
           draggingCue = false;
           state.ballInHand = false;
-          setMessage("母球已摆好。拖动台面瞄准，按住「击球」蓄力出杆！");
+          setMsg("msg_placed");
           updateShootBtn();
         }
       }
@@ -1191,7 +1316,7 @@
         state.chargeStart = performance.now();
         state.power = 0;
         shootBtn.classList.add("charging");
-        shootBtn.textContent = "蓄力中……松手击球";
+        shootBtn.textContent = t("shoot_charging");
       }
       shootBtn.addEventListener("pointerdown", function (e) {
         e.preventDefault();
@@ -1207,7 +1332,7 @@
         state.charging = false;
         shootPointerId = null;
         shootBtn.classList.remove("charging");
-        shootBtn.textContent = "按住蓄力 · 击球";
+        shootBtn.textContent = t("shoot_hold");
         var elapsed = performance.now() - (state.chargeStart || performance.now());
         var p = Math.min(1, elapsed / 1150);
         if (elapsed < 160) p = 0.42; // 轻点：中等力度直接击球
@@ -1252,10 +1377,14 @@
       if (window.ResizeObserver) {
         new ResizeObserver(function () { fitCanvas(); }).observe(document.querySelector(".table-wrap"));
       }
+      document.getElementById("langZh").addEventListener("click", function () { setLang("zh"); });
+      document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
       rack();
       fitCanvas();
       updateHUD();
       updatePowerUI();
+      applyLang();
+      setMsg("msg_initial");
       requestAnimationFrame(loop);
       // canvas 尺寸在布局后校正一次
       setTimeout(fitCanvas, 60);
