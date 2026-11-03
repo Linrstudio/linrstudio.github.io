@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <meta name="description" content="Vue 3 学习笔记：响应式、组件通信、表单、路由、Pinia、持久化、生命周期与测试。">
+  <title>Vue 3 学习整理 · 从响应式到测试</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #192638;
+      --muted: #5d6c80;
+      --line: #dfe6ef;
+      --paper: #ffffff;
+      --canvas: #f4f7fb;
+      --blue: #315ee8;
+      --blue-soft: #edf2ff;
+      --teal: #087e78;
+      --code: #101827;
+      --code-ink: #e7edf6;
+      --shadow: 0 14px 36px rgba(29, 48, 77, .07);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 16px/1.72 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #173fc3; }
+    .page { width: min(1160px, calc(100% - 36px)); margin: 0 auto; }
+    header { padding: 56px 0 34px; }
+    .eyebrow { margin: 0 0 10px; color: var(--blue); font-size: .78rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { max-width: 820px; margin: 0; font-size: clamp(2rem, 5vw, 3.6rem); line-height: 1.13; letter-spacing: -.045em; }
+    .lead { max-width: 790px; margin: 18px 0 0; color: var(--muted); font-size: 1.08rem; }
+    .hero-note { display: flex; align-items: flex-start; gap: 13px; max-width: 900px; margin-top: 25px; padding: 17px 19px; border: 1px solid #dbe5ff; border-radius: 14px; background: var(--blue-soft); color: #243b78; }
+    .hero-note strong { white-space: nowrap; }
+    .layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 70px; }
+    aside { position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    aside h2 { margin: 0 0 10px; font-size: .95rem; }
+    aside ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: .88rem; }
+    aside li { padding: 3px 0; }
+    aside a { color: inherit; text-decoration: none; }
+    aside a:hover { color: var(--blue); }
+    main { min-width: 0; }
+    section, .summary-card { margin-bottom: 20px; padding: clamp(20px, 4vw, 32px); border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow); }
+    section h2 { display: flex; align-items: baseline; gap: 11px; margin: 0 0 14px; font-size: clamp(1.35rem, 3vw, 1.75rem); line-height: 1.35; letter-spacing: -.025em; }
+    section h3 { margin: 24px 0 9px; font-size: 1.08rem; }
+    p { margin: 9px 0 13px; }
+    ul, ol { padding-left: 1.35rem; }
+    li { margin: 5px 0; }
+    .num { display: inline-grid; width: 30px; height: 30px; place-items: center; flex: none; border-radius: 9px; background: var(--blue-soft); color: var(--blue); font-size: .84rem; font-weight: 800; }
+    .callout { margin: 16px 0; padding: 14px 16px; border-left: 4px solid var(--teal); border-radius: 0 10px 10px 0; background: #effaf8; color: #245750; }
+    .warning { border-left-color: #d58b1b; background: #fff8e9; color: #624914; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+    .mini { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+    .mini h3 { margin: 0 0 7px; }
+    .mini p:last-child { margin-bottom: 0; }
+    code:not(pre code) { padding: .12em .38em; border-radius: 5px; background: #edf1f6; color: #203452; font: .91em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { overflow: auto; margin: 14px 0 17px; padding: 17px 19px; border: 1px solid #263348; border-radius: 12px; background: var(--code); color: var(--code-ink); font: .88rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; tab-size: 2; }
+    pre code { font: inherit; }
+    .caption { margin-top: -8px; color: var(--muted); font-size: .88rem; }
+    .tag { display: inline-block; margin: 2px 5px 2px 0; padding: 3px 9px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: .78rem; }
+    .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; }
+    .flow span { padding: 8px 11px; border: 1px solid #dce5f5; border-radius: 9px; background: #f7f9ff; font-size: .9rem; }
+    .flow b { color: #8391a5; }
+    .checklist { padding-left: 0; list-style: none; }
+    .checklist li { position: relative; padding-left: 28px; }
+    .checklist li::before { position: absolute; left: 0; color: var(--teal); content: "✓"; font-weight: 900; }
+    footer { padding: 0 0 42px; color: var(--muted); text-align: center; font-size: .88rem; }
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: 1fr; gap: 14px; }
+      aside { position: static; max-height: none; }
+      aside ol { columns: 2; column-gap: 24px; }
+    }
+    @media (max-width: 540px) {
+      .page { width: min(100% - 22px, 760px); }
+      header { padding: 38px 0 24px; }
+      .hero-note { display: block; }
+      .hero-note strong { display: block; margin-bottom: 5px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      aside ol { columns: 1; }
+      section, .summary-card { padding: 19px; border-radius: 15px; }
+      pre { padding: 14px; font-size: .8rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <p class="eyebrow">Vue 3 · 学习整理</p>
+      <h1>从响应式状态，到可测试的应用</h1>
+      <p class="lead">把今天涉及的 Vue 3 知识点串成一条主线：状态变化如何驱动画面，组件如何协作，数据如何跨页面保存，以及怎样验证和清理副作用。</p>
+      <div class="hero-note"><strong>先记住这条主线</strong><span>把状态放在合适的位置 → 用模板声明视图 → 通过 props 和事件传递变化 → 用组合式函数或 Pinia 复用与共享逻辑 → 在生命周期中管理外部副作用 → 用测试守住行为。</span></div>
+    </header>
+
+    <div class="layout">
+      <aside aria-label="页面目录">
+        <h2>本页目录</h2>
+        <ol>
+          <li><a href="#state">状态驱动视图</a></li>
+          <li><a href="#ref">ref 与 const</a></li>
+          <li><a href="#reactive">reactive 与数组</a></li>
+          <li><a href="#computed-watch">computed 与 watch</a></li>
+          <li><a href="#component">组件通信</a></li>
+          <li><a href="#vmodel">组件 v-model</a></li>
+          <li><a href="#composable">组合式函数</a></li>
+          <li><a href="#form">表单与校验</a></li>
+          <li><a href="#router">Vue Router</a></li>
+          <li><a href="#pinia">Pinia 与 storeToRefs</a></li>
+          <li><a href="#storage">localStorage</a></li>
+          <li><a href="#lifecycle">生命周期与请求取消</a></li>
+          <li><a href="#testing">Vitest 与组件测试</a></li>
+          <li><a href="#recap">速查与检查清单</a></li>
+        </ol>
+      </aside>
+
+      <main>
+        <section id="state">
+          <h2><span class="num">01</span>状态驱动视图</h2>
+          <p>Vue 的核心思路是：视图是状态的声明式表达。模板读取响应式状态；状态变化后，Vue 会追踪依赖并更新相关 DOM。通常不需要手动查找元素、修改文字或重新绘制整个页面。</p>
+          <pre><code>&lt;script setup&gt;
+import { ref } from 'vue'
+const message = ref('准备开始')
+function start() {
+  message.value = '正在学习 Vue 3'
+}
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;p&gt;{{ message }}&lt;/p&gt;
+  &lt;button @click="start"&gt;开始&lt;/button&gt;
+&lt;/template&gt;</code></pre>
+          <div class="flow" aria-label="响应式数据流"><span>用户操作</span><b>→</b><span>更新状态</span><b>→</b><span>Vue 追踪依赖</span><b>→</b><span>视图更新</span></div>
+          <p class="caption">模板负责描述“状态是什么样时，页面应该是什么样”，事件处理函数负责提出状态变更。</p>
+        </section>
+
+        <section id="ref">
+          <h2><span class="num">02</span><code>ref</code> 与 <code>const</code>：绑定不变，值可变</h2>
+          <div class="grid-2">
+            <div class="mini"><h3>在脚本中</h3><p><code>ref()</code> 返回一个 ref 对象。读写其内部值时使用 <code>.value</code>，Vue 才能追踪这次读写。</p></div>
+            <div class="mini"><h3>在模板中</h3><p>顶层 ref 会自动解包，所以通常直接写变量名，不写 <code>.value</code>。</p></div>
+          </div>
+          <pre><code>const count = ref(0)
+count.value += 1  // 脚本：通过 .value 读写
+
+// 模板中：{{ count }}
+// 事件绑定中：@click="count++"</code></pre>
+          <div class="callout"><strong><code>const</code> 和 <code>ref.value</code> 管的不是同一件事：</strong><code>const count</code> 禁止把变量 <code>count</code> 重新绑定到另一个对象；它不禁止修改这个 ref 对象内部的 <code>value</code>。因此 <code>count.value = 1</code> 合法，而给 <code>count</code> 重新赋值不合法。</div>
+          <pre><code>const count = ref(0)
+count.value = 1       // ✅ 修改 ref 内部状态
+// count = ref(2)     // ❌ 重新赋值给 const 绑定</code></pre>
+          <p>简单记法：<strong>脚本里的 ref 用 <code>.value</code>；模板顶层 ref 自动解包；<code>const</code> 锁定变量绑定，不是冻结对象内容。</strong></p>
+        </section>
+
+        <section id="reactive">
+          <h2><span class="num">03</span><code>reactive</code> 与响应式数组</h2>
+          <p><code>reactive()</code> 通常用于对象或数组，返回一个响应式代理；模板和脚本都可以直接读写属性，不需要对每个属性写 <code>.value</code>。</p>
+          <pre><code>import { reactive } from 'vue'
+
+const profile = reactive({ name: 'Lin', level: 1 })
+profile.level += 1
+
+const cart = reactive([
+  { id: 'a', name: '笔记本', price: 12, quantity: 2 },
+  { id: 'b', name: '钢笔', price: 8, quantity: 1 },
+])
+cart.push({ id: 'c', name: '便签', price: 5, quantity: 3 })</code></pre>
+          <h3>用 <code>reduce</code> 汇总数组</h3>
+          <p>汇总值通常是由列表推导出的派生数据。给 <code>reduce</code> 明确初始值，空数组也能得到正确结果。</p>
+          <pre><code>const totalQuantity = computed(() =&gt;
+  cart.reduce((sum, item) =&gt; sum + item.quantity, 0)
+)
+
+const totalPrice = computed(() =&gt;
+  cart.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0)
+)</code></pre>
+          <div class="callout warning"><strong>注意解构：</strong>直接把响应式对象上的普通字段解构到局部变量，可能会切断该变量与原代理属性的联系。需要独立 ref 时，可使用 <code>toRefs()</code>；Pinia store 则使用 <code>storeToRefs()</code>。</div>
+        </section>
+
+        <section id="computed-watch">
+          <h2><span class="num">04</span><code>computed</code> 与 <code>watch</code>：派生值和副作用</h2>
+          <div class="grid-2">
+            <div class="mini"><h3><code>computed</code></h3><p>从已有状态计算出一个值。它会缓存结果，依赖变化后才重新计算。适合总价、过滤列表、格式化显示等派生状态。</p></div>
+            <div class="mini"><h3><code>watch</code></h3><p>监听指定来源变化并执行副作用。适合写入存储、请求数据、记录日志或与非 Vue API 同步。</p></div>
+          </div>
+          <pre><code>const keyword = ref('')
+const filteredItems = computed(() =&gt;
+  items.value.filter(item =&gt; item.name.includes(keyword.value))
+)
+
+watch(keyword, (newKeyword, oldKeyword) =&gt; {
+  console.log('搜索词变化：', oldKeyword, '→', newKeyword)
+})</code></pre>
+          <p><strong>判断口诀：</strong>“我要一个随状态自动更新的结果”用 <code>computed</code>；“状态变了我要做一件事”用 <code>watch</code>。不要用 <code>watch</code> 手动维护本来可以直接计算出来的值。</p>
+        </section>
+
+        <section id="component">
+          <h2><span class="num">05</span>组件：props、事件与单向数据流</h2>
+          <p>父组件通过 <code>props</code> 向下传入数据；子组件通过事件向上表达用户意图。这样数据由谁负责、变化从哪里来会更清楚。</p>
+          <div class="flow"><span>父组件状态</span><b>— props →</b><span>子组件展示</span><b>— emit 事件 →</b><span>父组件更新</span></div>
+          <pre><code>&lt;!-- 子组件 ProductCard.vue --&gt;
+&lt;script setup&gt;
+const props = defineProps({
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+})
+const emit = defineEmits(['add-to-cart'])
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;article&gt;
+    &lt;h2&gt;{{ props.title }}&lt;/h2&gt;
+    &lt;p&gt;¥{{ props.price }}&lt;/p&gt;
+    &lt;button @click="emit('add-to-cart')"&gt;加入购物车&lt;/button&gt;
+  &lt;/article&gt;
+&lt;/template&gt;</code></pre>
+          <pre><code>&lt;ProductCard
+  :title="product.name"
+  :price="product.price"
+  @add-to-cart="addProduct(product)"
+/&gt;</code></pre>
+          <p class="caption">不要直接修改子组件收到的 prop。若子组件需要编辑值，应发出事件，请父组件更新其状态。</p>
+        </section>
+
+        <section id="vmodel">
+          <h2><span class="num">06</span><code>v-model:quantity</code> 的展开形式</h2>
+          <p>带参数的组件 <code>v-model:quantity</code> 是一组约定：prop 名为 <code>quantity</code>，更新事件名为 <code>update:quantity</code>。它并不是子组件直接改父组件变量。</p>
+          <pre><code>&lt;!-- 父组件：语法糖 --&gt;
+&lt;QuantityPicker v-model:quantity="quantity" /&gt;
+
+&lt;!-- 等价于显式绑定 --&gt;
+&lt;QuantityPicker
+  :quantity="quantity"
+  @update:quantity="quantity = $event"
+/&gt;</code></pre>
+<pre><code>&lt;!-- 子组件 QuantityPicker.vue --&gt;
+&lt;script setup&gt;
+const props = defineProps({ quantity: { type: Number, required: true } })
+const emit = defineEmits(['update:quantity'])
+
+function decrease() {
+  emit('update:quantity', Math.max(1, props.quantity - 1))
+}
+function increase() {
+  emit('update:quantity', props.quantity + 1)
+}
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;button @click="decrease"&gt;−&lt;/button&gt;
+  &lt;span&gt;{{ quantity }}&lt;/span&gt;
+  &lt;button @click="increase"&gt;+&lt;/button&gt;
+&lt;/template&gt;</code></pre>
+          <p class="caption">在 <code>&lt;script setup&gt;</code> 中，如果需要在脚本里读取 props，应将 <code>defineProps()</code> 的结果赋给变量（如 <code>const props = defineProps(...)</code>），再使用 <code>props.quantity</code>；模板中可直接使用 prop 名。</p>
+        </section>
+
+        <section id="composable">
+          <h2><span class="num">07</span>组合式函数：用 <code>useCart</code> 复用逻辑</h2>
+          <p>组合式函数是普通 JavaScript 函数，常以 <code>use</code> 开头。它把相关的状态和操作封装在一起，让组件只保留页面交互与展示。</p>
+          <pre><code>// composables/useCart.js
+import { computed, ref } from 'vue'
+
+export function useCart() {
+  const items = ref([])
+  const count = computed(() =&gt;
+    items.value.reduce((sum, item) =&gt; sum + item.quantity, 0)
+  )
+  const total = computed(() =&gt;
+    items.value.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0)
+  )
+
+  function add(product) {
+    const found = items.value.find(item =&gt; item.id === product.id)
+    if (found) found.quantity += 1
+    else items.value.push({ ...product, quantity: 1 })
+  }
+  function remove(id) {
+    items.value = items.value.filter(item =&gt; item.id !== id)
+  }
+
+  return { items, count, total, add, remove }
+}</code></pre>
+          <p>在组件中调用 <code>const { items, count, total, add, remove } = useCart()</code> 即可使用。组合式函数默认每次调用有自己的状态；如果需要多个页面共享同一份状态，应考虑提升到 Pinia store。</p>
+        </section>
+
+        <section id="form">
+          <h2><span class="num">08</span>表单：修饰符和校验</h2>
+          <p><code>v-model.trim</code> 会去掉首尾空白；<code>v-model.number</code> 会尝试把输入转换为数字。校验仍应明确处理空值、范围和类型，而不是只依赖输入框的修饰符。</p>
+          <pre><code>&lt;script setup&gt;
+import { computed, ref } from 'vue'
+const name = ref('')
+const age = ref('')
+const nameError = computed(() =&gt;
+  name.value.length === 0 ? '请填写姓名' : ''
+)
+const ageError = computed(() =&gt; {
+  if (age.value === '' || !Number.isFinite(age.value)) return '年龄须为数字'
+  if (age.value &lt; 0 || age.value &gt; 120) return '年龄须在 0 到 120 之间'
+  return ''
+})
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;input v-model.trim="name" placeholder="姓名"&gt;
+  &lt;p v-if="nameError"&gt;{{ nameError }}&lt;/p&gt;
+
+  &lt;input v-model.number="age" type="number" min="0" max="120"&gt;
+  &lt;p v-if="ageError"&gt;{{ ageError }}&lt;/p&gt;
+&lt;/template&gt;</code></pre>
+          <div class="callout warning"><code>.number</code> 不保证所有情况下都得到有效数字；输入为空或无法转换时仍要单独处理。提交时也应再次校验，不能只依赖浏览器控件。</div>
+        </section>
+
+        <section id="router">
+          <h2><span class="num">09</span>Vue Router：静态路由和动态参数</h2>
+          <p>静态路由匹配固定路径；动态路由用 <code>:</code> 标记参数。动态参数在路由中一般以字符串形式读取，若业务需要数值，应在使用处显式转换和验证。</p>
+          <pre><code>const routes = [
+  { path: '/', component: HomeView },
+  { path: '/about', component: AboutView },
+  { path: '/products/:id', component: ProductView },
+]</code></pre>
+          <pre><code>// ProductView.vue
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const productId = computed(() =&gt; Number(route.params.id))
+const validId = computed(() =&gt;
+  Number.isInteger(productId.value) &amp;&amp; productId.value &gt; 0
+)</code></pre>
+          <p>例如访问 <code>/products/42</code> 时，<code>route.params.id</code> 通常是字符串 <code>'42'</code>。不要把路由参数直接当数字参与比较或计算。导航可使用 <code>&lt;RouterLink to="/about"&gt;</code>，路由出口使用 <code>&lt;RouterView /&gt;</code>。</p>
+        </section>
+
+        <section id="pinia">
+          <h2><span class="num">10</span>Pinia：跨页面共享状态</h2>
+          <p>当购物车、登录用户等状态需要由多个页面或组件共同读取和更新时，可把它放到 Pinia store。store 中集中定义状态、派生 getter 和业务 action。</p>
+          <pre><code>// stores/cart.js
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+
+export const useCartStore = defineStore('cart', () =&gt; {
+  const items = ref([])
+  const total = computed(() =&gt;
+    items.value.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0)
+  )
+  function clear() { items.value = [] }
+  return { items, total, clear }
+})</code></pre>
+          <h3>解构 store 时用 <code>storeToRefs</code></h3>
+          <pre><code>import { storeToRefs } from 'pinia'
+
+const cart = useCartStore()
+const { items, total } = storeToRefs(cart) // state 和 getter 保持响应式
+const { clear } = cart                     // action 可直接取出</code></pre>
+          <p class="caption"><code>storeToRefs()</code> 会为 store 的状态和 getter 创建 ref，并跳过 action；方法通常直接从 store 解构或通过 <code>cart.clear()</code> 调用。</p>
+          <div class="callout">一般选择原则：局部、单个组件的状态放组件里；复用但不要求全局共享的逻辑放组合式函数；需要跨页面共享的应用状态放 Pinia。</div>
+        </section>
+
+        <section id="storage">
+          <h2><span class="num">11</span><code>localStorage</code> 持久化与深度监听</h2>
+          <p><code>localStorage</code> 只能保存字符串；对象需要先 <code>JSON.stringify()</code>，恢复时用 <code>JSON.parse()</code>。加载时要处理无数据或损坏数据的情况；对对象或数组内部变化进行持久化时，可使用深度监听。</p>
+          <pre><code>import { ref, watch } from 'vue'
+
+function readCart() {
+  try {
+    const saved = localStorage.getItem('cart-items')
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
+const items = ref(readCart())
+watch(items, (newItems) =&gt; {
+  localStorage.setItem('cart-items', JSON.stringify(newItems))
+}, { deep: true })</code></pre>
+          <div class="callout warning"><strong>注意：</strong>浏览器存储可能不可用或内容格式不正确；写入也可能失败。生产代码可以把读取、解析和写入都放进 <code>try/catch</code>。不要把密码、访问令牌等敏感信息放进 <code>localStorage</code>。服务端渲染环境中，还要等客户端再访问 <code>window</code> 或 <code>localStorage</code>。</div>
+        </section>
+
+        <section id="lifecycle">
+          <h2><span class="num">12</span>生命周期：启动请求，也要清理</h2>
+          <p><code>onMounted</code> 适合组件挂载到页面后启动依赖 DOM 或客户端环境的工作；<code>onBeforeUnmount</code> 可在组件销毁前移除监听器、计时器或取消未完成请求。</p>
+          <pre><code>import { onBeforeUnmount, onMounted, ref } from 'vue'
+
+const data = ref(null)
+const error = ref('')
+let controller
+
+onMounted(async () =&gt; {
+  controller = new AbortController()
+  try {
+    const response = await fetch('/api/items', {
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new Error('请求失败')
+    data.value = await response.json()
+  } catch (err) {
+    if (err.name !== 'AbortError') error.value = err.message
+  }
+})
+
+onBeforeUnmount(() =&gt; {
+  controller?.abort()
+})</code></pre>
+          <p>用 <code>AbortController</code> 取消组件不再需要的请求，可以避免卸载后继续处理过期结果，也能节省资源。若请求允许在页面切换后继续完成，是否取消则要按业务决定。</p>
+        </section>
+
+        <section id="testing">
+          <h2><span class="num">13</span>Vitest 与 Pinia 组件测试</h2>
+          <p>测试要验证用户能观察到的行为：初始内容是否正确、点击后状态是否改变、提交事件是否发出。使用真实 Pinia 实例时，在测试中创建并挂载一个新的实例，避免测试之间共享状态。</p>
+          <pre><code>// CounterPanel.vue
+&lt;script setup&gt;
+import { useCounterStore } from './counter'
+const counter = useCounterStore()
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;p data-test="count"&gt;{{ counter.count }}&lt;/p&gt;
+  &lt;button data-test="increment" @click="counter.increment()"&gt;+1&lt;/button&gt;
+&lt;/template&gt;</code></pre>
+          <pre><code>// CounterPanel.spec.js
+import { describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
+import CounterPanel from './CounterPanel.vue'
+
+describe('CounterPanel', () =&gt; {
+  it('点击按钮后显示更新后的计数', async () =&gt; {
+    const wrapper = mount(CounterPanel, {
+      global: { plugins: [createPinia()] },
+    })
+
+    expect(wrapper.get('[data-test="count"]').text()).toBe('0')
+    await wrapper.get('[data-test="increment"]').trigger('click')
+    expect(wrapper.get('[data-test="count"]').text()).toBe('1')
+  })
+})</code></pre>
+          <p>可以用 Vitest 的 <code>describe</code>、<code>it</code> 和 <code>expect</code> 组织断言，用 Vue Test Utils 的 <code>mount</code> 渲染组件。测试组件事件时可检查 <code>wrapper.emitted()</code>；测试 Pinia store 时重点覆盖 action 的状态变化和 getter 的计算结果。</p>
+        </section>
+
+        <section id="recap">
+          <h2><span class="num">14</span>速查：把知识点落到工程选择</h2>
+          <div class="grid-2">
+            <div class="mini"><h3>响应式与派生</h3><p><code>ref</code>：脚本中经 <code>.value</code> 操作；模板顶层自动解包。<br><code>reactive</code>：代理对象/数组。<br><code>computed</code>：缓存派生值。<br><code>watch</code>：监听变化、执行副作用。</p></div>
+            <div class="mini"><h3>组件与状态</h3><p><code>props</code> 向下，事件向上。<br><code>v-model:quantity</code> ↔ <code>quantity</code> + <code>update:quantity</code>。<br><code>useCart</code> 复用领域逻辑；Pinia 共享跨页面状态。<br>解构 store 状态用 <code>storeToRefs</code>。</p></div>
+          </div>
+          <ul class="checklist">
+            <li>要显示的值是否来自响应式状态，而不是手动改 DOM？</li>
+            <li>派生数据是否用 <code>computed</code>，副作用是否才用 <code>watch</code>？</li>
+            <li>子组件有没有直接修改 prop？需要更新时是否发出事件？</li>
+            <li>路由参数是否按字符串处理，并在需要时显式转换、校验？</li>
+            <li>持久化是否兼顾 JSON 解析失败、空值和敏感数据？</li>
+            <li>组件卸载时，定时器、事件监听和未完成请求是否按需清理？</li>
+            <li>测试是否覆盖用户可见结果，而不只是内部实现细节？</li>
+          </ul>
+          <p><span class="tag">状态单一来源</span><span class="tag">数据流清晰</span><span class="tag">副作用有边界</span><span class="tag">关键行为可测试</span></p>
+        </section>
+      </main>
+    </div>
+    <footer>Vue 3 学习整理 · 可通过本地静态文件预览；提交或推送前请自行确认。</footer>
+  </div>
+</body>
+</html>
