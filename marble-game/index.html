@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg" />
-    <title>弹珠游戏</title>
+    <title>Marble Game</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -449,24 +449,28 @@
       <!-- ===== Level select ===== -->
       <div class="select-screen" id="selectScreen">
         <div class="sel-head">
-          <div class="sel-title">选择关卡</div>
+          <div class="sel-title" id="selTitle">Select Level</div>
           <div class="sel-stars" id="starTotal">★ 0 / 36</div>
-          <span class="version">V8</span>
+          <span class="version">V8</span><button class="btn mini" id="langBtn" type="button">中文 / EN</button>
         </div>
         <div class="level-grid" id="levelGrid"></div>
-        <button class="free-btn" id="freeBtn" type="button">自由模式<span>经典 7 珠 · 6 发 · 无限重开，不计星</span></button>
+        <button class="free-btn" id="freeBtn" type="button">Free Play<span id="freeSub">Classic 7 marbles · 6 shots · unlimited retries, no stars</span></button>
         <div class="bg-box">
-          <div class="bg-title">场景背景</div>
+          <div class="bg-title" id="bgTitle">Scene Background</div>
           <div class="bg-actions">
-            <button class="btn" id="bgPickBtn" type="button">自定义背景</button>
-            <button class="btn gone" id="bgResetBtn" type="button">恢复默认</button>
+            <button class="btn" id="bgPickBtn" type="button">Choose Background</button>
+            <button class="btn gone" id="bgResetBtn" type="button">Reset to Default</button>
           </div>
           <div class="bg-opacity-row gone" id="bgOpacityRow">
-            <label for="bgOpacity">背景透明度</label>
+            <label for="bgOpacity" id="bgOpacityLabel">Background Opacity</label>
             <input type="range" id="bgOpacity" min="10" max="100" step="5" value="30" />
             <span class="bg-opacity-val" id="bgOpacityVal">30%</span>
           </div>
           <p class="bg-note" id="bgNote"></p>
+        </div>
+        <div class="bg-box" id="aboutBox">
+          <div class="bg-title" id="aboutTitle">About &amp; Safety Notes</div>
+          <p class="bg-note" id="aboutBody"></p>
         </div>
         <input type="file" id="bgFile" accept="image/*" class="gone" />
       </div>
@@ -476,18 +480,19 @@
         <header class="hud">
           <div class="stats">
             <div class="stat">
-              <div class="label" id="outLabel">击出弹珠</div>
+              <div class="label" id="outLabel">Knocked Out</div>
               <div class="value"><span id="outCount">0</span><span class="dim" id="totalWrap"> / <span id="totalCount">7</span></span></div>
             </div>
             <div class="stat">
-              <div class="label">剩余机会</div>
+              <div class="label" id="shotsLabel">Shots Left</div>
               <div class="value" id="shotsLeft">6</div>
             </div>
           </div>
           <div class="hud-row">
-            <button class="btn" id="restartBtn" type="button">↻ 重开</button>
-            <button class="btn" id="levelsBtn" type="button">关卡</button>
-            <div class="level-name"><span id="levelName">第 1 / 12 关</span><span class="extra gone" id="extraInfo"></span></div>
+            <button class="btn" id="restartBtn" type="button">↻ Restart</button>
+            <button class="btn" id="levelsBtn" type="button">Levels</button>
+            <button class="btn mini" id="langBtnGame" type="button">中文 / EN</button>
+            <div class="level-name"><span id="levelName">Level 1 / 12</span><span class="extra gone" id="extraInfo"></span></div>
           </div>
           <div class="level-hint" id="levelHint"></div>
         </header>
@@ -497,20 +502,20 @@
           <div class="version">V8</div>
           <div class="overlay" id="overlay">
             <div class="card">
-              <p class="result" id="resultTitle">全部击出！</p>
+              <p class="result" id="resultTitle">All Out!</p>
               <div class="stars-big" id="resultStars"></div>
               <p class="detail" id="resultDetail"></p>
-              <button class="btn primary gone" id="nextBtn" type="button">下一关 →</button>
+              <button class="btn primary gone" id="nextBtn" type="button">Next Level →</button>
               <div class="btn-row">
-                <button class="btn" id="againBtn" type="button">重玩本关</button>
-                <button class="btn" id="backBtn" type="button">关卡选择</button>
+                <button class="btn" id="againBtn" type="button">Replay Level</button>
+                <button class="btn" id="backBtn" type="button">Level Select</button>
               </div>
             </div>
           </div>
         </div>
 
         <div class="power-wrap">
-          <span class="power-label">力度</span>
+          <span class="power-label" id="powerLabel">Power</span>
           <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
           <span class="power-num" id="powerNum">0</span>
         </div>
@@ -587,50 +592,39 @@
       }
 
       var LEVELS = [
-        { name: "经典花心", shots: 6, circleR: 138,
-          hint: "把 7 颗弹珠全部撞出圈外，通关时剩的发数越多，星越高。",
+        { shots: 6, circleR: 138,
           targets: hexPts(), blacks: [], obstacles: [] },
-        { name: "小花", shots: 5, circleR: 118,
-          hint: "圆圈更小、只有 5 颗珠，试试一发带走两颗。",
+        { shots: 5, circleR: 118,
           targets: [pt(CX, CY)].concat(ringPts(4, 50, 45)), blacks: [], obstacles: [] },
-        { name: "圆环阵", shots: 6, circleR: 138,
-          hint: "空心环阵：打穿一角，靠连锁把整圈带出去。",
+        { shots: 6, circleR: 138,
           targets: ringPts(8, 66, 0), blacks: [], obstacles: [] },
-        { name: "双团", shots: 6, circleR: 138,
-          hint: "左右两簇，先想好打哪边、往哪个方向带。",
+        { shots: 6, circleR: 138,
           targets: [
             pt(140, CY), pt(140, CY + 50), pt(90, CY), pt(140, CY - 50),
             pt(260, CY), pt(260, CY + 50), pt(310, CY), pt(260, CY - 50)
           ], blacks: [], obstacles: [] },
-        { name: "大圆散点", shots: 7, circleR: 158,
-          hint: "圆更大、珠子分散，每一颗都要处理到位。",
+        { shots: 7, circleR: 158,
           targets: [
             pt(200, 120), pt(130, 160), pt(275, 155), pt(160, 225), pt(245, 230),
             pt(200, 300), pt(120, 270), pt(290, 285), pt(200, 180)
           ], blacks: [], obstacles: [] },
-        { name: "一字墙", shots: 6, circleR: 158,
-          hint: "大圆里横排成墙，正面硬撞效果差，试试打两端。",
+        { shots: 6, circleR: 158,
           // Wall marbles are smaller (r 20) and spaced 44 apart, centred
           // on ±132: neighbours keep a ~4-unit gap (no overlap) and the
           // end marbles' outer edge reaches only 132 + 20 = 152 < 158,
           // so the whole wall starts fully inside the ring.
           targets: [-132, -88, -44, 0, 44, 88, 132].map(function (dx) { return pt(CX + dx, CY, "normal", 20); }),
           blacks: [], obstacles: [] },
-        { name: "障碍初现", shots: 6, circleR: 138,
-          hint: "灰色障碍石固定不动、永远撞不走：绕开它，或借它反弹。",
+        { shots: 6, circleR: 138,
           targets: hexPts(), blacks: [], obstacles: [{ x: 200, y: 320 }] },
-        { name: "重珠登场", shots: 6, circleR: 138,
-          hint: "深色重珠约是普通珠 3 倍重：蓄满力、正中它才推得动。",
+        { shots: 6, circleR: 138,
           targets: [pt(CX, CY, "heavy")].concat(ringPts(6, 62, 30)),
           blacks: [], obstacles: [{ x: 140, y: 295 }] },
-        { name: "隐藏弹力", shots: 6, circleR: 138,
-          hint: "有一颗超级弹力珠混在里面，外表完全看不出来——撞到它你就知道了。",
+        { shots: 6, circleR: 138,
           targets: hexWithBouncyBottom().concat([pt(200, 112)]), blacks: [], obstacles: [] },
-        { name: "禁撞黑珠", shots: 6, circleR: 138,
-          hint: "黑珠只有被主珠在圈内直接撞到，才会让圈内多出 2 颗新珠；别的珠子碰到它没事，黑珠被撞出圈后就安全了、随便撞。",
+        { shots: 6, circleR: 138,
           targets: hexPts().concat([pt(200, 112)]), blacks: [{ x: 288, y: 272 }], obstacles: [] },
-        { name: "只打金珠", shots: 6, circleR: 138, variant: "gold",
-          hint: "目标只有一个：把金珠撞出圈。金珠就摆在珠团最前面、正对着你，直射就能打到；普通珠出圈不判负，会被送回圈内。",
+        { shots: 6, circleR: 138, variant: "gold",
           // Gold sits exposed at the front edge of the cluster (nearest
           // the shooter at the bottom), with a clear straight lane from
           // the launch spot. The 7 normal marbles half-surround it from
@@ -642,14 +636,233 @@
             pt(136, 204), pt(264, 204), pt(172, 164), pt(228, 164)
           ],
           blacks: [], obstacles: [] },
-        { name: "决赛大阵", shots: 7, circleR: 150,
-          hint: "12 颗大阵 + 障碍石 + 一颗隐藏弹力珠，综合考试。",
+        { shots: 7, circleR: 150,
           targets: [pt(CX, CY)].concat(hexWithBouncyBottom().slice(1), ringPts(5, 102, -30)),
           blacks: [], obstacles: [{ x: 118, y: 148 }] }
       ];
-      var FREE_LEVEL = { name: "自由模式", shots: 6, circleR: 138,
-        hint: "经典 7 珠 · 6 发，随便练手，无限重开。",
+      var FREE_LEVEL = { shots: 6, circleR: 138,
         targets: null, blacks: [], obstacles: [] }; // targets filled from LEVELS[0]
+
+
+      /* ============ i18n ============
+         Every user-visible string lives in I18N below. Language order:
+         ?lang= URL parameter > localStorage ("marbleGameLang") > browser
+         language (zh* -> zh, anything else -> en). Level names and hints
+         are indexed by level position, so level order and the progress
+         keys (indices into LEVELS, stored in marbleGameV8Progress) never
+         change when the language switches. */
+      var I18N = {
+        zh: {
+          title: "弹珠游戏",
+          selectLevel: "选择关卡",
+          freeMode: "自由模式",
+          freeSub: "经典 7 珠 · 6 发 · 无限重开，不计星",
+          freeHint: "经典 7 珠 · 6 发，随便练手，无限重开。",
+          bgTitle: "场景背景",
+          bgPick: "自定义背景",
+          bgReset: "恢复默认",
+          bgOpacity: "背景透明度",
+          outLabel: "击出弹珠",
+          shotsLeft: "剩余机会",
+          restart: "↻ 重开",
+          levels: "关卡",
+          power: "力度",
+          goldLabel: "金珠",
+          goldOut: "已出圈",
+          goldIn: "在圈内",
+          goldExtra: "普通珠出圈 {n}（会被送回圈内）",
+          returnedToRing: "普通珠出圈，被送回圈内",
+          goldWonTitle: "金珠出圈！",
+          goldWonDetail: "金珠被你干净地送出圈外，<br />还剩 {left} 次机会，漂亮！",
+          soClose: "就差一点",
+          goldLostDetail: "机会用完了，金珠还停在圈内，没能出圈。<br />普通珠出圈不判负、会被送回圈内——放心冲着金珠打。",
+          wonTitle: "全部击出！🎉",
+          wonDetail: "{total} 颗弹珠全部被你撞出圈外，<br />只用了 {used} 次机会，漂亮！",
+          lostDetail: "机会用完了，圈内还剩 {left} 颗弹珠。<br />调整一下力度和角度再试试。",
+          playAgain: "再来一局",
+          replayLevel: "重玩本关",
+          nextLevel: "下一关 →",
+          backToLevels: "关卡选择",
+          levelTitle: "第 {n} / {total} 关 · {name}",
+          bgChanged: "背景已更换",
+          bgChangedSession: "背景已更换（存储空间不足，仅本次打开生效）",
+          bgReadFail: "图片读取失败，背景未更改",
+          bgNotImage: "这个文件不是图片，背景未更改",
+          bgResetDone: "已恢复默认背景",
+          aboutTitle: "关于与安全提示",
+          aboutBody: "年龄分级：适合所有年龄（Rated E for Everyone），无暴力、无赌博、无聊天功能。<br>无付费内容：无内购、无开箱抽奖、无真钱赌博。<br>隐私：不收集任何个人数据，分数与进度只存在你的浏览器本地。<br>光敏性提示：本游戏无闪烁特效，如感到不适请立即停止并休息。",
+          levels: [
+            { name: "经典花心", hint: "把 7 颗弹珠全部撞出圈外，通关时剩的发数越多，星越高。" },
+            { name: "小花", hint: "圆圈更小、只有 5 颗珠，试试一发带走两颗。" },
+            { name: "圆环阵", hint: "空心环阵：打穿一角，靠连锁把整圈带出去。" },
+            { name: "双团", hint: "左右两簇，先想好打哪边、往哪个方向带。" },
+            { name: "大圆散点", hint: "圆更大、珠子分散，每一颗都要处理到位。" },
+            { name: "一字墙", hint: "大圆里横排成墙，正面硬撞效果差，试试打两端。" },
+            { name: "障碍初现", hint: "灰色障碍石固定不动、永远撞不走：绕开它，或借它反弹。" },
+            { name: "重珠登场", hint: "深色重珠约是普通珠 3 倍重：蓄满力、正中它才推得动。" },
+            { name: "隐藏弹力", hint: "有一颗超级弹力珠混在里面，外表完全看不出来——撞到它你就知道了。" },
+            { name: "禁撞黑珠", hint: "黑珠只有被主珠在圈内直接撞到，才会让圈内多出 2 颗新珠；别的珠子碰到它没事，黑珠被撞出圈后就安全了、随便撞。" },
+            { name: "只打金珠", hint: "目标只有一个：把金珠撞出圈。金珠就摆在珠团最前面、正对着你，直射就能打到；普通珠出圈不判负，会被送回圈内。" },
+            { name: "决赛大阵", hint: "12 颗大阵 + 障碍石 + 一颗隐藏弹力珠，综合考试。" }
+          ]
+        },
+        en: {
+          title: "Marble Game",
+          selectLevel: "Select Level",
+          freeMode: "Free Play",
+          freeSub: "Classic 7 marbles · 6 shots · unlimited retries, no stars",
+          freeHint: "Classic 7 marbles · 6 shots. Practice freely, retry as often as you like.",
+          bgTitle: "Scene Background",
+          bgPick: "Choose Background",
+          bgReset: "Reset to Default",
+          bgOpacity: "Background Opacity",
+          outLabel: "Knocked Out",
+          shotsLeft: "Shots Left",
+          restart: "↻ Restart",
+          levels: "Levels",
+          power: "Power",
+          goldLabel: "Gold",
+          goldOut: "Out",
+          goldIn: "In Ring",
+          goldExtra: "{n} normal marble(s) out (will be sent back inside)",
+          returnedToRing: "Normal marbles out were sent back inside",
+          goldWonTitle: "Gold Out!",
+          goldWonDetail: "You knocked the gold marble cleanly out of the ring,<br />with {left} shots to spare. Beautiful!",
+          soClose: "So Close",
+          goldLostDetail: "Out of shots, and the gold marble is still inside the ring.<br />Normal marbles out are not a loss — they get sent back inside, so aim straight at the gold.",
+          wonTitle: "All Out! 🎉",
+          wonDetail: "All {total} marbles knocked out of the ring<br />in just {used} shots. Beautiful!",
+          lostDetail: "Out of shots, with {left} marble(s) still inside the ring.<br />Adjust your power and angle and try again.",
+          playAgain: "Play Again",
+          replayLevel: "Replay Level",
+          nextLevel: "Next Level →",
+          backToLevels: "Level Select",
+          levelTitle: "Level {n} / {total} · {name}",
+          bgChanged: "Background changed",
+          bgChangedSession: "Background changed (not enough storage, applies to this session only)",
+          bgReadFail: "Couldn't read the image; background unchanged",
+          bgNotImage: "That file isn't an image; background unchanged",
+          bgResetDone: "Default background restored",
+          aboutTitle: "About & Safety Notes",
+          aboutBody: "Age rating: suitable for all ages (Rated E for Everyone). No violence, no gambling, no chat.<br>No purchases: no in-app purchases, no loot boxes, no real-money gambling.<br>Privacy: no personal data is collected. Scores and progress are stored only in your browser.<br>Photosensitivity: this game has no flashing effects. If you feel unwell, stop playing and rest immediately.",
+          levels: [
+            { name: "Classic Flower", hint: "Knock all 7 marbles out of the ring. The more shots you have left when you clear it, the more stars you earn." },
+            { name: "Little Flower", hint: "A smaller ring and only 5 marbles. Try taking two out with one shot." },
+            { name: "Ring Formation", hint: "A hollow ring: punch through one corner and let the chain reaction carry the rest out." },
+            { name: "Twin Clusters", hint: "Two clusters, left and right. Decide which side to hit and which direction to carry them." },
+            { name: "Big Scattered Ring", hint: "A bigger ring with scattered marbles — every single one needs handling." },
+            { name: "The Wall", hint: "A straight wall across the big ring. Head-on hits don't do much — try the ends." },
+            { name: "First Obstacles", hint: "Gray obstacle stones never move and can never be knocked out: go around them, or bounce off them." },
+            { name: "Heavy Marbles", hint: "Dark heavy marbles weigh about 3× a normal one: full power, dead center, or they won't budge." },
+            { name: "Hidden Bouncy", hint: "A super-bouncy marble is hiding among them, looking exactly like the rest — you'll know when you hit it." },
+            { name: "Forbidden Black", hint: "Only a direct hit from your shooter while the black marble is inside the ring spawns 2 extra marbles; other marbles touching it do nothing, and once it's knocked out of the ring it's safe to hit freely." },
+            { name: "Gold Only", hint: "Just one target: knock the gold marble out of the ring. It sits at the front of the cluster, right facing you — a straight shot reaches it. Normal marbles knocked out are not a loss; they're sent back inside." },
+            { name: "Final Formation", hint: "A 12-marble formation + obstacle stones + one hidden bouncy marble. The final exam." }
+          ]
+        }
+      };
+      var LANG_KEY = "marbleGameLang";
+      function resolveLang() {
+        try {
+          var q = new URLSearchParams(window.location.search).get("lang");
+          if (q === "zh" || q === "en") return q;
+        } catch (e) { /* ignore */ }
+        try {
+          var s = localStorage.getItem(LANG_KEY);
+          if (s === "zh" || s === "en") return s;
+        } catch (e) { /* ignore */ }
+        var nav = (navigator.language || "en").toLowerCase();
+        return nav.indexOf("zh") === 0 ? "zh" : "en";
+      }
+      var lang = resolveLang();
+      var lastResult = null;
+      function L(key) {
+        var d = I18N[lang] || I18N.zh;
+        if (d && d[key] !== undefined) return d[key];
+        if (I18N.zh[key] !== undefined) return I18N.zh[key];
+        return key;
+      }
+      function fmt(s, p) {
+        return String(s).replace(/\{(\w+)\}/g, function (m, k) { return (p && k in p) ? p[k] : m; });
+      }
+      function setText(id, key) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = L(key);
+      }
+      function levelText(idx, field) {
+        var arr = (I18N[lang] && I18N[lang].levels) || I18N.zh.levels;
+        return (arr[idx] && arr[idx][field]) || "";
+      }
+      function currentHint() {
+        if (mode === "free") return L("freeHint");
+        return levelText(levelIndex, "hint");
+      }
+      function renderResult(won) {
+        if (variant === "gold") {
+          if (won) {
+            resultTitle.textContent = L("goldWonTitle");
+            resultDetail.innerHTML = fmt(L("goldWonDetail"), { left: shotsLeft });
+          } else {
+            resultTitle.textContent = L("soClose");
+            resultDetail.innerHTML = L("goldLostDetail");
+          }
+        } else if (won) {
+          resultTitle.textContent = L("wonTitle");
+          resultDetail.innerHTML = fmt(L("wonDetail"), { total: targets.length, used: cfg.shots - shotsLeft });
+        } else {
+          resultTitle.textContent = L("soClose");
+          resultDetail.innerHTML = fmt(L("lostDetail"), { left: targets.length - outCount });
+        }
+      }
+      function applyLang() {
+        document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+        document.title = L("title");
+        setText("selTitle", "selectLevel");
+        setText("freeSub", "freeSub");
+        var fb = document.getElementById("freeBtn");
+        if (fb && fb.firstChild) fb.firstChild.nodeValue = L("freeMode");
+        setText("bgTitle", "bgTitle");
+        setText("bgPickBtn", "bgPick");
+        setText("bgResetBtn", "bgReset");
+        setText("bgOpacityLabel", "bgOpacity");
+        setText("shotsLabel", "shotsLeft");
+        setText("restartBtn", "restart");
+        setText("levelsBtn", "levels");
+        setText("powerLabel", "power");
+        setText("nextBtn", "nextLevel");
+        setText("backBtn", "backToLevels");
+        setText("aboutTitle", "aboutTitle");
+        var ab = document.getElementById("aboutBody");
+        if (ab) ab.innerHTML = L("aboutBody");
+        var lbl = lang === "zh" ? "<b>中文</b> / EN" : "中文 / <b>EN</b>";
+        var b1 = document.getElementById("langBtn"), b2 = document.getElementById("langBtnGame");
+        if (b1) b1.innerHTML = lbl;
+        if (b2) b2.innerHTML = lbl;
+        // dynamic HUD / level header (safe to call before the first loadLevel)
+        if (typeof cfg !== "undefined" && cfg) {
+          if (mode === "free") levelNameEl.textContent = L("freeMode");
+          else levelNameEl.textContent = fmt(L("levelTitle"), { n: levelIndex + 1, total: LEVELS.length, name: levelText(levelIndex, "name") });
+          levelHintEl.textContent = currentHint();
+          outLabelEl.textContent = variant === "gold" ? L("goldLabel") : L("outLabel");
+          syncHud();
+        }
+        if (overlay && overlay.classList.contains("show") && lastResult) renderResult(lastResult.won);
+        againBtn.textContent = mode === "free" ? L("playAgain") : L("replayLevel");
+      }
+      function setLang(next) {
+        if (next !== "zh" && next !== "en") return;
+        lang = next;
+        try { localStorage.setItem(LANG_KEY, next); } catch (e) { /* ignore */ }
+        try {
+          var u = new URL(window.location.href);
+          u.searchParams.set("lang", next);
+          window.history.replaceState(null, "", u.toString());
+        } catch (e) { /* ignore */ }
+        applyLang();
+        renderSelect(); // level names live in the select grid
+      }
+      document.getElementById("langBtn").addEventListener("click", function () { setLang(lang === "zh" ? "en" : "zh"); });
+      document.getElementById("langBtnGame").addEventListener("click", function () { setLang(lang === "zh" ? "en" : "zh"); });
 
       /* ============ Progress (localStorage; in-memory fallback) ============ */
       var progress = { unlocked: 1, stars: {} };
@@ -800,15 +1013,14 @@
         overlay.classList.remove("show");
         setPower(0);
         // HUD framing for this level
-        if (mode === "free") levelNameEl.textContent = "自由模式";
-        else levelNameEl.textContent = "第 " + (levelIndex + 1) + " / 12 关 · " + cfg.name;
-        if (typeof hintTimer !== "undefined" && hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
-        levelHintEl.textContent = cfg.hint;
+        if (mode === "free") levelNameEl.textContent = L("freeMode");
+        else levelNameEl.textContent = fmt(L("levelTitle"), { n: levelIndex + 1, total: LEVELS.length, name: levelText(levelIndex, "name") });
+        if (typeof hintTimer !== "undefined" && hintTimer) { clearTimeout(hintTimer); hintTimer = null; }        levelHintEl.textContent = currentHint();
         if (variant === "gold") {
-          outLabelEl.textContent = "金珠";
+          outLabelEl.textContent = L("goldLabel");
           totalWrapEl.style.display = "none";
         } else {
-          outLabelEl.textContent = "击出弹珠";
+          outLabelEl.textContent = L("outLabel");
           totalWrapEl.style.display = "";
         }
         syncHud();
@@ -816,8 +1028,8 @@
 
       function syncHud() {
         if (variant === "gold") {
-          outCountEl.textContent = goldOut ? "已出圈" : "在圈内";
-          extraInfoEl.textContent = "普通珠出圈 " + outCount + "（会被送回圈内）";
+          outCountEl.textContent = goldOut ? L("goldOut") : L("goldIn");
+          extraInfoEl.textContent = fmt(L("goldExtra"), { n: outCount });
           extraInfoEl.classList.remove("gone");
         } else {
           outCountEl.textContent = outCount;
@@ -1085,7 +1297,7 @@
         if (moved > 0) {
           checkCounted();
           syncHud();
-          flashHint("普通珠出圈，被送回圈内");
+          flashHint(L("returnedToRing"));
         }
       }
 
@@ -1094,7 +1306,7 @@
         levelHintEl.textContent = msg;
         if (hintTimer) clearTimeout(hintTimer);
         hintTimer = setTimeout(function () {
-          levelHintEl.textContent = cfg.hint;
+          levelHintEl.textContent = currentHint();
           hintTimer = null;
         }, 2600);
       }
@@ -1140,28 +1352,15 @@
           }
           saveProgress();
         }
-        if (variant === "gold") {
-          if (won) {
-            resultTitle.textContent = "金珠出圈！";
-            resultDetail.innerHTML = "金珠被你干净地送出圈外，<br />还剩 " + shotsLeft + " 次机会，漂亮！";
-          } else {
-            resultTitle.textContent = "就差一点";
-            resultDetail.innerHTML = "机会用完了，金珠还停在圈内，没能出圈。<br />普通珠出圈不判负、会被送回圈内——放心冲着金珠打。";
-          }
-        } else if (won) {
-          resultTitle.textContent = "全部击出！🎉";
-          resultDetail.innerHTML = targets.length + " 颗弹珠全部被你撞出圈外，<br />只用了 " + (cfg.shots - shotsLeft) + " 次机会，漂亮！";
-        } else {
-          resultTitle.textContent = "就差一点";
-          resultDetail.innerHTML = "机会用完了，圈内还剩 " + (targets.length - outCount) + " 颗弹珠。<br />调整一下力度和角度再试试。";
-        }
+        lastResult = { won: won };
+        renderResult(won);
         resultStars.innerHTML = (won && mode === "level")
           ? starString(earned).split("").map(function (ch) {
               return ch === "★" ? "★" : '<span class="off">☆</span>';
             }).join("")
           : "";
         nextBtn.classList.toggle("gone", !(won && mode === "level" && levelIndex + 1 < LEVELS.length));
-        againBtn.textContent = mode === "free" ? "再来一局" : "重玩本关";
+        againBtn.textContent = mode === "free" ? L("playAgain") : L("replayLevel");
         setTimeout(function () { overlay.classList.add("show"); }, 350);
       }
 
@@ -1759,11 +1958,11 @@
             }
           }
           applyCustomBg(dataUrl, img, !persisted);
-          bgNotify(persisted ? "背景已更换" : "背景已更换（存储空间不足，仅本次打开生效）");
+          bgNotify(persisted ? L("bgChanged") : L("bgChangedSession"));
         };
         img.onerror = function () {
           if (isObjectUrl) { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }
-          bgNotify("图片读取失败，背景未更改");
+          bgNotify(L("bgReadFail"));
         };
         img.src = url;
       }
@@ -1773,7 +1972,7 @@
         bgFileEl.value = ""; // allow re-picking the same file later
         if (!f) return;
         if (f.type && f.type.indexOf("image/") !== 0) {
-          bgNotify("这个文件不是图片，背景未更改");
+          bgNotify(L("bgNotImage"));
           return;
         }
         loadBgFromUrl(URL.createObjectURL(f), true);
@@ -1782,7 +1981,7 @@
       bgOpacityEl.addEventListener("input", function () { setBgOpacity(bgOpacityEl.value); });
       bgResetBtn.addEventListener("click", function () {
         clearCustomBg();
-        bgNotify("已恢复默认背景");
+        bgNotify(L("bgResetDone"));
       });
 
       // restore a saved background on load
@@ -1819,14 +2018,14 @@
               var starsHtml = "";
               for (var k = 0; k < 3; k++) starsHtml += k < s ? "★" : '<span class="off">☆</span>';
               btn.innerHTML = '<span class="num">' + (idx + 1) + '</span>' +
-                '<span class="name">' + LEVELS[idx].name + '</span>' +
+                '<span class="name">' + levelText(idx, "name") + '</span>' +
                 '<span class="stars">' + starsHtml + '</span>';
               btn.addEventListener("click", function () { ensureAudio(); startLevel(idx); });
             } else {
               btn.className = "level-card locked";
               btn.disabled = true;
               btn.innerHTML = '<span class="num">' + (idx + 1) + '</span>' +
-                '<span class="name">' + LEVELS[idx].name + '</span>' +
+                '<span class="name">' + levelText(idx, "name") + '</span>' +
                 '<span class="lock">' + LOCK_SVG + '</span>';
             }
             levelGrid.appendChild(btn);
@@ -1916,6 +2115,8 @@
         get shotsLeft() { return shotsLeft; },
         get progress() { return progress; },
         get mode() { return mode; },
+        get lang() { return lang; },
+        setLang: setLang,
         get levelIndex() { return levelIndex; },
         setBgDataUrl: function (u) { loadBgFromUrl(u, false); },
         clearBg: function () { clearCustomBg(); },
@@ -1926,6 +2127,7 @@
       };
 
       /* ============ Go ============ */
+      applyLang(); // translate every label before the first paint of the menu
       loadLevel(); // have a valid board behind the select screen
       showSelect();
       requestAnimationFrame(function (ts) { lastTime = ts; requestAnimationFrame(loop); });
