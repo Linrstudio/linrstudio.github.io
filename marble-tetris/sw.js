@@ -1,7 +1,7 @@
 // Marble Tetris PWA service worker — offline-first for the whole game.
 //
 // Bump CACHE_VERSION whenever the game files change so clients refresh.
-const CACHE_VERSION = 'marble-tetris-v1-pwa1';
+const CACHE_VERSION = 'marble-tetris-v1-pwa3';
 
 const PRECACHE_URLS = [
   './',

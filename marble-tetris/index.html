@@ -361,6 +361,15 @@
       @media (max-width: 480px) {
         .hint .kbd-hint { display: none; }
       }
+      .safety {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .safety h2 { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+      .safety ul { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.6; color: var(--ink-soft); }
+      .safety li + li { margin-top: 2px; }
       @media (min-width: 700px) {
         .app { max-width: 460px; }
         .pad button { height: 66px; }
@@ -371,19 +380,19 @@
     <div class="app">
       <div class="hud">
         <div class="stat">
-          <div class="label">分数</div>
+          <div class="label" data-i18n="score">分数</div>
           <div class="value" id="score">0</div>
         </div>
         <div class="stat small">
-          <div class="label">等级</div>
+          <div class="label" data-i18n="level">等级</div>
           <div class="value" id="level">1</div>
         </div>
         <div class="stat small">
-          <div class="label">消行</div>
+          <div class="label" data-i18n="lines">消行</div>
           <div class="value" id="lines">0</div>
         </div>
         <div class="next-box">
-          <div class="label">下一个</div>
+          <div class="label" data-i18n="next">下一个</div>
           <canvas id="next" width="120" height="120"></canvas>
         </div>
       </div>
@@ -400,7 +409,7 @@
             <div class="card">
               <h2 id="ovTitle">弹珠俄罗斯方块</h2>
               <p id="ovText">方块落下，弹珠成行。<br />堆满一行就会消掉，别让它顶到天。</p>
-              <p class="final" id="ovFinal" style="display:none">本局得分<b id="ovScore">0</b></p>
+              <p class="final" id="ovFinal" style="display:none"><span id="ovFinalLabel">本局得分</span><b id="ovScore">0</b></p>
               <button id="ovBtn" type="button">开始游戏</button>
             </div>
           </div>
@@ -411,39 +420,50 @@
         <div class="pad">
           <button id="btnLeft" type="button" aria-label="左移">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
-            <span class="cap">左移</span>
+            <span class="cap" data-i18n="moveLeft">左移</span>
           </button>
           <button id="btnRight" type="button" aria-label="右移">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg>
-            <span class="cap">右移</span>
+            <span class="cap" data-i18n="moveRight">右移</span>
           </button>
           <button id="btnRotate" type="button" aria-label="旋转">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 3v4h-4"/></svg>
-            <span class="cap">旋转</span>
+            <span class="cap" data-i18n="rotate">旋转</span>
           </button>
           <button id="btnDown" type="button" aria-label="软降">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 9.5 12 16l6.5-6.5"/></svg>
-            <span class="cap">软降</span>
+            <span class="cap" data-i18n="softDrop">软降</span>
           </button>
           <button id="btnDrop" class="drop" type="button" aria-label="硬降">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 4 6.5 6.5L18.5 4"/><path d="m5.5 11 6.5 6.5L18.5 11"/><path d="M5 20.5h14"/></svg>
-            <span class="cap">硬降</span>
+            <span class="cap" data-i18n="hardDrop">硬降</span>
           </button>
         </div>
         <div class="sysrow">
+          <button id="btnLang" type="button"><span>中文 / EN</span></button>
           <button id="btnPause" type="button">
             <span id="pauseIcon" style="display:inline-flex"></span>
             <span id="pauseLabel">开始</span>
           </button>
           <button id="btnRestart" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/></svg>
-            <span>重开</span>
+            <span data-i18n="restart">重开</span>
           </button>
           <button id="btnFx" class="fxbtn" type="button" aria-pressed="true"><span class="dot"></span><span id="fxLabel">效果：开</span></button>
           <button id="btnSound" class="fxbtn" type="button" aria-pressed="true"><span class="dot"></span><span id="soundLabel">音效：开</span></button>
         </div>
-        <p class="hint"><span class="kbd-hint">键盘：← → 移动 · ↑ 旋转 · ↓ 软降 · 空格硬降 · P 暂停&ensp;·&ensp;</span>硬降：方块震散，弹珠按列落下补洞&ensp;·&ensp;连消四行得 800 分触发狂野模式，每消 10 行升一级</p>
+        <p class="hint" data-i18n="hint"><span class="kbd-hint">键盘：← → 移动 · ↑ 旋转 · ↓ 软降 · 空格硬降 · P 暂停&ensp;·&ensp;</span>硬降：方块震散，弹珠按列落下补洞&ensp;·&ensp;连消四行得 800 分触发狂野模式，每消 10 行升一级</p>
       </div>
+
+      <section class="safety" id="safety">
+        <h2 data-i18n="safetyTitle">关于与安全提示</h2>
+        <ul>
+          <li data-i18n="safetyAge">适合所有年龄（Rated E for Everyone）：无暴力、无赌博、无聊天功能。</li>
+          <li data-i18n="safetyPurchase">无内购、无开箱抽奖、无真钱赌博。</li>
+          <li data-i18n="safetyPrivacy">不收集任何个人数据；分数只保存在你自己的浏览器本地。</li>
+          <li data-i18n="safetyPhotosensitive">光敏性提示：本游戏含四行消除时的全屏闪光与狂野模式下的快速变色辉光，如感到不适请立即停止并休息。</li>
+        </ul>
+      </section>
     </div>
 
     <script>
@@ -470,6 +490,11 @@
         var state; /* "ready" | "playing" | "paused" | "over" */
         var dropTimer, dropInterval, lockTimer, lockResets;
         var clearing; /* rows currently flashing before removal */
+        var matchFlash = null; /* match-3 cells flashing before removal */
+        var matchFlashMap = null; /* "x,y" -> true, for the draw loop */
+        var matchFlashAlpha = 1;
+        var matchChain = 0; /* consecutive match rounds inside one settle */
+        var settleHadClear = false; /* this settle cleared lines or matches */
         var scatterBalls = null; /* marbles mid-scatter after a hard drop: [{x, y0, yFloat, targetY, type, delay}] */
         var scatterBusy = false; /* true while the hard-drop scatter animation runs */
         var rafId, lastTs;
@@ -490,13 +515,123 @@
         var linesEl = document.getElementById("lines");
         var pauseLabel = document.getElementById("pauseLabel");
         var pauseIcon = document.getElementById("pauseIcon");
+
+        /* ================= i18n (zh/en) =================
+           Language priority: ?lang= param > localStorage > browser language.
+           All user-visible strings live in I18N below; game logic is untouched. */
+        var I18N = {
+          zh: {
+            gameTitle: "弹珠俄罗斯方块",
+            score: "分数", level: "等级", lines: "消行", next: "下一个",
+            moveLeft: "左移", moveRight: "右移", rotate: "旋转", softDrop: "软降", hardDrop: "硬降",
+            start: "开始", pause: "暂停", resume: "继续", restart: "重开",
+            startGame: "开始游戏", resumeGame: "继续游戏", playAgain: "再来一局",
+            ovIntro: "方块落下，弹珠成行。<br>堆满一行就会消掉，别让它顶到天。",
+            pausedTitle: "暂停中", pausedText: "弹珠都在原地等你。",
+            gameOverTitle: "顶到天了", gameOverText: "弹珠堆到了顶，这局结束。",
+            finalScore: "本局得分",
+            fxOn: "效果：开", fxOff: "效果：关", soundOn: "音效：开", soundOff: "音效：关",
+            hint: '<span class="kbd-hint">键盘：← → 移动 · ↑ 旋转 · ↓ 软降 · 空格硬降 · P 暂停&ensp;·&ensp;</span>硬降：方块震散，弹珠按列落下补洞&ensp;·&ensp;连消四行得 800 分触发狂野模式，每消 10 行升一级',
+            safetyTitle: "关于与安全提示",
+            safetyAge: "适合所有年龄（Rated E for Everyone）：无暴力、无赌博、无聊天功能。",
+            safetyPurchase: "无内购、无开箱抽奖、无真钱赌博。",
+            safetyPrivacy: "不收集任何个人数据；分数只保存在你自己的浏览器本地。",
+            safetyPhotosensitive: "光敏性提示：本游戏含四行消除时的全屏闪光与狂野模式下的快速变色辉光，如感到不适请立即停止并休息。"
+          },
+          en: {
+            gameTitle: "Marble Tetris",
+            score: "Score", level: "Level", lines: "Lines", next: "Next",
+            moveLeft: "Move left", moveRight: "Move right", rotate: "Rotate", softDrop: "Soft drop", hardDrop: "Hard drop",
+            start: "Start", pause: "Pause", resume: "Resume", restart: "Restart",
+            startGame: "Start game", resumeGame: "Resume game", playAgain: "Play again",
+            ovIntro: "Pieces fall, marbles line up.<br>Fill a row to clear it — don't let the stack reach the top.",
+            pausedTitle: "Paused", pausedText: "The marbles are waiting right where you left them.",
+            gameOverTitle: "Topped out", gameOverText: "The marbles reached the top. This game is over.",
+            finalScore: "Final score",
+            fxOn: "Effects: On", fxOff: "Effects: Off", soundOn: "Sound: On", soundOff: "Sound: Off",
+            hint: '<span class="kbd-hint">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause&ensp;·&ensp;</span>Hard drop: the piece shatters and marbles fall column by column into gaps&ensp;·&ensp;Clear 4 lines for 800 points to trigger Wild Mode; every 10 lines cleared raises the level',
+            safetyTitle: "About & Safety",
+            safetyAge: "Rated E for Everyone: no violence, no gambling, no chat with strangers.",
+            safetyPurchase: "No in-app purchases, no loot boxes, no real-money gambling.",
+            safetyPrivacy: "No personal data is collected; scores are stored only in your own browser.",
+            safetyPhotosensitive: "Photosensitivity note: this game contains full-screen flashes on four-line clears and fast colour glows in wild mode. If you feel discomfort, stop playing and rest immediately."
+          }
+        };
+        var LANG_KEY = "marble-tetris-lang";
+        function detectLang() {
+          var m = window.location.search.match(/[?&]lang=(zh|en)\b/);
+          if (m) return m[1];
+          try {
+            var saved = window.localStorage.getItem(LANG_KEY);
+            if (saved === "zh" || saved === "en") return saved;
+          } catch (e) {}
+          var nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+          return nav.indexOf("zh") === 0 ? "zh" : "en";
+        }
+        var lang = detectLang();
+        function t(key) {
+          if (I18N[lang] && I18N[lang][key] !== undefined) return I18N[lang][key];
+          if (I18N.zh[key] !== undefined) return I18N.zh[key];
+          return key;
+        }
+        function refreshOverlay() {
+          var finalLabel = document.getElementById("ovFinalLabel");
+          if (finalLabel) finalLabel.textContent = t("finalScore");
+          if (state === "paused") {
+            ovTitle.textContent = t("pausedTitle");
+            ovText.innerHTML = t("pausedText");
+            ovBtn.textContent = t("resumeGame");
+            ovFinal.style.display = "none";
+          } else if (state === "over") {
+            ovTitle.textContent = t("gameOverTitle");
+            ovText.innerHTML = t("gameOverText");
+            ovBtn.textContent = t("playAgain");
+            ovFinal.style.display = "block";
+          } else {
+            ovTitle.textContent = t("gameTitle");
+            ovText.innerHTML = t("ovIntro");
+            ovBtn.textContent = t("startGame");
+            ovFinal.style.display = "none";
+          }
+        }
+        function applyLang() {
+          document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+          document.title = t("gameTitle");
+          var els = document.querySelectorAll("[data-i18n]");
+          for (var i = 0; i < els.length; i++) {
+            els[i].innerHTML = t(els[i].getAttribute("data-i18n"));
+          }
+          var ariaMap = { btnLeft: "moveLeft", btnRight: "moveRight", btnRotate: "rotate", btnDown: "softDrop", btnDrop: "hardDrop" };
+          Object.keys(ariaMap).forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.setAttribute("aria-label", t(ariaMap[id]));
+          });
+          refreshOverlay();
+          if (state === "playing") setPauseUI(t("pause"), ICON_PAUSE);
+          else if (state === "paused") setPauseUI(t("resume"), ICON_PLAY);
+          else setPauseUI(t("start"), ICON_PLAY);
+          fxRefreshToggleUI();
+        }
+        function setLang(next) {
+          lang = (next === "en") ? "en" : "zh";
+          try { window.localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+          try {
+            var url = new URL(window.location.href);
+            url.searchParams.set("lang", lang);
+            window.history.replaceState(null, "", url.toString());
+          } catch (e) {}
+          applyLang();
+        }
+        document.getElementById("btnLang").addEventListener("click", function () {
+          setLang(lang === "zh" ? "en" : "zh");
+        });
         var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.5-6.86a1.03 1.03 0 0 0 0-1.76L9.56 4.26A1.03 1.03 0 0 0 8 5.14z"/></svg>';
         var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>';
         function setPauseUI(label, icon) {
           pauseLabel.textContent = label;
           pauseIcon.innerHTML = icon;
         }
-        setPauseUI("开始", ICON_PLAY);
+        setPauseUI(t("start"), ICON_PLAY);
 
         var cell = 30; /* logical px per cell, set by layout() */
 
@@ -958,10 +1093,10 @@
         function fxRefreshToggleUI() {
           btnFx.classList.toggle("off", !fxEnabled);
           btnFx.setAttribute("aria-pressed", fxEnabled ? "true" : "false");
-          fxLabel.textContent = fxEnabled ? "效果：开" : "效果：关";
+          fxLabel.textContent = fxEnabled ? t("fxOn") : t("fxOff");
           btnSound.classList.toggle("off", fxMuted);
           btnSound.setAttribute("aria-pressed", fxMuted ? "false" : "true");
-          soundLabel.textContent = fxMuted ? "音效：关" : "音效：开";
+          soundLabel.textContent = fxMuted ? t("soundOff") : t("soundOn");
         }
         function fxSetEnabled(on) {
           fxEnabled = !!on;
@@ -983,6 +1118,7 @@
           fxRefreshToggleUI();
         });
         fxRefreshToggleUI();
+        applyLang();
 
         /* ---------------- sizing ---------------- */
         function layout() {
@@ -1076,6 +1212,11 @@
               if (clearing && clearing.indexOf(y) !== -1) {
                 ctx.save();
                 ctx.globalAlpha = clearingAlpha;
+                drawMarble(ctx, x * cell, y * cell, cell, t);
+                ctx.restore();
+              } else if (matchFlashMap && matchFlashMap[x + "," + y]) {
+                ctx.save();
+                ctx.globalAlpha = matchFlashAlpha;
                 drawMarble(ctx, x * cell, y * cell, cell, t);
                 ctx.restore();
               } else {
@@ -1353,19 +1494,7 @@
           }
           fxClearTrail();
           if (over) { gameOver(); draw(); return; }
-          var full = [];
-          for (var y = 0; y < ROWS; y++) {
-            var isFull = true;
-            for (var x = 0; x < COLS; x++) if (!board[y][x]) { isFull = false; break; }
-            if (isFull) full.push(y);
-          }
-          if (full.length) {
-            clearing = full;
-            animateClear(full);
-          } else {
-            fxOnNoClear();
-            spawn();
-          }
+          resolveAfterSettle();
           draw();
         }
 
@@ -1386,19 +1515,7 @@
           fxClearTrail();
           current = null;
           if (over) { gameOver(); draw(); return; }
-          var full = [];
-          for (var y = 0; y < ROWS; y++) {
-            var isFull = true;
-            for (var x = 0; x < COLS; x++) if (!board[y][x]) { isFull = false; break; }
-            if (isFull) full.push(y);
-          }
-          if (full.length) {
-            clearing = full;
-            animateClear(full);
-          } else {
-            fxOnNoClear();
-            spawn();
-          }
+          resolveAfterSettle();
           draw();
         }
 
@@ -1439,6 +1556,7 @@
           fxOnClear(clearedCells, full.slice(), full.length, clearPoints);
           if (leveledUp) fxOnLevelUp(level);
           clearing = null;
+          settleHadClear = true;
           var kept = board.filter(function (_, y) { return full.indexOf(y) === -1; });
           while (kept.length < ROWS) {
             var row = [];
@@ -1447,7 +1565,125 @@
           }
           board = kept;
           updateHud();
-          if (state === "playing") spawn();
+          if (state === "playing") checkMatches();
+          draw();
+        }
+
+        /* ---------------- match-3 ----------------
+           After a piece settles — and after any full-row clears from
+           that settle — same-colour marbles in a horizontal or
+           vertical run of 3+ clear together. Cleared columns collapse
+           straight down and the board is re-scanned, so cascades
+           chain: each further round scores with a higher multiplier.
+           Full-row clears keep their existing priority and scoring;
+           matches never touch the lines counter, so level progression
+           stays row-based. */
+        function findMatches(b) {
+          var map = {};
+          var list = [];
+          function add(x, y) {
+            var k = x + "," + y;
+            if (!map[k]) { map[k] = true; list.push({ x: x, y: y, type: b[y][x] }); }
+          }
+          var y, x, x0, y0, t;
+          for (y = 0; y < ROWS; y++) {
+            x = 0;
+            while (x < COLS) {
+              t = b[y][x];
+              if (!t) { x++; continue; }
+              x0 = x;
+              while (x < COLS && b[y][x] === t) x++;
+              if (x - x0 >= 3) { for (var i = x0; i < x; i++) add(i, y); }
+            }
+          }
+          for (x = 0; x < COLS; x++) {
+            y = 0;
+            while (y < ROWS) {
+              t = b[y][x];
+              if (!t) { y++; continue; }
+              y0 = y;
+              while (y < ROWS && b[y][x] === t) y++;
+              if (y - y0 >= 3) { for (var j = y0; j < y; j++) add(x, j); }
+            }
+          }
+          return list;
+        }
+        function findFullRows() {
+          var full = [];
+          for (var y = 0; y < ROWS; y++) {
+            var isFull = true;
+            for (var x = 0; x < COLS; x++) if (!board[y][x]) { isFull = false; break; }
+            if (isFull) full.push(y);
+          }
+          return full;
+        }
+        function collapseColumns() {
+          for (var x = 0; x < COLS; x++) {
+            var stack = [];
+            for (var y = ROWS - 1; y >= 0; y--) if (board[y][x]) stack.push(board[y][x]);
+            var yy = ROWS - 1;
+            for (var s = 0; s < stack.length; s++, yy--) board[yy][x] = stack[s];
+            for (; yy >= 0; yy--) board[yy][x] = null;
+          }
+        }
+        function resolveAfterSettle() {
+          settleHadClear = false;
+          matchChain = 0;
+          var full = findFullRows();
+          if (full.length) { clearing = full; animateClear(full); return; }
+          checkMatches();
+        }
+        function checkMatches() {
+          var matches = findMatches(board);
+          if (!matches.length) {
+            /* fxOnNoClear resets the clear combo; a settle that cleared
+               lines or matches must not reset it, so it only fires
+               when this settle cleared nothing at all. */
+            if (!settleHadClear) fxOnNoClear();
+            settleHadClear = false;
+            matchChain = 0;
+            if (state === "playing") spawn();
+            return;
+          }
+          matchChain++;
+          animateMatchClear(matches);
+        }
+        function animateMatchClear(matches) {
+          var start = null;
+          var DURATION = 200;
+          matchFlash = matches;
+          matchFlashMap = {};
+          matches.forEach(function (c) { matchFlashMap[c.x + "," + c.y] = true; });
+          function step(ts) {
+            if (state === "over") return;
+            if (!start) start = ts;
+            var t = (ts - start) / DURATION;
+            matchFlashAlpha = t < 0.5 ? 1 - t * 1.6 : 0.2 + (t - 0.5) * 1.6;
+            draw();
+            if (t < 1) { requestAnimationFrame(step); return; }
+            matchFlashAlpha = 1;
+            applyMatchClear(matches);
+          }
+          requestAnimationFrame(step);
+        }
+        function applyMatchClear(matches) {
+          matchFlash = null;
+          matchFlashMap = null;
+          var rowsMap = {};
+          var rows = [];
+          matches.forEach(function (c) {
+            if (!rowsMap[c.y]) { rowsMap[c.y] = true; rows.push(c.y); }
+            board[c.y][c.x] = null;
+          });
+          var points = matches.length * 10 * matchChain;
+          score += points;
+          settleHadClear = true;
+          /* lineCount 0: same particles and float text as a row clear,
+             but no TETRIS/wild trigger and no lines counted. */
+          fxOnClear(matches, rows, 0, points);
+          collapseColumns();
+          updateHud();
+          if (state === "playing") checkMatches();
           draw();
         }
 
@@ -1457,13 +1693,10 @@
 
         function gameOver() {
           state = "over";
-          ovTitle.textContent = "顶到天了";
-          ovText.textContent = "弹珠堆到了顶，这局结束。";
-          ovFinal.style.display = "block";
           ovScore.textContent = score;
-          ovBtn.textContent = "再来一局";
+          refreshOverlay();
           overlay.classList.add("show");
-          setPauseUI("开始", ICON_PLAY);
+          setPauseUI(t("start"), ICON_PLAY);
           draw();
         }
 
@@ -1500,6 +1733,10 @@
           score = 0; lines = 0; level = 1;
           dropInterval = intervalForLevel(1);
           clearing = null;
+          matchFlash = null;
+          matchFlashMap = null;
+          matchChain = 0;
+          settleHadClear = false;
           current = null;
           scatterBalls = null;
           scatterBusy = false;
@@ -1516,7 +1753,7 @@
           resetGame();
           state = "playing";
           overlay.classList.remove("show");
-          setPauseUI("暂停", ICON_PAUSE);
+          setPauseUI(t("pause"), ICON_PAUSE);
           spawn();
           draw();
           lastTs = null;
@@ -1525,16 +1762,13 @@
         function togglePause() {
           if (state === "playing") {
             state = "paused";
-            setPauseUI("继续", ICON_PLAY);
-            ovTitle.textContent = "暂停中";
-            ovText.textContent = "弹珠都在原地等你。";
-            ovFinal.style.display = "none";
-            ovBtn.textContent = "继续游戏";
+            setPauseUI(t("resume"), ICON_PLAY);
+            refreshOverlay();
             overlay.classList.add("show");
             draw();
           } else if (state === "paused") {
             state = "playing";
-            setPauseUI("暂停", ICON_PAUSE);
+            setPauseUI(t("pause"), ICON_PAUSE);
             overlay.classList.remove("show");
             lastTs = null;
             draw();
