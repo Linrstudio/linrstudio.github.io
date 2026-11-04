@@ -5,3 +5,12 @@
 
 @keyframes move-path-fade{from{opacity:.78}to{opacity:0}}
 @media(prefers-reduced-motion:reduce){.board .move-path{animation:none}}
+
+/* 双人同屏翻转：黑方回合棋盘旋转 180°，上下方标签随之对调（文字本身不旋转）；全局 reduced-motion 规则会取消过渡动画。 */
+.board{transition:transform .45s ease}
+.board.flipped{transform:rotate(180deg)}
+.game.flipped{display:flex;flex-direction:column}
+.game.flipped .game-bottom{order:1}
+.game.flipped .board-frame{order:2}
+.game.flipped .game-top{order:3}
+.game.flipped .move-notice{order:4}
