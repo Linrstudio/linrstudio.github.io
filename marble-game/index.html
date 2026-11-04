@@ -691,7 +691,7 @@
           bgResetDone: "已恢复默认背景",
           aboutTitle: "关于与安全提示",
           aboutBody: "年龄分级：适合所有年龄（Rated E for Everyone），无暴力、无赌博、无聊天功能。<br>无付费内容：无内购、无开箱抽奖、无真钱赌博。<br>隐私：不收集任何个人数据，分数与进度只存在你的浏览器本地。<br>光敏性提示：本游戏无闪烁特效，如感到不适请立即停止并休息。",
-          levels: [
+          levelList: [
             { name: "经典花心", hint: "把 7 颗弹珠全部撞出圈外，通关时剩的发数越多，星越高。" },
             { name: "小花", hint: "圆圈更小、只有 5 颗珠，试试一发带走两颗。" },
             { name: "圆环阵", hint: "空心环阵：打穿一角，靠连锁把整圈带出去。" },
@@ -745,7 +745,7 @@
           bgResetDone: "Default background restored",
           aboutTitle: "About & Safety Notes",
           aboutBody: "Age rating: suitable for all ages (Rated E for Everyone). No violence, no gambling, no chat.<br>No purchases: no in-app purchases, no loot boxes, no real-money gambling.<br>Privacy: no personal data is collected. Scores and progress are stored only in your browser.<br>Photosensitivity: this game has no flashing effects. If you feel unwell, stop playing and rest immediately.",
-          levels: [
+          levelList: [
             { name: "Classic Flower", hint: "Knock all 7 marbles out of the ring. The more shots you have left when you clear it, the more stars you earn." },
             { name: "Little Flower", hint: "A smaller ring and only 5 marbles. Try taking two out with one shot." },
             { name: "Ring Formation", hint: "A hollow ring: punch through one corner and let the chain reaction carry the rest out." },
@@ -790,7 +790,7 @@
         if (el) el.textContent = L(key);
       }
       function levelText(idx, field) {
-        var arr = (I18N[lang] && I18N[lang].levels) || I18N.zh.levels;
+        var arr = (I18N[lang] && I18N[lang].levelList) || I18N.zh.levelList;
         return (arr[idx] && arr[idx][field]) || "";
       }
       function currentHint() {
