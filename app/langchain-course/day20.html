@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 20：工具路由 + 深圳天气工具（Open-Meteo，免 Key） | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 20 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 20：工具路由 + 深圳天气工具（Open-Meteo，免 Key）</h1>
+<p>RAG 讲完了，今天讲另一条线：工具。问题来了，先判断走 RAG 还是走工具；天气问题走工具，工具去调真实的天气接口——用 Open-Meteo，免 Key，深圳坐标 22.54, 114.06。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 路由是什么：问题来了，先分流，再干活</h3>
+<pre><code>用户问题
+  → 问天气、温度、下雨、风？ → 走天气工具（调 Open-Meteo）
+  → 问文档、规则、教程里有的事？ → 走 RAG（检索 + 生成）
+  → 两边都沾？ → Day 21 讲混合问答，先分再合
+  → 两边都不沾？ → 直接回答“这个问题我答不了”，不要现编</code></pre>
+<p>路由可以先做规则版：问题里有“天气、温度、下雨、风”这些词，就走天气工具；没有，就走 RAG。规则版简单、可解释，起步就够了；规则版不够用了，再上模型版路由（让模型自己判断走哪条），不要一上来就上模型版——模型版路由错了，你连它为什么错都说不清。</p>
+<h3>2. 天气工具怎么做：一个函数，三个要点</h3>
+<ul>
+<li><strong>参数要收敛</strong>：城市名先映射到坐标，深圳就是 22.54, 114.06；不要让模型直接传经纬度，模型编坐标比编天气还快。</li>
+<li><strong>接口要免 Key、要超时</strong>：Open-Meteo 不用 Key，适合教学和演示；调用要设超时，超时算一次工具失败、转成 ToolMessage 贴回，不要让 Agent 干等。</li>
+<li><strong>结果要结构化</strong>：温度、湿度、风速、天气码，四项原样返回，不要让工具自己写成一句话——写成一句话，模型就没法再加工、没法再校验了。</li>
+</ul>
+<h3>3. 工具结果怎么进 Agent 循环：和第 1 周一样，ToolMessage 回填</h3>
+<p>天气工具和 calculator 工具没有本质区别：模型出 tool_call，工具调接口，结果包成 ToolMessage、按 tool_call_id 回填，再调模型生成最终回答。工具结果里要带出处：数据来自 Open-Meteo、时间是哪一刻，回答里才能写“据 Open-Meteo，深圳当前……”而不是“深圳当前……”——出处是工具结果的一部分，不是回答时现编的。</p>
+<h3>4. 天气码怎么翻译：不要让模型猜</h3>
+<p>Open-Meteo 返回的 weather_code 是数字，0 是晴、1 到 3 是多云、61 是雨，诸如此类。翻译表要写在工具代码里，工具返回时直接带中文翻译，不要把数字原样丢给模型、让模型猜——模型猜天气码，和编天气是一个性质。</p>
+<div class="warn"><strong>容易踩的坑：</strong>让模型直接传经纬度、直接传城市名去调接口。城市名要先映射到坐标表，坐标表是代码里的白名单，不是模型现编的；不在表里的城市，先问用户、或者直接说“这个城市我还没接”，不要让模型编一个坐标出来。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：规则版路由（本地实测）</h3>
+<pre><code>def route(question: str) -> str:
+    # 规则版：问题里有天气词，就走天气工具；没有，就走 RAG
+    if any(w in question for w in ["天气", "温度", "下雨", "风"]):
+        return "weather_tool"
+    return "rag"
+
+# 本地实测：
+# route("深圳今天天气怎么样？") → "weather_tool"
+# route("LangChain 记忆怎么做预算？") → "rag"
+# 规则版简单、可解释，起步就够了；不够用了再上模型版路由</code></pre>
+<h3>示例 2：天气工具骨架（结构化返回，翻译表写在代码里）</h3>
+<pre><code>from langchain_core.tools import tool
+
+CITY_COORDS = {"深圳": (22.54, 114.06)}  # 白名单映射，不让模型编坐标
+WEATHER_TEXT = {0: "晴", 1: "多云", 2: "多云", 3: "阴", 61: "雨"}  # 翻译表写死
+
+@tool
+def get_weather(city: str) -> str:
+    """查指定城市的当前天气，城市名必须是白名单里的。"""
+    if city not in CITY_COORDS:
+        return f"这个城市我还没接：{city}，目前只接了深圳"
+    lat, lon = CITY_COORDS[city]
+    # 真实调用：requests.get("https://api.open-meteo.com/v1/forecast",
+    #   params={"latitude": lat, "longitude": lon,
+    #           "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"},
+    #   timeout=10)
+    # 返回结构化四项：温度、湿度、风速、天气码翻译，不要写成一句话
+    return "深圳当前：26.5°C，湿度 72%，风速 3.2 m/s，多云（示例数据，真实调用替换上面那行）"</code></pre>
+<p>注意：示例里的 26.5°C、72%、3.2 m/s 是示例数据，用来演示返回格式，不是实时天气；真实调用把上面注释那行换成真正的 requests 调用，超时设 10 秒，超时算工具失败转 ToolMessage。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给路由加两条规则：问题里有“明天天气”走天气工具（要加预报参数），问题里有“深圳”和“天气”两个词才走天气工具——哪条更稳？为什么？<br>
+2. 把城市白名单扩到 3 个城市，写出不在白名单时的返回文案，再想想：不在白名单时，是直接拒绝好，还是问用户好？<br>
+3. 写一个天气码翻译表：0、1、2、3、61、71、95 各是什么意思？查不到的码，工具应该返回什么？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 路由是干嘛的？</strong></p><button data-i="0">让模型一次答所有问题</button><button data-i="1">问题来了先分流：天气走工具，文档走 RAG，两边都不沾就说答不了</button><button data-i="2">把问题翻译成英文</button><div class="ans">解析：选 B。路由是分流，不是翻译；两边都不沾，直接说答不了，不要现编。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 路由起步应该用规则版还是模型版？</strong></p><button data-i="0">一上来就用模型版，越智能越好</button><button data-i="1">不用路由，全部走 RAG</button><button data-i="2">先用规则版，简单、可解释；不够用了再上模型版</button><div class="ans">解析：选 C。模型版路由错了，你连它为什么错都说不清；规则版错了，一眼就能看出是哪条规则错了。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 城市名应该怎么处理？</strong></p><button data-i="0">先映射到坐标白名单，深圳就是 22.54, 114.06；不要让模型直接传经纬度</button><button data-i="1">让模型直接编一个坐标</button><button data-i="2">不用坐标，直接问模型天气</button><div class="ans">解析：选 A。模型编坐标比编天气还快，坐标表是代码里的白名单，不是模型现编的。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 天气工具的结果应该怎么返回？</strong></p><button data-i="0">写成一句漂亮的话</button><button data-i="1">结构化四项：温度、湿度、风速、天气码翻译，原样返回</button><button data-i="2">只返回温度</button><div class="ans">解析：选 B。写成一句话，模型就没法再加工、没法再校验了；结构化返回，模型才能再组织回答。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 天气码应该怎么翻译？</strong></p><button data-i="0">把数字原样丢给模型，让模型猜</button><button data-i="1">不用翻译，数字就行</button><button data-i="2">翻译表写在工具代码里，工具返回时直接带中文翻译</button><div class="ans">解析：选 C。模型猜天气码，和编天气是一个性质；翻译表写死在代码里。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 工具调用超时了，应该怎么办？</strong></p><button data-i="0">超时算一次工具失败，转成 ToolMessage 贴回，不要让 Agent 干等</button><button data-i="1">一直等，等到接口回来为止</button><button data-i="2">直接说天气很好</button><div class="ans">解析：选 A。和第 1 周的工具异常处理一样：工具失败转消息回填，让模型纠错或换路，不要崩、不要编。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：路由怎么做？规则版和模型版怎么选？</summary><p>先分流再干活：天气词走工具，文档问题走 RAG，两边都不沾就说答不了。起步用规则版，简单、可解释；规则版不够用了再上模型版，不要一上来就上模型版。</p></details>
+<details><summary>Q2：天气工具的参数怎么设计？</summary><p>城市名先映射到坐标白名单，深圳 22.54, 114.06；不要让模型直接传经纬度。接口用 Open-Meteo，免 Key，设超时；结果结构化返回温度、湿度、风速、天气码翻译，带出处和时间。</p></details>
+<details><summary>Q3：工具结果怎么进 Agent 循环？</summary><p>和第 1 周一样：模型出 tool_call，工具调接口，结果包成 ToolMessage、按 tool_call_id 回填，再调模型生成最终回答。工具结果里带出处和时间，回答里才能写“据 Open-Meteo……”而不是现编。</p></details>
+<details><summary>Q4：天气码为什么不能让模型猜？</summary><p>天气码是数字编码，翻译表要写在工具代码里，工具返回时直接带中文翻译。把数字丢给模型猜，和编天气是一个性质。</p></details>
+<details><summary>Q5：不在白名单的城市，怎么办？</summary><p>直接返回“这个城市我还没接”，或者问用户确认，不要让模型编一个坐标出来。白名单是代码里的，不是模型现编的。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>天气工具上线前，先问三个问题：城市白名单有没有？调用超时设了没有？结果结构化、带出处和时间了吗？三问有一个答不上来，工具就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过天气工具”，写“规则版路由分流，城市名映射坐标白名单，Open-Meteo 免 Key 调用、超时转 ToolMessage，结构化返回温度、湿度、风速、天气码翻译”。前者是名词，后者是可追问的工具设计。</p>
+<p><strong>明日预告：</strong>Day 21 讲混合问答 Agent：RAG 和工具怎么一起调，混合问题怎么拆、怎么合、怎么标出处。</p>
+</div>
+<div class="nav"><span><a href="day19.html">← Day 19</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day21.html">Day 21 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

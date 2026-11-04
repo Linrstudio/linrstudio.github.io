@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 17：向量库与检索：TopK 怎么选 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 17 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 17：向量库与检索：TopK 怎么选</h1>
+<p>切块和向量都准备好了，今天讲存和查：向量库存什么、相似度怎么算、TopK 怎么选、关键词和向量怎么混合——这一步决定模型面前摆的是哪几块资料。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 向量库存什么：向量 + 原文 + 元数据，三件套</h3>
+<p>向量库里每条记录有三样东西：<strong>向量</strong>（用来算相似度）、<strong>原文块</strong>（检索回来要拼进提示词的）、<strong>元数据</strong>（出处、章节、时间、编号，回答引用和过滤都靠它）。只存向量不存原文，检索回来没东西可拼；只存原文不存元数据，回答没法引用、没法按时间过滤。</p>
+<h3>2. 相似度怎么算：余弦相似度，方向比长度重要</h3>
+<p>最常用的是余弦相似度：算两个向量方向的夹角，方向越接近，相似度越高。为什么用方向不用长度？因为向量长度受文本长短影响大，方向才代表语义。实际使用时，向量通常先归一化，归一化后余弦相似度就等于点积，算起来更快。</p>
+<h3>3. TopK 怎么选：看命中率和 Token 预算，不看感觉</h3>
+<table>
+<tr><th>TopK 太小</th><th>TopK 太大</th></tr>
+<tr><td>漏关键块：答案在第 6 块，你只取了 5 块</td><td>噪音太多：模型要在无关块里筛答案，还烧 Token</td></tr>
+</table>
+<p>起步值可以给一个：<strong>TopK = 5</strong>，跑评测集看命中率，再调。调的时候看两个数一起变：命中率上去了、Token 消耗没爆，才算调对了；只看一个，另一个迟早反噬。Day 19 会讲评测集怎么做。</p>
+<h3>4. 关键词和向量怎么混合：精确在前、语义补位</h3>
+<p>和 Day 9 代码检索的结论一样，文档检索也要混合，只是主次反过来：<strong>向量检索是主力</strong>，因为文档问题多是语义问题；<strong>关键词检索是补充</strong>，专门抓精确名字、编号、错误码这些向量容易漏的。混合的做法是：两边各取一批，合并去重，再按分数排，Day 18 的重排就是干这件事的。</p>
+<h3>5. 索引更新：文档改了，向量库不能还留着旧的</h3>
+<p>文档一改，对应的块要重新切、重新向量化、重新入库，旧块要删掉或标记过期。更新不及时，检索回来的是旧答案，模型还一本正经地引用它，比没有答案更糟。更新机制和 Day 9 的索引过期是同一个坑，只是换到了文档这边。</p>
+<div class="warn"><strong>容易踩的坑：</strong>TopK 取回来就直接拼进提示词，不做过滤。相似度分数很低的块，拼进去也是噪音。正确做法是：相似度设一个下限，低于下限的块不要，哪怕 TopK 没取满——宁缺毋滥，缺了模型还能说“资料里没有”，滥了模型就开始现编。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：余弦相似度与 TopK（本地实测，小向量算给你看）</h3>
+<pre><code>import math
+
+def cosine(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    return dot / (na * nb)
+
+docs = [("d1", [1, 0]), ("d2", [0, 1]), ("d3", [0.7, 0.7])]
+query = [1, 0]
+ranked = sorted([(cosine(query, v), name) for name, v in docs], reverse=True)
+print(ranked[:2])  # [(1.0, 'd1'), (0.707..., 'd3')]：d1 方向完全一致，d3 次之
+
+# 逻辑要点：方向越接近，分数越高；TopK 就是取分数最高的前 K 个
+# 真实向量是几百上千维，公式一样，只是数字变长了</code></pre>
+<h3>示例 2：混合检索的形状（概念代码，先看形状）</h3>
+<pre><code>def hybrid_search(question, top_k=5):
+    vector_hits = vector_search(question)   # 主力：语义相近
+    keyword_hits = keyword_search(question) # 补充：精确名字、编号
+    # 合并去重：向量在前、关键词补位，总数不超过 top_k
+    # 相似度低于下限的块不要，宁缺毋滥
+    seen, merged = set(), []
+    for hit in vector_hits + keyword_hits:
+        if hit["id"] not in seen and hit["score"] >= 0.5 and len(merged) < top_k:
+            seen.add(hit["id"]); merged.append(hit)
+    return merged</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 用示例 1 的小向量，换一个问题向量 [0, 1]，算出 Top2 是谁，再换 [1, 1]，看排名怎么变。<br>
+2. 给你的 RAG 定三个数：TopK、相似度下限、起步值，再写出如果命中率低，你先调哪一个。<br>
+3. 想一个关键词检索能救场的例子：问题里有个精确编号，向量检索漏了，关键词怎么补上？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 向量库每条记录存什么？</strong></p><button data-i="0">只存向量</button><button data-i="1">向量 + 原文块 + 元数据，三件套</button><button data-i="2">只存原文</button><div class="ans">解析：选 B。向量算相似度，原文拼进提示词，元数据管引用和过滤，缺一个都不行。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 余弦相似度为什么看方向不看长度？</strong></p><button data-i="0">因为长度算起来慢</button><button data-i="1">因为方向比较好看</button><button data-i="2">因为向量长度受文本长短影响大，方向才代表语义</button><div class="ans">解析：选 C。归一化后余弦相似度等于点积，算起来也更快。</div></div>
+<div class="q" data-answer="0"><p><strong>3. TopK 太小和太大，各有什么代价？</strong></p><button data-i="0">太小漏关键块，太大噪音多、烧 Token</button><button data-i="1">太小噪音多，太大漏关键块</button><button data-i="2">没有代价，随便取</button><div class="ans">解析：选 A。起步 TopK = 5，跑评测集看命中率和 Token 消耗一起调。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 文档检索里，关键词和向量谁是主力？</strong></p><button data-i="0">关键词是主力，向量是补充</button><button data-i="1">向量是主力，关键词补充精确名字、编号</button><button data-i="2">只用一种就够了</button><div class="ans">解析：选 B。和代码检索主次是反的：文档问题多是语义问题，向量是主力。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 相似度分数很低的块，应该怎么办？</strong></p><button data-i="0">照样拼进去，越多越好</button><button data-i="1">分数低说明模型不行，换模型</button><button data-i="2">设下限，低于下限不要，宁缺毋滥</button><div class="ans">解析：选 C。缺了模型还能说“资料里没有”，滥了模型就开始现编。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 文档改了，向量库应该怎么办？</strong></p><button data-i="0">对应块重新切、重新向量化、重新入库，旧块删掉或标记过期</button><button data-i="1">不用管，旧答案也能用</button><button data-i="2">把整个库删了重建，每次都全量</button><div class="ans">解析：选 A。更新不及时，检索回来的是旧答案，模型还一本正经地引用它，比没有答案更糟。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：向量库存什么？为什么要存元数据？</summary><p>向量、原文块、元数据三件套：向量算相似度，原文拼进提示词，元数据管引用和过滤。没有元数据，回答没法引用、没法按时间过滤。</p></details>
+<details><summary>Q2：TopK 怎么选？</summary><p>起步 5，跑评测集看命中率和 Token 消耗一起调。太小漏关键块，太大噪音多、烧 Token；还要设相似度下限，低于下限不要，宁缺毋滥。</p></details>
+<details><summary>Q3：关键词和向量怎么混合？</summary><p>向量是主力，关键词补充精确名字、编号、错误码。两边各取一批，合并去重，再按分数排，重排在 Day 18 讲。</p></details>
+<details><summary>Q4：余弦相似度和点积是什么关系？</summary><p>向量归一化后，余弦相似度就等于点积。方向代表语义，长度受文本长短影响，所以看方向不看长度。</p></details>
+<details><summary>Q5：索引更新怎么做？</summary><p>文档改了，对应块重新切、重新向量化、重新入库，旧块删掉或标记过期。更新不及时，检索回来的是旧答案，比没有答案更糟。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>向量库上线前，先问三个问题：元数据齐不齐？TopK 和相似度下限定了没有？文档更新机制有没有？三问有一个答不上来，检索就别上。</p>
+<p><strong>简历讲法：</strong>别写“用过向量库”，写“向量、原文、元数据三件套入库，余弦相似度检索，起步 TopK = 5、相似度下限过滤，关键词与向量混合检索，文档更新时旧块重建”。前者是名词，后者是可追问的方案。</p>
+<p><strong>明日预告：</strong>Day 18 讲重排、引用与防幻觉：检索回来的块怎么再排一次序，引用怎么写，资料里没有时怎么拦住现编。</p>
+</div>
+<div class="nav"><span><a href="day16.html">← Day 16</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day18.html">Day 18 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

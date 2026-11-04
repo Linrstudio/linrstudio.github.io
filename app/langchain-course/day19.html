@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 19：RAG 评测集：命中率、引用准确率、幻觉率 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 19 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 19：RAG 评测集：命中率、引用准确率、幻觉率</h1>
+<p>没有评测集的 RAG，调参就是碰运气。今天讲评测集怎么做、三个数怎么算、调参时看哪几个数一起变——这是第 3 周从“做出来”到“能证明变好了”的关键一课。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 评测集怎么做：问题 + 标准答案块 + 标准答案，三件套</h3>
+<p>评测集里每条有三样东西：<strong>问题</strong>（用户真实会问的）、<strong>标准答案块</strong>（答案出自哪几块，事先标好）、<strong>标准答案</strong>（正确答案本身，用来比对生成结果）。起步 10 到 20 条就够了，关键是覆盖：常见问题、边界问题、资料里没有的问题，三类都要有——只有常见问题，评测集就是摆设。</p>
+<h3>2. 三个数，怎么算</h3>
+<table>
+<tr><th>指标</th><th>怎么算</th><th>低了说明什么</th></tr>
+<tr><td>命中率</td><td>检索回来的块里，有标准答案块的问题 / 总问题数</td><td>切块、向量、TopK 有问题，检索这步就漏了</td></tr>
+<tr><td>引用准确率</td><td>回答里引用正确的结论 / 回答里的全部关键结论</td><td>引用标错了，或者模型在引用块之外编了结论</td></tr>
+<tr><td>幻觉率</td><td>回答里资料里没有的结论 / 回答里的全部关键结论</td><td>防幻觉的三道关有缺口，重点查 Day 18 的关卡</td></tr>
+</table>
+<p>三个数要一起看：命中率高、引用准确率低，说明检索对了、生成标错了；命中率低，其他两个数再高也没用，因为答案根本没检索到；幻觉率高，先查检索为空分支和校验关，不要先换模型。</p>
+<h3>3. 调参看哪几个数一起变</h3>
+<p>调块大小、重叠、TopK、相似度下限时，每次只改一个数，跑一遍评测集，记下三个数和 Token 消耗的变化。一次改多个数，变好了也不知道是谁的功劳，变坏了也不知道是谁的锅。调参的记录表本身就是面试可讲的东西：改了什么、三个数怎么变、为什么停在这个值。</p>
+<h3>4. 评测集也要防作弊：别用同一批问题既调参又验收</h3>
+<p>调参用的问题和最终验收的问题要分开：同一批问题既调参又验收，调出来的数是虚高的——参数是照着这批问题调的，换一批问题就原形毕露。起步时可以先用一批，但心里要清楚：最终验收一定要换一批没见过的问题。</p>
+<div class="warn"><strong>容易踩的坑：</strong>评测集里只有“资料里有答案”的问题，没有“资料里没有”的问题。没有后者，幻觉率永远测不出来——模型现编了，你也不知道，因为评测集里根本没有现编会被发现的题目。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：三个数怎么算（本地实测，小数字算给你看）</h3>
+<pre><code># 评测集：2 条，标准答案块事先标好
+gold = {"q1": "d1", "q2": "d2"}   # q1 答案在 d1，q2 答案在 d2
+got = {"q1": "d1", "q2": "d3"}    # 检索回来：q1 对了，q2 错了
+hit_rate = sum(1 for k in gold if got[k] == gold[k]) / len(gold)
+print(hit_rate)  # 0.5：2 条里 1 条命中
+
+# 引用准确率和幻觉率同理：
+# 引用准确率 = 引用正确的关键结论 / 全部关键结论
+# 幻觉率 = 资料里没有的关键结论 / 全部关键结论
+# 三个数一起看，不要只看一个</code></pre>
+<h3>示例 2：调参记录表（照着抄，不要只记“变好了”）</h3>
+<pre><code># 每次只改一个数，跑一遍评测集，记下四个数：
+# 改动 | 命中率 | 引用准确率 | 幻觉率 | Token 消耗
+# TopK 5 → 8 | 0.70 → 0.80 | 0.85 → 0.83 | 0.10 → 0.09 | +20%
+# 结论：命中率上去了，引用准确率微降、Token 多了 20%，值不值要看场景
+# 只记“变好了”三个字，下次再调，你连上次改了什么都想不起来</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给你的 RAG 写 10 条评测题：常见问题 5 条、边界问题 3 条、资料里没有的问题 2 条，再标好每条的标准答案块。<br>
+2. 用示例 1 的方法，手工算一次命中率，再写出如果命中率低，你先查切块、向量、TopK 里的哪一个。<br>
+3. 写一张调参记录表：只改 TopK 一个数，跑两遍，记下四个数的变化，再写出你停在这个值的理由。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 评测集每条有哪三样东西？</strong></p><button data-i="0">只有问题</button><button data-i="1">问题 + 标准答案块 + 标准答案</button><button data-i="2">只有标准答案</button><div class="ans">解析：选 B。起步 10 到 20 条就够了，关键是覆盖常见、边界、资料里没有三类问题。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 命中率低了，说明什么？</strong></p><button data-i="0">模型太笨</button><button data-i="1">引用标错了</button><button data-i="2">切块、向量、TopK 有问题，检索这步就漏了</button><div class="ans">解析：选 C。命中率低，其他两个数再高也没用，因为答案根本没检索到。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 幻觉率高了，先查什么？</strong></p><button data-i="0">先查检索为空分支和校验关，不要先换模型</button><button data-i="1">先换一个更贵的模型</button><button data-i="2">先把提示词写得更长</button><div class="ans">解析：选 A。幻觉率高，重点查 Day 18 的三道关有没有缺口。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 调参时，应该一次改几个数？</strong></p><button data-i="0">一次改多个，越快越好</button><button data-i="1">每次只改一个数，跑一遍评测集，记下四个数的变化</button><button data-i="2">不用记，凭感觉就行</button><div class="ans">解析：选 B。一次改多个，变好了也不知道是谁的功劳，变坏了也不知道是谁的锅。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 评测集里为什么必须有“资料里没有”的问题？</strong></p><button data-i="0">为了凑数</button><button data-i="1">为了让模型多答几题</button><button data-i="2">没有它，幻觉率永远测不出来，模型现编了你也不知道</button><div class="ans">解析：选 C。评测集只有“资料里有答案”的问题，幻觉率就是摆设。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 调参和验收，为什么要用不同的问题？</strong></p><button data-i="0">同一批问题既调参又验收，调出来的数是虚高的，换一批就原形毕露</button><button data-i="1">为了多写几道题</button><button data-i="2">没有区别，用同一批就行</button><div class="ans">解析：选 A。最终验收一定要换一批没见过的问题。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：RAG 评测集怎么做？三个数怎么算？</summary><p>每条有问题、标准答案块、标准答案三件套，起步 10 到 20 条，覆盖常见、边界、资料里没有三类。命中率是检索命中标准块的比例，引用准确率是引用正确的关键结论比例，幻觉率是资料里没有的关键结论比例，三个数一起看。</p></details>
+<details><summary>Q2：命中率高、引用准确率低，说明什么？</summary><p>检索对了、生成标错了：答案块检索到了，但模型引用标错了，或者在引用块之外编了结论。先查引用和生成，不要先动检索。</p></details>
+<details><summary>Q3：调参时，你怎么记录？</summary><p>每次只改一个数，跑一遍评测集，记下命中率、引用准确率、幻觉率、Token 消耗四个数的变化。调参记录表本身就是面试可讲的东西：改了什么、三个数怎么变、为什么停在这个值。</p></details>
+<details><summary>Q4：幻觉率怎么测出来？</summary><p>评测集里必须有“资料里没有”的问题，没有它，幻觉率永远测不出来。模型现编了，你也不知道，因为评测集里根本没有现编会被发现的题目。</p></details>
+<details><summary>Q5：评测集和第 1 周的最小评测集，是什么关系？</summary><p>同一个思路，对象换了：第 1 周是 Agent 的最小评测集（工具选对没有、步数多少），这里是 RAG 的评测集（命中、引用、幻觉）。思路一样：先定评测集，再谈变好变坏，不要凭感觉。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>RAG 评测上线前，先问三个问题：评测集覆盖三类问题了吗？调参和验收的问题分开了吗？调参记录表写了吗？三问有一个答不上来，评测就是摆设。</p>
+<p><strong>简历讲法：</strong>别写“做过 RAG 评测”，写“10 到 20 条评测集，覆盖常见、边界、资料里没有三类，报命中率、引用准确率、幻觉率三个数，每次只改一个参数、记下四个数的变化”。前者是名词，后者是可追问的评测。</p>
+<p><strong>明日预告：</strong>Day 20 讲工具路由 + 深圳天气工具：问题来了先判断走 RAG 还是走工具，天气工具怎么接 Open-Meteo（免 Key），深圳坐标 22.54, 114.06。</p>
+</div>
+<div class="nav"><span><a href="day18.html">← Day 18</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day20.html">Day 20 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
