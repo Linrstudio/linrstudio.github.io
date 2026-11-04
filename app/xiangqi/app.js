@@ -18,11 +18,9 @@ function render(){
  for(let r=0;r<10;r++)for(let c=0;c<9;c++){
   const p=board[r][c],isSelected=selected?.[0]===r&&selected?.[1]===c,isLegal=choices.some(m=>m.to[0]===r&&m.to[1]===c),isOrigin=last&&last.from[0]===r&&last.from[1]===c,from=showPath&&last.from[0]===r&&last.from[1]===c,to=showPath&&last.to[0]===r&&last.to[1]===c;
   const name=`${p?sideName(p.side)+pieceLabel(p):'空位'}，第${r+1}行第${c+1}列${from?'，电脑上一步起点':to?'，电脑上一步落点':''}`;
-  html+=`<button class="cell${isSelected?' selected':''}${isLegal?' legal':''}${isOrigin?' last-origin':''}${from?' move-from':''}${to?' move-to':''}${to&&motion?' landing':''}" style="left:${(c+.5)/9*100}%;top:${(r+.5)/10*100}%" data-r="${r}" data-c="${c}" aria-label="${name}" aria-pressed="${!!isSelected}">${p?`<span class="piece ${p.side==='red'?'is-red':''}">${pieceLabel(p)}</span>`:''}${from?'<span class="move-tag">起</span>':to?'<span class="move-tag">落</span>':''}</button>`;
+  html+=`<button class="cell${isSelected?' selected':''}${isLegal?' legal':''}${isOrigin?' last-origin':''}${from?' move-from':''}${to?' move-to':''}${to&&motion?' landing':''}" style="left:${(c+.5)/9*100}%;top:${(r+.5)/10*100}%" data-r="${r}" data-c="${c}" aria-label="${name}" aria-pressed="${!!isSelected}">${p?`<span class="piece ${p.side==='red'?'is-red':'is-black'}">${pieceLabel(p)}</span>`:''}${from?'<span class="move-tag">起</span>':to?'<span class="move-tag">落</span>':''}</button>`;
  }
  $('board').innerHTML=html;$('board').setAttribute('aria-busy',String(thinking||!!motion));
- // 双人同屏：黑方回合棋盘旋转 180°，使行棋方棋子对其一侧为正；人机模式不翻转。点击按 data-r/data-c 取格，与旋转无关。
- const flipped=mode==='local'&&turn==='black';$('board').classList.toggle('flipped',flipped);document.querySelector('.game').classList.toggle('flipped',flipped);$('board').setAttribute('aria-label',flipped?'象棋棋盘，红方在上，黑方在下':'象棋棋盘，黑方在上，红方在下');
  $('step').textContent=`第 ${history.length} 手`;$('move-count').textContent=`${history.length} 手`;$('mode').value=mode;$('black-role').textContent=mode==='ai'?'电脑':'同屏好友';$('undo').disabled=!history.length;
  $('status').textContent=motion?'电脑落子中…':result.over?(result.winner?`${sideName(result.winner)}获胜`:'和棋'):thinking?'电脑思考中…':`${sideName(turn)}行棋${inCheck(board,turn)?' · 将军':''}`;
  $('message').textContent=motion?'电脑正在移动，落定后连线停留 2 秒，再用 0.4 秒淡出。':result.over?(result.winner?(inCheck(board,turn)?'将死，棋局结束。':'无合法走法，棋局结束。'):result.reason):thinking?'稍等片刻，电脑正在思考。':showPath?'电脑走棋连线在落定后停留 2 秒，再用 0.4 秒淡出；可继续行棋。':mode==='ai'?'你执红方，点选棋子查看合法落点。':'双人同屏，红黑双方交替行棋。';
@@ -39,7 +37,7 @@ function move(m,computer=false){
  if(computer){trail=h;trailExpires=performance.now()+(animate?MOVE_DURATION:0)+PATH_HOLD+PATH_FADE;const token=epoch;trailTimer=setTimeout(()=>{if(token!==epoch)return;clearTrail();render();},(animate?MOVE_DURATION:0)+PATH_HOLD+PATH_FADE);}
  persist();render();
  if(animate){
-  const ghost=document.createElement('span');ghost.className='moving-piece';ghost.setAttribute('aria-hidden','true');ghost.innerHTML=`<span class="piece">${pieceLabel(h.board[m.from[0]][m.from[1]])}</span>`;$('board').append(ghost);
+  const ghost=document.createElement('span');ghost.className='moving-piece';ghost.setAttribute('aria-hidden','true');ghost.innerHTML=`<span class="piece ${h.board[m.from[0]][m.from[1]].side==='red'?'is-red':'is-black'}">${pieceLabel(h.board[m.from[0]][m.from[1]])}</span>`;$('board').append(ghost);
   const frames=movePath(h).map(([r,c])=>({left:`${(c+.5)/9*100}%`,top:`${(r+.5)/10*100}%`}));ghost.animate(frames,{duration:MOVE_DURATION,easing:'ease-in-out',fill:'forwards'});
   const token=epoch;motionTimer=setTimeout(()=>{if(token!==epoch)return;motionTimer=null;motion=null;playTone();render();},MOVE_DURATION);
  }else{playTone();maybeAI();}
