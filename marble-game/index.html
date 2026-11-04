@@ -989,7 +989,7 @@
         return {
           x: x, y: y, vx: 0, vy: 0, r: rOverride || def.r, m: def.m, type: type,
           style: style, counted: false, revealed: false, armed: true,
-          bornAt: 0, spin: Math.random() * Math.PI * 2
+          bornAt: 0, outSince: 0, spin: Math.random() * Math.PI * 2
         };
       }
 
@@ -1176,12 +1176,24 @@
          only in endShot(), once every marble has come to rest. */
       function checkCounted() {
         var n = 0, g = false;
+        var now = performance.now();
         for (var i = 0; i < targets.length; i++) {
           var t = targets[i];
           var d = Math.hypot(t.x - circle.x, t.y - circle.y);
           t.counted = d > circle.r + t.r;  // fully outside the ring
+          if (t.counted) { if (!t.outSince) t.outSince = now; }
+          else t.outSince = 0;
           if (t.type === "gold") g = t.counted;
           else if (t.counted) n++;
+        }
+        // Black marbles get the same out tracking for the fade only;
+        // they never feed outCount or goldOut.
+        for (var j = 0; j < blacks.length; j++) {
+          var b = blacks[j];
+          var bd = Math.hypot(b.x - circle.x, b.y - circle.y);
+          b.counted = bd > circle.r + b.r;
+          if (b.counted) { if (!b.outSince) b.outSince = now; }
+          else b.outSince = 0;
         }
         if (variant === "gold") {
           if (n !== outCount || g !== goldOut) { outCount = n; goldOut = g; syncHud(); }
@@ -1437,6 +1449,26 @@
         return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
       }
 
+      /* Out-marble fade: a marble that leaves the ring stays fully
+         visible for 1s, then fades out over 0.5s so it stops blocking
+         the view. Rolling back inside restores it instantly
+         (checkCounted clears outSince). Physics is untouched: a faded
+         marble still collides and can roll back in — this is visual
+         only, the live out-count rule does not change. */
+      var FADE_DELAY = 1000, FADE_DUR = 500;
+      function outAlpha(m, now) {
+        if (!m.counted || !m.outSince) return 1;
+        var e = now - m.outSince;
+        if (e < FADE_DELAY) return 1;
+        if (e < FADE_DELAY + FADE_DUR) return 1 - (e - FADE_DELAY) / FADE_DUR;
+        return 0;
+      }
+      function drawFaded(m) {
+        var a = outAlpha(m, performance.now());
+        if (a <= 0) return;
+        if (a < 1) { ctx.globalAlpha = a; drawMarble(m, false); ctx.globalAlpha = 1; }
+        else drawMarble(m, false);
+      }
       function drawMarble(m, isShooter) {
         var x = m.x, y = m.y, r = m.r;
         var st = (m.type === "bouncy" && m.revealed) ? BOUNCY_STYLE : m.style;
@@ -1677,9 +1709,9 @@
 
         // marbles: counted ones first (under), then the black marble,
         // then active targets, shooter last
-        for (i = 0; i < targets.length; i++) if (targets[i].counted) drawMarble(targets[i], false);
-        for (i = 0; i < blacks.length; i++) drawMarble(blacks[i], false);
-        for (i = 0; i < targets.length; i++) if (!targets[i].counted) drawMarble(targets[i], false);
+        for (i = 0; i < targets.length; i++) if (targets[i].counted) drawFaded(targets[i]);
+        for (i = 0; i < blacks.length; i++) drawFaded(blacks[i]);
+        for (i = 0; i < targets.length; i++) if (!targets[i].counted) drawFaded(targets[i]);
         if (shooter) {
           var alpha = state === "returning" ? 0.55 : 1;
           ctx.globalAlpha = alpha;
