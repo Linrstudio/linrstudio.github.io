@@ -1,6 +1,6 @@
 // Marble Game PWA service worker — offline-first for the whole game.
 // Bump CACHE_VERSION whenever the game files change so clients refresh.
-const CACHE_VERSION = 'marble-game-v8-pwa7';
+const CACHE_VERSION = 'marble-game-v8-pwa8';
 const PRECACHE_URLS = [
   './',
   './index.html',

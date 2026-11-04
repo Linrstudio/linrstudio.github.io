@@ -989,7 +989,7 @@
         return {
           x: x, y: y, vx: 0, vy: 0, r: rOverride || def.r, m: def.m, type: type,
           style: style, counted: false, revealed: false, armed: true,
-          bornAt: 0, outSince: 0, spin: Math.random() * Math.PI * 2
+          bornAt: 0, outSince: 0, reenterAt: 0, spin: Math.random() * Math.PI * 2
         };
       }
 
@@ -1180,9 +1180,10 @@
         for (var i = 0; i < targets.length; i++) {
           var t = targets[i];
           var d = Math.hypot(t.x - circle.x, t.y - circle.y);
+          var wasCounted = t.counted;
           t.counted = d > circle.r + t.r;  // fully outside the ring
-          if (t.counted) { if (!t.outSince) t.outSince = now; }
-          else t.outSince = 0;
+          if (t.counted) { if (!t.outSince) t.outSince = now; t.reenterAt = 0; }
+          else { t.outSince = 0; if (wasCounted) t.reenterAt = now; }
           if (t.type === "gold") g = t.counted;
           else if (t.counted) n++;
         }
@@ -1191,9 +1192,10 @@
         for (var j = 0; j < blacks.length; j++) {
           var b = blacks[j];
           var bd = Math.hypot(b.x - circle.x, b.y - circle.y);
+          var bWasCounted = b.counted;
           b.counted = bd > circle.r + b.r;
-          if (b.counted) { if (!b.outSince) b.outSince = now; }
-          else b.outSince = 0;
+          if (b.counted) { if (!b.outSince) b.outSince = now; b.reenterAt = 0; }
+          else { b.outSince = 0; if (bWasCounted) b.reenterAt = now; }
         }
         if (variant === "gold") {
           if (n !== outCount || g !== goldOut) { outCount = n; goldOut = g; syncHud(); }
@@ -1451,17 +1453,26 @@
 
       /* Out-marble fade: a marble that leaves the ring stays fully
          visible for 1s, then fades out over 0.5s so it stops blocking
-         the view. Rolling back inside restores it instantly
-         (checkCounted clears outSince). Physics is untouched: a faded
-         marble still collides and can roll back in — this is visual
-         only, the live out-count rule does not change. */
-      var FADE_DELAY = 1000, FADE_DUR = 500;
+         the view. Rolling back inside fades it back in over 0.4s
+         instead of popping into existence (a fully faded marble
+         reappearing instantly reads as a new marble appearing from
+         nowhere). Physics is untouched: a faded marble still
+         collides and can roll back in — this is visual only, the
+         live out-count rule does not change. */
+      var FADE_DELAY = 1000, FADE_DUR = 500, FADE_IN_DUR = 400;
       function outAlpha(m, now) {
-        if (!m.counted || !m.outSince) return 1;
-        var e = now - m.outSince;
-        if (e < FADE_DELAY) return 1;
-        if (e < FADE_DELAY + FADE_DUR) return 1 - (e - FADE_DELAY) / FADE_DUR;
-        return 0;
+        if (m.counted) {
+          if (!m.outSince) return 1;
+          var e = now - m.outSince;
+          if (e < FADE_DELAY) return 1;
+          if (e < FADE_DELAY + FADE_DUR) return 1 - (e - FADE_DELAY) / FADE_DUR;
+          return 0;
+        }
+        if (m.reenterAt) {
+          var f = (now - m.reenterAt) / FADE_IN_DUR;
+          if (f < 1) return Math.max(0, f);
+        }
+        return 1;
       }
       function drawFaded(m) {
         var a = outAlpha(m, performance.now());
