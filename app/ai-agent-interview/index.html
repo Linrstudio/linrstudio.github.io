@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="面向 AI Agent 前端岗位的面试复习笔记：结合腾讯广告设计系统、Agent 洞察工具等真实经历，梳理流式对话、React、权限、安全与评估。">
+  <title>AI Agent 前端面试复习 | LinrStudio</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #627087;
+      --line: #e4e9f1;
+      --paper: #ffffff;
+      --canvas: #f4f6fa;
+      --accent: #5748df;
+      --accent-soft: #f0efff;
+      --teal: #087b70;
+      --teal-soft: #e9f7f4;
+      --amber: #8b5b12;
+      --amber-soft: #fff7e8;
+      --rose: #a84653;
+      --rose-soft: #fff0f1;
+      --shadow: 0 12px 36px rgba(25, 39, 67, .055);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 105px; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      line-height: 1.72;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .wrap { width: min(1080px, calc(100% - 36px)); margin: 0 auto; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 42px 0 34px;
+      color: #f7f8ff;
+      background: radial-gradient(ellipse at 84% 2%, rgba(115, 98, 255, .38), transparent 34%), linear-gradient(135deg, #111b2d 0%, #17253b 57%, #202449 100%);
+    }
+    .hero::after {
+      position: absolute;
+      right: max(-90px, calc((100vw - 1140px) / 2));
+      bottom: -180px;
+      width: 410px;
+      height: 410px;
+      border: 1px solid rgba(210, 215, 255, .14);
+      border-radius: 50%;
+      box-shadow: 0 0 0 42px rgba(210, 215, 255, .025), 0 0 0 84px rgba(210, 215, 255, .025);
+      content: "";
+      pointer-events: none;
+    }
+    .crumb { margin: 0 0 16px; color: #abb7cb; font-size: 12px; letter-spacing: .04em; }
+    .crumb a { text-decoration: none; }
+    .eyebrow { margin: 0 0 8px; color: #bcb7ff; font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 0; font-size: clamp(31px, 5vw, 48px); line-height: 1.18; letter-spacing: -.04em; }
+    .hero-lead { max-width: 710px; margin: 15px 0 0; color: #d3d9e6; font-size: 16px; }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 21px; }
+    .hero-chip { padding: 6px 11px; border: 1px solid rgba(215, 220, 255, .2); border-radius: 999px; background: rgba(255,255,255,.06); color: #edf0ff; font-size: 12px; }
+    .fact-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 730px; margin-top: 28px; }
+    .fact { padding: 14px 16px; border: 1px solid rgba(220, 226, 255, .14); border-radius: 14px; background: rgba(255,255,255,.055); }
+    .fact strong { display: block; color: #fff; font-size: 21px; line-height: 1.2; letter-spacing: -.03em; }
+    .fact span { display: block; margin-top: 5px; color: #bdc8d9; font-size: 11px; }
+    main { padding: 26px 0 72px; }
+    .principle {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 12px;
+      padding: 17px 18px;
+      border: 1px solid #dcdafb;
+      border-radius: 16px;
+      background: linear-gradient(120deg, #f5f3ff, #fff);
+      box-shadow: 0 6px 24px rgba(43, 37, 110, .035);
+    }
+    .principle-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; background: #e5e2ff; color: var(--accent); font-weight: 800; }
+    .principle strong { display: block; margin-bottom: 2px; font-size: 14px; }
+    .principle p { margin: 0; color: #525d74; font-size: 13px; }
+    .nav-panel { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+    .nav-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .nav-heading h2 { margin: 0; font-size: 16px; }
+    .nav-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+    .toc { display: flex; flex-wrap: wrap; gap: 7px; }
+    .toc a { display: inline-flex; align-items: center; min-height: 31px; padding: 4px 9px; border: 1px solid #e5e8f0; border-radius: 999px; color: #47536a; background: #fbfcfe; font-size: 11px; text-decoration: none; transition: .18s ease; }
+    .toc a:hover, .toc a:focus-visible { border-color: #c6c2ff; color: var(--accent); background: #f7f6ff; outline: none; }
+    .toolbar { position: sticky; z-index: 5; top: 0; display: grid; grid-template-columns: minmax(190px, 1fr) auto; gap: 12px; align-items: center; margin: 19px 0 25px; padding: 11px 12px; border: 1px solid rgba(220, 226, 237, .92); border-radius: 16px; background: rgba(255,255,255,.94); box-shadow: 0 6px 24px rgba(27, 40, 67, .07); backdrop-filter: blur(14px); }
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; top: 50%; left: 12px; width: 17px; height: 17px; color: #78859a; transform: translateY(-50%); pointer-events: none; }
+    #search { width: 100%; min-height: 41px; padding: 9px 39px 9px 38px; border: 1px solid #e6e9f0; border-radius: 11px; background: #fafbfe; color: var(--ink); outline: none; }
+    #search:focus { border-color: #a9a1ff; box-shadow: 0 0 0 3px rgba(87,72,223,.11); }
+    #clear-search { position: absolute; top: 50%; right: 7px; display: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; color: #68758b; background: transparent; transform: translateY(-50%); }
+    #clear-search.visible { display: block; }
+    .filters { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+    .filter { min-height: 32px; padding: 5px 9px; border: 1px solid transparent; border-radius: 9px; color: #657189; background: transparent; font-size: 11px; white-space: nowrap; }
+    .filter[aria-pressed="true"] { border-color: #d8d5ff; color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px 12px; color: var(--muted); font-size: 12px; }
+    .status-row strong { color: #374258; }
+    .print-btn { padding: 5px 9px; border: 1px solid #e0e5ed; border-radius: 8px; color: #526078; background: white; font-size: 11px; }
+    .section-title { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 34px 2px 13px; }
+    .section-title .kicker { margin: 0 0 2px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    .section-title h2 { margin: 0; font-size: 23px; letter-spacing: -.025em; }
+    .section-title p { max-width: 480px; margin: 0; color: var(--muted); font-size: 12px; text-align: right; }
+    .question-card { margin-bottom: 12px; padding: 21px 22px 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); scroll-margin-top: 100px; }
+    .question-top { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 12px; align-items: start; }
+    .q-num { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 12px; color: var(--accent); background: var(--accent-soft); font-size: 13px; font-weight: 800; }
+    .question-top h3 { margin: 1px 0 0; font-size: 18px; line-height: 1.45; letter-spacing: -.02em; }
+    .tag { padding: 4px 8px; border-radius: 999px; color: #526078; background: #f0f3f8; font-size: 10px; white-space: nowrap; }
+    .tag.real { color: var(--teal); background: var(--teal-soft); }
+    .tag.design { color: #5d50c6; background: #f0efff; }
+    .talk-track { margin: 15px 0 0; padding: 14px 16px; border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; color: #28344b; background: #f8f8ff; font-size: 14px; }
+    .talk-label { display: block; margin-bottom: 4px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+    .answer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 12px; }
+    .answer-block { padding: 12px 14px; border: 1px solid #edf0f5; border-radius: 13px; background: #fcfdff; }
+    .answer-block h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 5px; color: #354158; font-size: 12px; }
+    .answer-block h4::before { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); content: ""; }
+    .answer-block p { margin: 0; color: #5d687c; font-size: 12px; }
+    .answer-block ul { margin: 0; padding-left: 17px; color: #5d687c; font-size: 12px; }
+    .answer-block li + li { margin-top: 3px; }
+    .answer-block.caution { border-color: #f4e4c3; background: #fffaf0; }
+    .answer-block.caution h4 { color: var(--amber); }
+    .answer-block.caution h4::before { background: #d3932c; }
+    .copy-row { display: flex; justify-content: flex-end; margin-top: 9px; }
+    .copy-btn { padding: 6px 10px; border: 1px solid #e4e7ef; border-radius: 9px; color: #66728a; background: #fff; font-size: 11px; }
+    .copy-btn:hover { color: var(--accent); border-color: #cbc7ff; }
+    .no-results { display: none; padding: 28px; border: 1px dashed #cbd3df; border-radius: 16px; color: var(--muted); background: #fff; text-align: center; }
+    .followup-intro { margin: 0 0 13px; padding: 13px 15px; border: 1px solid #f0dfbd; border-radius: 13px; color: #705424; background: var(--amber-soft); font-size: 12px; }
+    .followup { margin-bottom: 9px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 7px 22px rgba(25,39,67,.035); scroll-margin-top: 100px; }
+    .followup summary { display: grid; grid-template-columns: 31px minmax(0,1fr) 18px; gap: 10px; align-items: center; padding: 15px 16px; cursor: pointer; list-style: none; }
+    .followup summary::-webkit-details-marker { display: none; }
+    .followup summary::after { width: 9px; height: 9px; border-right: 2px solid #8792a5; border-bottom: 2px solid #8792a5; content: ""; transform: rotate(45deg) translateY(-2px); transition: transform .18s ease; }
+    .followup[open] summary::after { transform: rotate(225deg) translate(-1px,-1px); }
+    .f-num { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 10px; color: var(--amber); background: var(--amber-soft); font-size: 11px; font-weight: 800; }
+    .followup h3 { margin: 0; font-size: 14px; line-height: 1.5; }
+    .followup-answer { padding: 0 17px 16px 57px; color: #58647a; font-size: 13px; }
+    .followup-answer p { margin: 0; }
+    .followup-answer p + p { margin-top: 8px; }
+    .followup-answer ul { margin: 6px 0 0; padding-left: 18px; }
+    .followup-answer li + li { margin-top: 3px; }
+    pre { overflow-x: auto; margin: 9px 0; padding: 12px 14px; border-radius: 10px; color: #e8eaff; background: #182236; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .closing { display: grid; grid-template-columns: 6px 1fr; gap: 13px; margin-top: 27px; padding: 16px 18px; border-radius: 14px; color: #4d5a70; background: #eaf0f8; font-size: 12px; }
+    .closing::before { border-radius: 99px; background: #7888aa; content: ""; }
+    .closing p { margin: 0; }
+    footer { padding: 17px 0 30px; color: #8590a3; font-size: 11px; text-align: center; }
+    .hidden { display: none !important; }
+    :focus-visible { outline: 3px solid rgba(87,72,223,.35); outline-offset: 2px; }
+    @media (max-width: 760px) {
+      .wrap { width: min(100% - 24px, 620px); }
+      .hero { padding: 27px 0 25px; }
+      .hero::after { right: -260px; bottom: -260px; }
+      .hero-lead { font-size: 14px; }
+      .fact-row { gap: 7px; margin-top: 20px; }
+      .fact { padding: 11px 10px; }
+      .fact strong { font-size: 18px; }
+      .fact span { font-size: 10px; }
+      main { padding-top: 16px; }
+      .principle { grid-template-columns: 32px 1fr; gap: 9px; padding: 13px; }
+      .principle-icon { width: 30px; height: 30px; }
+      .nav-panel { margin-top: 15px; padding: 15px 13px; }
+      .nav-heading { align-items: start; flex-direction: column; gap: 0; }
+      .toc { gap: 6px; }
+      .toc a { padding: 4px 8px; font-size: 10px; }
+      .toolbar { grid-template-columns: 1fr; gap: 8px; margin: 12px 0 20px; padding: 9px; }
+      .filters { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; scrollbar-width: thin; }
+      .filter { flex: 0 0 auto; }
+      .section-title { align-items: start; flex-direction: column; gap: 3px; margin-top: 27px; }
+      .section-title h2 { font-size: 20px; }
+      .section-title p { text-align: left; }
+      .question-card { padding: 16px 14px; border-radius: 16px; }
+      .question-top { grid-template-columns: 33px minmax(0,1fr); gap: 9px; }
+      .q-num { width: 32px; height: 32px; border-radius: 10px; }
+      .question-top h3 { font-size: 16px; }
+      .question-top .tag { grid-column: 2; justify-self: start; margin-top: -4px; }
+      .talk-track { margin-top: 12px; padding: 12px; font-size: 13px; }
+      .answer-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 9px; }
+      .answer-block { padding: 11px 12px; }
+      .followup summary { grid-template-columns: 28px minmax(0,1fr) 16px; gap: 8px; padding: 13px 12px; }
+      .f-num { width: 27px; height: 27px; }
+      .followup h3 { font-size: 13px; }
+      .followup-answer { padding: 0 13px 14px 48px; font-size: 12px; }
+      .status-row { font-size: 11px; }
+    }
+    @media (max-width: 390px) {
+      .wrap { width: calc(100% - 20px); }
+      .hero-chip { font-size: 11px; }
+      .fact strong { font-size: 16px; }
+      .followup-answer { padding-left: 45px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .hero { padding: 20px 0; color: #111; background: #fff; }
+      .hero::after, .toolbar, .print-btn, .copy-row { display: none !important; }
+      .hero-lead, .crumb, .fact span { color: #444; }
+      .hero-chip, .fact { border-color: #ddd; color: #222; background: #fff; }
+      .fact strong { color: #111; }
+      .wrap { width: 100%; }
+      .question-card, .followup { break-inside: avoid; box-shadow: none; }
+      .followup:not([open]) .followup-answer { display: block; }
+      .followup summary::after { display: none; }
+      .nav-panel { box-shadow: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="crumb"><a href="/">LinrStudio</a>　/　<a href="/app/">应用</a>　/　面试复习</p>
+      <p class="eyebrow">Interview field notes · AI Agent frontend</p>
+      <h1>AI Agent 前端面试复习</h1>
+      <p class="hero-lead">把真实经历讲具体，把技术方案讲清楚；不把“我会这样设计”说成“我已经在生产项目里做过”。</p>
+      <div class="hero-chips" aria-label="经历摘要">
+        <span class="hero-chip">18+ 年前端 / UI</span>
+        <span class="hero-chip">2017 至今 · 腾讯 AMS</span>
+        <span class="hero-chip">设计系统与 Agent 工具</span>
+      </div>
+      <div class="fact-row" aria-label="可核实的项目规模">
+        <div class="fact"><strong>60+</strong><span>设计系统支撑的业务平台</span></div>
+        <div class="fact"><strong>5+</strong><span>覆盖的业务部门</span></div>
+        <div class="fact"><strong>2万+ → 1,216 → 70+</strong><span>会话样本、有效反馈、归纳需求</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="principle" aria-label="面试表达原则">
+      <div class="principle-icon" aria-hidden="true">✓</div>
+      <div>
+        <strong>先区分“亲自做过”与“方案设计”</strong>
+        <p>已确认的经历：腾讯广告设计系统、Agent 设计系统的五层约束落地、Agent 洞察分析工具及相关内部工具。SSE 生产链路和 TypeScript 深度没有确认；相关技术题按设计思路作答，必要时明确说“如果由我负责，我会这样设计”。</p>
+      </div>
+    </section>
+
+    <section class="nav-panel" aria-labelledby="toc-title">
+      <div class="nav-heading">
+        <h2 id="toc-title">快速跳转</h2>
+        <p>点编号跳到对应问题；也可用下方搜索筛选答案。</p>
+      </div>
+      <nav class="toc" aria-label="面试问题目录">
+        <a href="#q1">01 项目经历</a><a href="#q2">02 对话架构</a><a href="#q3">03 SSE / WS</a><a href="#q4">04 流解析</a><a href="#q5">05 停止与切换</a><a href="#q6">06 工具调用</a><a href="#q7">07 长对话</a><a href="#q8">08 React 渲染</a><a href="#q9">09 组件库</a><a href="#q10">10 错误恢复</a><a href="#q11">11 RAG 权限</a><a href="#q12">12 效果评估</a><a href="#q13">13 AI 编码工具</a><a href="#followups">底部追问 ×10</a>
+      </nav>
+    </section>
+
+    <div class="toolbar" role="search" aria-label="搜索面试问题与答案">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input id="search" type="search" placeholder="搜索：SSE、取消、权限、Profiler…" autocomplete="off" aria-label="搜索问题和答案">
+        <button id="clear-search" type="button" aria-label="清除搜索">×</button>
+      </div>
+      <div class="filters" role="group" aria-label="按主题筛选">
+        <button class="filter" type="button" data-filter="all" aria-pressed="true">全部</button>
+        <button class="filter" type="button" data-filter="experience" aria-pressed="false">项目经历</button>
+        <button class="filter" type="button" data-filter="stream" aria-pressed="false">流式架构</button>
+        <button class="filter" type="button" data-filter="react" aria-pressed="false">React / 组件</button>
+        <button class="filter" type="button" data-filter="quality" aria-pressed="false">安全 / 评估</button>
+        <button class="filter" type="button" data-filter="followup" aria-pressed="false">底部追问</button>
+      </div>
+    </div>
+
+    <div class="status-row"><span id="result-count" aria-live="polite">共 <strong>23</strong> 道题：13 个主问题 + 10 个追问（追问默认折叠）</span><button class="print-btn" type="button" onclick="window.print()">打印 / 存为 PDF</button></div>
+    <div class="no-results" id="no-results">没有找到匹配的问题。试试更短的关键词，或切回“全部”。</div>
+
+    <div class="section-title" id="primary-title">
+      <div><p class="kicker">Core questions · 01–13</p><h2>高频问题与回答提纲</h2></div>
+      <p>每题先给一段可复述主线，再补回答结构与真实经历落点。</p>
+    </div>
+
+    <section id="primary-questions" aria-labelledby="primary-title">
+      <article class="question-card searchable" id="q1" data-category="experience">
+        <div class="question-top"><span class="q-num">01</span><h3>讲一个你做过的 AI 产品或 Agent 项目</h3><span class="tag real">真实经历</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会讲 Agent 洞察分析工具：基于用户调研和微信小店客服会话，从 2 万多条会话中筛出 1,216 条有效反馈，归纳出 70 多项需求。我参与了洞察工具的开发，也建设腾讯广告 AI Agent 项目的设计系统并推动五层约束体系落地。我的经历更偏 Agent 周边工具和设计系统，不会把它描述成我独立完成了核心对话产品端到端。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>展开顺序</h4><ul><li>用户与问题：谁在什么流程中遇到什么困难。</li><li>个人职责：讲清你亲自负责的前端、工具或设计系统范围。</li><li>方案与结果：说明如何把反馈转成可执行需求，以及 1,216 条有效反馈、70+ 项需求。</li></ul></div>
+          <div class="answer-block"><h4>项目落点</h4><p>另一个规模化案例是腾讯广告设计系统：自 2017 年起持续建设，支撑 60+ 业务平台、覆盖 5+ 业务部门；在 AI Agent 项目中推动五层约束体系落地。围绕具体模块讲自己承担的部分。</p></div>
+          <div class="answer-block caution"><h4>边界提醒</h4><p>不要补造模型选型、后端数据流、转化率或“完整 SSE 链路”等未经确认的信息。被问到核心对话链路时，可以说清楚自己做过的相邻能力，再转到对架构的理解。</p></div>
+          <div class="answer-block"><h4>面试官想确认</h4><p>你是否理解用户问题、能说清个人贡献、会用证据衡量结果，以及是否能诚实区分团队成果与本人职责。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q2" data-category="stream">
+        <div class="question-top"><span class="q-num">02</span><h3>如果设计 AI 对话前端架构与状态，你会怎么拆？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会拆成 UI、前端会话状态、传输层和服务端 Agent。前端负责输入、消息展示、取消、滚动与局部交互；服务端负责权威会话、权限、上下文、模型和工具执行。消息用稳定 ID 关联会话，并显式记录生成状态、工具步骤、引用和错误，避免切换会话时串数据。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>状态边界</h4><ul><li>UI 状态：输入框、焦点、滚动位置、展开态。</li><li>会话数据：消息列表、流式状态、工具步骤、错误。</li><li>服务端状态：权限、上下文、Agent 运行与最终结果；前端不把本地缓存当权威。</li></ul></div>
+          <div class="answer-block"><h4>关键标识</h4><p>为会话、消息、请求和工具步骤分配稳定 ID；所有异步响应校验 conversationId / requestId。用户可见状态可建模为 idle、streaming、waiting-confirmation、success、error、cancelled。</p></div>
+          <div class="answer-block caution"><h4>经验边界</h4><p>以上是架构设计思路，不是已确认亲自上线过完整对话系统。可以联系你真实做过的设计系统治理经验：强调跨业务一致性、组件契约和约束落地，但不要把系统治理等同于对话后端实现。</p></div>
+          <div class="answer-block"><h4>可加一句</h4><p>我会先根据产品的多轮上下文、工具执行和权限风险确定状态模型，再决定状态放在哪里，而不是先选某个状态管理库。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q3" data-category="stream">
+        <div class="question-top"><span class="q-num">03</span><h3>SSE 和 WebSocket 怎么选？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>SSE 是服务端向浏览器的单向事件流，适合用户发起一次请求后，服务端持续推送回答；WebSocket 是双向长连接，适合高频双向消息，例如实时语音或协作。选择时还要看鉴权、代理与基础设施支持、重连语义、并发和运维成本，不只比较协议本身。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>SSE 更合适</h4><p>请求由 HTTP 发起，浏览器主要接收增量文本、状态事件或工具进度；需设计心跳、断线重连、取消与错误处理。</p></div>
+          <div class="answer-block"><h4>WebSocket 更合适</h4><p>客户端和服务端都要持续、频繁地推送消息，比如实时语音、协同编辑或双向控制；需要管理连接生命周期和消息协议。</p></div>
+          <div class="answer-block"><h4>说明权衡</h4><p>如果只是回答生成，不必为了“实时”默认上 WebSocket；同时检查网关超时、连接数限制、鉴权方式，以及浏览器端是否需要自定义重连。</p></div>
+          <div class="answer-block caution"><h4>经验边界</h4><p>这里按系统设计题回答。不要说自己已经在生产中负责过 SSE / WebSocket 链路，除非能给出亲自实现的模块和故障处理细节。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q4" data-category="stream">
+        <div class="question-top"><span class="q-num">04</span><h3>SSE 流解析时最容易踩什么坑？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>网络返回的 chunk 不等于完整的 SSE 事件，也不一定正好落在 UTF-8 字符边界。我会用流式解码器处理字节，保留未完成的文本片段，按 SSE 的空行边界拼出事件，再解析 data 字段；同时覆盖结束标记、错误、断线和主动取消。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>处理步骤</h4><ul><li>用支持流式模式的 UTF-8 解码器，避免多字节字符被拆开后乱码。</li><li>累积文本残片，按事件分隔符切分；完整事件处理后，留下尾部残片。</li><li>按 SSE 规范处理多行 data、注释行、空行边界和结束条件。</li></ul></div>
+          <div class="answer-block"><h4>错误与生命周期</h4><p>读流期间检查 HTTP 状态、服务端事件类型、EOF、AbortSignal 和解析异常；清理 reader 与监听器，区分主动取消和意外断线。</p></div>
+          <div class="answer-block"><h4>测试边界</h4><p>人为把中文字符拆开、把一个事件拆成多块、把多个事件合并一块；再测空 data、多行 data、异常 JSON、无结束标记和中途 EOF。</p></div>
+          <div class="answer-block caution"><h4>经验边界</h4><p>这是实现 checklist。若没有亲自实现过生产解析器，可以直接说“这是我会采用的解析方式”，不要把设计稿说成已上线经验。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q5" data-category="stream">
+        <div class="question-top"><span class="q-num">05</span><h3>停止生成、重试和切换会话，如何避免串请求？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>为每次生成绑定 requestId、conversationId 和 AbortController。停止时中止当前请求并把对应消息标记为 cancelled；切换会话时取消旧请求，或在每次更新前检查会话 ID，不匹配就丢弃响应。重试用新请求标识和服务端幂等键，避免重复执行有副作用的操作。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>防竞态</h4><p>更新状态前验证 requestId 仍是当前请求；异步响应带 conversationId，不把旧会话内容写进新会话。请求状态和消息状态分开维护。</p></div>
+          <div class="answer-block"><h4>取消语义</h4><p>取消前端 fetch 不代表服务端一定停止推理或工具。若产品要求真正停止，协议需支持取消信号 / cancel API，且服务端要校验权限和任务归属。</p></div>
+          <div class="answer-block"><h4>重试规则</h4><p>明确重试是继续、重新生成还是从头重发；纯读取可按策略重试，可能造成外部影响的工具调用必须依靠服务端幂等与确认。</p></div>
+          <div class="answer-block caution"><h4>容易漏掉</h4><p>组件卸载清理 AbortController 和订阅；取消错误单独识别，避免显示成“系统异常”；切换回来时加载该会话真实状态而非旧闭包数据。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q6" data-category="stream">
+        <div class="question-top"><span class="q-num">06</span><h3>Agent 连续多次调用工具，前端怎么展示？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>把 Agent 的工具调用展示成可理解的步骤，而不只是一个转圈。每步显示工具名称、简短意图、当前状态和必要的结果摘要；状态覆盖执行中、等待确认、成功、失败和取消。涉及外部影响的动作要展示将要执行的具体内容并让用户确认，权限和参数仍由服务端校验。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>信息层级</h4><ul><li>默认展示用户关心的摘要，原始参数与长结果按需展开。</li><li>连续步骤按时间顺序呈现，可定位某一步失败或等待确认。</li><li>最后把工具结果与 Agent 最终回答关联起来。</li></ul></div>
+          <div class="answer-block"><h4>状态反馈</h4><p>清楚区分正在执行与模型生成；可重试的失败提供原因和恢复入口；取消后不显示成成功完成。</p></div>
+          <div class="answer-block caution"><h4>安全边界</h4><p>发送邮件、改数据等有外部影响的操作，确认卡应明确动作对象和影响。前端确认只改善交互，不能替代服务端权限校验。</p></div>
+          <div class="answer-block"><h4>设计经验连接</h4><p>可结合 AI Agent 设计系统建设与五层约束体系的经历，讲如何沉淀一致组件、状态规范和治理方式；不要推断五层的具体命名或实现细节，除非自己能准确说明。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q7" data-category="react">
+        <div class="question-top"><span class="q-num">07</span><h3>长对话的性能和滚动体验怎么处理？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会先用 React Profiler 和浏览器性能工具找到瓶颈，再决定是否需要虚拟列表、局部状态或批量刷新。滚动上区分“用户本来就在底部”和“正在回看历史”：前者可跟随新内容，后者保留位置并提示有新消息，不强行把用户拉回底部。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>渲染策略</h4><ul><li>长历史按需虚拟化，稳定 key，避免整个消息树随 token 更新重建。</li><li>高频流式更新做节流或批量提交，不牺牲关键信息反馈。</li><li>Markdown / 代码高亮可分块、增量或在生成完成后处理，避免每个 token 都全量解析。</li></ul></div>
+          <div class="answer-block"><h4>滚动策略</h4><p>以接近底部阈值判断是否自动跟随；用户向上浏览时不抢滚动，显示“有新内容”按钮，点击后再回到底部。</p></div>
+          <div class="answer-block"><h4>验证方式</h4><p>在长历史、长代码块和持续流式输出下观察主线程耗时、React commit、内存、滚动位置稳定性和低端设备体验。</p></div>
+          <div class="answer-block caution"><h4>不要先下结论</h4><p>虚拟列表与 memo 会增加复杂度。先测量消息数量、更新频率和实际卡顿，再针对瓶颈优化。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q8" data-category="react">
+        <div class="question-top"><span class="q-num">08</span><h3>React 高频重渲染怎么排查和优化？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>先用 Profiler 找到是哪些组件、因为什么 props 或 state 更新而重渲染，再把高频状态局部化，避免一个 token 更新带动整页刷新。确有必要时批量更新、稳定传入值，再用 memo、useMemo 或 useCallback；我不会在没有测量的情况下到处加 memo。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>排查顺序</h4><ul><li>定位高频 commit 与耗时组件。</li><li>检查状态放置位置、Context value 是否每次重建、列表 key 是否稳定。</li><li>区分“发生了重渲染”与“渲染真的很慢”。</li></ul></div>
+          <div class="answer-block"><h4>优先手段</h4><p>状态下沉、拆分订阅范围、避免无意义对象/函数变化；对 token 流按合理频率合并更新。保证用户感知及时，不为微观次数而牺牲交互。</p></div>
+          <div class="answer-block caution"><h4>缓存取舍</h4><p>useMemo / useCallback 有依赖维护、比较和认知成本。只有稳定引用能阻止昂贵子树重渲染、避免重复计算或满足依赖契约时再用。</p></div>
+          <div class="answer-block"><h4>真实经验落点</h4><p>可以用 React 项目经历讲你真实做过的性能或组件治理工作；如果手上没有具体性能指标案例，就描述排查方法，不要伪造优化百分比。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q9" data-category="react">
+        <div class="question-top"><span class="q-num">09</span><h3>如何设计一套可复用的 AI 对话组件库？</h3><span class="tag real">真实经验可连接</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会把基础展示组件、组合模式和业务编排层分开：基础层提供消息气泡、输入、引用、错误态等稳定原语；组合层支持消息列表、工具步骤卡等模式；业务层处理会话策略和具体产品规则。契约要覆盖状态、主题、可访问性和扩展点，并且从实际复用场景出发，避免抽象过度。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>分层建议</h4><ul><li>基础组件：按钮、输入、气泡、引用、加载与错误状态。</li><li>对话模式：消息列表、工具调用卡、确认卡、空状态。</li><li>产品编排：会话、权限策略、工具注册和数据来源。</li></ul></div>
+          <div class="answer-block"><h4>组件契约</h4><p>明确 props / events、受控与非受控边界、状态语义、键盘操作、主题 token、国际化和扩展插槽；对错误与无障碍状态一并设计。</p></div>
+          <div class="answer-block"><h4>真实经历连接</h4><p>腾讯广告设计系统多年建设，覆盖 60+ 平台和 5+ 部门；可重点谈组件复用、治理、落地约束，以及在 AI Agent 设计系统中的建设经验。</p></div>
+          <div class="answer-block caution"><h4>避免空泛</h4><p>不要只说“做成通用组件”。说明哪些变化点稳定、哪些留给业务层，并说明如何用真实业务验证抽象是否成立。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q10" data-category="stream">
+        <div class="question-top"><span class="q-num">10</span><h3>生成中断、网络断开或服务报错，前端如何恢复？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>先把用户主动取消、网络断开、超时、服务端错误和业务错误区分开，再决定恢复方式。是否能续传取决于服务端是否提供稳定事件 ID 或序号；支持时按游标续接并去重，不支持时明确提示重新生成或从头重试，不假装无缝恢复。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>恢复策略</h4><ul><li>可续传：带最后处理的事件 ID / 序号重连，服务端校验会话与权限。</li><li>不可续传：保留已有部分结果，说明状态，提供明确的重新生成操作。</li><li>对可能有副作用的工具调用，优先查任务状态和幂等结果，不盲目重放。</li></ul></div>
+          <div class="answer-block"><h4>一致性</h4><p>用消息 ID、请求 ID 和幂等键防止重复追加；服务端是最终事实源，重连后对齐消息状态与工具执行状态。</p></div>
+          <div class="answer-block"><h4>错误体验</h4><p>保留已生成文本并标注“未完成”，给出重试、复制已有内容或继续其他操作的路径；错误信息说清用户可以做什么。</p></div>
+          <div class="answer-block caution"><h4>关键前提</h4><p>前端无法单独保证服务端续传。面试中把需要后端提供的事件序号、持久化任务状态和幂等语义明确说出来。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q11" data-category="quality">
+        <div class="question-top"><span class="q-num">11</span><h3>RAG 回答里的引用与权限如何设计？</h3><span class="tag design">设计思路</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>把引用和回答内容建立可追溯关联，呈现来源标题、相关片段、时间或可访问链接；前端负责清晰展示和交互。真正的数据权限必须由服务端在检索前或检索过程中校验，不能靠前端把无权数据隐藏起来。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>引用呈现</h4><p>支持回答内引用标记与来源列表互相定位；长片段折叠，来源不可用时给出状态；链接打开前按产品策略处理外链。</p></div>
+          <div class="answer-block"><h4>服务端责任</h4><p>用户身份、租户、文档 ACL 和权限变更都需服务端验证；检索索引过滤与最终文档读取均要遵守权限策略。</p></div>
+          <div class="answer-block caution"><h4>前端边界</h4><p>前端鉴权状态只用于交互，不是安全边界；不能将敏感原文预先发到浏览器再用 CSS 或条件渲染隐藏。</p></div>
+          <div class="answer-block"><h4>可用性</h4><p>避免把来源标记做成难以辨认的脚注；让用户能看出答案的依据、来源是否可打开以及内容的时效性。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q12" data-category="quality">
+        <div class="question-top"><span class="q-num">12</span><h3>怎么评估 AI 对话前端做得好不好？</h3><span class="tag design">评估框架</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会先定义用户任务和埋点口径，再看首字延迟、完整回答耗时、成功 / 中断 / 取消率、长对话滚动体验和任务完成率。只看页面渲染速度不够；还要把前端体验指标与回答质量、工具成功率等服务端指标关联，避免把模型问题误归因给 UI。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>体验指标</h4><ul><li>从提交到首个可见反馈的时间、完整回答时间。</li><li>生成中断率、主动取消率、错误率、重试率。</li><li>长对话滚动稳定性、工具状态可理解度、无障碍操作。</li></ul></div>
+          <div class="answer-block"><h4>任务指标</h4><p>结合用户是否完成目标、是否接受或修正答案、是否重复追问等业务口径；指标需先统一分母、采样范围和失败定义。</p></div>
+          <div class="answer-block caution"><h4>避免误判</h4><p>指标上涨不自动等于体验变好。分场景、设备和网络分析，并与后端 Agent / 工具结果质量联看；涉及会话数据时遵守隐私与最小化采集。</p></div>
+          <div class="answer-block"><h4>真实结果</h4><p>如果没有做过生产对话产品的线上指标分析，不报虚构数字。可用洞察工具的已知数据举例说明你如何把大量反馈转成 70+ 项需求。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+
+      <article class="question-card searchable" id="q13" data-category="experience">
+        <div class="question-top"><span class="q-num">13</span><h3>你怎么看 Cursor / Claude Code 这类 AI 编码工具？</h3><span class="tag design">工程方法</span></div>
+        <p class="talk-track"><span class="talk-label">回答主线</span>我会把 AI 编码工具用于探索代码、生成样板、补测试和解释陌生模块，但把任务拆小并明确约束；产出的代码仍需经过类型检查、单测、E2E、代码审查和安全检查。对流式交互，重点验证取消、断线、重复请求、长文本和特殊字符这些边界。</p>
+        <div class="answer-grid">
+          <div class="answer-block"><h4>可控流程</h4><ul><li>先给上下文、范围、不能改动的接口和完成标准。</li><li>一次聚焦一个可验证变更，要求补测试和说明风险。</li><li>由开发者审查差异、运行项目现有验证，不盲目接受自动修改。</li></ul></div>
+          <div class="answer-block"><h4>高风险点</h4><p>依赖 API 幻觉、隐含安全漏洞、大范围重构、未经运行的测试，以及对代码库旧约定理解错误。</p></div>
+          <div class="answer-block caution"><h4>个人经验边界</h4><p>若没有实际使用过某个具体工具，不要说“我日常用它”。可以讲你认可的工程化使用方法，或举确实用过的工具与任务。</p></div>
+          <div class="answer-block"><h4>成熟度信号</h4><p>说明如何设定验收标准、验证生成结果、识别不确定性；AI 提效不能替代对代码与业务后果的责任。</p></div>
+        </div>
+        <div class="copy-row"><button class="copy-btn" type="button">复制回答主线</button></div>
+      </article>
+    </section>
+
+    <section id="followups" aria-labelledby="followups-title">
+      <div class="section-title">
+        <div><p class="kicker">Interviewer follow-ups · 14–23</p><h2 id="followups-title">面试官追问 × 10</h2></div>
+        <p>默认折叠，点击展开参考答案；建议先口头作答，再展开核对。</p>
+      </div>
+      <p class="followup-intro">这些答案是精简参考，不是个人项目事实。尤其是 TypeScript、SSE 与完整对话链路相关内容，按自己的真实熟悉程度表述。</p>
+
+      <details class="followup searchable" id="f1" data-category="followup">
+        <summary><span class="f-num">14</span><h3>React 状态更新为什么会触发重渲染？useMemo / useCallback 什么时候值得用？</h3></summary>
+        <div class="followup-answer"><p>当组件 state 更新、父组件重渲染，或订阅的 Context / 外部 store 发生变化时，React 会重新计算相关组件输出；重渲染不一定等于 DOM 一定变化。先用 Profiler 找到真正耗时点，再判断是状态范围太大、Context 广播、props 引用每次变化，还是子树计算昂贵。useMemo 缓存计算结果，useCallback 稳定函数引用；如果没有减少昂贵计算、避免 memo 子组件重复渲染或满足依赖契约，缓存本身会增加依赖管理和认知复杂度。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f2" data-category="followup">
+        <summary><span class="f-num">15</span><h3>多请求乱序返回、组件卸载后请求还在跑，怎么防竞态和资源泄漏？</h3></summary>
+        <div class="followup-answer"><p>用 AbortController 在切换、卸载或主动取消时中止 fetch；每次请求带递增 requestId / 会话 ID，响应写状态前校验它仍是当前请求。对无法真正取消的异步任务，忽略过期结果并解除事件监听、订阅和定时器。取消应被识别为正常生命周期，不显示成服务错误。若后端任务也需终止，还要有服务端取消协议，不能只 abort 浏览器请求。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f3" data-category="followup">
+        <summary><span class="f-num">16</span><h3>如何用 TypeScript 联合类型描述消息、流事件和工具状态？</h3></summary>
+        <div class="followup-answer"><p>用判别字段区分事件种类，让每种状态只带该状态合法的数据；解析外部 JSON 时仍要做运行时校验，因为类型擦除不能验证网络输入。</p>
+          <pre><code>type Message =
+  | { id: string; role: "user"; text: string }
+  | { id: string; role: "assistant"; status: "streaming"; text: string }
+  | { id: string; role: "assistant"; status: "done"; text: string }
+  | { id: string; role: "assistant"; status: "error"; text: string; error: string };
+
+type ToolStep =
+  | { id: string; state: "running"; name: string }
+  | { id: string; state: "waiting-confirmation"; name: string; summary: string }
+  | { id: string; state: "success"; name: string; result: unknown }
+  | { id: string; state: "failed"; name: string; error: string };</code></pre>
+          <p>更新状态时按 state 做穷尽分支，避免让“成功却没有结果”之类非法状态通过编译。示例是类型设计思路，不代表已确认项目实际采用此模型。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f4" data-category="followup">
+        <summary><span class="f-num">17</span><h3>会话列表、当前会话和流式消息放组件状态、Context 还是全局 store？</h3></summary>
+        <div class="followup-answer"><p>按共享范围、更新频率和一致性需求决定，不先押某个库。输入框草稿、焦点和局部展开状态放组件内；多个页面共享且需要缓存的会话列表 / 当前会话数据，可以放合适的 store 或数据层；Context 适合低频、稳定的依赖，不适合把每个 token 都广播给整棵组件树。流式消息可按会话和消息订阅，限制每次更新影响的组件范围。还要明确服务端状态和本地临时 UI 状态的边界。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f5" data-category="followup">
+        <summary><span class="f-num">18</span><h3>从零搭 AI 对话前端，目录、API、路由、状态和权限怎么拆？</h3></summary>
+        <div class="followup-answer"><p>一个可讨论的边界是：<code>routes/</code> 负责页面入口与路由守卫；<code>features/chat/</code> 负责会话 UI、状态编排和交互；<code>api/</code> 封装 HTTP / SSE 协议与错误映射；<code>components/</code> 放稳定可复用展示组件；<code>auth/</code> 处理身份和前端能力门控；<code>shared/</code> 放通用工具。权限检查必须在服务端执行，前端路由拦截只是体验层；按团队规模与现有仓库习惯调整，不为目录整齐而拆碎代码。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f6" data-category="followup">
+        <summary><span class="f-num">19</span><h3>Markdown 渲染怎么防 XSS？模型返回 HTML、链接和代码块怎么办？</h3></summary>
+        <div class="followup-answer"><p>默认把模型输出当不可信输入：尽量禁用原始 HTML，或经成熟的 sanitizer 按白名单净化后再渲染；不要直接把回答塞进未经净化的 <code>dangerouslySetInnerHTML</code>。限制允许的 URL 协议，安全处理新窗口链接；代码块走文本节点 / 安全高亮器，不执行模型生成内容。使用 CSP 等纵深防御，并对恶意标签、事件属性、javascript: URL、SVG / data URL 做安全测试。具体库和策略需结合产品依赖审查。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f7" data-category="followup">
+        <summary><span class="f-num">20</span><h3>SSE parser、停止生成、会话切换、重连和工具确认分别如何测试？</h3></summary>
+        <div class="followup-answer"><ul><li>Parser：切碎 UTF-8 多字节字符，拆分或合并事件，覆盖多行 data、空事件、异常 payload 和 EOF。</li><li>停止 / 切会话：模拟慢请求，快速切换会话并检查旧响应不会污染当前状态；确认取消后资源被清理。</li><li>重连：覆盖网络中断、重复事件、缺少事件序号和服务端不支持续传等路径。</li><li>工具确认：验证确认前不执行、拒绝后不会执行、越权由服务端拒绝；对有副作用的重试验证幂等性。</li><li>组合测试：长回答、连续工具步骤、并发请求与键盘 / 屏幕阅读器交互。</li></ul></div>
+      </details>
+
+      <details class="followup searchable" id="f8" data-category="followup">
+        <summary><span class="f-num">21</span><h3>AI 回答很慢、拒答、工具失败或结果不可靠，界面怎么帮助用户继续？</h3></summary>
+        <div class="followup-answer"><p>按原因提供不同反馈，不要用一个通用“出错了”覆盖全部情况。慢时先确认请求已提交，显示阶段性状态并提供取消；拒答时说明边界并给可调整的问题方向；工具失败时显示哪一步失败及可恢复入口；低置信或来源不足时明确标注限制、展示引用并鼓励核验。保留已完成内容，支持重新尝试、修改问题或换路径。措辞不应暗示 AI 结果绝对正确。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f9" data-category="followup">
+        <summary><span class="f-num">22</span><h3>简历里的 Agent 项目，哪段代码或方案是你本人负责？最难点和结果怎么说？</h3></summary>
+        <div class="followup-answer"><p>先按真实分工列出自己亲自做过的页面、组件、交互、数据整理或设计系统工作，再选一个能讲清决策与取舍的具体例子；如果答不上某段代码，就说清楚那部分由谁负责，不抢团队功劳。已确认可讲的事实包括：Agent 洞察分析工具开发、基于 2 万多条会话筛得 1,216 条有效反馈并归纳 70+ 项需求，以及 AI Agent 设计系统的五层约束体系落地。需要补充的最难问题、本人代码范围、采用技术和效果指标，应以你实际经历为准，不在这里代写虚构答案。</p></div>
+      </details>
+
+      <details class="followup searchable" id="f10" data-category="followup">
+        <summary><span class="f-num">23</span><h3>如果主要做设计系统和 Agent 洞察工具，而不是完整对话链路，为什么胜任？入职后怎么补齐？</h3></summary>
+        <div class="followup-answer"><p>诚实承认自己没有把完整生产级 SSE 对话链路作为已确认的亲历成果，但说明相邻能力如何迁移：18+ 年前端 / UI 经验、React 与工程化背景、腾讯广告设计系统的规模化治理，以及 Agent 设计系统和洞察工具建设，都能支撑复杂交互、状态规范与跨团队协作。补齐时先通过代码阅读和可运行小闭环熟悉团队协议，再实现流解析、取消、切会话、错误恢复和测试，逐步接入真实工具与权限场景；明确用测试和评审验证，不声称已掌握未经实践的细节。</p></div>
+      </details>
+    </section>
+
+    <aside class="closing">
+      <p><strong>临场提醒：</strong>先用 30–60 秒讲结论，再按“问题 → 个人职责 → 取舍 → 结果”展开。数字只用可核实的数据；技术设计题用“我会如何做”，项目复盘题用“我具体做过什么”。</p>
+    </aside>
+  </main>
+  <footer class="wrap">AI Agent 前端面试复习 · 静态单页 · 搜索、目录跳转、折叠追问与打印均可直接使用</footer>
+
+  <script>
+    (() => {
+      const search = document.getElementById('search');
+      const clear = document.getElementById('clear-search');
+      const cards = [...document.querySelectorAll('.searchable')];
+      const filters = [...document.querySelectorAll('.filter')];
+      const count = document.getElementById('result-count');
+      const empty = document.getElementById('no-results');
+      const primaryTitle = document.getElementById('primary-title');
+      let activeFilter = 'all';
+
+      function update() {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        let visiblePrimary = 0;
+        let visibleFollowup = 0;
+        for (const card of cards) {
+          const matchesText = !query || card.innerText.toLocaleLowerCase().includes(query);
+          const matchesFilter = activeFilter === 'all' || card.dataset.category === activeFilter;
+          const show = matchesText && matchesFilter;
+          card.classList.toggle('hidden', !show);
+          if (show) {
+            visible += 1;
+            if (card.classList.contains('question-card')) visiblePrimary += 1;
+            else visibleFollowup += 1;
+          }
+        }
+        primaryTitle.classList.toggle('hidden', visiblePrimary === 0);
+        empty.style.display = visible === 0 ? 'block' : 'none';
+        clear.classList.toggle('visible', Boolean(search.value));
+        count.innerHTML = query || activeFilter !== 'all'
+          ? `找到 <strong>${visible}</strong> 道题${visiblePrimary ? `（主问题 ${visiblePrimary}` : '（'}${visibleFollowup ? `${visiblePrimary ? '，' : ''}追问 ${visibleFollowup}` : ''}）`
+          : '共 <strong>23</strong> 道题：13 个主问题 + 10 个追问（追问默认折叠）';
+      }
+
+      search.addEventListener('input', update);
+      clear.addEventListener('click', () => { search.value = ''; search.focus(); update(); });
+      filters.forEach(button => button.addEventListener('click', () => {
+        activeFilter = button.dataset.filter;
+        filters.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        update();
+      }));
+      document.querySelectorAll('.copy-btn').forEach(button => button.addEventListener('click', async () => {
+        const text = button.closest('.question-card').querySelector('.talk-track').innerText.replace(/^回答主线\s*/, '').trim();
+        const original = button.textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = '已复制';
+        } catch {
+          button.textContent = '复制失败';
+        }
+        window.setTimeout(() => { button.textContent = original; }, 1600);
+      }));
+      update();
+    })();
+  </script>
+</body>
+</html>
