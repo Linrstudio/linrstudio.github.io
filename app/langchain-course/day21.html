@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 21：混合问答 Agent：RAG 和工具怎么一起调 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 21 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 21：混合问答 Agent：RAG 和工具怎么一起调</h1>
+<p>第 3 周的最后一课，把 RAG 和工具合起来：真实问题很少只沾一边，“深圳今天天气怎么样，顺便讲讲 LangChain 的记忆怎么做预算”——前半句走工具，后半句走 RAG，答案要合起来、出处要分开标。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 第 3 周复盘：一张表收束</h3>
+<table>
+<tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
+<tr><td>Day 15</td><td>RAG 全链路</td><td>生成之前先检索，知识问题用 RAG、行为问题用微调</td></tr>
+<tr><td>Day 16</td><td>切分与 Embedding</td><td>按标题、段落分层切，一块讲一件事，问题和文档用同一个模型</td></tr>
+<tr><td>Day 17</td><td>向量库与检索</td><td>向量、原文、元数据三件套，起步 TopK = 5、相似度下限过滤</td></tr>
+<tr><td>Day 18</td><td>重排、引用与防幻觉</td><td>小批重排、按句标引用，提示词、检索、校验三道关</td></tr>
+<tr><td>Day 19</td><td>RAG 评测集</td><td>命中率、引用准确率、幻觉率三个数，每次只改一个参数</td></tr>
+<tr><td>Day 20</td><td>工具路由与天气工具</td><td>规则版路由先分流，城市映射坐标白名单，结构化返回带出处</td></tr>
+<tr><td>Day 21</td><td>混合问答</td><td>问题先拆、分别走、再合起来，出处分开标</td></tr>
+</table>
+<h3>2. 混合问题怎么拆：先拆子问题，再分别走</h3>
+<pre><code>混合问题：“深圳今天天气怎么样，顺便讲讲 LangChain 的记忆怎么做预算”
+  → 拆成两个子问题：
+    ① “深圳今天天气怎么样” → 走天气工具
+    ② “LangChain 的记忆怎么做预算” → 走 RAG
+  → 两个子问题的结果都回来，再合起来生成最终回答
+  → 出处分开标：天气部分标 Open-Meteo，记忆部分标 [资料N]</code></pre>
+<p>拆的原则是：<strong>一个子问题只走一条路</strong>。子问题本身还是混合的，就继续拆，直到每个子问题只走一条路为止。拆不干净就合起来，答案里天气和文档的出处就会混在一起，查都查不清。</p>
+<h3>3. 合起来怎么合：先分段，再组织，不要混写</h3>
+<p>最终回答要分段：天气一段、文档一段，每段后面标自己的出处。不要把天气数字和文档结论写在同一句话里——同一句话里两个出处，引用就没法标了。分段不是排版问题，是出处问题：出处分不开，引用就不可信。</p>
+<h3>4. 一边失败了，另一边怎么办：失败隔离，不要全盘崩</h3>
+<p>天气工具超时了，RAG 那段照样可以回答；RAG 检索为空了，天气那段照样可以回答。失败的那段，回答里写清楚“天气工具超时了，没查到”或者“资料里没有这部分”，不要让一边失败拖垮整个回答，也不要用另一边的答案去填失败那段的空——填空就是现编。</p>
+<div class="warn"><strong>容易踩的坑：</strong>混合问题不拆，直接丢给模型。模型会凭感觉决定先答哪段、漏哪段，天气数字可能从训练知识里编，文档结论可能从天气工具结果里拼。拆问题是混合问答的第一步，不是可选项。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：混合问答骨架（概念代码，先看形状）</h3>
+<pre><code>def hybrid_answer(question):
+    sub_questions = split_question(question)
+    # 拆：每个子问题只走一条路，拆不干净就继续拆
+    results = {}
+    for sub in sub_questions:
+        route_result = route(sub)  # Day 20 的路由：天气词走工具，否则走 RAG
+        if route_result == "weather_tool":
+            results[sub] = get_weather("深圳")  # 工具结果，带出处和时间
+        else:
+            results[sub] = rag_answer(sub)     # RAG 结果，带 [资料N] 引用
+    # 合：分段组织，每段标自己的出处，不要混写
+    return compose_answer(results)
+
+# 失败隔离：某一边失败了，另一边照样回答，失败那段写清楚原因，不要填空</code></pre>
+<h3>示例 2：最终回答的格式（照着抄，出处分开标）</h3>
+<pre><code># 天气部分：据 Open-Meteo，深圳当前 26.5°C，湿度 72%，风速 3.2 m/s，多云。
+# （示例数据，真实调用替换为实时结果）
+# 文档部分：LangChain 的记忆做法是 System 保留 + 最近 N 轮全量 + 中间摘要 [资料1]，
+# 预算要显式配置，摘要模板强制保留目标、已排除选项和关键数字 [资料2]。
+# 分段写，每段标自己的出处，同一句话里不要混两个出处</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 写一个混合问题，再拆成两个子问题：每个子问题走哪条路？出处分别是什么？<br>
+2. 假设天气工具超时了，写出最终回答：天气那段写什么？文档那段照样回答吗？为什么不能用文档答案去填天气的空？<br>
+3. 对照第 3 周复盘表，不看表，试着按 Day 15 到 Day 21 的顺序，每课说出一句核心，再对照表格补缺口——补不上的那课，就是下周开始前要重看的一课。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 混合问题应该先做什么？</strong></p><button data-i="0">直接丢给模型，让它自己决定</button><button data-i="1">先拆成子问题，每个子问题只走一条路，拆不干净就继续拆</button><button data-i="2">先答最简单的那段</button><div class="ans">解析：选 B。拆问题是混合问答的第一步，不是可选项；不拆，模型会凭感觉漏段、编数。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 最终回答应该怎么合？</strong></p><button data-i="0">混写在一起，越自然越好</button><button data-i="1">只写天气那段，文档那段下次再说</button><button data-i="2">分段写，每段标自己的出处，同一句话里不要混两个出处</button><div class="ans">解析：选 C。分段不是排版问题，是出处问题：出处分不开，引用就不可信。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 一边失败了，另一边怎么办？</strong></p><button data-i="0">失败隔离：另一边照样回答，失败那段写清楚原因，不要填空</button><button data-i="1">整个回答都崩掉</button><button data-i="2">用另一边的答案去填失败那段的空</button><div class="ans">解析：选 A。失败隔离是混合问答的底线；填空就是现编，比直接说没查到更糟。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 天气部分的出处应该标什么？</strong></p><button data-i="0">不用标，天气大家都知道</button><button data-i="1">标 Open-Meteo 和时间</button><button data-i="2">标 [资料1]</button><div class="ans">解析：选 B。天气出处是工具结果的一部分，不是文档引用；两边出处要分开标。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 混合问题不拆，直接丢给模型，会怎样？</strong></p><button data-i="0">模型会自己拆好，不用你操心</button><button data-i="1">模型会先问你怎么拆</button><button data-i="2">模型会凭感觉漏段、编数，天气数字可能从训练知识里编</button><div class="ans">解析：选 C。不拆，天气和文档的出处就会混在一起，查都查不清。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 第 3 周结束时，你能拿出什么可演示的东西？</strong></p><button data-i="0">一个带评测的 RAG 加一个深圳天气 Agent，混合问题能拆、能合、能标出处</button><button data-i="1">一堆工具函数的罗列</button><button data-i="2">一个跑通一次的演示视频</button><div class="ans">解析：选 A。面试讲的时候按任务讲：问题怎么拆、每段走哪条路、失败怎么隔离、三个评测数是多少——比罗列工具名可信得多。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：混合问题怎么处理？</summary><p>先拆成子问题，每个子问题只走一条路，拆不干净就继续拆；分别走工具和 RAG，结果都回来再分段合起来，每段标自己的出处；一边失败了，另一边照样回答，失败那段写清楚原因，不要填空。</p></details>
+<details><summary>Q2：为什么最终回答要分段？</summary><p>分段不是排版问题，是出处问题：天气出处是 Open-Meteo，文档出处是 [资料N]，同一句话里混两个出处，引用就没法标了。分段写，每段标自己的出处，引用才可信。</p></details>
+<details><summary>Q3：失败隔离怎么做？</summary><p>天气工具超时了，RAG 那段照样回答；RAG 检索为空了，天气那段照样回答。失败那段写清楚原因，不要让一边失败拖垮整个回答，也不要用另一边的答案去填空。</p></details>
+<details><summary>Q4：第 3 周学完，你能做出什么？还缺什么？</summary><p>能做出：带评测的 RAG、深圳天气工具、混合问答 Agent。还缺的是：Computer Use 的安全边界、上线加固、面试模拟，这些正是第 4 周和最后 2 天的内容。</p></details>
+<details><summary>Q5：RAG 和工具，什么时候一起用、什么时候分开用？</summary><p>问题只沾一边，就只走一边；问题两边都沾，就拆开走、再合起来。拆的原则是一个子问题只走一条路，合的原则是分段标出处、失败隔离。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>第 3 周收尾时，先问三个问题：混合问题能拆、能合、能标出处吗？失败隔离做了吗？评测三个数报了吗？三问有一个答不上来，第 3 周就不算闭环。</p>
+<p><strong>简历讲法：</strong>别写“做过混合问答”，写“混合问题先拆子问题、分别走工具和 RAG、再分段合起来、出处分开标，失败隔离，评测报命中率、引用准确率、幻觉率”。前者是名词，后者是可追问的项目。</p>
+<p><strong>下周预告：</strong>第 4 周进 Computer Use + 上线加固：白名单、人工确认、步数上限、截图留痕，先 Playwright 再 pyautogui，最后 2 天面试模拟。</p>
+</div>
+<div class="nav"><span><a href="day20.html">← Day 20</a> &nbsp; <a href="index.html">课程首页</a></span><span>第 4 周：Computer Use + 上线加固 →</span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

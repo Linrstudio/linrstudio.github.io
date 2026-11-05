@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 15：RAG 全链路：一张图讲清切分、向量、检索、生成 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 15 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 15：RAG 全链路：一张图讲清切分、向量、检索、生成</h1>
+<p>第 3 周的第一课，先把 RAG 的整条链路讲清，再拆开讲每一步：模型不知道答案时，不要让它现编，而是先去你的文档里找，再带着找到的东西回答。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 一张图：RAG 的四步</h3>
+<pre><code>离线（索引时做一次）：
+文档 → 切块 → Embedding 向量化 → 存进向量库
+
+在线（每次提问都走）：
+用户问题 → 向量化 → 在向量库里检索 TopK → 把 TopK 拼进提示词 → 模型生成回答
+（回答要带引用：答案出自哪几块，写清楚）</code></pre>
+<p>RAG 的核心思想只有一句：<strong>生成之前先检索</strong>。模型本身的知识是训练时定型的、会过期、还会编造；你的文档是现成的、可更新的、可溯源的。检索把“模型不知道”变成“模型面前有资料”，幻觉就少了一大半。</p>
+<h3>2. RAG 和微调，什么时候选哪个</h3>
+<table>
+<tr><th></th><th>RAG</th><th>微调</th></tr>
+<tr><td>适合</td><td>知识会变、要溯源、要引用出处</td><td>要改风格、改格式、改行为习惯</td></tr>
+<tr><td>成本</td><td>低：建索引就行，不用训练</td><td>高：要数据、要算力、要评测</td></tr>
+<tr><td>更新</td><td>文档一改，索引一更就生效</td><td>知识一变就要重新训</td></tr>
+</table>
+<p>面试时这句很关键：<strong>知识问题用 RAG，行为问题用微调</strong>。把知识问题拿去微调，又贵又难更新；把行为问题拿去 RAG，检索再准也改不了模型的说话方式。</p>
+<h3>3. 四步里，哪一步最容易背锅</h3>
+<p>新手一出问题就怪模型，其实 RAG 出问题时，第一嫌疑永远是检索：切块切碎了语义、Embedding 选错了模型、TopK 太小漏了关键块、拼进提示词时没带出处。Day 16 到 Day 19 就是按这个顺序，把每一步的坑逐个讲透：切块、向量、检索、评测。</p>
+<h3>4. 和第 2 周的关系：检索是同一套思路，对象换了</h3>
+<p>Day 9 讲代码检索，查的是函数、调用关系；这里查的是文档段落，查的是语义。思路一样，都是“先查、再答”，但代码检索更看重精确名字，向量只是补充；文档检索更看重语义，关键词只是补充。主次是反的，别把 Day 9 的结论原样搬过来。</p>
+<div class="warn"><strong>容易踩的坑：</strong>RAG 不是“把文档全塞给模型”。全塞进去，Token 爆了不说，模型还会在无关段落里找答案，越找越偏。正确姿势永远是：检索给短名单，模型只看名单里的块。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：全链路骨架（概念代码，先看形状，不接真实模型）</h3>
+<pre><code># 离线：建索引（做一次）
+chunks = split_documents(docs)          # Day 16：切块
+vectors = embed(chunks)                 # Day 16：Embedding
+store = VectorStore(vectors, chunks)    # Day 17：存进向量库
+
+# 在线：问答（每次提问都走）
+def answer(question):
+    q_vec = embed([question])[0]
+    topk = store.search(q_vec, top_k=5) # Day 17：检索
+    topk = rerank(question, topk)       # Day 18：重排
+    prompt = build_prompt(question, topk)  # 拼进提示词，带出处
+    return llm.invoke(prompt)           # 生成，回答要带引用</code></pre>
+<h3>示例 2：提示词怎么拼，引用怎么写</h3>
+<pre><code># 拼提示词时，每块都要带编号和出处，模型回答时才能引用：
+# [资料1：产品手册第3章] ……内容……
+# [资料2：FAQ 第5条] ……内容……
+# 指令要写死三条：
+# 1. 只用资料里的内容回答，资料里没有就说“资料里没有”
+# 2. 每句关键结论后面标 [资料N]
+# 3. 不要把资料里没有的数字、日期、名字编出来</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一篇你熟悉的文档（比如第 1 周的计划文档），手工走一遍四步：切成几块？每块讲一件事吗？换你来提问，哪几块应该被检索到？<br>
+2. 写一个“资料里没有”的测试问题：问一个文档里根本没有的东西，看提示词里的三条指令能不能拦住模型现编。<br>
+3. 对照上表，写出一个该用 RAG、一个该用微调的场景，再写出选错的代价。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. RAG 的核心思想是？</strong></p><button data-i="0">让模型背下所有文档</button><button data-i="1">生成之前先检索，带着找到的资料再回答</button><button data-i="2">把文档全塞给模型</button><div class="ans">解析：选 B。检索把“模型不知道”变成“模型面前有资料”，幻觉就少了一大半。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 知识问题和行为问题，分别用什么？</strong></p><button data-i="0">都用微调</button><button data-i="1">都用 RAG</button><button data-i="2">知识问题用 RAG，行为问题用微调</button><div class="ans">解析：选 C。知识会变、要溯源用 RAG；改风格、改行为用微调，选错又贵又难更新。</div></div>
+<div class="q" data-answer="0"><p><strong>3. RAG 出问题时，第一嫌疑是谁？</strong></p><button data-i="0">检索：切块、Embedding、TopK、拼提示词这几步</button><button data-i="1">一定是模型太笨</button><button data-i="2">一定是用户问得不好</button><div class="ans">解析：选 A。新手一出问题就怪模型，其实第一嫌疑永远是检索链路。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 离线和在线，分别做什么？</strong></p><button data-i="0">离线问答，在线建索引</button><button data-i="1">离线切块、向量化、建索引；在线向量化问题、检索、生成</button><button data-i="2">离线和在线都做同一件事</button><div class="ans">解析：选 B。索引做一次、反复用；问答每次提问都走检索加生成。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 回答里的引用是干嘛的？</strong></p><button data-i="0">为了让回答看起来专业</button><button data-i="1">为了凑字数</button><button data-i="2">让答案可溯源、可核查，资料里没有的就说没有</button><div class="ans">解析：选 C。引用是 RAG 相对纯生成的最大优势之一，没有引用，RAG 就只剩一半价值。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 为什么不能把文档全塞给模型？</strong></p><button data-i="0">Token 会爆，模型还会在无关段落里找偏答案</button><button data-i="1">因为模型读不完</button><button data-i="2">因为文档太长不好看</button><div class="ans">解析：选 A。检索给短名单，模型只看名单里的块，才是正确姿势。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：RAG 是什么？一句话讲清。</summary><p>生成之前先检索：把用户问题向量化，在向量库里找最相关的文档块，拼进提示词再让模型生成，回答带引用。离线建索引，在线检索加生成。</p></details>
+<details><summary>Q2：RAG 和微调怎么选？</summary><p>知识问题用 RAG：知识会变、要溯源、要引用；行为问题用微调：改风格、改格式、改行为习惯。把知识问题拿去微调，又贵又难更新；把行为问题拿去 RAG，检索再准也改不了说话方式。</p></details>
+<details><summary>Q3：RAG 回答错了，你先查哪？</summary><p>先查检索：切块是不是切碎了语义、Embedding 是不是选错了、TopK 是不是太小漏了关键块、拼提示词时有没有带出处。先查检索链路，再查模型和提示词，不要一上来就怪模型。</p></details>
+<details><summary>Q4：RAG 和第 2 周的代码检索，是一回事吗？</summary><p>思路一样，都是先查再答，但对象和主次是反的：代码检索更看重精确名字，向量只是补充；文档检索更看重语义，关键词只是补充。</p></details>
+<details><summary>Q5：第 3 周结束时，你能拿出什么？</summary><p>一个带评测的 RAG 加一个深圳天气 Agent：文档切块、向量检索、重排引用、防幻觉、评测集、工具路由、混合问答，全部能讲清、能演示、能报数字。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>RAG 上线前，先问三个问题：索引更新机制有没有？回答有没有引用？评测集有没有？三问有一个答不上来，RAG 就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过 RAG”，写“离线切块、向量化、建索引，在线检索 TopK、重排、拼提示词带引用，回答资料里没有就说没有，评测报命中率和引用准确率”。前者是名词，后者是可追问的链路。</p>
+<p><strong>明日预告：</strong>Day 16 讲切分与 Embedding：按标题切为什么比固定长度好，Embedding 选型看什么，切块多大、重叠多少才合适。</p>
+</div>
+<div class="nav"><span><a href="day14.html">← Day 14</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day16.html">Day 16 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

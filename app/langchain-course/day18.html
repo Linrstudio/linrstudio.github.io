@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 18：重排、引用与防幻觉 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 18 / 30</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 18：重排、引用与防幻觉</h1>
+<p>检索回来的块，不等于可以直接用的块。今天讲检索之后的三件事：重排怎么把最相关的往前放，引用怎么写才可核查，资料里没有时怎么拦住模型现编。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 重排是干嘛的：向量排的是方向，重排排的是“对这个问题有没有用”</h3>
+<p>向量检索按语义方向排，方向接近不等于对这个问题有用：比如问题问“退货要几天”，向量可能先返回“退货流程很顺”而不是“退货 7 天内”。重排就是第二遍排序：用一个更强的打分方式（比如交叉编码器、或者让模型自己判断相关性），把真正回答问题的块往前放，把方向接近但答非所问的往后放。重排的代价是多一次计算，所以只对 TopK 里取出来的小批（比如前 20）重排，不对全库重排。</p>
+<h3>2. 重排的分数怎么合：向量分 + 关键词分 + 新鲜度，封顶 1.0</h3>
+<p>一个可用的合分公式是：向量相似度打底，关键词精确命中加分，文档越新加分越少越旧扣分，总分封顶 1.0。公式本身不重要，重要的是：<strong>分数要可解释</strong>——排错了，你要能说出是哪一项把错的块顶上来的，否则调参就是碰运气。</p>
+<h3>3. 引用怎么写：每句关键结论后面标出处</h3>
+<p>引用不是文末贴一串链接，而是：<strong>每句关键结论后面标 [资料N]</strong>，资料编号和拼进提示词时的编号一致。数字、日期、名字、条款，这四类最容易编造，也最必须标引用。引用标错了比不标更糟：标错了，人按引用去查，查到的根本不是那句话，信任就没了。</p>
+<h3>4. 防幻觉的三道关</h3>
+<table>
+<tr><th>关卡</th><th>怎么做</th></tr>
+<tr><td>提示词关</td><td>写死：只用资料里的内容回答，资料里没有就说“资料里没有”，不要编</td></tr>
+<tr><td>检索关</td><td>相似度下限过滤，低于下限的块不要；检索为空时，直接走“资料里没有”分支，不生成</td></tr>
+<tr><td>校验关</td><td>生成后检查：回答里的数字、日期、名字，是不是都出现在引用块里？没出现的，标出来、打回去重生成</td></tr>
+</table>
+<p>三道关缺一不可：只靠提示词，模型照样会编；只靠检索过滤，模型拿到资料还是会添油加醋；只靠事后校验，校验本身又要花一次调用。防幻觉是系统，不是某一句提示词。</p>
+<div class="warn"><strong>容易踩的坑：</strong>检索为空时还让模型生成。检索为空，说明资料里根本没有答案，这时正确输出是“资料里没有”，不是让模型凭训练知识编一个。空检索还生成，是 RAG 里最常见的幻觉来源。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：合分重排（本地实测逻辑，小数字算给你看）</h3>
+<pre><code>def rerank_score(vector_score, keyword_hit, freshness_bonus=0.0):
+    # 向量分打底，关键词精确命中加 0.2，新鲜度加分，总分封顶 1.0
+    return min(1.0, vector_score + (0.2 if keyword_hit else 0.0) + freshness_bonus)
+
+# 本地实测：向量分 0.8 + 关键词命中 0.2 = 1.0（封顶）
+# 向量分 0.8 + 无关键词命中 = 0.8
+# 排错了能说出是哪一项顶上来的，分数才可解释</code></pre>
+<h3>示例 2：防幻觉的提示词模板（照着抄，不要只写“请准确回答”）</h3>
+<pre><code># 拼提示词时，指令写死这四条：
+# 1. 只用下面资料里的内容回答，资料里没有就说“资料里没有”
+# 2. 每句关键结论后面标 [资料N]，编号和资料编号一致
+# 3. 数字、日期、名字、条款，必须出现在引用块里才能写
+# 4. 不要把资料里没有的数字、日期、名字编出来
+# 检索为空时：不调用模型，直接返回“资料里没有”</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿 Day 17 的 TopK 结果，手工加一次重排：哪块方向接近但答非所问？关键词命中能不能把它挤下去？<br>
+2. 写一个“资料里没有”的测试问题，再写一个检索为空时的分支：不调用模型，直接返回什么？<br>
+3. 拿一段你写过的回答，逐句检查：每句关键结论后面有没有引用？数字、日期、名字是不是都出现在引用块里？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 重排是干嘛的？</strong></p><button data-i="0">把全库重新排一遍</button><button data-i="1">对 TopK 取出来的小批再排一次，把真正回答问题的块往前放</button><button data-i="2">把检索结果删掉重来</button><div class="ans">解析：选 B。向量排的是方向，重排排的是“对这个问题有没有用”，只对前 20 左右的小批重排，不对全库重排。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 合分公式最重要的是什么？</strong></p><button data-i="0">公式越复杂越好</button><button data-i="1">分数越高越好</button><button data-i="2">分数要可解释：排错了能说出是哪一项顶上来的</button><div class="ans">解析：选 C。分数不可解释，调参就是碰运气；向量分打底、关键词加分、新鲜度加分，总分封顶 1.0。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 引用应该怎么写？</strong></p><button data-i="0">每句关键结论后面标 [资料N]，编号和拼进提示词时的编号一致</button><button data-i="1">文末贴一串链接就行</button><button data-i="2">不用标引用，回答对了就行</button><div class="ans">解析：选 A。数字、日期、名字、条款最容易编造，也最必须标引用；标错了比不标更糟。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 防幻觉的三道关是？</strong></p><button data-i="0">只靠提示词写“请准确回答”</button><button data-i="1">提示词关 + 检索关 + 校验关，三道一起上</button><button data-i="2">只靠事后校验</button><div class="ans">解析：选 B。只靠提示词，模型照样会编；只靠检索过滤，模型还是会添油加醋；只靠校验，校验本身又要花一次调用。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 检索为空时，应该怎么办？</strong></p><button data-i="0">让模型凭训练知识编一个</button><button data-i="1">多取几块，凑够 TopK 再生成</button><button data-i="2">不调用模型，直接返回“资料里没有”</button><div class="ans">解析：选 C。空检索还生成，是 RAG 里最常见的幻觉来源。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 生成后校验，查什么？</strong></p><button data-i="0">回答里的数字、日期、名字，是不是都出现在引用块里？没出现的打回去重生成</button><button data-i="1">回答够不够长</button><button data-i="2">回答够不够礼貌</button><div class="ans">解析：选 A。校验关就是干这个的：没出现在引用块里的数字、日期、名字，都是现编的嫌疑。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：重排和向量检索，差在哪？</summary><p>向量检索按语义方向排，方向接近不等于对这个问题有用；重排是第二遍排序，用更强的打分把真正回答问题的块往前放。重排只对 TopK 取出来的小批做，不对全库做。</p></details>
+<details><summary>Q2：防幻觉，你会怎么做？</summary><p>三道关一起上：提示词写死只用资料回答、资料里没有就说没有；检索设下限、为空直接走“资料里没有”分支；生成后校验数字、日期、名字是不是都出现在引用块里，没出现的打回去重生成。</p></details>
+<details><summary>Q3：引用标错了，为什么比不标更糟？</summary><p>标错了，人按引用去查，查到的根本不是那句话，信任就没了。不标，人至少知道答案没出处；标错，人以为有出处、查完发现是假的，信任损失更大。</p></details>
+<details><summary>Q4：合分公式怎么调？</summary><p>先保证分数可解释：排错了能说出是哪一项顶上来的。向量分打底、关键词加分、新鲜度加分，总分封顶 1.0；调的时候跑评测集，看命中率和引用准确率一起变，不要只看一个。</p></details>
+<details><summary>Q5：检索为空还生成，会怎样？</summary><p>模型会凭训练知识编一个，看起来有模有样，实际上资料里根本没有。这是 RAG 里最常见的幻觉来源，正确做法是不调用模型，直接返回“资料里没有”。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>重排和引用上线前，先跑三个用例：方向接近但答非所问的块能不能被挤下去？引用编号和资料编号对不对得上？检索为空时是不是直接返回“资料里没有”？三个有一个没过，就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过 RAG 防幻觉”，写“TopK 小批重排、合分可解释，引用按句标出处，提示词、检索过滤、生成后校验三道关，检索为空不调用模型”。前者是名词，后者是可追问的系统。</p>
+<p><strong>明日预告：</strong>Day 19 讲 RAG 评测集：命中率、引用准确率、幻觉率怎么算，评测集怎么做，调参看哪几个数一起变。</p>
+</div>
+<div class="nav"><span><a href="day17.html">← Day 17</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day19.html">Day 19 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
