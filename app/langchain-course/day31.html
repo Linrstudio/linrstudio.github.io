@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 31：Multi-Agent 协作总览：Supervisor 模式 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 31 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 31：Multi-Agent 协作总览：Supervisor 模式</h1>
+<p>第 5 周的第一课，先把 Multi-Agent 的总图讲清：一个任务不再由一个 Agent 从头做到尾，而是由一个 Supervisor（主管）分发给多个子 Agent，各自做完再汇总。单 Agent 是“一个人干全活”，Multi-Agent 是“一个团队分工干活”，团队的好处是能并行、能各用所长，代价是通信、汇总和失败处理都变复杂了。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 为什么要多个 Agent：单 Agent 的三块天花板</h3>
+<p>第一，上下文天花板：一个 Agent 要同时记住规划、检索结果、工具输出、校验意见，上下文越长越容易顾此失彼；分工后，每个子 Agent 只看自己那部分，上下文反而变干净了。第二，能力天花板：检索、执行、校验是三种不同的活，一个提示词很难同时把三件事都做到最好，分开写提示词、分开配工具，各自才能调优。第三，并行天花板：单 Agent 只能一步一步来，多个子 Agent 可以同时动手，总耗时从“各步相加”变成“最慢的那步”。</p>
+<h3>2. Supervisor 模式：一张图，主管 + 子图</h3>
+<p>Supervisor 是图的中心节点：它收到任务，先判断该派给谁；子 Agent 做完，把结果写回共享状态；Supervisor 再判断是继续派、打回重做，还是收口汇总。子 Agent 本身也可以是一张小图（比如 Knowledge 子 Agent 内部就是检索循环），这就是“图里套图”。主管不直接干活，只做三件事：分发、判断、汇总——主管一旦开始自己动手查资料、自己写答案，分工就乱了。</p>
+<h3>3. 子 Agent 怎么通信：三种方式，各有适用场景</h3>
+<table>
+<tr><th>方式</th><th>做法</th><th>适合</th></tr>
+<tr><td>共享状态</td><td>所有子 Agent 读写同一份状态：任务、步骤、每步结果、校验意见</td><td>大多数场景，复盘时能看到全过程</td></tr>
+<tr><td>消息传递</td><td>子 Agent 只把消息追加到消息列表，不直接改别人的字段</td><td>对话式协作、需要留完整对话记录时</td></tr>
+<tr><td>显式交接</td><td>交接时写清“交给谁、为什么是它、带上哪些结果”</td><td>关键节点交接，出问题时能定位责任</td></tr>
+</table>
+<p>实操建议是三者混用：状态是底座，消息是过程记录，关键交接必须显式写清。只靠口头传话（让模型自己决定把什么传给下一个），出问题时根本查不清是哪一步丢了信息。</p>
+<h3>4. 并行与串行、失败隔离：团队协作的两条底线</h3>
+<p>没有依赖的步骤可以并行，有依赖的必须串行：先检索再生成、先执行再校验，并行跑会读到没出来的结果。并行的上限也要设——同时跑十个子 Agent，成本和限流都会炸，通常并行度设 3–5 个就够了。<strong>失败隔离</strong>是另一条底线：某一路子 Agent 挂了（工具超时、检索为空、校验不过），Supervisor 只重试那一路，不重跑整张图；重试超过上限（通常 2–3 次），就把失败写进结果、继续走别的路，而不是让整个任务崩掉。</p>
+<div class="warn"><strong>容易踩的坑：</strong>为了“多 Agent”而多 Agent。任务本身一步就能做完，硬拆成五个子 Agent，只会多出通信成本和出错点。判断标准是：拆开后，每一路是不是真的有独立的输入、独立的工具、独立的验收标准？三项缺两项，就别拆。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Supervisor 图的骨架（概念代码，先看形状）</h3>
+<pre><code># 共享状态：任务、步骤、每步结果、校验意见，都写在这里，不靠口头传话
+from typing import TypedDict, Annotated
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+
+class TeamState(TypedDict):
+    task: str                    # 原始任务
+    messages: Annotated[list, add_messages]  # 过程消息，各子 Agent 追加
+    results: dict                # 每路子 Agent 的结果，键是子 Agent 名
+    next_agent: str              # Supervisor 显式写清：下一步交给谁
+
+def supervisor(state):
+    # 主管只做分发、判断、汇总，不直接查资料、不直接写答案
+    if all_done(state["results"]):
+        return {"next_agent": "composer"}   # 收口
+    return {"next_agent": pick_next(state)}  # 派给最缺的那一路
+
+# 子 Agent 是节点，也可以是子图；Verifier 不过就打回对应节点，不重跑全图
+graph = StateGraph(TeamState)
+graph.add_node("supervisor", supervisor)
+graph.add_node("planner", planner_node)
+graph.add_node("knowledge", knowledge_node)
+graph.add_node("tool", tool_node)
+graph.add_node("verifier", verifier_node)
+graph.add_node("composer", composer_node)
+graph.set_entry_point("supervisor")
+graph.add_edge("composer", END)</code></pre>
+<h3>示例 2：并行与失败隔离的写法（概念代码）</h3>
+<pre><code># 没有依赖的两路并行跑，有依赖的两步必须串行
+PARALLEL_LIMIT = 3   # 并行上限，防成本和限流炸掉
+MAX_RETRY = 2        # 某一路重试上限，超了就写失败、不重跑全图
+
+def run_team(task):
+    results = run_parallel(["knowledge", "tool"], limit=PARALLEL_LIMIT)
+    # 失败隔离：只重试失败的那一路，成功的不重跑
+    for name, res in results.items():
+        if res.failed and res.retries &lt; MAX_RETRY:
+            results[name] = retry_only(name)
+        elif res.failed:
+            results[name] = {"failed": True, "reason": res.reason}  # 写进结果，继续走
+    return compose(results)</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一个你熟悉的任务（比如“查某产品退货政策并对比两个版本”），拆成三路：哪路是检索、哪路是执行、哪路是校验？每路的输入和验收标准分别是什么？<br>
+2. 这三路里哪两路可以并行、哪两路必须串行？为什么？<br>
+3. 假设检索那路挂了两次，写出 Supervisor 的处理：重试还是写失败？最终回答里该怎么写这段？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Supervisor 在 Multi-Agent 里主要负责什么？</strong></p><button data-i="0">直接查资料、写答案</button><button data-i="1">分发、判断、汇总，不直接干活</button><button data-i="2">只负责跑测试</button><div class="ans">解析：选 B。主管一旦开始自己动手，分工就乱了；分发、判断、汇总才是主管的三件事。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 子 Agent 通信最推荐的做法是？</strong></p><button data-i="0">只靠模型口头传话</button><button data-i="1">共享状态做底座、消息做过程记录、关键交接显式写清</button><button data-i="2">每个子 Agent 各写各的，不共享</button><div class="ans">解析：选 B。三者混用：状态是底座，消息是过程，关键交接显式写清，出问题才能定位。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 没有依赖的步骤和有依赖的步骤，分别怎么跑？</strong></p><button data-i="0">都并行跑，越快越好</button><button data-i="1">没有依赖的并行、有依赖的串行</button><button data-i="2">都串行跑，最稳妥</button><div class="ans">解析：选 B。并行跑有依赖的步骤，会读到还没出来的结果。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 某一路子 Agent 失败了，正确做法是？</strong></p><button data-i="0">重跑整张图</button><button data-i="1">只重试失败的那一路，超上限就写失败、继续走别的路</button><button data-i="2">整个任务直接崩掉</button><div class="ans">解析：选 B。这就是失败隔离：局部失败不拖垮全局，重试也要有上限。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 什么时候不该拆成 Multi-Agent？</strong></p><button data-i="0">任务复杂、需要并行时</button><button data-i="1">每路有独立输入、工具和验收标准时</button><button data-i="2">任务一步就能做完，拆开只多通信成本时</button><div class="ans">解析：选 C。为了多 Agent 而多 Agent，只会多出成本和出错点。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 并行度为什么要设上限？</strong></p><button data-i="0">并行越多越好，不用设</button><button data-i="1">防成本和模型限流炸掉，通常 3–5 个就够</button><button data-i="2">为了让代码好看</button><div class="ans">解析：选 B。同时跑十个子 Agent，成本和限流都会炸，上限是工程约束。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：什么是 Supervisor 模式？</summary><p>一张图里主管加子图：Supervisor 收到任务先判断派给谁，子 Agent 做完把结果写回共享状态，Supervisor 再判断是继续派、打回重做，还是收口汇总。主管只做分发、判断、汇总，不直接干活。</p></details>
+<details><summary>Q2：子 Agent 之间怎么通信？</summary><p>三种方式混用：共享状态做底座，所有结果、校验意见都写进状态；消息传递留过程记录；关键交接必须显式写清交给谁、为什么是它、带上哪些结果。只靠口头传话，出问题查不清。</p></details>
+<details><summary>Q3：并行和串行怎么定？</summary><p>看依赖：没有依赖的步骤并行，有依赖的必须串行，先检索再生成、先执行再校验。并行度设上限，通常 3–5 个，防成本和限流。</p></details>
+<details><summary>Q4：失败隔离怎么做？</summary><p>某一路挂了，只重试那一路，不重跑全图；重试超过 2–3 次，就把失败和原因写进结果、继续走别的路，最终回答里写清哪段失败了，不要填空。</p></details>
+<details><summary>Q5：单 Agent 和 Multi-Agent 怎么选？</summary><p>看三项：拆开后每路是不是有独立的输入、独立的工具、独立的验收标准？三项基本都满足就拆，缺两项就别拆；任务一步能做完，硬拆只多成本和出错点。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Multi-Agent 上线前，先问三个问题：主管的判断逻辑写死了吗（不能全靠模型临场发挥）？失败隔离和重试上限设了吗？共享状态里能不能复盘全过程？三问有一个答不上来，多 Agent 就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过 Multi-Agent”，写“Supervisor 分发、子 Agent 并行、共享状态复盘、失败隔离只重试失败路，重试上限 2 次”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 32 讲 Planner 与任务分解：怎么把任务拆成 DAG，依赖和并行度怎么定，拆不干净怎么办，计划怎么做到可校验。</p>
+</div>
+<div class="nav"><span><a href="index.html">← 课程首页</a></span><span><a href="day32.html">Day 32 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

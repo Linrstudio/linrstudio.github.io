@@ -186,6 +186,15 @@ state = app.invoke(
 <p><strong>下周预告：</strong>第 2 周进 Mini Cursor：代码 Agent 的架构、仓库索引、文件工具与 diff 预览、命令白名单与测试闭环。第 1 周的循环、记忆、图，全部会在 Mini Cursor 里复用。</p>
 </div>
 
+<h2>六、补充：Multi-Agent 协作图：Supervisor / Planner / Knowledge / Tool / Verifier / Composer</h2>
+<p>单 Agent 是一张图、多 Agent 是多张图协作，岗位上常见的分工是六个角色，刚好对应六个节点或子图：<strong>Supervisor</strong> 负责分发和收口，收到任务先判断派给谁、最后汇总；<strong>Planner</strong> 负责把复杂任务拆成步骤和依赖；<strong>Knowledge</strong> 负责检索（就是第 3 周的 RAG）；<strong>Tool</strong> 负责执行工具；<strong>Verifier</strong> 负责校验（跑测试、查引用、验 schema，通不过就打回）；<strong>Composer</strong> 负责把各路结果合成最终回答、出处分开标。</p>
+<pre><code># 形状：Supervisor 是图，子 Agent 是子图，状态共享同一份 AgentState
+# Supervisor → Planner（拆步骤）→ Knowledge（检索）/ Tool（执行，并行）
+#   → Verifier（校验：测试、引用、schema 有一项不过就打回对应节点）
+#   → Composer（合成最终回答）→ END
+# 交接靠状态里的字段：下一步派给谁、每步的结果、校验意见，都写进状态，不靠口头传话
+# 失败隔离：某一路子 Agent 挂了，Supervisor 只重试那一路，不重跑整张图</code></pre>
+<p>三个设计点最容易错：<strong>第一，状态要共享、不要各写各的</strong>，子 Agent 的结果必须写回共享状态，否则 Supervisor 汇总时只能凭印象；<strong>第二，交接要显式</strong>，下一步是谁、为什么是它，要写在状态里，出了问题才能复盘；<strong>第三，Verifier 必须独立于执行者</strong>，自己改、自己验等于没验，Verifier 的标准（测试、引用、schema）要事先写死，不能由执行者现场定。</p>
 <div class="nav">
 <span><a href="day06.html">← Day 6</a> &nbsp; <a href="index.html">课程首页</a></span>
 <span>第 2 周：Mini Cursor →</span>

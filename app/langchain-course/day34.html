@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 34：MCP 协议详解：Host、Client、Server | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 34 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 34：MCP 协议详解：Host、Client、Server</h1>
+<p>工具调用做到第 5 周，会遇到一个新问题：每个 Agent 都要接一堆工具，每个工具的接法都不一样，换个模型、换个平台就要重接一遍。MCP（Model Context Protocol）就是来解决这个问题的：它是一套开放协议，让模型和工具之间用同一种方式对话——工具不用为每个模型各写一套，模型也不用为每个工具各学一套接法。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 三方分工：Host、Client、Server 各管什么</h3>
+<p>MCP 里有三方：<strong>Host</strong> 是用户直接用的应用（比如聊天客户端、IDE），它管界面、管模型调用、管把多个 Client 的结果汇总；<strong>Client</strong> 是 Host 里的一对一连接器，一个 Client 连一个 Server，负责按协议发请求、收结果；<strong>Server</strong> 是工具的提供方，它把自己的能力暴露出来，等 Client 来调。一个 Host 可以挂多个 Client，一个 Client 只连一个 Server——分工一清，出了问题就知道是界面、连接还是工具本身的问题。</p>
+<h3>2. Server 暴露三种能力：Tools、Resources、Prompts</h3>
+<table>
+<tr><th>能力</th><th>是什么</th><th>例子</th></tr>
+<tr><td>Tools</td><td>模型可以调用的函数，有输入 schema、有返回值</td><td>查天气、查数据库、发消息</td></tr>
+<tr><td>Resources</td><td>只读的数据，模型可以读、不能改</td><td>文件内容、数据库记录、网页</td></tr>
+<tr><td>Prompts</td><td>预置的提示词模板，Server 提供、Client 选用</td><td>“按这份模板写周报”的模板</td></tr>
+</table>
+<p>区分的关键是“能不能改东西”：Tools 能改（发消息、写文件），Resources 只读，Prompts 是模板。权限和审计都要按这个区分来定：只读的能力可以放宽，可写的工具必须过 Day 35 的纵深防御。</p>
+<h3>3. 发现机制：list_tools，先问有什么、再决定调什么</h3>
+<p>Client 连上 Server 后，第一件事不是直接调工具，而是先发 <strong>list_tools</strong> 问一句：“你都提供什么工具？每个工具的输入长什么样？”Server 回一张工具清单，每个工具带名字、描述和输入 schema。模型看到清单，才决定调哪个、传什么参数。发现机制的好处是：Server 加了新工具，Client 不用改代码，下次 list 一下就看到了；Server 下掉工具，Client 也不会再去调一个不存在的工具。</p>
+<h3>4. 传输方式：stdio 与 Streamable HTTP，本地和远程各一套</h3>
+<p>两种传输：<strong>stdio</strong> 是本地进程间通信，Client 把 Server 当子进程启动、通过标准输入输出对话，适合本地工具，延迟低、不用走网络；<strong>Streamable HTTP</strong> 是走 HTTP 的远程方式，适合 Server 在另一台机器、或要给多人共用的场景，可以复用 HTTP 的鉴权、负载均衡。选哪个看部署：工具在本地就用 stdio，工具要远程共用就用 HTTP，协议本身不变，换传输不用重写工具逻辑。</p>
+<div class="warn"><strong>容易踩的坑：</strong>把 MCP 当成“更快的本地函数调用”。MCP 的价值不在快，而在可移植：同一套工具，今天接 A 模型、明天接 B 平台，不用重写。只接一个模型、一个平台时，协议的收益不明显，成本（多一层协议、多一处故障点）反而先到。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：发现 + 调用的形状（协议示意，先看流程）</h3>
+<pre><code># 流程：先发现，再调用，不要跳过发现直接硬编码工具名
+# 1. Client 连上 Server，先问：你提供什么工具？
+tools = client.list_tools()
+# 返回示例：[{"name": "get_weather", "description": "查指定城市天气",
+#            "input_schema": {"city": "string", "date": "string"}}]
+# 2. 模型看到清单，决定调哪个、传什么参数
+result = client.call_tool("get_weather", {"city": "深圳", "date": "今天"})
+# 3. 结果带回 Host，汇总进回答；工具本身不知道调用方是哪个模型</code></pre>
+<h3>示例 2：三种能力的区分（概念代码）</h3>
+<pre><code># Server 暴露的能力，按“能不能改东西”区分，权限和审计也按这个区分定
+server_capabilities = {
+    "tools": ["get_weather", "send_message"],  # 可写：必须过 Day 35 纵深防御
+    "resources": ["docs/manual.md", "db/orders"],  # 只读：可以放宽，但也要鉴权
+    "prompts": ["weekly_report_template"],     # 模板：Server 提供，Client 选用
+}
+# Host 汇总多个 Client 的结果时，要标清每个结果来自哪个 Server、哪个工具</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿你第 2 周的 Mini Cursor 工具清单，改写成 MCP 风格：哪些是 Tools、哪些是 Resources？可写的工具列出来，准备过 Day 35 的防御。<br>
+2. 假设 Server 新加了一个工具，Client 不改代码怎么用上它？写出 list_tools 之后的那一步。<br>
+3. 你的工具在本地还是远程？选 stdio 还是 Streamable HTTP？为什么？换传输方式时，工具逻辑本身要不要重写？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. MCP 里 Host、Client、Server 各管什么？</strong></p><button data-i="0">Host 管工具、Client 管界面、Server 管模型</button><button data-i="1">Host 管界面和汇总、Client 一对一连 Server、Server 提供工具能力</button><button data-i="2">三方都管同一件事</button><div class="ans">解析：选 B。一个 Host 挂多个 Client，一个 Client 只连一个 Server，分工一清，出问题能定位。</div></div>
+<div class="q" data-answer="1"><p><strong>2. Tools、Resources、Prompts 的区分关键是？</strong></p><button data-i="0">名字好不好听</button><button data-i="1">能不能改东西：Tools 可写、Resources 只读、Prompts 是模板</button><button data-i="2">哪个跑得更快</button><div class="ans">解析：选 B。权限和审计都要按这个区分定，可写工具必须过纵深防御。</div></div>
+<div class="q" data-answer="1"><p><strong>3. Client 连上 Server 后第一件事是？</strong></p><button data-i="0">直接调最常用的工具</button><button data-i="1">先发 list_tools 问有什么工具、输入长什么样</button><button data-i="2">先让模型猜工具名</button><div class="ans">解析：选 B。发现机制让 Server 加新工具时 Client 不用改代码。</div></div>
+<div class="q" data-answer="1"><p><strong>4. stdio 和 Streamable HTTP 怎么选？</strong></p><button data-i="0">都一样，随便选</button><button data-i="1">工具在本地用 stdio、远程共用用 Streamable HTTP，协议本身不变</button><button data-i="2">stdio 只能本地、HTTP 只能远程且工具逻辑要重写</button><div class="ans">解析：选 B。换传输不用重写工具逻辑，选哪个看部署。</div></div>
+<div class="q" data-answer="1"><p><strong>5. MCP 的核心价值是什么？</strong></p><button data-i="0">调用更快</button><button data-i="1">可移植：同一套工具接不同模型和平台不用重写</button><button data-i="2">工具更多</button><div class="ans">解析：选 B。只接一个模型、一个平台时，协议收益不明显、成本反而先到。</div></div>
+<div class="q" data-answer="1"><p><strong>6. Host 汇总多个 Client 的结果时，要注意什么？</strong></p><button data-i="0">不用标来源，混在一起就行</button><button data-i="1">标清每个结果来自哪个 Server、哪个工具</button><button data-i="2">只汇总第一个结果</button><div class="ans">解析：选 B。来源不清，出了问题查不到是哪路工具的锅。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：MCP 是什么？三方怎么分工？</summary><p>一套让模型和工具用同一种方式对话的开放协议。Host 是用户用的应用、管界面和汇总；Client 是 Host 里一对一连 Server 的连接器；Server 是工具提供方。一个 Host 挂多个 Client，一个 Client 只连一个 Server。</p></details>
+<details><summary>Q2：Tools、Resources、Prompts 各是什么？</summary><p>Tools 是模型可调用的函数、可写；Resources 是只读数据、模型只能读；Prompts 是 Server 提供的提示词模板。区分关键是能不能改东西，权限和审计按这个区分定。</p></details>
+<details><summary>Q3：list_tools 是干嘛的？</summary><p>发现机制：Client 连上 Server 先问有什么工具、输入 schema 长什么样，模型看到清单再决定调哪个。Server 加新工具、下掉工具，Client 不用改代码。</p></details>
+<details><summary>Q4：stdio 和 Streamable HTTP 怎么选？</summary><p>本地工具用 stdio，延迟低、不走网络；远程共用用 Streamable HTTP，可复用 HTTP 鉴权和负载均衡。协议本身不变，换传输不用重写工具逻辑。</p></details>
+<details><summary>Q5：什么时候不值得上 MCP？</summary><p>只接一个模型、一个平台时：协议收益不明显，还多一层协议、多一处故障点。工具要接多个模型或平台、可移植是刚需时，才值得上。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>接 MCP Server 前，先问三个问题：这个 Server 是谁提供的、可信吗？它暴露的 Tools 里有没有可写的高危操作？调用超时和失败怎么处理？三问有一个答不上来，Server 就别接。</p>
+<p><strong>简历讲法：</strong>别写“用过 MCP”，写“Host 挂多 Client、Server 暴露 Tools/Resources/Prompts、list_tools 发现后调用，本地 stdio、远程 Streamable HTTP”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 35 讲工具安全纵深防御：Schema 白名单、Pydantic 校验、ACL、幂等键、超时、沙箱、审计日志、高危操作人工确认，一层不够就上多层。</p>
+</div>
+<div class="nav"><span><a href="day33.html">← Day 33</a></span><span><a href="day35.html">Day 35 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

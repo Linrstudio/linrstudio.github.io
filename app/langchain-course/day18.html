@@ -91,6 +91,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p><strong>简历讲法：</strong>别写“做过 RAG 防幻觉”，写“TopK 小批重排、合分可解释，引用按句标出处，提示词、检索过滤、生成后校验三道关，检索为空不调用模型”。前者是名词，后者是可追问的系统。</p>
 <p><strong>明日预告：</strong>Day 19 讲 RAG 评测集：命中率、引用准确率、幻觉率怎么算，评测集怎么做，调参看哪几个数一起变。</p>
 </div>
+<h2>六、补充：Cross-Encoder 重排 + 引用一致性校验（结合岗位要求）</h2>
+<p><strong>Cross-Encoder 和双编码器的区别</strong>，一句话：双编码器是问题和文档各编一次向量、再算余弦相似度，快但看不到问题和文档之间的细交互；Cross-Encoder 是把“问题 + 文档”拼在一起送进同一个模型、直接打一个相关性分，慢但准。所以分工是：双编码器（向量）负责从几十万块里捞出 Top 50，Cross-Encoder 只对这 50 个打分、重排成 Top 5，速度和精度都保住。不要反过来——Cross-Encoder 全量跑，成本和延迟都扛不住。</p>
+<p><strong>引用一致性校验</strong>是重排之后的最后一道关，专门防“引用对了出处、内容却是编的”：回答里的每个关键结论（数字、日期、人名、结论句）都要能在它标的那个引用块里找到依据，找不到就两种处理——要么改写成块里确实有的说法，要么把这句删掉并说“资料里没有”。落地时写成一个检查函数：抽回答里的结论句 → 对每个 [资料 N] 查对应块 → 做归一化后的子串或关键词匹配 → 不通过的结论不进最终回答。引用不是装饰，校验不通过的引用等于没有引用。</p>
 <div class="nav"><span><a href="day17.html">← Day 17</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day19.html">Day 19 →</a></span></div>
 <script>
 let score = 0, answered = 0;

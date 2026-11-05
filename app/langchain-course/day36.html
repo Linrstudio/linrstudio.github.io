@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 36：Verifier 与 Composer：校验与合成 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 36 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 36：Verifier 与 Composer：校验与合成</h1>
+<p>Multi-Agent 的最后两步，经常被当成“顺手的事”：Verifier（校验者）查一遍，Composer（合成者）合起来。但这两步恰恰是质量的分水岭：没有独立的 Verifier，子 Agent 交什么、最终就是什么；没有规则的 Composer，多路结果一冲突，合成就会凭感觉取舍。这课讲清楚：Verifier 查什么、怎么打回，Composer 怎么合、冲突听谁的。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. Verifier 为什么必须独立于执行者</h3>
+<p>自己改、自己验，等于没验。执行者写答案时已经认定自己的做法是对的，校验时只会找支持自己的证据，找不出自己的错。所以 Verifier 必须是另一个节点、另一套提示词、最好是另一类标准：执行者负责“做出来”，Verifier 负责“按标准查”。独立还体现在数据上：Verifier 不能只看执行者的结论，要看原始材料——测试结果、引用块、schema 校验结果，结论和材料对不上，就打回。</p>
+<h3>2. Verifier 查哪三项：测试、引用、schema</h3>
+<table>
+<tr><th>标准</th><th>查什么</th><th>不过怎么办</th></tr>
+<tr><td>测试</td><td>代码类任务：测试是不是全过了</td><td>打回执行者，附失败的测试名</td></tr>
+<tr><td>引用</td><td>结论里的数字、日期、人名，能不能在标的资料里找到</td><td>打回改写或删除结论</td></tr>
+<tr><td>schema</td><td>输出格式对不对：字段全不全、类型对不对</td><td>打回按格式重交</td></tr>
+</table>
+<p>三项标准要事先写死，不能由执行者现场定，也不能由 Verifier 临场发挥。标准写死的好处是：打回有依据，执行者知道改哪里；复盘时也能看出来，是标准太松，还是执行者没达标。</p>
+<h3>3. 打回与重试上限：打回不是无限循环</h3>
+<p>打回要带意见：哪项标准不过、具体是哪条结论、原始材料是什么，不带意见的打回（“再改改”）只会让执行者瞎改。重试也要有上限，通常 2–3 次：超了就停下来，把“校验不过”本身写进结果，交给 Supervisor 决定——是换一路、降级，还是诚实告诉用户这部分没通过。没有上限的打回循环，成本和延迟都会炸，还掩盖了“这路根本做不出来”的事实。</p>
+<h3>4. Composer 怎么合成：分段、标出处、冲突听校验</h3>
+<p>Composer 的合成规则是三条：<strong>分段</strong>，每路结果各成一段，不要混写；<strong>标出处</strong>，每段标自己的来源（工具结果标工具名，文档结论标 [资料 N]）；<strong>冲突时听校验</strong>：两路结论冲突了，不看谁说得自信、看谁通过了校验——通过测试、有出处、格式对的那路为准；两路都没通过，就都写出来、标清冲突，让用户或 Supervisor 定夺，不要由 Composer 偷偷选一个。Composer 不生产新结论，只合成已校验的结论；合成时现编一句话，就是新的幻觉来源。</p>
+<div class="warn"><strong>容易踩的坑：</strong>Composer 偷偷做取舍。两路冲突，Composer 凭“哪个读起来顺”选一个，还不告诉用户有冲突——用户看到的是一个干净但可能错的答案。冲突必须显式写出来，取舍要有依据。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Verifier 的三项标准（概念代码，先看标准）</h3>
+<pre><code>def verifier(result):
+    # 三项标准事先写死，不由执行者现场定、不由 Verifier 临场发挥
+    checks = {
+        "tests": run_tests(result.code),       # 代码类：测试全过才算过
+        "citations": check_citations(result),  # 结论里的数字、日期、人名能在出处里找到
+        "schema": validate_schema(result),     # 输出字段全、类型对
+    }
+    failed = [k for k, v in checks.items() if not v.passed]
+    if not failed:
+        return {"passed": True}
+    # 打回要带意见：哪项不过、具体哪条、原始材料是什么
+    return {"passed": False, "failed": failed,
+            "details": {k: checks[k].detail for k in failed}}
+
+# 重试上限：超了就停，把“校验不过”写进结果，交给 Supervisor 定夺
+MAX_VERIFY_RETRY = 2</code></pre>
+<h3>示例 2：Composer 的合成规则（概念代码）</h3>
+<pre><code>def composer(verified_results):
+    # 分段：每路各成一段，不要混写；每段标自己的出处
+    sections = []
+    for name, res in verified_results.items():
+        sections.append({"from": name, "content": res.content,
+                         "source": res.source})  # 工具名或 [资料 N]
+    # 冲突：不看谁说得自信，看谁通过了校验；都没通过就都写出来、标清冲突
+    conflicts = find_conflicts(verified_results)
+    if conflicts:
+        sections.append({"from": "conflict_note",
+                         "content": "以下两路结论冲突，均未通过全部校验，请定夺",
+                         "conflicting": conflicts})
+    return sections  # Composer 不生产新结论，只合成已校验的结论</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一个你做过的任务，写出它的 Verifier 三项标准：测试查什么、引用查什么、schema 查什么？每项不过时，打回意见怎么写？<br>
+2. 假设执行者被打回两次还是不过，写出 Supervisor 的三种选择（换一路、降级、诚实告诉用户），你选哪种、为什么？<br>
+3. 假设两路结论冲突，一路通过了引用校验、一路没通过，Composer 该怎么写最终答案？写出分段和出处。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Verifier 为什么必须独立于执行者？</strong></p><button data-i="0">为了多一个节点显得复杂</button><button data-i="1">自己改、自己验等于没验，执行者只会找支持自己的证据</button><button data-i="2">为了省成本</button><div class="ans">解析：选 B。独立体现在节点、提示词和标准上，Verifier 要看原始材料、不是只看结论。</div></div>
+<div class="q" data-answer="1"><p><strong>2. Verifier 查哪三项？</strong></p><button data-i="0">速度、长度、格式</button><button data-i="1">测试、引用、schema</button><button data-i="2">模型、工具、成本</button><div class="ans">解析：选 B。三项标准事先写死，不能由执行者现场定、Verifier 临场发挥。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 打回时最重要的是带什么？</strong></p><button data-i="0">带一句鼓励</button><button data-i="1">带意见：哪项不过、具体哪条、原始材料是什么</button><button data-i="2">带一个新任务</button><div class="ans">解析：选 B。不带意见的打回只会让执行者瞎改。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 重试超过上限应该怎么办？</strong></p><button data-i="0">继续打回直到过为止</button><button data-i="1">停下来，把校验不过写进结果，交给 Supervisor 定夺</button><button data-i="2">直接当成通过</button><div class="ans">解析：选 B。没有上限的打回循环会炸成本和延迟，还掩盖做不出来的事实。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 两路结论冲突时，Composer 听谁的？</strong></p><button data-i="0">听谁说得更自信</button><button data-i="1">听通过校验的那路；都没通过就都写出来、标清冲突</button><button data-i="2">偷偷选一个，不告诉用户</button><div class="ans">解析：选 B。冲突必须显式写出来，取舍要有依据，不能偷偷选。</div></div>
+<div class="q" data-answer="1"><p><strong>6. Composer 能不能在合成时现编一句话？</strong></p><button data-i="0">能，合成就是要写顺</button><button data-i="1">不能，Composer 只合成已校验的结论，现编就是新的幻觉来源</button><button data-i="2">偶尔能编一句</button><div class="ans">解析：选 B。Composer 不生产新结论，只合成已校验的结论。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Verifier 独立是什么意思？</summary><p>节点独立、提示词独立、标准独立：执行者负责做出来，Verifier 按事先写死的标准查，还要看原始材料（测试结果、引用块、schema 结果），不是只看执行者的结论。</p></details>
+<details><summary>Q2：Verifier 的三项标准各查什么？</summary><p>测试：代码类任务测试全过；引用：结论里的数字、日期、人名能在标的资料里找到；schema：输出字段全、类型对。三项事先写死，打回有依据。</p></details>
+<details><summary>Q3：打回和重试上限怎么定？</summary><p>打回带意见：哪项不过、具体哪条、原始材料是什么；重试上限通常 2–3 次，超了就停，把校验不过写进结果，交给 Supervisor 换一路、降级或诚实告诉用户。</p></details>
+<details><summary>Q4：Composer 合成有哪三条规则？</summary><p>分段：每路各成一段、不混写；标出处：每段标工具名或 [资料 N]；冲突听校验：通过校验的为准，都没通过就都写出来、标清冲突。</p></details>
+<details><summary>Q5：Composer 和 Verifier 的分工是什么？</summary><p>Verifier 负责查：按标准验、打回带意见；Composer 负责合：分段、标出处、按校验结果处理冲突。Composer 不生产新结论，Verifier 不替执行者重做。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Verifier 和 Composer 上线前，先问三个问题：三项标准写死了吗？打回意见带材料了吗？冲突显式写出来了吗？三问有一个答不上来，收口质量就没保证。</p>
+<p><strong>简历讲法：</strong>别写“做过结果校验”，写“Verifier 独立于执行者，测试、引用、schema 三项标准写死，打回带意见、重试上限 2 次，Composer 分段标出处、冲突以校验结果为准”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 37 是第 5 周复盘：Multi-Agent 项目完整链路怎么复盘，EvalHarness 怎么评测多 Agent，简历上这段怎么写。</p>
+</div>
+<div class="nav"><span><a href="day35.html">← Day 35</a></span><span><a href="day37.html">Day 37 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

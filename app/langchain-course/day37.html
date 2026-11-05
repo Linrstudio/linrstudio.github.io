@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 37：第 5 周复盘：Multi-Agent 项目与面试讲法 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 37 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 37：第 5 周复盘：Multi-Agent 项目与面试讲法</h1>
+<p>第 5 周的最后一课，把 Multi-Agent 和 MCP 收束成一个完整项目：从 Supervisor 分发、Planner 拆 DAG、Knowledge 检索、MCP 工具调用、纵深防御、Verifier 校验、Composer 合成，一条链路走下来。再讲这条链路怎么评测、面试怎么讲——第 5 周结束时，你手里应该有一个能讲清、能演示、能报数字的 Multi-Agent 项目，而不是一堆名词。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 第 5 周复盘：一张表收束</h3>
+<table>
+<tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
+<tr><td>Day 31</td><td>Multi-Agent 总览</td><td>Supervisor 分发、判断、汇总，共享状态、失败隔离只重试失败路</td></tr>
+<tr><td>Day 32</td><td>Planner 与 DAG</td><td>步骤带输入、输出、验收标准，依赖成圈显式报错，按层并行</td></tr>
+<tr><td>Day 33</td><td>Knowledge Agent</td><td>Multi-hop 检索循环，跳数上限、每跳留痕、带出处交付、检索失败诚实回答</td></tr>
+<tr><td>Day 34</td><td>MCP 协议</td><td>Host、Client、Server 三方，list_tools 发现，本地 stdio、远程 Streamable HTTP</td></tr>
+<tr><td>Day 35</td><td>工具安全纵深防御</td><td>白名单、Pydantic、ACL、幂等键、超时沙箱、审计日志、高危人工确认</td></tr>
+<tr><td>Day 36</td><td>Verifier 与 Composer</td><td>Verifier 独立，测试、引用、schema 三项标准，打回带意见，冲突以校验为准</td></tr>
+<tr><td>Day 37</td><td>复盘与面试讲法</td><td>完整链路能复盘、多 Agent 能评测、简历能讲清设计取舍</td></tr>
+</table>
+<h3>2. 完整链路怎么走：一个任务从头到尾的顺序</h3>
+<p>拿“查某产品两版退货政策并对比”当例子，链路是：Supervisor 接到任务 → Planner 拆成 DAG（查 2024 版、查 2025 版、对照差异、合成）→ Knowledge Agent 跑 Multi-hop 检索（每跳留痕、带出处）→ 需要调工具时走 MCP（list_tools 发现、纵深防御过一遍）→ Verifier 按三项标准查（测试、引用、schema）→ 不过打回、超上限交给 Supervisor → Composer 分段合成、标出处、冲突显式写出。链路里的每一步都有名字、有标准、有留痕，面试时按这个顺序讲，面试官才能跟得上。</p>
+<h3>3. EvalHarness 怎么评测多 Agent：五个指标一起报</h3>
+<p>单 Agent 的评测只看最终答案对不对，多 Agent 还要看每路的表现。五个指标：<strong>任务成功率</strong>（最终答案通过全部校验的比例）、<strong>每路成功率</strong>（Planner 拆得稳不稳、Knowledge 命中率高不高、Verifier 拦截率多少，定位弱环就靠它）、<strong>成本</strong>（平均 Token 和调用次数，并行越多成本越高，要报出来）、<strong>延迟</strong>（关键路径耗时，并行省下的时间要算进去）、<strong>失败分布</strong>（失败都栽在哪一步：检索、工具、校验还是合成）。只报任务成功率，会掩盖“某一路一直在失败、靠别的路兜底”的问题；五个一起报，弱环藏不住。</p>
+<h3>4. 面试讲法：按任务讲，不要按名词讲</h3>
+<p>面试讲 Multi-Agent，最忌讳罗列名词：“我用过 Supervisor、MCP、Verifier”。要按任务讲：任务是什么、为什么要拆成多 Agent（单 Agent 的哪块天花板撞上了）、DAG 怎么拆的、每路的验收标准是什么、哪路失败过、怎么隔离和打回的、五个评测数是多少、如果重做会改哪里。讲的时候带一张图（Supervisor、Planner、Knowledge、Tool、Verifier、Composer 六个节点和箭头），图一摆，面试官就知道你不是背名词，是真搭过。</p>
+<div class="warn"><strong>容易踩的坑：</strong>复盘只写“学到了什么”，不写“哪里还不行”。第 5 周复盘必须写两栏：做对的（链路、标准、留痕）和没做好的（哪路成功率低、成本哪里高、哪次冲突处理得不好），没做好的那栏就是下一个项目的起点。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：完整链路的复盘清单（概念代码，先看清单）</h3>
+<pre><code># 复盘不是写感想，是逐项打勾：每项都有名字、有标准、有数字
+review_checklist = [
+    ("Supervisor", "分发、判断、汇总是否写死，不靠临场发挥"),
+    ("Planner", "DAG 有没有圈，每步有没有输入、输出、验收标准"),
+    ("Knowledge", "Multi-hop 跳数上限、每跳留痕、带出处交付"),
+    ("MCP", "list_tools 发现，本地 stdio、远程 Streamable HTTP"),
+    ("安全", "白名单、Pydantic、ACL、幂等键、超时沙箱、审计、高危确认"),
+    ("Verifier", "测试、引用、schema 三项标准，打回带意见、重试上限 2 次"),
+    ("Composer", "分段、标出处、冲突以校验为准，不偷偷取舍"),
+    ("评测", "任务成功率、每路成功率、成本、延迟、失败分布，五个一起报"),
+]
+# 勾不上的那项，就是下一个项目要先补的项</code></pre>
+<h3>示例 2：多 Agent 评测报告的形状（概念代码）</h3>
+<pre><code># 评测报告一页纸：先报总的，再报每路的，弱环藏不住
+report = {
+    "task_success_rate": "82%",      # 最终答案通过全部校验的比例
+    "per_agent": {                    # 每路成功率，定位弱环
+        "planner": "95%", "knowledge": "78%",
+        "tool": "90%", "verifier": "88%"},
+    "cost": "平均 12,400 Token / 任务",  # 并行成本要报出来
+    "latency": "关键路径 42 秒",       # 并行省下的时间要算进去
+    "failures": {"knowledge": 12, "tool": 5, "verifier": 3},  # 失败分布
+}
+# 结论示例：弱环是 Knowledge（78%），下一轮先优化检索，而不是全图一起调</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 不看复盘表，试着按 Day 31 到 Day 37 的顺序，每课说出一句核心，再对照表格补缺口——补不上的那课，就是要重看的一课。<br>
+2. 拿你自己的一个任务，写出它的完整链路：Supervisor、Planner、Knowledge、Tool、Verifier、Composer 各一步，每步的验收标准是什么？<br>
+3. 写一份一页纸评测报告：任务成功率、每路成功率、成本、延迟、失败分布，五个指标各填一个数（没有实测就写“待实测”，不要编数），指出弱环是哪一路。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 第 5 周完整链路的顺序是？</strong></p><button data-i="0">Supervisor、Planner、Knowledge、工具、Verifier、Composer</button><button data-i="1">Composer、Verifier、Supervisor、Planner</button><button data-i="2">Knowledge、Supervisor、Composer、Planner</button><div class="ans">解析：选 A。按这个顺序讲，面试官才能跟得上；每一步都有名字、有标准、有留痕。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 评测多 Agent 时，只报任务成功率会掩盖什么？</strong></p><button data-i="0">什么都不会掩盖</button><button data-i="1">某一路一直在失败、靠别的路兜底的问题</button><button data-i="2">成本问题</button><div class="ans">解析：选 B。定位弱环要靠每路成功率，五个指标一起报，弱环藏不住。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 失败分布是用来干嘛的？</strong></p><button data-i="0">凑报告篇幅</button><button data-i="1">看失败都栽在哪一步，下一轮先优化弱环</button><button data-i="2">算成本</button><div class="ans">解析：选 B。弱环是 Knowledge 就先优化检索，而不是全图一起调。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 面试讲 Multi-Agent，应该怎么讲？</strong></p><button data-i="0">罗列名词：Supervisor、MCP、Verifier</button><button data-i="1">按任务讲：为什么拆、怎么拆、验收标准、失败处理、评测数、重做改哪里</button><button data-i="2">只讲最难的那部分</button><div class="ans">解析：选 B。按任务讲、带一张六节点图，面试官才知道你是真搭过。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 复盘必须写哪两栏？</strong></p><button data-i="0">学到了什么、感谢谁</button><button data-i="1">做对的和没做好的，没做好的那栏是下一个项目的起点</button><button data-i="2">优点和缺点，随便写写</button><div class="ans">解析：选 B。只写学到了什么、不写哪里还不行，复盘就是表演。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 第 5 周结束时，你应该拿出什么？</strong></p><button data-i="0">一堆名词</button><button data-i="1">一个能讲清、能演示、能报数字的 Multi-Agent 项目</button><button data-i="2">一个跑通一次的演示</button><div class="ans">解析：选 B。能讲清链路、能演示、能报五个评测数，才算第 5 周闭环。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：第 5 周的完整链路怎么走？</summary><p>Supervisor 接任务、Planner 拆 DAG、Knowledge 跑 Multi-hop 检索、工具走 MCP 加纵深防御、Verifier 按三项标准查、不过打回、Composer 分段合成标出处、冲突显式写出。每一步有名字、有标准、有留痕。</p></details>
+<details><summary>Q2：多 Agent 怎么评测？</summary><p>五个指标一起报：任务成功率、每路成功率、成本、延迟、失败分布。只报任务成功率会掩盖某一路一直在失败、靠别的路兜底的问题；每路成功率定位弱环，失败分布告诉下一轮先优化哪里。</p></details>
+<details><summary>Q3：面试怎么讲 Multi-Agent 项目？</summary><p>按任务讲：任务是什么、为什么拆（单 Agent 哪块天花板撞上了）、DAG 怎么拆、每路验收标准、哪路失败过、怎么隔离打回、五个评测数、重做改哪里。带一张六节点图，不要罗列名词。</p></details>
+<details><summary>Q4：Multi-Agent 和单 Agent 怎么选？</summary><p>看 Day 31 的三项：拆开后每路是不是有独立输入、独立工具、独立验收标准？三项基本满足就拆，缺两项别拆；任务一步能做完，硬拆只多成本和出错点。</p></details>
+<details><summary>Q5：第 5 周之后还缺什么？</summary><p>第 5 周补的是协作和工具治理，之前第 4 周的 Computer Use 安全边界、上线加固和最后 2 天的面试模拟，合起来才是一个完整的 AI Agent 项目闭环。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>第 5 周收尾时，先问三个问题：完整链路能按顺序讲清吗？五个评测数报了吗？弱环是哪一路、下一轮先优化它吗？三问有一个答不上来，第 5 周就不算闭环。</p>
+<p><strong>简历讲法：</strong>别写“做过 Multi-Agent 项目”，写“Supervisor 分发、Planner 拆 DAG、Knowledge 跑 Multi-hop 检索、MCP 工具加纵深防御、Verifier 三项标准校验、Composer 分段合成，任务成功率 82%、弱环 Knowledge 78%（待实测不要编数）”。前者是名词，后者是可追问的项目。</p>
+<p><strong>全课预告：</strong>第 5 周之后，整条线是：LangChain 核心 → Mini Cursor → RAG + 天气 Agent → Computer Use + 上线加固 → 面试模拟 → Multi-Agent + MCP。面试时按这条线讲，每个阶段都能说出项目、设计和数字。</p>
+</div>
+<div class="nav"><span><a href="day36.html">← Day 36</a></span><span><a href="index.html">课程首页 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

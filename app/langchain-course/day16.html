@@ -100,6 +100,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p><strong>简历讲法：</strong>别写“做过文档切分”，写“按标题、段落分层切块，起步 300 到 500 Token、重叠 10% 到 20%，标题和表格头带进块里，块大小按评测集命中率调”。前者是名词，后者是可追问的方案。</p>
 <p><strong>明日预告：</strong>Day 17 讲向量库与检索：向量怎么存、相似度怎么算、TopK 怎么选、关键词和向量怎么混合。</p>
 </div>
+<h2>六、补充：Section 感知切分（结合岗位要求）</h2>
+<p>固定长度切块最大的问题是把一个意思切成两半，Section 感知切分就是先按结构切、再按长度切：先按标题层级（Markdown 的 #、##、###，或文档的章节）把文档切成节，每块保留它的<strong>标题路径</strong>作为元数据，比如“第 3 章 &gt; 3.2 退货政策”，切块时把这条路径拼在块的开头，检索时模型就知道这块出自哪里，不用靠猜。</p>
+<p>规则四条：<strong>一、标题优先</strong>，一节太长才在段落边界继续切，不在句子中间断；<strong>二、表格不拆</strong>，一张表尽量整块进一个块，实在太长也要每块都带表头，否则后半张表没列名，检索回来也看不懂；<strong>三、块内只讲一件事</strong>，一节里混了两个主题，就按主题再切，块的主题越单一，Embedding 越准；<strong>四、重叠只补边界</strong>，上一块尾巴带一两句到下一块开头就够了，重叠太大等于把同一内容存了好几份，检索结果全是重复块。</p>
 <div class="nav"><span><a href="day15.html">← Day 15</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day17.html">Day 17 →</a></span></div>
 <script>
 let score = 0, answered = 0;

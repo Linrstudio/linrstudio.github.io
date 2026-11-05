@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 32：Planner 与任务分解：把任务拆成 DAG | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 32 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 32：Planner 与任务分解：把任务拆成 DAG</h1>
+<p>Multi-Agent 的第一步不是动手，而是拆：Planner 把一个复杂任务拆成步骤、标出依赖、定出并行度。拆得好不好，决定了后面并行能不能跑、失败能不能隔离、结果能不能验收。拆问题这件事，第 3 周的混合问答已经练过一次，这课把它系统化：拆成 DAG（有向无环图），每个步骤都有输入、输出和验收标准。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 为什么拆成 DAG：步骤之间只有两种关系</h3>
+<p>DAG 的意思是：步骤之间有箭头（依赖），但箭头不能绕成圈。两个步骤之间只有两种关系：有依赖（A 的输出是 B 的输入，必须先 A 后 B），没依赖（可以并行）。把关系画成图，Supervisor 就不用凭感觉派活：看图就知道哪步能跑、哪步要等、哪步卡住了。依赖成圈（A 等 B、B 等 A）是死锁，Planner 输出的第一件事就是检查有没有圈。</p>
+<h3>2. 拆的粒度：一步只做一件事，验收标准写在前面</h3>
+<p>每个步骤只做一件事：检索、执行、校验、合成，各是一步；“查资料并写答案”这种一步包两件事的拆法，失败时说不清是哪半步错了。每个步骤还要在动手前写清三样：<strong>输入</strong>（需要什么）、<strong>输出</strong>（交出什么格式）、<strong>验收标准</strong>（怎么算做完，比如“检索命中至少 2 块相关资料”或“测试全部通过”）。验收标准写在前面，Verifier 才有标准可查；动手后再定标准，等于自己给自己打分。</p>
+<h3>3. 拆不干净怎么办：继续拆，直到每步只走一条路</h3>
+<p>判断拆没拆干净的标准，和第 3 周混合问答一样：一个步骤是不是只走一条路、只用一类工具、只产出一种结果？如果一个步骤里既要检索又要执行，就继续拆。拆到不能再拆、或者再拆就没有意义（步骤小到“打开一个文件”这种原子操作），就停下来。拆太碎也有代价：步骤越多，通信和汇总成本越高，所以粒度停在“可独立验收”这一层就够了。</p>
+<h3>4. 并行度从图里算出来，不是拍脑袋定的</h3>
+<p>图的“宽度”就是天然并行度：同一层没有依赖的步骤有几个，就能并行几个，但还要受 Day 31 的并行上限（3–5 个）和成本约束。图的“关键路径”是最长的一条依赖链，它决定了任务最少要花多久——优化要先优化关键路径上的步骤，并行再多，关键路径上的慢步骤不解决，总耗时也下不来。</p>
+<div class="warn"><strong>容易踩的坑：</strong>计划只写步骤、不写验收标准。没有验收标准，Verifier 只能凭感觉说“好像做完了”，子 Agent 交上来的半成品也会被当成成品汇总，错误一路传到最终答案。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：DAG 计划的数据结构（概念代码，先看形状）</h3>
+<pre><code># 一个步骤 = 一件事 + 输入 + 输出 + 验收标准，依赖写成列表
+plan = [
+    {"id": "retrieve_v1", "task": "检索 2024 版退货政策",
+     "inputs": ["产品名"], "outputs": ["资料块"],
+     "accept": "命中至少 2 块相关资料", "deps": []},
+    {"id": "retrieve_v2", "task": "检索 2025 版变更",
+     "inputs": ["2024 版条款编号"], "outputs": ["资料块"],
+     "accept": "命中变更条款", "deps": ["retrieve_v1"]},  # 依赖上一步的条款编号
+    {"id": "compare", "task": "对照两版写差异",
+     "inputs": ["两版资料块"], "outputs": ["差异表"],
+     "accept": "每条差异都标出处", "deps": ["retrieve_v1", "retrieve_v2"]},
+]
+# 校验：依赖不能成圈；没有依赖的步骤可以并行，有依赖的必须等前置完成</code></pre>
+<h3>示例 2：按 DAG 执行：分层并行、关键路径优先（概念代码）</h3>
+<pre><code>def run_plan(plan):
+    done = {}  # 已完成步骤的结果
+    while len(done) &lt; len(plan):
+        # 本层：依赖都已完成、还没跑的步骤，并行跑，但受并行上限约束
+        ready = [s for s in plan if s["id"] not in done
+                 and all(d in done for d in s["deps"])]
+        if not ready:
+            raise ValueError("依赖成圈或前置失败，计划卡住了")  # 死锁要显式报错
+        for step in ready[:PARALLEL_LIMIT]:
+            result = run_step(step, done)
+            # 验收：不过就打回这一步，不重跑全图
+            done[step["id"]] = verify_or_retry(step, result)
+    return done</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿“做一份某产品的竞品对比”当任务，拆成 4–5 步：每步的输入、输出、验收标准分别是什么？依赖关系画出来，有圈吗？<br>
+2. 你的图里哪一层最宽（并行度最高）、哪条链最长（关键路径）？如果只能优化一步，你优化关键路径上的哪一步？<br>
+3. 把其中一步的验收标准改成“凭感觉算做完”，想想 Verifier 会怎么误判——这就是为什么验收标准必须写在前面。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. DAG 里两个步骤之间有几种关系？</strong></p><button data-i="0">三种：并行、串行、循环</button><button data-i="1">两种：有依赖必须串行，没依赖可以并行</button><button data-i="2">一种：都串行</button><div class="ans">解析：选 B。依赖关系只有有和没有两种，依赖成圈就是死锁，Planner 要先检查。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 一个步骤拆得好不好，关键看什么？</strong></p><button data-i="0">步骤写得越细越好</button><button data-i="1">一步只做一件事，且动手前写清输入、输出、验收标准</button><button data-i="2">步骤名字起得好不好</button><div class="ans">解析：选 B。一步包两件事，失败时说不清是哪半步错了；验收标准后定，等于自己给自己打分。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 拆不干净的判断标准是？</strong></p><button data-i="0">步骤数量不够多</button><button data-i="1">一个步骤里既要检索又要执行、只走一条路的要求没满足</button><button data-i="2">计划写得不够长</button><div class="ans">解析：选 B。继续拆，直到每步只走一条路、只用一类工具、只产出一种结果。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 并行度应该怎么定？</strong></p><button data-i="0">拍脑袋定 10 个</button><button data-i="1">从图的宽度算，再受并行上限和成本约束</button><button data-i="2">越多越好</button><div class="ans">解析：选 B。图的宽度是天然并行度，但还要受上限和成本约束。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 优化总耗时应该先优化哪里？</strong></p><button data-i="0">并行最多的那层</button><button data-i="1">关键路径上的步骤</button><button data-i="2">最简单的步骤</button><div class="ans">解析：选 B。关键路径是最长依赖链，决定最少耗时；它不解决，并行再多也没用。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 计划里没有验收标准，会导致什么？</strong></p><button data-i="0">没什么，Verifier 凭感觉也行</button><button data-i="1">半成品会被当成成品汇总，错误一路传到最终答案</button><button data-i="2">任务跑得更快</button><div class="ans">解析：选 B。没有标准，Verifier 只能凭感觉，错误会一路传到最终答案。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Planner 是干嘛的？</summary><p>把复杂任务拆成 DAG：步骤、依赖、并行度、每个步骤的输入、输出、验收标准。拆完先检查依赖有没有成圈，再交给 Supervisor 按图执行。</p></details>
+<details><summary>Q2：拆的粒度怎么把握？</summary><p>停在“可独立验收”这一层：一步只做一件事，动手前写清输入、输出、验收标准；再拆就碎到原子操作、通信成本反而上去，就停下来。</p></details>
+<details><summary>Q3：并行度和关键路径是什么关系？</summary><p>图的宽度是天然并行度，关键路径是最长依赖链、决定最少耗时。优化先优化关键路径，并行度还要受上限和成本约束。</p></details>
+<details><summary>Q4：依赖成圈了怎么办？</summary><p>Planner 输出时就要检查出来，显式报错、让 Planner 重拆，而不是让执行跑到死锁才发现。执行里遇到 ready 为空，也要显式报错。</p></details>
+<details><summary>Q5：验收标准为什么必须写在前面？</summary><p>因为 Verifier 要按标准查：检索命中几块、测试过没过、每条结论有没有出处。动手后再定标准，执行者会按对自己有利的标准交差。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>计划本身也要评测：同一任务，让 Planner 拆两次，步骤和依赖稳不稳定？不稳定的计划，执行再稳也稳不住。计划的稳定性，是 Multi-Agent 可靠性的第一道关。</p>
+<p><strong>简历讲法：</strong>别写“会任务分解”，写“把任务拆成 DAG，步骤带输入、输出、验收标准，依赖成圈显式报错，按层并行、关键路径优先”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 33 讲 Knowledge Agent：把 RAG 做成一个子 Agent，Multi-hop 检索循环怎么做，检索失败时怎么诚实回答。</p>
+</div>
+<div class="nav"><span><a href="day31.html">← Day 31</a></span><span><a href="day33.html">Day 33 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

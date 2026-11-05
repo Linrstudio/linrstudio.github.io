@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 33：Knowledge Agent：把 RAG 做成一个子 Agent | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 33 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 33：Knowledge Agent：把 RAG 做成一个子 Agent</h1>
+<p>第 3 周的 RAG 是一条流水线，这课把它升级成一个子 Agent：Knowledge Agent。区别是，流水线是“查一次、答一次”，子 Agent 是“查不够就再查、查偏了就换词查、查不到就老实说”。Supervisor 把“需要查资料”的子任务派给它，它内部跑检索循环，最后交出带出处的结果，而不是一堆没整理的资料块。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 从流水线到子 Agent：多出来的三样能力</h3>
+<p>流水线是固定顺序：切块、向量、检索、生成，一步走完就结束。子 Agent 多了三样：<strong>判断</strong>（这次检索够不够回答？不够就再查）、<strong>换策略</strong>（关键词查不到就换同义词、换向量查、换上一跳的结果当查询词）、<strong>止损</strong>（查了几轮还是不够，就停下来、诚实回答）。这三样让 Knowledge Agent 能处理流水线处理不了的复杂问题，比如 Day 21 补充过的 Multi-hop 问题。</p>
+<h3>2. Multi-hop 检索循环：分解、检索、判断、再检索</h3>
+<p>循环是四步：<strong>分解</strong>（原问题拆成有依赖的子问题）、<strong>检索</strong>（每跳查一次，TopK 不宜太大，5 左右就够）、<strong>判断</strong>（本跳的结果能不能回答本跳的子问题？能不能为下一跳提供查询词？）、<strong>再检索</strong>（不够就用新信息生成下一跳的查询）。比如“某产品 2024 版政策和 2025 版改了什么”：第一跳查 2024 版，第二跳用第一跳拿到的条款编号查 2025 版变更，第三跳对照两版回答。每跳的查询、命中块、判断结论都要写进状态，答错了才能定位是哪一跳歪了。</p>
+<h3>3. 引用与出处：子 Agent 的交付标准</h3>
+<p>Knowledge Agent 交给 Supervisor 的不是“答案”，而是“带出处的结果”：每条结论后面标 [资料 N]，每块资料带标题路径和原文片段。Supervisor 和 Composer 汇总时，只汇总带出处的部分，没出处的不进最终答案。引用还有一道 Day 18 的校验：结论里的数字、日期、人名，必须能在标的那块资料里找到，找不到就改写或删除，不把“引用对了出处、内容却是编的”放过去。</p>
+<h3>4. 检索失败时的诚实回答：没查到，比编一个更重要</h3>
+<p>检索失败有三种：查了几轮都没命中、命中的块和问题无关、资料本身就没有这部分。三种的处理都一样：停下来，写清“查了哪几轮、用什么词查的、为什么判定为没查到”，最终回答里说“资料里没有这部分”，而不是用模型训练知识去填空。诚实回答不是能力不足的遮羞布，是 RAG 系统可信的底线——用户能接受“没查到”，不能接受“查到了假的”。</p>
+<div class="warn"><strong>容易踩的坑：</strong>检索循环没有跳数上限。没有上限的循环会在“换词再查”里无限转下去，成本和延迟一起炸。跳数上限通常设 3–5 跳，超了就停、诚实回答。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Knowledge Agent 的检索循环（概念代码，先看形状）</h3>
+<pre><code>MAX_HOPS = 3  # 跳数上限，超了就停、诚实回答，不要无限转下去
+
+def knowledge_agent(sub_question):
+    trace = []   # 每跳留痕：查了什么、命中哪几块、判断结论
+    query = sub_question
+    for hop in range(MAX_HOPS):
+        chunks = retrieve(query, top_k=5)   # 每跳 TopK 不宜太大
+        trace.append({"hop": hop, "query": query, "chunks": chunks})
+        # 判断：够回答了吗？不够的话，下一跳问什么？
+        if enough_to_answer(chunks, sub_question):
+            return {"chunks": chunks, "trace": trace, "cited": True}
+        query = next_query(chunks, sub_question)  # 用本跳结果生成下一跳查询
+    # 超上限：诚实回答，写清查了几轮、为什么判定为没查到
+    return {"chunks": [], "trace": trace, "cited": False,
+            "reason": "查了 3 轮，未命中可回答的资料"}</code></pre>
+<h3>示例 2：带出处的交付格式（概念代码）</h3>
+<pre><code># Knowledge Agent 交给 Supervisor 的结果，必须带出处，不是一堆裸资料
+result = {
+    "conclusions": [
+        {"text": "2024 版退货期限为 30 天", "source": "资料1：产品手册第 3 章"},
+        {"text": "2025 版改为 15 天", "source": "资料2：2025 变更公告第 2 条"},
+    ],
+    "trace": trace,  # 每跳的查询和命中块，复盘时定位哪一跳歪了
+}
+# 校验：结论里的数字、日期，必须能在标的那块资料里找到，否则改写或删除</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿一个需要两跳的问题（比如“某政策去年和今年改了什么”），写出第一跳和第二跳分别查什么、第二跳的查询词从第一跳的哪个结果来。<br>
+2. 假设第二跳没命中，第三跳你换什么策略：换同义词、换向量查、还是停下来？为什么？<br>
+3. 写出检索失败时的最终回答：查了几轮、用什么词、为什么判定为没查到——对照这三条，检查你的回答里有没有用训练知识填空。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Knowledge Agent 和 RAG 流水线最大的区别是？</strong></p><button data-i="0">用的模型不一样</button><button data-i="1">能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说</button><button data-i="2">查得更快</button><div class="ans">解析：选 B。流水线是查一次答一次，子 Agent 是带判断的检索循环。</div></div>
+<div class="q" data-answer="0"><p><strong>2. Multi-hop 检索循环是哪四步？</strong></p><button data-i="0">分解、检索、判断、再检索</button><button data-i="1">切块、向量、检索、生成</button><button data-i="2">提问、回答、再提问、再回答</button><div class="ans">解析：选 A。每跳的查询、命中块、判断结论都要写进状态，答错才能定位。</div></div>
+<div class="q" data-answer="1"><p><strong>3. Knowledge Agent 交给 Supervisor 的应该是什么？</strong></p><button data-i="0">一堆没整理的资料块</button><button data-i="1">带出处的结果：每条结论标 [资料 N]，每块带标题路径和原文</button><button data-i="2">直接写好的最终答案</button><div class="ans">解析：选 B。没出处的部分不进最终答案，引用是交付标准。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 检索循环为什么要设跳数上限？</strong></p><button data-i="0">为了让代码好看</button><button data-i="1">防无限转下去，成本和延迟炸掉，通常 3–5 跳</button><button data-i="2">跳数越多越好</button><div class="ans">解析：选 B。超上限就停、诚实回答，不要无限追下去。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 检索失败时正确的做法是？</strong></p><button data-i="0">用模型训练知识填空</button><button data-i="1">停下来，写清查了几轮、用什么词、为什么判定没查到，最终说资料里没有</button><button data-i="2">换个问题重新问用户</button><div class="ans">解析：选 B。用户能接受没查到，不能接受查到了假的。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 引用一致性校验查的是什么？</strong></p><button data-i="0">引用格式好不好看</button><button data-i="1">结论里的数字、日期、人名能不能在标的那块资料里找到</button><button data-i="2">资料块够不够长</button><div class="ans">解析：选 B。引用对了出处、内容却是编的，校验就是防这一手。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：为什么要把 RAG 做成一个子 Agent？</summary><p>因为复杂问题一次检索不够：子 Agent 能判断够不够、换策略再查、查不到止损。流水线是固定顺序，子 Agent 是带判断的循环，能处理 Multi-hop 问题。</p></details>
+<details><summary>Q2：Multi-hop 循环怎么跑？</summary><p>分解、检索、判断、再检索：每跳 TopK 约 5 个，判断本跳够不够、能不能为下一跳提供查询词；每跳留痕，跳数上限 3–5 跳，超了就停、诚实回答。</p></details>
+<details><summary>Q3：Knowledge Agent 的交付标准是什么？</summary><p>带出处的结果：每条结论标 [资料 N]，每块带标题路径和原文；结论里的数字、日期、人名必须能在标的资料里找到，否则改写或删除。</p></details>
+<details><summary>Q4：检索失败有几种？怎么处理？</summary><p>三种：几轮都没命中、命中的块无关、资料本身就没有。处理都一样：停下来，写清查了几轮、用什么词、为什么判定没查到，最终说资料里没有，不填空。</p></details>
+<details><summary>Q5：Knowledge Agent 和 Supervisor 怎么分工？</summary><p>Supervisor 派“需要查资料”的子任务，Knowledge Agent 内部跑检索循环、交出带出处的结果；Supervisor 只汇总带出处的部分，没出处的不进最终答案。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Knowledge Agent 上线前，先问三个问题：跳数上限设了吗？每跳留痕了吗？检索失败的诚实回答写进去了吗？三问有一个答不上来，检索循环就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过 RAG Agent”，写“Knowledge 子 Agent 跑 Multi-hop 检索循环，跳数上限 3 跳、每跳留痕、带出处交付、检索失败诚实回答”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 34 讲 MCP 协议详解：Host、Client、Server 三方怎么分工，Tools、Resources、Prompts 各是什么，协议为什么比本地写死工具更可移植。</p>
+</div>
+<div class="nav"><span><a href="day32.html">← Day 32</a></span><span><a href="day34.html">Day 34 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

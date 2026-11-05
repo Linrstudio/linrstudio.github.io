@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 35：工具安全纵深防御：Schema、ACL、幂等 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 35 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 35：工具安全纵深防御：Schema、ACL、幂等</h1>
+<p>工具一接上，安全问题就来了：模型可能传错参数、调错工具、重复调用、调了不该调的高危操作。纵深防御的意思是：不靠任何一层兜底，每一层都拦一部分，层层叠加。这课按调用链路的顺序讲：Schema 白名单、Pydantic 校验、ACL、幂等键、超时、沙箱、审计日志、高危操作人工确认——第 2 周的白名单是其中一层，这课补全整条链。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. Schema 白名单 + Pydantic 校验：参数进门先过两道关</h3>
+<p><strong>Schema 白名单</strong>是第一道关：只允许清单里的工具、清单里的参数名，多一个参数、少一个必填参数、工具名不在清单里，直接拒绝，不走到执行。白名单在第 2 周 Day 11 已经讲过前缀匹配的漏洞：生产版要三条一起上——不用 shell（argv 执行）、拒绝元字符、参数元组精确匹配。<strong>Pydantic 校验</strong>是第二道关：参数名对了，值还要合法——类型对不对、范围对不对、枚举值在不在清单里，比如“城市”必须是白名单里的城市名、“金额”必须是正数。两道关分工不同：白名单拦“不该调的”，Pydantic 拦“调得不对的”。</p>
+<h3>2. ACL：谁能调哪个工具，先查权限再执行</h3>
+<p>ACL（访问控制列表）是一张表：行是调用方（用户、角色、子 Agent），列是工具，格子里写能不能调。普通用户能调“查天气”，不能调“发消息给全员”；Knowledge 子 Agent 能调“检索”，不能调“写文件”。ACL 要在执行前查，查完还要记下来：谁、在什么时候、调了哪个工具、结果如何，审计日志就是这张表的流水。没有 ACL，模型一旦被提示词注入带偏，就能调到它本不该调的工具。</p>
+<h3>3. 幂等键：同一个调用重复发了，只执行一次</h3>
+<p>网络重试、Supervisor 重试、用户手抖点了两次，都会让同一个调用发两次。发消息、写文件、扣款这种操作执行两次就是事故。<strong>幂等键</strong>的做法是：调用方给每次调用带一个唯一键（比如用户 ID + 任务 ID + 工具调用 ID 的组合），服务端先查这个键有没有执行过——执行过就直接返回上次的结果，不再执行；没执行过才执行、并把结果和键一起存下来。幂等键不是“去重显示”，是“去重执行”，只读查询不需要它，可写操作必须有它。</p>
+<h3>4. 超时、沙箱、审计日志、人工确认：剩下的四层</h3>
+<p><strong>超时</strong>：每个工具设超时（比如 30 秒），超了就停、返回失败，不要让一个挂住的工具拖垮整张图。<strong>沙箱</strong>：工具在受限环境里跑，只能碰白名单里的文件和网络，跑测试、跑代码、跑命令都要进沙箱，不能直接跑在宿主机上。<strong>审计日志</strong>：每次调用记谁、什么时候、调了什么、传了什么参数、结果如何，出事后能复盘。<strong>人工确认</strong>：高危操作（删文件、发全员消息、扣款、改线上配置）执行前必须停下来、等人点了确认才继续，确认里要写清“要做什么、影响什么”，不能只写“是否继续”。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只做一层就以为安全了。只做白名单，参数值非法照样能捣乱；只做 Pydantic，越权调用照样能执行；只做幂等，超时挂住的工具照样拖垮全图。纵深防御的意思就是：每一层都拦一部分，缺一层就多一个口子。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：调用链路的防御顺序（概念代码，先看顺序）</h3>
+<pre><code>def safe_call(caller, tool_name, args, idempotency_key):
+    # 1. Schema 白名单：工具名和参数名必须在清单里
+    if tool_name not in ALLOWED_TOOLS or not args_match_schema(tool_name, args):
+        return {"error": "工具或参数不在白名单"}
+    # 2. Pydantic 校验：值要合法（类型、范围、枚举）
+    validated = ToolArgs(**args)  # 不合法就抛错，不走到执行
+    # 3. ACL：调用方有没有权限调这个工具
+    if not acl_allows(caller, tool_name):
+        return {"error": "无权限"}
+    # 4. 幂等键：执行过就直接返回上次结果，不再执行
+    if idempotency_key in executed:
+        return executed[idempotency_key]
+    # 5. 高危操作：先停下来，等人工确认
+    if tool_name in HIGH_RISK_TOOLS and not human_confirmed():
+        return {"error": "高危操作，需人工确认"}
+    # 6. 超时 + 沙箱里执行，执行完写审计日志
+    result = run_in_sandbox(tool_name, validated, timeout=30)
+    executed[idempotency_key] = result
+    audit_log(caller, tool_name, args, result)
+    return result</code></pre>
+<h3>示例 2：Pydantic 校验 + ACL 表（概念代码）</h3>
+<pre><code>from pydantic import BaseModel, Field
+
+class WeatherArgs(BaseModel):
+    city: str = Field(pattern="^(深圳|北京|上海)$")  # 枚举白名单，不在清单里的城市直接拦
+    date: str = Field(pattern="^今天|明天$")
+
+# ACL 表：行是调用方，列是工具，格子里写能不能调
+ACL = {
+    "knowledge_agent": {"retrieve": True, "write_file": False},
+    "user": {"get_weather": True, "send_broadcast": False},
+}
+# 查表在执行前做，查完记审计日志：谁、什么时候、调了什么、结果如何</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿你第 2 周的工具清单，画一张 ACL 表：哪些调用方能调哪些工具？哪个工具是高危、必须人工确认？<br>
+2. 给“发消息”这个可写操作设计一个幂等键：键里要含哪几部分？为什么不能只用时间戳当键？<br>
+3. 假设模型传了一个不在白名单里的参数，写出调用链路在哪一层拦住它、返回什么错误——对照示例 1 的顺序，指出是哪一步。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Schema 白名单和 Pydantic 校验的分工是？</strong></p><button data-i="0">都一样，任选一个就行</button><button data-i="1">白名单拦不该调的，Pydantic 拦调得不对的（值不合法）</button><button data-i="2">白名单拦值，Pydantic 拦工具名</button><div class="ans">解析：选 B。两道关分工不同，缺一层就多一个口子。</div></div>
+<div class="q" data-answer="1"><p><strong>2. ACL 应该在什么时候查？</strong></p><button data-i="0">执行完再查</button><button data-i="1">执行前查，查完还要记审计日志</button><button data-i="2">不用查，模型不会调错</button><div class="ans">解析：选 B。执行前查权限，查完记流水，出事后能复盘。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 幂等键的核心作用是？</strong></p><button data-i="0">让显示不重复</button><button data-i="1">同一个调用重复发了，只执行一次，重复的直接返回上次结果</button><button data-i="2">让调用更快</button><div class="ans">解析：选 B。幂等是去重执行，不是去重显示，只读查询不需要它。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 高危操作执行前应该怎么做？</strong></p><button data-i="0">直接执行，越快越好</button><button data-i="1">停下来，等人工确认，确认里写清要做什么、影响什么</button><button data-i="2">多执行一次确认效果</button><div class="ans">解析：选 B。删文件、发全员消息、扣款、改线上配置，都必须先确认。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 工具超时了，正确做法是？</strong></p><button data-i="0">一直等它跑完</button><button data-i="1">按超时停掉、返回失败，不要拖垮整张图</button><button data-i="2">自动重跑全图</button><div class="ans">解析：选 B。超时是工程约束，一个挂住的工具不能拖垮全图。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 纵深防御的意思是？</strong></p><button data-i="0">只做最强的一层就够了</button><button data-i="1">每一层都拦一部分，层层叠加，缺一层就多一个口子</button><button data-i="2">层数越多越好，不用管分工</button><div class="ans">解析：选 B。只做白名单，值非法照样捣乱；只做 Pydantic，越权照样执行。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：工具安全纵深防御有哪几层？按顺序说。</summary><p>Schema 白名单、Pydantic 校验、ACL、幂等键、超时、沙箱、审计日志、高危操作人工确认。按调用链路顺序拦，每一层拦一部分。</p></details>
+<details><summary>Q2：Schema 白名单生产版要哪三条一起上？</summary><p>不用 shell（argv 执行）、拒绝元字符、参数元组精确匹配。只做前缀匹配有漏洞，比如以 pytest 开头的拼接命令会被放行。</p></details>
+<details><summary>Q3：ACL 和审计日志是什么关系？</summary><p>ACL 是执行前查权限的表，审计日志是执行后记的流水：谁、什么时候、调了什么、传了什么参数、结果如何。没有 ACL，提示词注入带偏的模型能调到不该调的工具；没有日志，出事复盘不了。</p></details>
+<details><summary>Q4：幂等键怎么设计？</summary><p>调用方带唯一键，比如用户 ID + 任务 ID + 工具调用 ID 的组合；服务端先查键有没有执行过，执行过直接返回上次结果，没执行过才执行并存下结果和键。不能只用时间戳，时间戳会撞、也区分不了不同调用。</p></details>
+<details><summary>Q5：沙箱和人工确认各防什么？</summary><p>沙箱防工具跑出边界：只能碰白名单里的文件和网络，跑代码、跑命令都要进沙箱。人工确认防高危操作误执行：删文件、发全员消息、扣款、改线上配置，执行前必须停下来等人确认。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>工具安全上线前，先问三个问题：白名单、Pydantic、ACL 三层都上了吗？可写操作都有幂等键吗？高危操作的人工确认和审计日志都通了吗？三问有一个答不上来，工具就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过工具安全”，写“Schema 白名单 + Pydantic 校验 + ACL 执行前查权 + 幂等键去重执行 + 超时沙箱 + 审计日志 + 高危操作人工确认”。前者是名词，后者是可追问的链路。</p>
+<p><strong>明日预告：</strong>Day 36 讲 Verifier 与 Composer：Verifier 为什么必须独立于执行者，打回和重试上限怎么定，Composer 怎么合成多路结果、冲突时听谁的。</p>
+</div>
+<div class="nav"><span><a href="day34.html">← Day 34</a></span><span><a href="day36.html">Day 36 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
