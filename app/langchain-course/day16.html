@@ -70,6 +70,49 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 # q_vec = embed_model.embed_query(question)      # 在线：问题变向量
 # 关键：两边必须是同一个模型，否则向量不在同一个空间，相似度算不了
 # 选型看语言、维度、成本和速度，中文文档先看中文效果</code></pre>
+<h3>示例 3：Section 感知切分（按标题切成节，块首拼标题路径）</h3>
+<pre><code>import re
+
+def split_by_section(text, max_chars=1000, overlap=100):
+    # 1. 按标题切成节，同时拼出标题路径
+    sections, stack, buf = [], [], []
+    def flush():
+        if buf:
+            sections.append((" > ".join(stack) if stack else "全文", "\n".join(buf)))
+            buf.clear()
+    for line in text.splitlines():
+        m = re.match(r"^(#{1,3})\s+(.*)", line)
+        if m:
+            flush()
+            level = len(m.group(1))
+            stack = stack[:level - 1] + [m.group(2).strip()]
+        else:
+            buf.append(line)
+    flush()
+    # 2. 每节再按段落累积，超预算才切；块首拼标题路径
+    chunks = []
+    for title, body in sections:
+        current = ""
+        for para in body.split("\n\n"):
+            para = para.strip()
+            if not para:
+                continue
+            if current and len(current) + len(para) > max_chars:
+                chunks.append(f"【{title}】\n{current}")
+                current = current[-overlap:] + para
+            else:
+                current = (current + "\n\n" + para) if current else para
+        if current.strip():
+            chunks.append(f"【{title}】\n{current}")
+    return chunks
+
+# 跑一遍上面那份《退货政策》，得到两块：
+# 块 1 = 【退货政策 > 退货期限】\n自签收之日起 7 天内可申请退货……
+#        超过 7 天后，仅质量问题可申请换货……
+# 块 2 = 【退货政策 > 退货流程】\n第一步，在 App 内提交退货申请……
+#        第二步，等待审核，审核通过后寄回商品。
+# 要点：标题路径拼在块首，块单独拿出来也知道出自哪里；一节太长时，
+# 在段落边界继续切，不在句子中间断；表格要整块进，实在太长也要每块带表头</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 拿一篇手册，分别按固定长度和按标题切一次，对比：哪种切法下，每块单独拿出来还能看懂？<br>
