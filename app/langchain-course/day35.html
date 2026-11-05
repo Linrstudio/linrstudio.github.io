@@ -75,6 +75,33 @@ ACL = {
     "user": {"get_weather": True, "send_broadcast": False},
 }
 # 查表在执行前做，查完记审计日志：谁、什么时候、调了什么、结果如何</code></pre>
+<h3>示例 3：幂等键完整实现（可复现键 + 原子占键 + TTL，本地实测过）</h3>
+<pre><code>import hashlib, json, threading, time
+
+store, lock = {}, threading.Lock()  # 生产里换成 Redis：SET key result NX EX 86400
+
+def make_key(user_id, task_id, tool_name, args):
+    # 键要可复现：重试时带同一个键，同一组固定信息算出同一个键
+    raw = json.dumps([user_id, task_id, tool_name, args], sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+def call_once(user_id, task_id, tool_name, args, fn, ttl=86400):
+    key = make_key(user_id, task_id, tool_name, args)
+    with lock:  # 原子占键：查和占必须一步完成，否则并发下两个调用都会执行
+        now = time.time()
+        if key in store and store[key][1] > now:
+            return store[key][0]  # 执行过，直接返回上次结果
+        result = fn()             # 没执行过才执行
+        store[key] = (result, now + ttl)  # 存结果 + 过期时间（这里 24 小时）
+        return result
+
+# 同一调用发两次，第二次带同一个键（重试复用键）：函数只真正执行 1 次
+# call_once("u1", "t7", "send_message", {"to": "群"}, send)  # 执行，返回“已发送”
+# call_once("u1", "t7", "send_message", {"to": "群"}, send)  # 不执行，返回上次的“已发送”
+# 不同参数 = 不同操作，键不一样，正常执行：
+# call_once("u1", "t7", "send_message", {"to": "小明"}, send)  # 执行，次数变成 2
+# 注意：演示里执行放在锁内；生产里先用 SET NX 占键、执行放锁外、执行完再存结果，
+# 避免一次长执行占着锁；内存字典重启就丢，生产里键和结果存 Redis 或数据库</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 拿你第 2 周的工具清单，画一张 ACL 表：哪些调用方能调哪些工具？哪个工具是高危、必须人工确认？<br>
