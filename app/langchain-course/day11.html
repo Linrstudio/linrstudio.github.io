@@ -170,6 +170,22 @@ def run_task(patch_fn, run_tests):
 <h2>六、补充：MCP 工具接入 + 工具调用全链路防御（结合岗位要求）</h2>
 <p><strong>MCP（Model Context Protocol）</strong>是模型和外部工具之间的标准协议，理解它的三方分工就够了：<strong>Host</strong> 是运行模型的应用，<strong>Client</strong> 是 Host 里负责连 MCP 服务的一端，<strong>Server</strong> 是提供工具、资源、提示词的一端。一个 Server 可以暴露三种东西——<strong>Tools</strong>（可调用的函数）、<strong>Resources</strong>（可读的数据，如文件、数据库记录）、<strong>Prompts</strong>（预置的提示词模板）。传输上本地常用 stdio、远程常用 Streamable HTTP，模型侧看到的仍是一张工具列表，调用仍走 Function Calling，只是工具的来源从“本地写死”变成了“协议发现”：Client 先调 <code>list_tools</code> 拿到工具的 schema，再按 schema 调用。</p>
 <p>工具来源变多了，防御必须成链，单点白名单不够，全链路四层要一起上：<strong>第一，Schema 白名单</strong>（Day 11 正文）——只放行已知工具和参数，模型现场编出来的工具一律拒绝；<strong>第二，Pydantic 校验</strong>（Day 4）——参数类型、范围、枚举全部在执行前校验，不合规不执行；<strong>第三，ACL</strong>——一张“谁能调哪个工具”的表，普通用户不能调删文件、发消息、改配置这类高危工具，高危操作还要人工确认；<strong>第四，幂等性</strong>——每次调用带一个幂等键（用户 + 任务 + 调用 ID 的哈希），重复发来的同一键直接返回上次结果、不重复执行，写文件、发消息、扣费这类操作没有幂等就是埋雷。再加上超时、沙箱、审计日志三件套，才算一套能讲给面试官的防御。</p>
+<h2>七、幂等键入门：同一个调用重复发了，只执行一次</h2>
+<p>网络重试、模型重试、用户手抖点了两次，都会让同一个工具调用发两次。发消息、写文件、扣款这种可写操作执行两次就是事故，只读查询（查天气、查文档）不需要幂等，<strong>可写操作必须有它</strong>。做法是：调用方给每次调用带一个唯一键——由用户 ID + 任务 ID + 工具调用 ID 拼出来，服务端先查这个键有没有执行过，执行过就直接返回上次的结果，不再执行；没执行过才执行、并把结果和键一起存下来。</p>
+<pre><code>executed = {}  # 键 -> 上次的结果（生产里换成数据库或 Redis，这里先看形状）
+
+def call_once(key, fn):
+    if key in executed:
+        return executed[key]      # 重复发，直接返回上次结果，不再执行
+    result = fn()
+    executed[key] = result        # 执行完把结果和键一起存下来
+    return result
+
+# 同一个键发两次，函数只真正执行一次：
+# call_once("user1-task7-send_message", send_message)  # 执行，返回“已发送”
+# call_once("user1-task7-send_message", send_message)  # 不执行，返回上次的“已发送”
+# 键不能用时间戳或随机数：重试时必须带同一个键，否则去重就失效了</code></pre>
+<p>这只是入门形状，生产里的坑在 Day35 讲全：两个相同调用同时到达会都通过检查（要用原子操作，比如 Redis 的 SET NX 或数据库唯一约束）；键不能永久存（要设过期时间，比如 24 小时）；内存字典重启就丢，生产里要存数据库。先记住这课的一句话：<strong>幂等是去重执行，不是去重显示</strong>，深的在 <a href="day35.html">Day 35 工具安全纵深防御</a>。</p>
 <div class="nav">
 <span><a href="day10.html">← Day 10</a> &nbsp; <a href="index.html">课程首页</a></span>
 <span><a href="day12.html">Day 12 →</a></span>
