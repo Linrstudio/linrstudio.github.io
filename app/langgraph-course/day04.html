@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -40,14 +52,20 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="400" y="133" font-size="13" fill="#222">循环直到无工具调用</text>
 </svg>
 <h3>1. ReAct 是什么：推理和行动交替进行</h3>
-<p>ReAct 的全称是 Reasoning + Acting：模型先想（推理：要不要调工具、调哪个、传什么参数），再做（行动：执行工具），看到工具结果再想、再做，直到它觉得不用调工具了、直接回答。手写循环版你已经在 LangChain 课 Day 5 写过，图版是同一套逻辑，只是循环变成了边。</p>
+<p>模型先想（要不要调工具、调哪个、传什么参数），再做（执行工具），看到工具结果再想、再做，直到它觉得不用调工具了、直接回答。</p>
 <h3>2. ToolNode 是什么：执行工具调用的现成节点</h3>
-<p><code>ToolNode(tools)</code> 是 LangGraph 自带的节点，干三件事：从最后一条 AI 消息里取出工具调用（tool_calls），按名字找到对应的工具函数，执行它，把结果包成 ToolMessage 追加回状态。你不用自己写“解析调用、查表、执行、包结果”的样板代码，但要知道它在背后做的就是这些事——出了问题（比如工具名对不上）要知道去哪查。</p>
+<p><code>ToolNode(tools)</code> 干三件事：从最后一条 AI 消息里取出工具调用，按名字找到对应的工具函数，执行它，把结果包成 ToolMessage 追加回状态。</p>
 <h3>3. 模型怎么调工具：bind_tools</h3>
-<p>模型节点里，模型要先 <code>llm.bind_tools(tools)</code> 绑定工具列表，调模型时它才会在需要的时候返回 tool_calls，而不是直接给答案。没绑定的模型永远不会调工具，图会第一轮就走到 END。绑定的是工具的 schema（名字、参数、描述），模型按描述决定调哪个、传什么参数。</p>
+<p>模型节点里，模型要先 <code>llm.bind_tools(tools)</code> 绑定工具列表，调模型时它才会在需要的时候返回 tool_calls。没绑定的模型永远不会调工具，图第一轮就走到 END。</p>
 <h3>4. 循环什么时候停：模型说了算，步数上限兜底</h3>
-<p>循环的每一轮都是“agent → tools → agent”，停的条件是模型某次返回的消息里没有 tool_calls，tools_condition 返回 END。正常情况下两三轮就停；如果模型一直调工具，Day 3 的步数上限（recursion_limit，默认 25 步）会把它拦住。调不好的循环先看提示词：有没有告诉模型“资料里没有就说没有，不要反复试同一个工具”？</p>
+<p>停的条件是模型某次返回的消息里没有 tool_calls，tools_condition 返回 END。正常两三轮就停；一直调工具就靠 recursion_limit（默认 25 步）拦住。</p>
 <div class="warn"><strong>容易踩的坑：</strong>用已经弃用的旧版 ReAct 工厂函数。新版 LangGraph 里它已弃用，推荐做法就是今天这张手写图：StateGraph + ToolNode + tools_condition。手写图多几行代码，但每一步都看得见、改得动，面试也能讲清。</div>
+<div class="widget">
+<h4>动手玩：ReAct 循环步进器 —— 点“下一步”，一轮一轮看</h4>
+<p>用户问“深圳今天天气怎么样，还要湿度”。点下一步，看模型和工具怎么交替干活，消息列表怎么变长，循环在哪一轮停。</p>
+<p><button class="wbtn primary" id="d4-next">下一步 ▶</button> <button class="wbtn" id="d4-reset">重置</button></p>
+<div class="wlog" id="d4-log"></div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：ReAct Agent 完整图（先看形状，模型换成你的）</h3>
@@ -141,6 +159,32 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var steps=[
+{node:'agent', text:'第 1 轮 · agent（调模型）：模型想，要查天气 → tool_calls: get_weather(深圳）'},
+{node:'tools', text:'第 1 轮 · tools（ToolNode）：执行 get_weather，返回 ToolMessage：26°C，晴'},
+{node:'agent', text:'第 2 轮 · agent（调模型）：模型想，还要湿度 → tool_calls: get_humidity(深圳）'},
+{node:'tools', text:'第 2 轮 · tools（ToolNode）：执行 get_humidity，返回 ToolMessage：湿度 72%'},
+{node:'agent', text:'第 3 轮 · agent（调模型）：模型这次没有 tool_calls，直接回答'},
+{node:'end', text:'END：循环结束。最终回答：深圳今天 26°C，晴，湿度 72%。'}
+];
+var i=0;
+var log=document.getElementById('d4-log');
+var next=document.getElementById('d4-next');
+function render(){
+  var out='循环轮数：'+Math.min(Math.ceil(i/2),2)+' 轮\n消息列表（共 '+i+' 条）：\n';
+  for(var k=0;k<i;k++){ out+=(k+1)+'. '+steps[k].text+'\n'; }
+  if(i===0){ out+='（还没开始，点“下一步”）\n'; }
+  if(i>=steps.length){ out+='\n✅ 停了：模型不再调工具，tools_condition 返回 END。'; }
+  log.textContent=out;
+  next.disabled=(i>=steps.length);
+}
+next.addEventListener('click',function(){ if(i<steps.length){ i++; render(); } });
+document.getElementById('d4-reset').addEventListener('click',function(){ i=0; render(); });
+render();
+})();
 </script>
 </body>
 </html>

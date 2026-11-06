@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -38,14 +50,25 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="20" y="125" font-size="13" fill="#222">Reducer = 合并规则：messages 用 add_messages 追加，不是覆盖</text>
 </svg>
 <h3>1. AgentState 是什么：一张有类型的记事本</h3>
-<p>状态用 <code>TypedDict</code> 定义，每个字段都有类型。Agent 最常用的状态叫 <code>AgentState</code>，核心字段是 <code>messages</code>（消息列表）。类型写在前面有两个好处：写错字段名会报错，而不是默默地多出一个没人读的字段；每个节点拿到状态时，都知道里面有什么。</p>
+<p>状态用 <code>TypedDict</code> 定义，每个字段都有类型。Agent 最常用的状态叫 <code>AgentState</code>，核心字段是 <code>messages</code>（消息列表）。</p>
 <h3>2. Reducer 是什么：旧值 + 更新 = 新值</h3>
-<p>Reducer 就是一个字段的合并规则，写在字段的 <code>Annotated</code> 里。没有 Reducer 的字段，默认值是“覆盖”：新值直接替换旧值。列表、计数、累加这种字段不能覆盖，必须显式指定 Reducer，比如消息列表用 <code>add_messages</code>（追加），数字用加法。Reducer 的意思是：节点不用操心旧状态长什么样，只管返回自己的更新，图负责按规则合并。</p>
+<p>Reducer 就是一个字段的合并规则，写在字段的 <code>Annotated</code> 里。没有 Reducer 的字段默认是“覆盖”；列表、计数这种字段必须显式指定 Reducer。</p>
 <h3>3. add_messages 是干嘛的：消息只能追加，不能覆盖</h3>
-<p><code>messages: Annotated[list, add_messages]</code> 是最常用的一行。节点返回 <code>{"messages": [新消息]}</code>，图不会用这一条消息替换整个列表，而是把它追加到列表末尾。没有它会怎样？模型节点返回一条 AI 消息，整个聊天记录就只剩这一条，之前用户问过什么全丢了，下一轮模型连上下文都没有。</p>
+<p><code>messages: Annotated[list, add_messages]</code> 是最常用的一行。节点返回一条新消息，图把它追加到列表末尾，而不是替换整个列表。</p>
 <h3>4. 为什么状态要可合并：并行分支的需要</h3>
-<p>图里经常有并行分支：两个节点同时跑，同时往状态里写。没有 Reducer，两个写操作会互相覆盖，只剩一个；有了 Reducer，两个更新按规则合并，消息列表是两条消息都追加，计数是两个增量都加上。Reducer 让“并发写状态”从竞态变成确定性的合并。这也是为什么节点只返回更新、不返回整个状态——返回整个状态，合并就没意义了。</p>
+<p>两个节点同时跑、同时往状态里写，没有 Reducer 会互相覆盖，只剩一个；有了 Reducer，两个更新按规则合并，消息都追加、计数都加上。</p>
 <div class="warn"><strong>容易踩的坑：</strong>在节点里直接改传入的 state（比如 <code>state["messages"].append(...)</code>）。节点应该返回更新，让图去合并；直接改传入的状态，图不知道你改了什么，Checkpoint 存下来的可能是改之前的状态，断点续跑会丢数据。</div>
+<div class="widget">
+<h4>动手玩：状态游乐场 —— 点一点，看 add_messages 怎么合并</h4>
+<p>在框里写一句话，选一种消息加进去。注意：新消息是追加到列表末尾的，旧消息不会丢。再点“试试覆盖”，看看不用 Reducer 会丢成什么样。</p>
+<p><input class="winput" id="d2-input" value="深圳今天天气怎么样？"> </p>
+<p><button class="wbtn primary" id="d2-human">+ HumanMessage</button>
+<button class="wbtn" id="d2-ai">+ AIMessage</button>
+<button class="wbtn" id="d2-tool">+ ToolMessage</button>
+<button class="wbtn" id="d2-overwrite">试试覆盖（错误示范）</button>
+<button class="wbtn" id="d2-reset">重置</button></p>
+<div class="wlog" id="d2-log"></div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：AgentState + add_messages（先看形状）</h3>
@@ -127,6 +150,33 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var msgs=[];
+var log=document.getElementById('d2-log');
+var input=document.getElementById('d2-input');
+function render(note){
+  var out='messages（共 '+msgs.length+' 条，add_messages 追加）：\n';
+  for(var i=0;i<msgs.length;i++){ out+=(i+1)+'. ['+msgs[i].role+'] '+msgs[i].text+'\n'; }
+  if(msgs.length===0){ out+='（空列表，先加一条消息）\n'; }
+  if(note){ out+='\n'+note; }
+  log.textContent=out;
+}
+function add(role, text){
+  msgs.push({role: role, text: text});
+  render();
+}
+document.getElementById('d2-human').addEventListener('click',function(){ add('HumanMessage', input.value || '你好'); });
+document.getElementById('d2-ai').addEventListener('click',function(){ add('AIMessage', '我来查一下深圳天气。'); });
+document.getElementById('d2-tool').addEventListener('click',function(){ add('ToolMessage', '工具返回：26°C，晴。'); });
+document.getElementById('d2-overwrite').addEventListener('click',function(){
+  msgs=[{role: 'AIMessage', text: '我来查一下深圳天气。'}];
+  render('⚠️ 覆盖了！整个列表只剩最后这一条，之前用户问过什么全丢了——这就是不用 add_messages 的后果。');
+});
+document.getElementById('d2-reset').addEventListener('click',function(){ msgs=[]; render(); });
+render();
+})();
 </script>
 </body>
 </html>

@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -40,14 +52,23 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="20" y="140" font-size="13" fill="#222">审核后三条路：继续（原样执行）、改了再继续、拒绝（不执行）</text>
 </svg>
 <h3>1. 中断是什么：图在指定节点前停住</h3>
-<p>中断就是让图在某个节点前停下来，等外部输入。编译时传 <code>interrupt_before=["tools"]</code>，图每次跑到 tools 节点前就停住、返回当前状态，不执行工具。停住不是报错，是正常状态：快照已经存好（所以中断必须配 Checkpointer，Day 5 的内容），人什么时候回来，图就从停住的地方接着跑。</p>
+<p>编译时传 <code>interrupt_before=["tools"]</code>，图每次跑到 tools 节点前就停住、返回当前状态，不执行工具。停住不是报错，是正常状态。</p>
 <h3>2. human-in-the-loop 是什么：人是图里的一步</h3>
-<p>human-in-the-loop 的意思是：人不是图的旁观者，是图里的一步。高危操作执行前，图停下来，把“要做什么、参数是什么、影响是什么”展示给人，人看完再决定。审核的界面可以是一个按钮、一个工单、一封邮件，但逻辑都一样：图等人的决定，人的决定是图继续跑的输入。</p>
+<p>人不是图的旁观者，是图里的一步。高危操作执行前，图停下来，把“要做什么、参数是什么、影响是什么”展示给人，人看完再决定。</p>
 <h3>3. 审核后三条路：继续、改了再继续、拒绝</h3>
-<p>人审核完，有三条路：<strong>继续</strong>——原样执行，用 <code>Command(resume=...)</code> 或再 invoke 一次（什么都不改），图接着跑；<strong>改了再继续</strong>——参数不对，人改掉再跑，用 <code>update_state</code> 改状态里的工具调用参数，再继续；<strong>拒绝</strong>——不执行，图走到 END 或走一条“拒绝”的分支，回答里写清楚“已拒绝执行”。三条路都要有，缺了“改”和“拒绝”，审核就只剩一个摆设按钮。</p>
+<p><strong>继续</strong>：原样执行；<strong>改了再继续</strong>：用 <code>update_state</code> 改参数再跑；<strong>拒绝</strong>：不执行，回答里写清楚“已拒绝执行”。三条路都要有，缺了“改”和“拒绝”，审核就只剩一个摆设按钮。</p>
 <h3>4. 节点内中断：interrupt() 函数</h3>
-<p>除了编译时定死的中断点，节点里也可以用 <code>interrupt()</code> 函数（从 <code>langgraph.types</code> 导入）动态停住：节点跑到一半，调 <code>interrupt("请确认是否发送")</code>，图停住并把这句话返回给人；人回复后，<code>interrupt()</code> 的返回值就是人的回复，节点接着跑。编译时中断适合“固定检查点”，节点内中断适合“跑到一半才知道要不要问人”的场景。</p>
+<p>节点里也可以调 <code>interrupt()</code> 动态停住：节点跑到一半，调 <code>interrupt("请确认是否发送")</code>，图停住并把这句话返回给人；人回复后，<code>interrupt()</code> 的返回值就是人的回复，节点接着跑。</p>
 <div class="warn"><strong>容易踩的坑：</strong>中断了，但没配 Checkpointer。没有 Checkpointer，图停住后状态没地方存，人回来时图已经忘了跑到哪了。中断和 Checkpoint 是一对：Day 5 是 Day 6 的前置条件。</div>
+<div class="widget">
+<h4>动手玩：人工介入演示 —— 你来当审核员</h4>
+<p>模型想调用 <code>send_broadcast</code> 发一条全员消息。先点“运行到 tools 前”，图会在工具执行前停住；再由你决定：批准就执行，拒绝就不执行。两种结果对比着看。</p>
+<p><button class="wbtn primary" id="d6-run">运行到 tools 前 ▶</button>
+<button class="wbtn" id="d6-approve">✅ 批准，继续执行</button>
+<button class="wbtn" id="d6-reject">❌ 拒绝，不执行</button>
+<button class="wbtn" id="d6-reset">重置</button></p>
+<div class="wlog" id="d6-log">还没运行。点“运行到 tools 前”，图会在高危工具前停住等你审核。</div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：tools 节点前中断，审核后继续（先看形状）</h3>
@@ -129,6 +150,41 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var stage=0; // 0 未运行，1 已暂停等审核，2 已结束
+var log=document.getElementById('d6-log');
+var approve=document.getElementById('d6-approve');
+var reject=document.getElementById('d6-reject');
+function setButtons(){
+  approve.disabled=(stage!==1);
+  reject.disabled=(stage!==1);
+}
+document.getElementById('d6-run').addEventListener('click',function(){
+  stage=1;
+  log.textContent='⏸ 图在 tools 节点前停住了，等你审核。\n\n待执行的工具调用：\nsend_broadcast（发全员消息）\n参数：内容 = 「明天放假」\n影响：全体成员都会收到\n\n点“批准”就执行，点“拒绝”就不执行。';
+  setButtons();
+});
+approve.addEventListener('click',function(){
+  if(stage!==1){ return; }
+  stage=2;
+  log.textContent='✅ 你点了批准 → tools 执行：消息已发送\n→ END：图结束。最终状态里有一条“消息已发送”的记录。';
+  setButtons();
+});
+reject.addEventListener('click',function(){
+  if(stage!==1){ return; }
+  stage=2;
+  log.textContent='❌ 你点了拒绝 → 工具没执行\n→ 模型回答：已拒绝执行发全员消息。\n→ END：图结束。最终状态里没有发送记录，只有这句拒绝说明。';
+  setButtons();
+});
+document.getElementById('d6-reset').addEventListener('click',function(){
+  stage=0;
+  log.textContent='还没运行。点“运行到 tools 前”，图会在高危工具前停住等你审核。';
+  setButtons();
+});
+setButtons();
+})();
 </script>
 </body>
 </html>

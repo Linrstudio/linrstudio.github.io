@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -40,14 +52,23 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="20" y="165" font-size="13" fill="#222">tools 跑完回边到 agent，形成循环；无工具调用时走 END，循环终止</text>
 </svg>
 <h3>1. 条件边是什么：边上挂一个路由函数</h3>
-<p>普通边是死箭头：做完 A 一定去 B。条件边是活箭头：<code>add_conditional_edges("agent", 路由函数, {"tools": "tools", END: END})</code>，路由函数读当前状态、返回一个字符串，图按这个字符串决定下一步去哪个节点。路由函数只做一件事：看状态，报名字，不做业务逻辑。</p>
+<p>普通边是死箭头：做完 A 一定去 B。条件边是活箭头：路由函数读当前状态、返回一个字符串，图按这个字符串决定下一步去哪个节点。路由函数只做一件事：看状态，报名字。</p>
 <h3>2. tools_condition：最常用的现成路由</h3>
-<p>LangGraph 自带一个路由函数 <code>tools_condition</code>，专门判断“模型最后一条消息有没有工具调用”：有，就返回 <code>"tools"</code>，去工具节点；没有，就返回 <code>END</code>，图结束。ReAct 循环的核心就是它，Day 4 会完整跑一遍。记住：tools_condition 看的是最后一条 AI 消息里的 tool_calls，不是看状态里有没有别的字段。</p>
+<p>它只判断一件事：模型最后一条消息有没有工具调用。有，就返回 <code>"tools"</code>，去工具节点；没有，就返回 <code>END</code>，图结束。</p>
 <h3>3. 循环是怎么形成的：回边</h3>
-<p>循环不是特殊语法，就是一条指回去的边：工具节点跑完，加一条普通边 <code>add_edge("tools", "agent")</code> 回到 agent 节点，agent 再调模型、再判断要不要调工具。循环的每一次都是一次“模型 → 工具 → 模型”的回合，状态里的 messages 在不断变长。</p>
+<p>循环不是特殊语法，就是一条指回去的边：工具节点跑完，加一条普通边 <code>add_edge("tools", "agent")</code> 回到 agent 节点。</p>
 <h3>4. 循环怎么终止：两个保险</h3>
-<p>循环必须能停，有两个保险：<strong>第一，业务终止条件</strong>——模型不再调工具，tools_condition 返回 END，循环正常结束；<strong>第二，步数上限</strong>——图编译时默认有递归上限（recursion_limit，默认 25 步），超过就抛错停下，防止模型死循环把账单跑爆。步数上限可以在 invoke 时用 <code>{"recursion_limit": 50}</code> 调，但调大之前先问：模型为什么一直调工具？是不是提示词或工具设计有问题？上限是保险丝，不是解决方案。</p>
+<p><strong>业务终止条件</strong>：模型不再调工具，tools_condition 返回 END；<strong>步数上限</strong>：recursion_limit 默认 25 步，超过就抛错停下，防止死循环把账单跑爆。</p>
 <div class="warn"><strong>容易踩的坑：</strong>路由函数返回了映射表里没有的名字。比如映射表只有 {"tools": "tools", END: END}，路由函数却返回了 "retry"，图会直接报错。路由函数的返回值必须和映射表的键一一对应，写完先对一遍表。</div>
+<div class="widget">
+<h4>动手玩：路由模拟器 —— 你来当模型，决定走哪条边</h4>
+<p>先选模型这次返回了什么，再点“运行路由”，看 tools_condition 会把图送去哪。选“带工具调用”会去 tools 节点、跑完回边到 agent；选“直接回答”就走 END。</p>
+<p><button class="wbtn sel" id="d3-a">模型返回：带 tool_calls</button>
+<button class="wbtn" id="d3-b">模型返回：直接回答（无工具调用）</button></p>
+<p><button class="wbtn primary" id="d3-run">运行路由 ▶</button> <button class="wbtn" id="d3-reset">重置</button></p>
+<div><span class="wnode" id="d3-tools">tools 节点</span> <span class="wnode" id="d3-end">END</span></div>
+<div class="wlog" id="d3-log">还没运行。先选一种模型输出，再点“运行路由”。</div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：自己写路由函数（先看形状）</h3>
@@ -125,6 +146,36 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var choice='tools';
+var a=document.getElementById('d3-a'), b=document.getElementById('d3-b');
+var log=document.getElementById('d3-log');
+function pick(which){
+  choice=which;
+  a.className='wbtn'+(which==='tools'?' sel':'');
+  b.className='wbtn'+(which==='end'?' sel':'');
+}
+a.addEventListener('click',function(){ pick('tools'); });
+b.addEventListener('click',function(){ pick('end'); });
+document.getElementById('d3-run').addEventListener('click',function(){
+  var t=document.getElementById('d3-tools'), e=document.getElementById('d3-end');
+  if(choice==='tools'){
+    t.className='wnode on'; e.className='wnode';
+    log.textContent='tools_condition 看最后一条 AI 消息：有 tool_calls → 返回 "tools"\n→ 去 tools 节点执行工具，跑完沿回边回到 agent，再调一次模型。';
+  } else {
+    t.className='wnode'; e.className='wnode on';
+    log.textContent='tools_condition 看最后一条 AI 消息：没有 tool_calls → 返回 END\n→ 图结束，循环终止，返回最后的状态。';
+  }
+});
+document.getElementById('d3-reset').addEventListener('click',function(){
+  pick('tools');
+  document.getElementById('d3-tools').className='wnode';
+  document.getElementById('d3-end').className='wnode';
+  log.textContent='还没运行。先选一种模型输出，再点“运行路由”。';
+});
+})();
 </script>
 </body>
 </html>

@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -40,14 +52,24 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="20" y="140" font-size="13" fill="#222">每步存一个 Checkpoint；续跑时读最近的快照，不用从头再跑</text>
 </svg>
 <h3>1. Checkpoint 是什么：每步一个快照</h3>
-<p>Checkpoint 就是图在每一步跑完后存的状态快照：跑到哪一步、状态长什么样、下一步去哪。没有 Checkpoint，图就是一次性的，断了就没了；有了 Checkpoint，图就是可恢复的，断了可以从最近的快照继续。快照由 Checkpointer 存，MemorySaver 是存在内存里的实现，适合学习和演示。</p>
+<p>Checkpoint 就是图在每一步跑完后存的状态快照：跑到哪一步、状态长什么样、下一步去哪。没有它，图就是一次性的，断了就没了。</p>
 <h3>2. thread_id 是什么：一次对话一个编号</h3>
-<p>Checkpointer 要区分“这是谁的对话”，靠的就是 <code>thread_id</code>：每次 invoke 时在 config 里传 <code>{"configurable": {"thread_id": "user-1"}}</code>，同一个 thread_id 的多次调用共享同一份状态、同一串快照，不同 thread_id 互不干扰。thread_id 通常就是用户 ID 或会话 ID。忘传 thread_id，图每次都是全新的对话，之前的上下文全丢了。</p>
+<p>每次 invoke 在 config 里传 <code>{"configurable": {"thread_id": "user-1"}}</code>，同一个 thread_id 的多次调用共享同一份状态、同一串快照，不同 thread 互不干扰。</p>
 <h3>3. 断点续跑怎么跑：同一 thread_id 再 invoke 一次</h3>
-<p>续跑不需要特殊 API：用同一个 thread_id 再 invoke 一次，图会自动读最近的快照、从断的地方继续。比如第一次 invoke 跑了两步后中断了，第二次 invoke 传新的输入（或不传新输入，只传 config），图从第三步接着跑，之前两步不重跑——工具不会重复执行，钱不会重复花。</p>
+<p>图自动读最近的快照、从断的地方继续，之前跑过的步骤不重跑——工具不会重复执行，钱不会重复花。</p>
 <h3>4. get_state 是干嘛的：看看现在跑到哪了</h3>
-<p><code>app.get_state(config)</code> 可以读出当前的状态和下一步要去哪，排错和做“继续”按钮都靠它。结合 Day 6 的中断：图停在人工审核前时，get_state 能看到停在哪一步、状态里有什么，人看完再决定继续还是改。</p>
+<p><code>app.get_state(config)</code> 读出当前状态和下一步要去哪，排错和做“继续”按钮都靠它。</p>
 <div class="warn"><strong>容易踩的坑：</strong>MemorySaver 存在内存里，进程一重启，快照全丢了。生产里要换持久化的 Checkpointer（比如 PostgresSaver、RedisSaver），否则“断点续跑”只在同一次运行里有效。MemorySaver 是学习用的，不是上线用的。</div>
+<div class="widget">
+<h4>动手玩：检查点演示 —— 先跑两步、存一个快照，再中断、再恢复</h4>
+<p>试试这个顺序：跑一步 → 跑一步 → 保存检查点 → 再跑一步 → 中断 → 从检查点恢复。看恢复后是从第几步继续的，消息有没有丢。再试试不保存检查点就中断恢复，会怎样。</p>
+<p><button class="wbtn primary" id="d5-step">跑一步 ▶</button>
+<button class="wbtn" id="d5-save">保存检查点</button>
+<button class="wbtn" id="d5-break">中断</button>
+<button class="wbtn" id="d5-resume">从检查点恢复</button>
+<button class="wbtn" id="d5-reset">重置</button></p>
+<div class="wlog" id="d5-log"></div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：MemorySaver + thread_id，多轮对话不断线</h3>
@@ -119,6 +141,46 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var stepTexts=[
+'第 1 步 · agent：模型决定查深圳天气',
+'第 2 步 · tools：工具返回 26°C，晴',
+'第 3 步 · agent：模型回答：深圳今天 26°C，晴。'
+];
+var step=0, msgs=[], ckpt=null, interrupted=false;
+var log=document.getElementById('d5-log');
+function render(note){
+  var out='当前步数：第 '+step+' / 3 步\n检查点：'+(ckpt?('已保存（第 '+ckpt.step+' 步，消息 '+ckpt.msgs.length+' 条）'):'无')+'\n状态：'+(interrupted?'已中断 ⏸':'运行中')+'\n消息列表（共 '+msgs.length+' 条）：\n';
+  for(var i=0;i<msgs.length;i++){ out+=(i+1)+'. '+msgs[i]+'\n'; }
+  if(msgs.length===0){ out+='（空）\n'; }
+  if(note){ out+='\n'+note; }
+  log.textContent=out;
+}
+document.getElementById('d5-step').addEventListener('click',function(){
+  if(interrupted){ render('⚠️ 图已中断，先点“从检查点恢复”。'); return; }
+  if(step>=3){ render('已经跑完了。'); return; }
+  msgs.push(stepTexts[step]); step++; render();
+});
+document.getElementById('d5-save').addEventListener('click',function(){
+  ckpt={step: step, msgs: msgs.slice()};
+  render('✅ 检查点已保存：第 '+step+' 步，消息 '+msgs.length+' 条。');
+});
+document.getElementById('d5-break').addEventListener('click',function(){
+  interrupted=true;
+  render('⏸ 图在第 '+step+' 步中断了。快照已存，回来能接着跑。');
+});
+document.getElementById('d5-resume').addEventListener('click',function(){
+  if(!ckpt){ render('❌ 没有检查点，只能从头跑（点“重置”再跑一遍，记得先保存检查点）。'); return; }
+  step=ckpt.step; msgs=ckpt.msgs.slice(); interrupted=false;
+  render('✅ 从检查点恢复：第 '+step+' 步继续，之前的 '+msgs.length+' 条消息都在，不用重跑。');
+});
+document.getElementById('d5-reset').addEventListener('click',function(){
+  step=0; msgs=[]; ckpt=null; interrupted=false; render();
+});
+render();
+})();
 </script>
 </body>
 </html>

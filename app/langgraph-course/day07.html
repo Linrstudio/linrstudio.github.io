@@ -21,6 +21,18 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn:disabled{opacity:.4;cursor:default}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.wbtn.sel{background:#0b62d6;color:#fff}
+.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
+.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
+.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
+.wnode.done{border-color:#22a35a;background:#dcfce7}
+.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -40,12 +52,13 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="20" y="165" font-size="13" fill="#222">子图跑完把结果写回共享状态，Supervisor 汇总；某一路失败只重试那一路</text>
 </svg>
 <h3>1. 子图是什么：一张编译好的图，当成一个节点用</h3>
-<p>子图就是一张已经 <code>compile()</code> 好的小图，把它当成一个节点加进大图里：<code>graph.add_node("检索子图", retrieval_subgraph)</code>。小图内部有自己的节点和边，大图只关心两件事：进去时状态长什么样，出来时状态变成什么样。子图让大图保持可读：大图只有三四个节点，每个节点内部是一张小图。</p>
+<p>子图就是一张已经 <code>compile()</code> 好的小图，把它当成一个节点加进大图里。大图只关心：进去时状态长什么样，出来时状态变成什么样。</p>
 <h3>2. Supervisor 图：总指挥 + 三个子 Agent</h3>
-<p>多 Agent 协作最常见的形状是 Supervisor 图：一个 Supervisor 节点（通常是模型）负责分发和收口，收到任务先判断派给谁，最后把各路结果汇总；下面是几个子 Agent，每个都是一张子图：检索子图（RAG）、工具子图（ReAct）、校验子图（引用检查）。Supervisor 的分发就是 Day 3 的条件边，只不过这次分的不是节点，是子图。</p>
+<p>一个 Supervisor 节点负责分发和收口，下面是几个子 Agent，每个都是一张子图：检索子图（RAG）、工具子图（ReAct）、校验子图（引用检查）。</p>
 <h3>3. 子图之间怎么协作：共享状态 + 显式交接</h3>
-<p>三个要点：<strong>第一，状态要共享</strong>，子图的结果必须写回共享状态，否则 Supervisor 汇总时只能凭印象；<strong>第二，交接要显式</strong>，下一步派给谁、为什么是它，要写在状态里，出了问题才能复盘；<strong>第三，失败要隔离</strong>，某一路子图挂了，Supervisor 只重试那一路，不重跑整张图。状态共享、显式交接、失败隔离，这三条是多 Agent 图和单 Agent 图最大的区别。</p>
+<p><strong>状态要共享</strong>：子图结果必须写回共享状态；<strong>交接要显式</strong>：下一步派给谁、为什么，写在状态里；<strong>失败要隔离</strong>：某一路挂了，只重试那一路。</p>
 <h3>4. 7 天复盘：一张表收束</h3>
+<p>7 天的核心一句话收束如下表，点上面的分发板可以亲手走一遍这张图的协作。</p>
 <table>
 <tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
 <tr><td>Day 1</td><td>图是什么</td><td>节点、边、状态；StateGraph 搭图纸，compile 编译后 invoke</td></tr>
@@ -57,6 +70,16 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>Day 7</td><td>子图与多 Agent 图</td><td>编译好的图当节点用，Supervisor 分发收口，失败隔离只重试那一路</td></tr>
 </table>
 <div class="warn"><strong>容易踩的坑：</strong>子图和父图的状态类型不一样。子图进去时状态长什么样、出来时变成什么样，要事先对齐；对不齐，子图读不到它要的字段，或者写回去的字段父图不认。拼图之前先对状态表。</div>
+<div class="widget">
+<h4>动手玩：Supervisor 分发板 —— 点一个任务，看总指挥怎么派活</h4>
+<p>先点一个任务，Supervisor 会分发给对应的子 Agent；再点“下一步”，一步步看检索、校验、合成是怎么接力的。三种任务走的路线不一样，对比着看。</p>
+<p><button class="wbtn primary" id="d7-t1">任务 1：查退货政策</button>
+<button class="wbtn" id="d7-t2">任务 2：查深圳天气</button>
+<button class="wbtn" id="d7-t3">任务 3：整理本周工作</button></p>
+<div><span class="wnode" id="d7-n-sup">Supervisor</span> <span class="wnode" id="d7-n-plan">Planner</span> <span class="wnode" id="d7-n-know">Knowledge</span> <span class="wnode" id="d7-n-tool">Tool</span> <span class="wnode" id="d7-n-ver">Verifier</span> <span class="wnode" id="d7-n-comp">Composer</span></div>
+<p><button class="wbtn primary" id="d7-next">下一步 ▶</button> <button class="wbtn" id="d7-reset">重置</button></p>
+<div class="wlog" id="d7-log">先点一个任务，Supervisor 再分发。</div>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：子图当节点用（先看形状）</h3>
@@ -139,6 +162,64 @@ document.querySelectorAll('.q').forEach(function(box){
 document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
+</script>
+<script>
+(function(){
+var tasks={
+t1:{name:'查退货政策', stages:[
+  {node:'sup', text:'Supervisor：收到任务“查退货政策”，派给 Knowledge（检索）。'},
+  {node:'know', text:'Knowledge：检索到“7 天内可申请退货”[资料1]。'},
+  {node:'ver', text:'Verifier：校验通过——数字 7 天在资料 1 里。'},
+  {node:'comp', text:'Composer：最终回答：自签收起 7 天内可退货。'}
+]},
+t2:{name:'查深圳天气', stages:[
+  {node:'sup', text:'Supervisor：收到任务“查深圳天气”，派给 Tool（工具）。'},
+  {node:'tool', text:'Tool：调用 get_weather，返回 26°C，晴。'},
+  {node:'ver', text:'Verifier：校验通过——26°C 在工具结果里。'},
+  {node:'comp', text:'Composer：最终回答：深圳今天 26°C，晴。'}
+]},
+t3:{name:'整理本周工作', stages:[
+  {node:'sup', text:'Supervisor：收到任务“整理本周工作”，先派给 Planner。'},
+  {node:'plan', text:'Planner：拆成 3 步：收集、分类、写摘要。'},
+  {node:'tool', text:'Tool：执行收集，拿到 5 条记录。'},
+  {node:'ver', text:'Verifier：校验通过——5 条都有来源。'},
+  {node:'comp', text:'Composer：最终回答：本周 5 件事，已按类整理好。'}
+]}
+};
+var nodeIds={sup:'d7-n-sup', plan:'d7-n-plan', know:'d7-n-know', tool:'d7-n-tool', ver:'d7-n-ver', comp:'d7-n-comp'};
+var cur=null, idx=0;
+var log=document.getElementById('d7-log');
+var next=document.getElementById('d7-next');
+function paint(){
+  var doneNodes={};
+  if(cur){
+    for(var k=0;k<idx && k<cur.stages.length;k++){ doneNodes[cur.stages[k].node]=true; }
+  }
+  for(var key in nodeIds){
+    var el=document.getElementById(nodeIds[key]);
+    var isCur=cur && idx>0 && idx<=cur.stages.length && cur.stages[idx-1].node===key;
+    el.className='wnode'+(doneNodes[key]?(isCur?' on':' done'):'');
+  }
+}
+function render(){
+  if(!cur){ log.textContent='先点一个任务，Supervisor 再分发。'; paint(); next.disabled=true; return; }
+  var out='任务：'+cur.name+'（共 '+cur.stages.length+' 步，已走 '+idx+' 步）\n';
+  for(var k=0;k<idx;k++){ out+=(k+1)+'. '+cur.stages[k].text+'\n'; }
+  if(idx>=cur.stages.length){ out+='\n✅ 完成：各路结果已汇总，失败只重试那一路，不重跑整张图。'; }
+  log.textContent=out;
+  paint();
+  next.disabled=(idx>=cur.stages.length);
+}
+function pick(key){
+  cur=tasks[key]; idx=0; render();
+}
+document.getElementById('d7-t1').addEventListener('click',function(){ pick('t1'); });
+document.getElementById('d7-t2').addEventListener('click',function(){ pick('t2'); });
+document.getElementById('d7-t3').addEventListener('click',function(){ pick('t3'); });
+next.addEventListener('click',function(){ if(cur && idx<cur.stages.length){ idx++; render(); } });
+document.getElementById('d7-reset').addEventListener('click',function(){ cur=null; idx=0; render(); });
+render();
+})();
 </script>
 </body>
 </html>
