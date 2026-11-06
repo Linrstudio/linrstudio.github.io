@@ -31,6 +31,7 @@ summary{cursor:pointer;font-weight:bold}
 <h2>一、核心解释</h2>
 <h3>1. 提示词不是写作文，是写“工作说明书”</h3>
 <p>好用的提示词一般有四件套：<strong>角色</strong>（你是谁）、<strong>任务</strong>（做什么）、<strong>约束</strong>（不做什么、用什么格式）、<strong>例子</strong>（给一两个输入输出样例）。小白常犯的错是只写任务不写约束，模型就自由发挥。还有一条分层铁律：<strong>System 里放规则，Human 里放用户问题</strong>，别把规则塞进用户消息里，否则用户一句话就能把它覆盖掉——这就是最简单的提示词注入。</p>
+<svg viewBox="0 0 720 120" width="100%" role="img" aria-label="提示词拼装：变量与样例进入模板，拼出带角色的消息列表" style="max-width:720px;display:block;margin:12px 0"><defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0b62d6"/></marker></defs><rect x="20" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="115" y="60" text-anchor="middle" font-size="13" fill="#222">变量 / 样例</text><rect x="265" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="60" text-anchor="middle" font-size="13" fill="#222">ChatPrompt 模板</text><rect x="510" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="605" y="60" text-anchor="middle" font-size="13" fill="#222">消息列表</text><line x1="210" y1="55" x2="260" y2="55" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar2)"/><line x1="455" y1="55" x2="505" y2="55" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar2)"/><text x="360" y="108" text-anchor="middle" font-size="12" fill="#666">System 定规则，Human 给问题，样例拼成消息</text></svg>
 <h3>2. PromptTemplate vs ChatPromptTemplate，一句话分清</h3>
 <ul>
 <li><strong>PromptTemplate</strong>：给纯文本用的，拼出来是一段字符串。</li>

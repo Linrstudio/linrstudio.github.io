@@ -30,6 +30,16 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 路由是什么：问题来了，先分流，再干活</h3>
+<svg viewBox="0 0 720 220" width="100%" role="img" aria-label="工具路由分支图：用户问题分流到天气工具、RAG 或直接说答不了" style="max-width:720px;display:block;margin:12px auto" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="260" y="15" width="200" height="48" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="45" text-anchor="middle" font-size="13" fill="#222">用户问题</text>
+<rect x="10" y="130" width="200" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="110" y="151" text-anchor="middle" font-size="13" fill="#222">天气工具</text><text x="110" y="169" text-anchor="middle" font-size="13" fill="#222">调 Open-Meteo</text>
+<rect x="260" y="130" width="200" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="151" text-anchor="middle" font-size="13" fill="#222">走 RAG</text><text x="360" y="169" text-anchor="middle" font-size="13" fill="#222">检索 + 生成</text>
+<rect x="510" y="130" width="200" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="610" y="151" text-anchor="middle" font-size="13" fill="#222">说答不了</text><text x="610" y="169" text-anchor="middle" font-size="13" fill="#222">不要现编</text>
+<line x1="300" y1="65" x2="112" y2="128" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="360" y1="65" x2="360" y2="128" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="420" y1="65" x2="608" y2="128" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<text x="180" y="105" text-anchor="middle" font-size="12" fill="#666">天气词</text><text x="388" y="105" text-anchor="middle" font-size="12" fill="#666">文档问题</text><text x="545" y="105" text-anchor="middle" font-size="12" fill="#666">都不沾</text>
+<text x="360" y="212" text-anchor="middle" font-size="12" fill="#666">规则版先分流 · 规则不够再上模型版</text>
+</svg>
 <pre><code>用户问题
   → 问天气、温度、下雨、风？ → 走天气工具（调 Open-Meteo）
   → 问文档、规则、教程里有的事？ → 走 RAG（检索 + 生成）

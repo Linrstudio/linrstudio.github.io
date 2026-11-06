@@ -30,6 +30,36 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. Schema 白名单 + Pydantic 校验：参数进门先过两道关</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="工具安全纵深防御：八层按调用链路顺序排列" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="95" y="43" text-anchor="middle" font-size="13" fill="#222">白名单</text>
+<line x1="170" y1="38" x2="188" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="190" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="265" y="43" text-anchor="middle" font-size="13" fill="#222">Pydantic 校验</text>
+<line x1="340" y1="38" x2="358" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="360" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="435" y="43" text-anchor="middle" font-size="13" fill="#222">ACL 查权</text>
+<line x1="510" y1="38" x2="528" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="530" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="605" y="43" text-anchor="middle" font-size="13" fill="#222">幂等键</text>
+<line x1="605" y1="60" x2="605" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="530" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="605" y="131" text-anchor="middle" font-size="13" fill="#222">超时</text>
+<line x1="530" y1="126" x2="512" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="360" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="435" y="131" text-anchor="middle" font-size="13" fill="#222">沙箱</text>
+<line x1="360" y1="126" x2="342" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="190" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="265" y="131" text-anchor="middle" font-size="13" fill="#222">审计日志</text>
+<line x1="190" y1="126" x2="172" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="95" y="131" text-anchor="middle" font-size="13" fill="#222">人工确认</text>
+<path d="M95,148 L95,170 L360,170 L360,190" fill="none" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="260" y="192" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="219" text-anchor="middle" font-size="13" fill="#222">执行工具</text>
+<text x="480" y="219" font-size="12" fill="#222">缺一层 = 多一个口子</text>
+</svg>
 <p><strong>Schema 白名单</strong>是第一道关：只允许清单里的工具、清单里的参数名，多一个参数、少一个必填参数、工具名不在清单里，直接拒绝，不走到执行。白名单在第 2 周 Day 11 已经讲过前缀匹配的漏洞：生产版要三条一起上——不用 shell（argv 执行）、拒绝元字符、参数元组精确匹配。<strong>Pydantic 校验</strong>是第二道关：参数名对了，值还要合法——类型对不对、范围对不对、枚举值在不在清单里，比如“城市”必须是白名单里的城市名、“金额”必须是正数。两道关分工不同：白名单拦“不该调的”，Pydantic 拦“调得不对的”。</p>
 <h3>2. ACL：谁能调哪个工具，先查权限再执行</h3>
 <p>ACL（访问控制列表）是一张表：行是调用方（用户、角色、子 Agent），列是工具，格子里写能不能调。普通用户能调“查天气”，不能调“发消息给全员”；Knowledge 子 Agent 能调“检索”，不能调“写文件”。ACL 要在执行前查，查完还要记下来：谁、在什么时候、调了哪个工具、结果如何，审计日志就是这张表的流水。没有 ACL，模型一旦被提示词注入带偏，就能调到它本不该调的工具。</p>

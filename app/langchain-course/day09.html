@@ -31,6 +31,20 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 索引是什么：一份“代码地图”，不是代码本身</h3>
+<svg viewBox="0 0 720 190" width="100%" role="img" style="margin:12px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="110" y="16" width="160" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="190" y="44" text-anchor="middle" font-size="13" fill="#222">关键词索引</text>
+<rect x="450" y="16" width="160" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="530" y="44" text-anchor="middle" font-size="13" fill="#222">向量索引</text>
+<rect x="30" y="100" width="150" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="105" y="128" text-anchor="middle" font-size="13" fill="#222">混合检索</text>
+<rect x="285" y="100" width="150" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="128" text-anchor="middle" font-size="13" fill="#222">短名单 Top5</text>
+<rect x="540" y="100" width="150" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="615" y="128" text-anchor="middle" font-size="13" fill="#222">读指定范围</text>
+<line x1="190" y1="62" x2="108" y2="98" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="530" y1="62" x2="152" y2="98" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="180" y1="123" x2="283" y2="123" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="435" y1="123" x2="538" y2="123" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<text x="360" y="178" text-anchor="middle" font-size="12" fill="#222">精确在前，语义补位；先查地图，再按名单读文件</text>
+</svg>
+
 <p>索引不存全部代码原文，存的是能快速定位的线索：文件路径、函数名、类名、符号定义位置、调用关系、文件摘要。检索时先查地图、拿到短名单，再按名单读文件。没有索引，Agent 只能靠猜文件名、或把仓库全塞给模型——前者找不全，后者 Token 爆了还容易找偏。</p>
 <h3>2. 索引的粒度：文件、函数、块，三档怎么选</h3>
 <table>

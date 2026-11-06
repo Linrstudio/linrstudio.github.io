@@ -30,6 +30,21 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 第 2 周复盘：一张表收束</h3>
+<svg viewBox="0 0 720 250" width="100%" role="img" style="margin:12px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="210" y="10" width="300" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="32" text-anchor="middle" font-size="13" fill="#222">1 检索层：名单有正确文件？</text>
+<line x1="360" y1="44" x2="360" y2="58" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="210" y="60" width="300" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="82" text-anchor="middle" font-size="13" fill="#222">2 读取层：范围读对没？</text>
+<line x1="360" y1="94" x2="360" y2="108" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="210" y="110" width="300" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="132" text-anchor="middle" font-size="13" fill="#222">3 diff 层：diff 写对没？</text>
+<line x1="360" y1="144" x2="360" y2="158" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="210" y="160" width="300" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="182" text-anchor="middle" font-size="13" fill="#222">4 测试层：测试本身有问题？</text>
+<line x1="360" y1="194" x2="360" y2="208" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="210" y="210" width="300" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="232" text-anchor="middle" font-size="13" fill="#222">5 需求层：需求说清没？</text>
+<text x="545" y="122" font-size="13" fill="#222">定位到哪层</text>
+<text x="545" y="144" font-size="13" fill="#222">就改哪层</text>
+</svg>
+
 <table>
 <tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
 <tr><td>Day 8</td><td>代码 Agent 架构</td><td>检索 → plan → diff 确认 → 测试，循环还是第 1 周那个循环</td></tr>

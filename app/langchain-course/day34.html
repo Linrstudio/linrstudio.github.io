@@ -30,6 +30,36 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 三方分工：Host、Client、Server 各管什么</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MCP 三方结构：一个 Host 挂多个 Client，各连一个 Server" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="260" y="16" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="43" text-anchor="middle" font-size="13" fill="#222">Host 应用</text>
+<text x="20" y="76" font-size="12" fill="#222">一个 Host 挂多个 Client</text>
+<line x1="360" y1="60" x2="360" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="600" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="110" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="82" x2="600" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="110" y="131" text-anchor="middle" font-size="13" fill="#222">Client A</text>
+<rect x="270" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">Client B</text>
+<rect x="500" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="131" text-anchor="middle" font-size="13" fill="#222">Client C</text>
+<line x1="110" y1="148" x2="110" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="148" x2="360" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="148" x2="600" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="375" y="172" font-size="12" fill="#222">list_tools 先发现</text>
+<rect x="20" y="192" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="110" y="212" text-anchor="middle" font-size="13" fill="#222">Server 1</text>
+<text x="110" y="229" text-anchor="middle" font-size="11" fill="#222">Tools · 资源 · 模板</text>
+<rect x="270" y="192" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="212" text-anchor="middle" font-size="13" fill="#222">Server 2</text>
+<text x="360" y="229" text-anchor="middle" font-size="11" fill="#222">Tools · 资源 · 模板</text>
+<rect x="500" y="192" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="212" text-anchor="middle" font-size="13" fill="#222">Server 3</text>
+<text x="600" y="229" text-anchor="middle" font-size="11" fill="#222">Tools · 资源 · 模板</text>
+</svg>
 <p>MCP 里有三方：<strong>Host</strong> 是用户直接用的应用（比如聊天客户端、IDE），它管界面、管模型调用、管把多个 Client 的结果汇总；<strong>Client</strong> 是 Host 里的一对一连接器，一个 Client 连一个 Server，负责按协议发请求、收结果；<strong>Server</strong> 是工具的提供方，它把自己的能力暴露出来，等 Client 来调。一个 Host 可以挂多个 Client，一个 Client 只连一个 Server——分工一清，出了问题就知道是界面、连接还是工具本身的问题。</p>
 <h3>2. Server 暴露三种能力：Tools、Resources、Prompts</h3>
 <table>

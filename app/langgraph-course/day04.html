@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4：工具节点与 ReAct Agent：ToolNode、模型调工具、循环直到无工具调用 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 4 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 4：工具节点与 ReAct Agent：ToolNode、模型调工具、循环直到无工具调用</h1>
+<p>前三天把图的零件讲完了，今天把它们拼成一个真正能干活的 Agent：模型节点调模型、工具节点跑工具、条件边在中间分流，循环直到模型不再调工具。这就是 ReAct，用图画出来只有两个节点、两条边。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="ReAct 循环：agent 到 tools 再回到 agent，直到无工具调用去 END">
+<rect x="20" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="89" text-anchor="middle" font-size="13" fill="#222">agent（调模型）</text>
+<line x1="160" y1="84" x2="220" y2="40" stroke="#0b62d6" stroke-width="2"/><polygon points="220,40 208,44 214,52" fill="#0b62d6"/>
+<rect x="220" y="16" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="295" y="45" text-anchor="middle" font-size="13" fill="#222">tools（ToolNode）</text>
+<line x1="160" y1="84" x2="220" y2="128" stroke="#0b62d6" stroke-width="2"/><polygon points="220,128 208,124 214,132" fill="#0b62d6"/>
+<rect x="220" y="104" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="295" y="133" text-anchor="middle" font-size="13" fill="#222">END（无工具调用）</text>
+<path d="M 295 16 C 295 2, 90 2, 90 60" fill="none" stroke="#0b62d6" stroke-width="2"/><polygon points="90,60 84,48 96,48" fill="#0b62d6"/>
+<text x="400" y="45" font-size="13" fill="#222">tools 跑完回边到 agent</text>
+<text x="400" y="133" font-size="13" fill="#222">循环直到无工具调用</text>
+</svg>
+<h3>1. ReAct 是什么：推理和行动交替进行</h3>
+<p>ReAct 的全称是 Reasoning + Acting：模型先想（推理：要不要调工具、调哪个、传什么参数），再做（行动：执行工具），看到工具结果再想、再做，直到它觉得不用调工具了、直接回答。手写循环版你已经在 LangChain 课 Day 5 写过，图版是同一套逻辑，只是循环变成了边。</p>
+<h3>2. ToolNode 是什么：执行工具调用的现成节点</h3>
+<p><code>ToolNode(tools)</code> 是 LangGraph 自带的节点，干三件事：从最后一条 AI 消息里取出工具调用（tool_calls），按名字找到对应的工具函数，执行它，把结果包成 ToolMessage 追加回状态。你不用自己写“解析调用、查表、执行、包结果”的样板代码，但要知道它在背后做的就是这些事——出了问题（比如工具名对不上）要知道去哪查。</p>
+<h3>3. 模型怎么调工具：bind_tools</h3>
+<p>模型节点里，模型要先 <code>llm.bind_tools(tools)</code> 绑定工具列表，调模型时它才会在需要的时候返回 tool_calls，而不是直接给答案。没绑定的模型永远不会调工具，图会第一轮就走到 END。绑定的是工具的 schema（名字、参数、描述），模型按描述决定调哪个、传什么参数。</p>
+<h3>4. 循环什么时候停：模型说了算，步数上限兜底</h3>
+<p>循环的每一轮都是“agent → tools → agent”，停的条件是模型某次返回的消息里没有 tool_calls，tools_condition 返回 END。正常情况下两三轮就停；如果模型一直调工具，Day 3 的步数上限（recursion_limit，默认 25 步）会把它拦住。调不好的循环先看提示词：有没有告诉模型“资料里没有就说没有，不要反复试同一个工具”？</p>
+<div class="warn"><strong>容易踩的坑：</strong>用已经弃用的旧版 ReAct 工厂函数。新版 LangGraph 里它已弃用，推荐做法就是今天这张手写图：StateGraph + ToolNode + tools_condition。手写图多几行代码，但每一步都看得见、改得动，面试也能讲清。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：ReAct Agent 完整图（先看形状，模型换成你的）</h3>
+<pre><code>from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from typing import Annotated, TypedDict
+
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+@tool
+def get_weather(city: str) -> str:
+    """查指定城市的天气。参数 city 是城市名，比如“深圳”。"""
+    return f"{city}当前 26.5°C，多云。（示例数据）"
+
+tools = [get_weather]
+llm = ChatOpenAI(model="...")  # 换成你的模型
+llm_with_tools = llm.bind_tools(tools)  # 绑定工具，模型才能调工具
+
+def agent_node(state: AgentState):
+    # 模型节点：调模型，可能返回工具调用，也可能直接回答
+    return {"messages": [llm_with_tools.invoke(state["messages"])]}
+
+graph = StateGraph(AgentState)
+graph.add_node("agent", agent_node)
+graph.add_node("tools", ToolNode(tools))  # 现成节点：执行工具调用，包成 ToolMessage
+graph.add_edge(START, "agent")
+graph.add_conditional_edges("agent", tools_condition)  # 有调用去 tools，没有去 END
+graph.add_edge("tools", "agent")  # 回边：工具跑完，回到 agent 再调模型
+app = graph.compile()
+
+result = app.invoke({"messages": [HumanMessage("深圳今天天气怎么样？")]})
+print(result["messages"][-1].content)</code></pre>
+<h3>示例 2：一轮跑通的轨迹（发生了什么）</h3>
+<pre><code># 第 1 轮 agent：模型看到“深圳今天天气怎么样”，返回 tool_calls=[get_weather(city="深圳")]
+# 条件边：有工具调用 → tools 节点
+# tools 节点：执行 get_weather("深圳")，追加 ToolMessage("深圳当前 26.5°C，多云")
+# 回边 → agent：第 2 轮模型看到工具结果，不再调工具，直接回答“深圳今天 26.5°C，多云”
+# 条件边：没有工具调用 → END，图结束
+# 状态里的 messages 全程是：Human → AI(工具调用) → Tool → AI(最终回答)</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再加一个计算器工具 <code>calculator</code>，问模型“深圳今天天气怎么样，26.5 加 3 是多少”，看它调几次工具、走几轮。<br>
+2. 把 <code>bind_tools</code> 忘掉再跑一次：图第几轮结束？为什么？<br>
+3. 问一个工具回答不了的问题（比如“明天天气怎么样”，工具只会查当前），看模型是认输、还是反复调同一个工具——反复调的话，提示词里加一句“查不到就说查不到”，再跑一次。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. ReAct 是什么？</strong></p><button data-i="0">推理和行动交替：模型先想、再调工具、看结果再想，直到不用调工具直接回答</button><button data-i="1">模型一次性回答，不调工具</button><button data-i="2">工具先跑，模型后看</button><div class="ans">解析：选 A。图版和手写循环版是同一套逻辑，只是循环变成了边。</div></div>
+<div class="q" data-answer="1"><p><strong>2. ToolNode 干哪三件事？</strong></p><button data-i="0">写提示词、调模型、生成回答</button><button data-i="1">从 AI 消息里取工具调用、按名字找到工具函数执行、结果包成 ToolMessage 追加回状态</button><button data-i="2">只负责记日志</button><div class="ans">解析：选 B。不用自己写解析、查表、执行、打包的样板代码，但要知道它在背后做这些事。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 模型怎么才能调工具？</strong></p><button data-i="0">直接问它</button><button data-i="1">把工具写进状态里</button><button data-i="2">llm.bind_tools(tools) 绑定工具列表，模型才会在需要时返回 tool_calls</button><div class="ans">解析：选 C。没绑定的模型永远不会调工具，图第一轮就走到 END。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 循环什么时候停？</strong></p><button data-i="0">模型某次返回的消息里没有 tool_calls，tools_condition 返回 END</button><button data-i="1">工具跑完一次就停</button><button data-i="2">跑满 25 步才停</button><div class="ans">解析：选 A。步数上限只是保险，正常停靠的是模型不再调工具。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 为什么不用旧版 ReAct 工厂函数？</strong></p><button data-i="0">因为它跑得慢</button><button data-i="1">它已弃用；手写图（StateGraph + ToolNode + tools_condition）每一步都看得见、改得动</button><button data-i="2">因为它不支持工具</button><div class="ans">解析：选 B。新版推荐做法就是今天这张手写图。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 工具结果以什么形式回到状态里？</strong></p><button data-i="0">直接覆盖 messages</button><button data-i="1">写进一个单独的字段</button><button data-i="2">包成 ToolMessage，追加到 messages 末尾</button><div class="ans">解析：选 C。messages 全程是 Human → AI（工具调用）→ Tool → AI（最终回答）。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：用 LangGraph 搭一个 ReAct Agent，图长什么样？</summary><p>两个节点、两条边：agent 节点调模型（bind_tools 绑定工具），tools 节点是 ToolNode 执行工具调用；START → agent，agent 上挂 tools_condition 条件边（有调用去 tools，没有去 END），tools 回边到 agent。循环直到模型不再调工具。</p></details>
+<details><summary>Q2：ToolNode 在背后做了什么？</summary><p>三件事：从最后一条 AI 消息里取 tool_calls，按名字找到工具函数执行，把结果包成 ToolMessage 追加回状态。不用自己写解析、查表、执行、打包的样板代码。</p></details>
+<details><summary>Q3：模型一直调工具、循环停不下来，怎么处理？</summary><p>先看提示词：有没有告诉模型“查不到就说查不到，不要反复试同一个工具”。步数上限 recursion_limit（默认 25 步）是保险丝，会拦住它，但修提示词和工具设计才是正解。</p></details>
+<details><summary>Q4：旧版 ReAct 工厂函数还能不能用？</summary><p>已弃用。新版推荐手写图：StateGraph + ToolNode + tools_condition，多几行代码，但每一步都看得见、改得动，面试也能讲清。</p></details>
+<details><summary>Q5：bind_tools 不绑会怎样？</summary><p>模型永远不会返回 tool_calls，图第一轮就走到 END。绑定的是工具的 schema（名字、参数、描述），模型按描述决定调哪个、传什么参数。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>ReAct 上线前，先问三个问题：工具列表有没有白名单（Day 11 的教训）？工具超时了怎么办（Day 35 的超时和沙箱）？循环超过多少轮要告警？三问有一个答不上来，ReAct 就别上。</p>
+<p><strong>简历讲法：</strong>别写“用 LangGraph 做过 Agent”，写“StateGraph 手写 ReAct：agent 节点 bind_tools 调模型，ToolNode 执行工具，tools_condition 分流，循环直到无工具调用，recursion_limit 25 步兜底”。前者是名词，后者是可追问的图。</p>
+<p><strong>明日预告：</strong>Day 5 讲 Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续。</p>
+</div>
+<div class="nav"><span><a href="day03.html">← Day 3</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day05.html">Day 5 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

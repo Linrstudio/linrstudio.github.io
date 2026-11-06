@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph 7 天实战课：从一张图到多 Agent 协作</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:12px 0}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.done{color:#0a7a42;font-weight:bold} .soon{color:#888}
+ol{padding-left:20px} li{margin:8px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<h1>LangGraph 7 天实战课</h1>
+<p><span class="tag">从一张图到多 Agent 协作</span> <span class="tag">每天一课</span></p>
+<p>LangChain 课里你已经手写过 Tool Calling 循环，LangGraph 就是把这个循环画成一张图：节点是步骤，边是流向，状态是共享的记事本。这门课 7 天讲完一张图的全部本事，最后落到一个能放进简历的多 Agent 项目上。目标岗是 <strong>AI 应用落地 / Agent 前端 / Agent 工具链</strong>，不对标 LLM 基建岗。</p>
+<div class="note">
+<p><strong>学习路线</strong><br>
+Day 1 图是什么 → Day 2 状态与 Reducer → Day 3 条件边与路由 → Day 4 工具节点与 ReAct → Day 5 Checkpoint 与断点续跑 → Day 6 人工介入与中断 → Day 7 子图、多 Agent 图与复盘</p>
+<p><strong>今天进度：Day 7 已上线（7 天完结）</strong>。先从 Day 1 开始，不用跳着看。</p>
+</div>
+
+<h2>7 天课表</h2>
+<ol>
+<li><a href="day01.html"><strong>Day 1：图是什么：StateGraph、节点、边、END</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day02.html"><strong>Day 2：状态与 Reducer：AgentState、add_messages、为什么状态要可合并</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day03.html"><strong>Day 3：条件边与路由：tools_condition、按条件分流、循环与终止</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day04.html"><strong>Day 4：工具节点与 ReAct Agent：ToolNode、模型调工具、循环直到无工具调用</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day05.html"><strong>Day 5：Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day06.html"><strong>Day 6：人工介入与中断：interrupt、human-in-the-loop、审核后继续</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day07.html"><strong>Day 7：子图、多 Agent 图与复盘：子图、Supervisor 图、7 天复盘与面试讲法</strong></a> <span class="done">● 已上线</span></li>
+</ol>
+
+<h2>每课的固定结构</h2>
+<div class="card">
+<p>1. <strong>核心解释</strong>：先讲概念和一张心智地图，不堆 API。<br>
+2. <strong>代码示例</strong>：能直接跑的最小代码，关键行有注释。<br>
+3. <strong>小测验</strong>：当页可点、可判分，答完再看解析。<br>
+4. <strong>面试题与答案</strong>：按“面试官想听的点”写，不是背诵版。<br>
+5. <strong>加分项</strong>：生产视角、上线视角、简历讲法。</p>
+</div>
+<p class="note">配套代码在学习计划的脚手架里：第 1 周对应 <code>agent-core</code>（手写循环 + LangGraph 版）。课程网页只讲思路和用法，动手跑代码用脚手架。</p>
+<p><a href="day01.html">→ 开始 Day 1 →</a></p>
+</body>
+</html>

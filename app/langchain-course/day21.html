@@ -30,6 +30,15 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 第 3 周复盘：一张表收束</h3>
+<svg viewBox="0 0 720 250" width="100%" role="img" aria-label="混合问答流程图：混合问题拆成子问题，分别走天气工具和 RAG，再合起来分段标出处" style="max-width:720px;display:block;margin:12px auto" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="260" y="8" width="200" height="42" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="35" text-anchor="middle" font-size="13" fill="#222">混合问题</text>
+<rect x="260" y="68" width="200" height="42" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="95" text-anchor="middle" font-size="13" fill="#222">拆成子问题</text>
+<rect x="40" y="128" width="260" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="170" y="147" text-anchor="middle" font-size="13" fill="#222">天气工具</text><text x="170" y="165" text-anchor="middle" font-size="13" fill="#222">出处：Open-Meteo</text>
+<rect x="420" y="128" width="260" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="550" y="147" text-anchor="middle" font-size="13" fill="#222">走 RAG</text><text x="550" y="165" text-anchor="middle" font-size="13" fill="#222">出处：[资料N]</text>
+<rect x="210" y="192" width="300" height="42" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="219" text-anchor="middle" font-size="13" fill="#222">合起来 · 分段标出处</text>
+<line x1="360" y1="52" x2="360" y2="66" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="310" y1="112" x2="172" y2="126" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="410" y1="112" x2="548" y2="126" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="172" y1="176" x2="308" y2="190" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="548" y1="176" x2="412" y2="190" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+</svg>
 <table>
 <tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
 <tr><td>Day 15</td><td>RAG 全链路</td><td>生成之前先检索，知识问题用 RAG、行为问题用微调</td></tr>

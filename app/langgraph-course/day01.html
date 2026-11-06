@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 1：图是什么：StateGraph、节点、边、END | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 1 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 1：图是什么：StateGraph、节点、边、END</h1>
+<p>LangChain 课里你手写过 Tool Calling 循环：while 循环里调模型、看有没有工具调用、有就执行、再把结果喂回去。LangGraph 就是把这个循环画成一张图：每一步是一个节点，箭头是边，循环不再是你手写的 while，而是图里的一条回边。今天先把最小的一张图跑起来。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 120" width="100%" role="img" aria-label="最小图：START 到 greet 再到 END">
+<rect x="20" y="35" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="64" text-anchor="middle" font-size="13" fill="#222">START</text>
+<line x1="140" y1="59" x2="200" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="200,59 188,53 188,65" fill="#0b62d6"/>
+<rect x="200" y="35" width="160" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="280" y="64" text-anchor="middle" font-size="13" fill="#222">greet 节点</text>
+<line x1="360" y1="59" x2="420" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="420,59 408,53 408,65" fill="#0b62d6"/>
+<rect x="420" y="35" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="480" y="64" text-anchor="middle" font-size="13" fill="#222">END</text>
+<text x="560" y="64" font-size="13" fill="#222">状态沿边流动</text>
+</svg>
+<h3>1. 图的三个零件：节点、边、状态</h3>
+<p>一张图只有三个零件：<strong>节点（Node）</strong>是做事的步骤，一个 Python 函数，输入是当前状态、输出是对状态的更新；<strong>边（Edge）</strong>是箭头，告诉图“这一步做完，下一步去哪”；<strong>状态（State）</strong>是全图共享的记事本，每一步都能读、每一步的返回值都会写回去。手写循环里散落在变量里的东西，在图里全部收进状态。</p>
+<h3>2. StateGraph 是什么：先画图，再编译</h3>
+<p>LangGraph 里建图分两步：先用 <code>StateGraph(状态类型)</code> 搭一张“图纸”，往上加节点、加边；再调 <code>.compile()</code> 把图纸编译成能跑的图。编译这一步会检查：有没有入口、有没有出口、有没有死循环的边。没编译的图跑不起来，编译过的图才能 <code>invoke</code>。</p>
+<h3>3. START 和 END：图的入口和出口</h3>
+<p>每张图都有一个隐含的入口 <code>START</code> 和一个出口 <code>END</code>。入口边用 <code>add_edge(START, "节点名")</code> 指明第一步去哪；出口边用 <code>add_edge("节点名", END)</code> 指明哪一步做完就结束。走到 END，整张图就停了，返回最后的状态。没有 END 的图会一直跑，直到步数上限把它拦住——步数上限是图的保险丝，Day 3 会讲。</p>
+<h3>4. 图比手写循环好在哪：三句话</h3>
+<p><strong>第一，流程看得见</strong>：循环、分支、重试在手写代码里是 if 和 while，在图里是边，一眼就能看出 Agent 会走哪条路。<strong>第二，状态有规矩</strong>：状态是什么形状、每一步能改什么，都写在状态类型里，不是随手往字典里塞。<strong>第三，能断点续跑</strong>：图跑到一半可以停下来、存下来，下次接着跑，手写循环要做到这一点得自己写一堆保存逻辑。Day 5 和 Day 6 讲的就是这两件事。</p>
+<div class="warn"><strong>容易踩的坑：</strong>节点函数返回了整个新状态，而不是“更新”。节点应该只返回它改了的那一部分，比如 <code>{"messages": [新消息]}</code>，图会按 Reducer 把它合并进旧状态；返回一整个新状态会把别的字段覆盖掉。Day 2 讲 Reducer 就是讲这个。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：最小图跑起来（先看形状，不接真实模型）</h3>
+<pre><code>from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+
+# 状态：全图共享的记事本，这里只有一个字段
+class State(TypedDict):
+    name: str
+    greeting: str
+
+def greet(state: State):
+    # 节点：输入当前状态，返回对状态的更新（只返回改了的部分）
+    return {"greeting": f"你好，{state['name']}！"}
+
+# 搭图：START → greet → END
+graph = StateGraph(State)
+graph.add_node("greet", greet)
+graph.add_edge(START, "greet")
+graph.add_edge("greet", END)
+app = graph.compile()  # 编译后才能跑
+
+print(app.invoke({"name": "小明", "greeting": ""}))
+# {'name': '小明', 'greeting': '你好，小明！'}</code></pre>
+<h3>示例 2：两个节点串起来（状态沿边流动）</h3>
+<pre><code>def add_title(state: State):
+    return {"greeting": "尊敬的" + state["greeting"]}
+
+graph2 = StateGraph(State)
+graph2.add_node("greet", greet)
+graph2.add_node("add_title", add_title)
+graph2.add_edge(START, "greet")
+graph2.add_edge("greet", "add_title")  # 上一步的输出，是下一步的输入
+graph2.add_edge("add_title", END)
+app2 = graph2.compile()
+print(app2.invoke({"name": "小明", "greeting": ""}))
+# {'name': '小明', 'greeting': '尊敬的你好，小明！'}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再加一个节点 <code>farewell</code>：在 greeting 后面拼一句“再见！”，画出 START → greet → farewell → END。<br>
+2. 故意把 <code>add_edge("greet", END)</code> 忘掉，看看编译或运行报什么错——没有出口的图会怎样？<br>
+3. 试着让 greet 节点返回整个新状态 <code>{"name": "小明", "greeting": "..."}</code>，再试只返回 <code>{"greeting": "..."}</code>，对比结果有什么不同。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 图的三个零件是？</strong></p><button data-i="0">模型、工具、提示词</button><button data-i="1">节点、边、状态</button><button data-i="2">输入、输出、日志</button><div class="ans">解析：选 B。节点是步骤，边是流向，状态是全图共享的记事本。</div></div>
+<div class="q" data-answer="0"><p><strong>2. StateGraph 建图分哪两步？</strong></p><button data-i="0">先搭图纸（加节点、加边），再 compile 编译成能跑的图</button><button data-i="1">先编译，再加节点</button><button data-i="2">直接 invoke，不用编译</button><div class="ans">解析：选 A。没编译的图跑不起来，编译会检查入口、出口和死循环的边。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 节点函数应该返回什么？</strong></p><button data-i="0">整个新状态</button><button data-i="1">什么都不返回</button><button data-i="2">只返回它改了的那一部分更新，图按 Reducer 合并进旧状态</button><div class="ans">解析：选 C。返回整个新状态会把别的字段覆盖掉。</div></div>
+<div class="q" data-answer="1"><p><strong>4. START 和 END 是干嘛的？</strong></p><button data-i="0">两个普通节点</button><button data-i="1">图的入口和出口：START 指明第一步，走到 END 整张图就停了</button><button data-i="2">只是装饰，没有实际作用</button><div class="ans">解析：选 B。没有 END 的图会一直跑，直到步数上限拦住它。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 图比手写循环好在哪？</strong></p><button data-i="0">流程看得见、状态有规矩、能断点续跑</button><button data-i="1">跑得更快</button><button data-i="2">不用写代码了</button><div class="ans">解析：选 A。这三点是图的核心优势，Day 5 和 Day 6 会展开讲后两点。</div></div>
+<div class="q" data-answer="2"><p><strong>6. invoke 的时候传进去的是什么？</strong></p><button data-i="0">模型对象</button><button data-i="1">工具列表</button><button data-i="2">初始状态，比如 {"name": "小明", "greeting": ""}</button><div class="ans">解析：选 C。invoke 接收初始状态，返回跑完的最后状态。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：LangGraph 的图由哪几部分组成？</summary><p>节点、边、状态。节点是步骤（一个函数），边是流向（做完去哪），状态是全图共享的记事本。建图分两步：StateGraph 搭图纸，compile 编译成能跑的图。</p></details>
+<details><summary>Q2：为什么用图，不用手写 while 循环？</summary><p>流程看得见：循环、分支、重试在图里是边，一眼能看出 Agent 会走哪条路；状态有规矩：形状写在状态类型里；能断点续跑：跑一半可以停下来存下来，下次接着跑。</p></details>
+<details><summary>Q3：节点返回整个新状态会怎样？</summary><p>会把别的字段覆盖掉。节点应该只返回它改了的那一部分更新，图按 Reducer 合并进旧状态。Reducer 的细节是 Day 2 的内容。</p></details>
+<details><summary>Q4：START 和 END 必须有吗？</summary><p>每张图都有隐含的 START 和 END。入口边指明第一步，出口边指明哪一步做完结束。没有 END 的图会一直跑，直到步数上限把它拦住。</p></details>
+<details><summary>Q5：compile 做了什么？</summary><p>把图纸编译成能跑的图，并检查入口、出口和死循环的边。没编译的图跑不起来，编译过的图才能 invoke。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>画图之前先问：这张图有几个节点、几条边、状态里有哪几个字段？画不出来就别写代码——流程想不清楚，代码只会更乱。</p>
+<p><strong>简历讲法：</strong>别写“会用 LangGraph”，写“用 StateGraph 把手写 Tool Calling 循环改成图：节点是步骤、边是流向、状态是共享记事本，编译后 invoke 跑通”。前者是名词，后者是可追问的动手过程。</p>
+<p><strong>明日预告：</strong>Day 2 讲状态与 Reducer：AgentState 怎么定义，add_messages 是干嘛的，为什么状态要可合并。</p>
+</div>
+<div class="nav"><span><a href="index.html">← 课程首页</a></span><span><a href="day02.html">Day 2 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

@@ -30,6 +30,15 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 预算要分账，不能一锅算</h3>
+<svg viewBox="0 0 720 150" width="100%" role="img" style="margin:12px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<text x="360" y="16" text-anchor="middle" font-size="13" fill="#222">总预算 4000 Token</text>
+<rect x="20" y="30" width="85" height="56" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="62" y="64" text-anchor="middle" font-size="13" fill="#222">System 500</text>
+<rect x="105" y="30" width="85" height="56" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="147" y="64" text-anchor="middle" font-size="13" fill="#222">输出预留 500</text>
+<rect x="190" y="30" width="510" height="56" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="445" y="64" text-anchor="middle" font-size="13" fill="#222">检索文件 3000：按相关度装，超了只留 TopN</text>
+<text x="360" y="122" text-anchor="middle" font-size="12" fill="#222">先扣 System 与输出预留，剩下的再装文件；历史先摘要再截断</text>
+</svg>
+
 <p>一次调用的总 Token 里，System、历史、检索结果、工具结果、输出都要算。正确做法是先分账、再装填：给每一类定一个上限，装填时按优先级来，超了就按优先级截断，而不是等爆了再整体砍。Day 6 的记忆预算是同一个道理，今天把它扩到整个代码任务上。</p>
 <table>
 <tr><th>类别</th><th>优先级</th><th>超了怎么办</th></tr>

@@ -30,6 +30,41 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 第 5 周复盘：一张表收束</h3>
+<svg viewBox="0 0 720 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="第 5 周完整链路：七个节点依次流转，再用五个指标评测" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="0" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="45" y="43" text-anchor="middle" font-size="13" fill="#222">主管</text>
+<line x1="90" y1="38" x2="103" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="105" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="150" y="43" text-anchor="middle" font-size="13" fill="#222">规划 DAG</text>
+<line x1="195" y1="38" x2="208" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="210" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="255" y="43" text-anchor="middle" font-size="13" fill="#222">知识检索</text>
+<line x1="300" y1="38" x2="313" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="315" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="43" text-anchor="middle" font-size="13" fill="#222">MCP 工具</text>
+<line x1="405" y1="38" x2="418" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="420" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="465" y="43" text-anchor="middle" font-size="13" fill="#222">纵深防御</text>
+<line x1="510" y1="38" x2="523" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="525" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="570" y="43" text-anchor="middle" font-size="13" fill="#222">校验</text>
+<line x1="615" y1="38" x2="628" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="630" y="16" width="90" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="675" y="43" text-anchor="middle" font-size="13" fill="#222">合成</text>
+<path d="M675,60 L675,82 L360,82 L360,102" fill="none" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="380" y="78" font-size="12" fill="#222">评测：五个指标一起报</text>
+<rect x="4" y="104" width="128" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="68" y="131" text-anchor="middle" font-size="13" fill="#222">任务成功率</text>
+<rect x="150" y="104" width="128" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="214" y="131" text-anchor="middle" font-size="13" fill="#222">每路成功率</text>
+<rect x="296" y="104" width="128" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">成本</text>
+<rect x="442" y="104" width="128" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="506" y="131" text-anchor="middle" font-size="13" fill="#222">延迟</text>
+<rect x="588" y="104" width="128" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="652" y="131" text-anchor="middle" font-size="13" fill="#222">失败分布</text>
+</svg>
 <table>
 <tr><th>天</th><th>核心</th><th>面试时能讲的一句话</th></tr>
 <tr><td>Day 31</td><td>Multi-Agent 总览</td><td>Supervisor 分发、判断、汇总，共享状态、失败隔离只重试失败路</td></tr>

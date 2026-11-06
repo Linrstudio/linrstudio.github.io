@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 3：条件边与路由：tools_condition、按条件分流、循环与终止 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 3 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 3：条件边与路由：tools_condition、按条件分流、循环与终止</h1>
+<p>Day 1 的图是直的：START → greet → END，一条路走到黑。真实的 Agent 要会拐弯：模型想调工具就去工具节点，不想调就结束；检索不到就换个问法再试，试三次还不行就认输。拐弯靠的就是条件边。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="条件边：agent 节点按条件去 tools 或 END">
+<rect x="20" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="89" text-anchor="middle" font-size="13" fill="#222">agent 节点</text>
+<line x1="160" y1="84" x2="220" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="220,84 208,78 208,90" fill="#0b62d6"/>
+<rect x="220" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="290" y="89" text-anchor="middle" font-size="13" fill="#222">条件边（路由）</text>
+<line x1="360" y1="84" x2="420" y2="40" stroke="#0b62d6" stroke-width="2"/><polygon points="420,40 408,44 414,52" fill="#0b62d6"/>
+<rect x="420" y="16" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="490" y="45" text-anchor="middle" font-size="13" fill="#222">tools 节点</text>
+<line x1="360" y1="84" x2="420" y2="128" stroke="#0b62d6" stroke-width="2"/><polygon points="420,128 408,124 414,132" fill="#0b62d6"/>
+<rect x="420" y="104" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="490" y="133" text-anchor="middle" font-size="13" fill="#222">END（无工具调用）</text>
+<text x="20" y="165" font-size="13" fill="#222">tools 跑完回边到 agent，形成循环；无工具调用时走 END，循环终止</text>
+</svg>
+<h3>1. 条件边是什么：边上挂一个路由函数</h3>
+<p>普通边是死箭头：做完 A 一定去 B。条件边是活箭头：<code>add_conditional_edges("agent", 路由函数, {"tools": "tools", END: END})</code>，路由函数读当前状态、返回一个字符串，图按这个字符串决定下一步去哪个节点。路由函数只做一件事：看状态，报名字，不做业务逻辑。</p>
+<h3>2. tools_condition：最常用的现成路由</h3>
+<p>LangGraph 自带一个路由函数 <code>tools_condition</code>，专门判断“模型最后一条消息有没有工具调用”：有，就返回 <code>"tools"</code>，去工具节点；没有，就返回 <code>END</code>，图结束。ReAct 循环的核心就是它，Day 4 会完整跑一遍。记住：tools_condition 看的是最后一条 AI 消息里的 tool_calls，不是看状态里有没有别的字段。</p>
+<h3>3. 循环是怎么形成的：回边</h3>
+<p>循环不是特殊语法，就是一条指回去的边：工具节点跑完，加一条普通边 <code>add_edge("tools", "agent")</code> 回到 agent 节点，agent 再调模型、再判断要不要调工具。循环的每一次都是一次“模型 → 工具 → 模型”的回合，状态里的 messages 在不断变长。</p>
+<h3>4. 循环怎么终止：两个保险</h3>
+<p>循环必须能停，有两个保险：<strong>第一，业务终止条件</strong>——模型不再调工具，tools_condition 返回 END，循环正常结束；<strong>第二，步数上限</strong>——图编译时默认有递归上限（recursion_limit，默认 25 步），超过就抛错停下，防止模型死循环把账单跑爆。步数上限可以在 invoke 时用 <code>{"recursion_limit": 50}</code> 调，但调大之前先问：模型为什么一直调工具？是不是提示词或工具设计有问题？上限是保险丝，不是解决方案。</p>
+<div class="warn"><strong>容易踩的坑：</strong>路由函数返回了映射表里没有的名字。比如映射表只有 {"tools": "tools", END: END}，路由函数却返回了 "retry"，图会直接报错。路由函数的返回值必须和映射表的键一一对应，写完先对一遍表。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：自己写路由函数（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+
+def route_by_steps(state):
+    # 路由函数：只看状态，报名字，不做业务逻辑
+    if state["steps"] >= 3:
+        return END          # 步数到了，去 END
+    return "work"           # 否则去 work 节点
+
+graph = StateGraph(State)
+graph.add_node("work", work_node)
+graph.add_conditional_edges(START, route_by_steps, {"work": "work", END: END})
+graph.add_edge("work", END)
+app = graph.compile()</code></pre>
+<h3>示例 2：tools_condition 的用法（ReAct 的核心，Day 4 展开）</h3>
+<pre><code>from langgraph.prebuilt import tools_condition, ToolNode
+
+graph = StateGraph(AgentState)
+graph.add_node("agent", agent_node)        # 模型节点：调模型，可能返回工具调用
+graph.add_node("tools", ToolNode(tools))   # 工具节点：执行工具调用
+graph.add_edge(START, "agent")
+# 条件边：最后一条消息有工具调用 → tools；没有 → END
+graph.add_conditional_edges("agent", tools_condition)
+graph.add_edge("tools", "agent")  # 回边：工具跑完，回到 agent 再调模型
+app = graph.compile()</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 写一个路由函数：steps 小于 3 去 work 节点，大于等于 3 去 END，再把映射表里的键和返回值对一遍。<br>
+2. 故意让路由函数返回映射表里没有的名字，看看报错长什么样——以后排错先查映射表。<br>
+3. 把 recursion_limit 设成 5，跑一个会循环 10 次的图，看看第 5 步之后发生什么，再想想：上限应该调大，还是修提示词？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 条件边和普通边，差在哪？</strong></p><button data-i="0">条件边跑得更快</button><button data-i="1">普通边是死箭头，条件边挂一个路由函数，按状态决定下一步去哪</button><button data-i="2">没有区别</button><div class="ans">解析：选 B。路由函数只看状态、报名字，不做业务逻辑。</div></div>
+<div class="q" data-answer="0"><p><strong>2. tools_condition 判断的是什么？</strong></p><button data-i="0">最后一条 AI 消息里有没有工具调用：有去 tools，没有去 END</button><button data-i="1">状态里有没有 messages</button><button data-i="2">模型跑了多少步</button><div class="ans">解析：选 A。tools_condition 是 ReAct 循环的核心，Day 4 会完整跑一遍。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 循环是怎么形成的？</strong></p><button data-i="0">用 while 语句</button><button data-i="1">用 for 循环</button><button data-i="2">一条指回去的边：tools 跑完回到 agent，再调模型、再判断</button><div class="ans">解析：选 C。循环不是特殊语法，就是一条回边。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 循环终止靠什么？</strong></p><button data-i="0">只靠步数上限</button><button data-i="1">业务终止条件（模型不再调工具）+ 步数上限（recursion_limit）两个保险</button><button data-i="2">靠运气</button><div class="ans">解析：选 B。步数上限是保险丝，不是解决方案；一直调工具要先修提示词或工具设计。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 路由函数返回了映射表里没有的名字，会怎样？</strong></p><button data-i="0">图直接报错</button><button data-i="1">图自动去 END</button><button data-i="2">图忽略它，继续跑</button><div class="ans">解析：选 A。路由函数的返回值必须和映射表的键一一对应，写完先对一遍表。</div></div>
+<div class="q" data-answer="2"><p><strong>6. recursion_limit 默认是多少？</strong></p><button data-i="0">5</button><button data-i="1">100</button><button data-i="2">25 步，超过就抛错停下</button><div class="ans">解析：选 C。可以在 invoke 时调大，但调大之前先问模型为什么一直调工具。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：条件边是什么？和普通边有什么区别？</summary><p>普通边是死箭头，做完 A 一定去 B；条件边挂一个路由函数，读当前状态、返回一个字符串，图按字符串决定下一步去哪。路由函数只看状态、报名字，不做业务逻辑。</p></details>
+<details><summary>Q2：tools_condition 是干嘛的？</summary><p>LangGraph 自带的路由函数，判断最后一条 AI 消息有没有工具调用：有去 tools 节点，没有去 END。它是 ReAct 循环的核心。</p></details>
+<details><summary>Q3：LangGraph 的循环是怎么形成的？怎么停？</summary><p>循环就是一条回边：tools 跑完回到 agent，再调模型、再判断。停靠两个保险：业务终止条件（模型不再调工具）和步数上限 recursion_limit（默认 25 步）。</p></details>
+<details><summary>Q4：路由函数返回了映射表里没有的名字，会怎样？</summary><p>图直接报错。路由函数的返回值必须和映射表的键一一对应，排错先查映射表。</p></details>
+<details><summary>Q5：recursion_limit 应该调大吗？</summary><p>先别调。步数上限是保险丝，模型一直调工具说明提示词或工具设计有问题，先修那个；实在需要多步（比如长任务）再调大，并配上步数统计和告警。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>每条条件边都要配一张表：路由函数会返回哪些值、每个值去哪个节点、哪个值是终止条件。表对不上，图就跑不起来；终止条件想不清楚，图就会死循环。</p>
+<p><strong>简历讲法：</strong>别写“会用条件边”，写“用 tools_condition 做 ReAct 路由：有工具调用去 ToolNode、没有去 END，工具跑完回边到 agent，recursion_limit 25 步做保险”。前者是名词，后者是可追问的机制。</p>
+<p><strong>明日预告：</strong>Day 4 讲工具节点与 ReAct Agent：ToolNode 怎么执行工具调用，循环直到无工具调用。</p>
+</div>
+<div class="nav"><span><a href="day02.html">← Day 2</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day04.html">Day 4 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

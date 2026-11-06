@@ -31,6 +31,7 @@ summary{cursor:pointer;font-weight:bold}
 <h2>一、核心解释</h2>
 <h3>1. 一句话：LangChain 不是大模型，是胶水</h3>
 <p>大模型负责思考和生成，LangChain 负责编排：提示词怎么拼、什么时候调模型、模型的结果往哪送、什么时候调工具、历史怎么带。它就像前端框架：不替你写业务逻辑，只帮你把组件、状态、接口组织起来。</p>
+<svg viewBox="0 0 720 120" width="100%" role="img" aria-label="最小链：提示词模板、ChatModel、输出解析器依次串联" style="max-width:720px;display:block;margin:12px 0"><defs><marker id="ar1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0b62d6"/></marker></defs><rect x="20" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="115" y="60" text-anchor="middle" font-size="13" fill="#222">提示词模板</text><rect x="265" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="60" text-anchor="middle" font-size="13" fill="#222">ChatModel 模型</text><rect x="510" y="30" width="190" height="50" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="605" y="60" text-anchor="middle" font-size="13" fill="#222">输出解析器</text><line x1="210" y1="55" x2="260" y2="55" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar1)"/><line x1="455" y1="55" x2="505" y2="55" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar1)"/><text x="360" y="108" text-anchor="middle" font-size="12" fill="#666">prompt | llm | parser：前一步输出 = 后一步输入</text></svg>
 <h3>2. 三个容易混的名字</h3>
 <ul>
 <li><strong>LangChain</strong>：编排框架，就是这门课的主角。</li>

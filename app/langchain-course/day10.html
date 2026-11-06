@@ -30,6 +30,22 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 读文件：只读范围，不读全文</h3>
+<svg viewBox="0 0 720 190" width="100%" role="img" style="margin:12px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="10" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="70" y="44" text-anchor="middle" font-size="13" fill="#222">读指定范围</text>
+<rect x="155" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="215" y="44" text-anchor="middle" font-size="13" fill="#222">生成 diff</text>
+<rect x="300" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="44" text-anchor="middle" font-size="13" fill="#222">人确认</text>
+<rect x="445" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="505" y="44" text-anchor="middle" font-size="13" fill="#222">校验旧内容</text>
+<rect x="590" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="650" y="44" text-anchor="middle" font-size="13" fill="#222">落盘</text>
+<line x1="130" y1="39" x2="153" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="275" y1="39" x2="298" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="420" y1="39" x2="443" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="565" y1="39" x2="588" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="10" y="96" width="265" height="40" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="142" y="121" text-anchor="middle" font-size="13" fill="#222">路径守卫：仓库内才放行</text>
+<line x1="70" y1="96" x2="70" y2="64" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<text x="360" y="172" text-anchor="middle" font-size="12" fill="#222">读和写都要守卫，只做一个就是后门</text>
+</svg>
+
 <p>read_file 的参数应该是路径 + 起止行号，而不是只有路径。大文件一次读全文，既烧 Token 又把模型带偏；读指定范围，模型看到的是检索定位到的那一段。行号从 1 开始还是从 0 开始，要在工具描述里写死，模型按描述传参，工具按描述解析——描述和实现不一致，行号就永远对不上。</p>
 <h3>2. 改文件：先生成 diff，再谈落盘</h3>
 <p>write_patch 的正确流程是三步：<strong>① 生成 diff 预览 → ② 人确认 → ③ 按 diff 落盘</strong>。diff 只展示改动行，没改的行不出现，人一眼就能看出改了哪、怎么改。直接整文件重写的问题 Day 8 讲过：会悄悄丢掉边界条件和注释里的约定，diff 只改写明的地方，丢东西的面小得多。</p>

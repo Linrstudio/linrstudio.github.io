@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5：Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 5 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 5：Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续</h1>
+<p>手写循环跑到一半断了，只能从头再跑；LangGraph 的图跑到一半断了，可以从断的地方继续。靠的就是 Checkpoint：每跑完一步，图就把状态存一个快照，下次接着跑时，先读快照、再继续走。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="Checkpoint：每步存快照，中断后从快照继续">
+<rect x="20" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="89" text-anchor="middle" font-size="13" fill="#222">第 1 步</text>
+<line x1="140" y1="84" x2="180" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="180,84 168,78 168,90" fill="#0b62d6"/>
+<rect x="180" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="240" y="89" text-anchor="middle" font-size="13" fill="#222">第 2 步</text>
+<line x1="300" y1="84" x2="340" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="340,84 328,78 328,90" fill="#0b62d6"/>
+<rect x="340" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="400" y="89" text-anchor="middle" font-size="13" fill="#222">中断 ✕</text>
+<line x1="460" y1="84" x2="500" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="500,84 488,78 488,90" fill="#0b62d6"/>
+<rect x="500" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="560" y="89" text-anchor="middle" font-size="13" fill="#222">续跑（从快照）</text>
+<text x="20" y="140" font-size="13" fill="#222">每步存一个 Checkpoint；续跑时读最近的快照，不用从头再跑</text>
+</svg>
+<h3>1. Checkpoint 是什么：每步一个快照</h3>
+<p>Checkpoint 就是图在每一步跑完后存的状态快照：跑到哪一步、状态长什么样、下一步去哪。没有 Checkpoint，图就是一次性的，断了就没了；有了 Checkpoint，图就是可恢复的，断了可以从最近的快照继续。快照由 Checkpointer 存，MemorySaver 是存在内存里的实现，适合学习和演示。</p>
+<h3>2. thread_id 是什么：一次对话一个编号</h3>
+<p>Checkpointer 要区分“这是谁的对话”，靠的就是 <code>thread_id</code>：每次 invoke 时在 config 里传 <code>{"configurable": {"thread_id": "user-1"}}</code>，同一个 thread_id 的多次调用共享同一份状态、同一串快照，不同 thread_id 互不干扰。thread_id 通常就是用户 ID 或会话 ID。忘传 thread_id，图每次都是全新的对话，之前的上下文全丢了。</p>
+<h3>3. 断点续跑怎么跑：同一 thread_id 再 invoke 一次</h3>
+<p>续跑不需要特殊 API：用同一个 thread_id 再 invoke 一次，图会自动读最近的快照、从断的地方继续。比如第一次 invoke 跑了两步后中断了，第二次 invoke 传新的输入（或不传新输入，只传 config），图从第三步接着跑，之前两步不重跑——工具不会重复执行，钱不会重复花。</p>
+<h3>4. get_state 是干嘛的：看看现在跑到哪了</h3>
+<p><code>app.get_state(config)</code> 可以读出当前的状态和下一步要去哪，排错和做“继续”按钮都靠它。结合 Day 6 的中断：图停在人工审核前时，get_state 能看到停在哪一步、状态里有什么，人看完再决定继续还是改。</p>
+<div class="warn"><strong>容易踩的坑：</strong>MemorySaver 存在内存里，进程一重启，快照全丢了。生产里要换持久化的 Checkpointer（比如 PostgresSaver、RedisSaver），否则“断点续跑”只在同一次运行里有效。MemorySaver 是学习用的，不是上线用的。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：MemorySaver + thread_id，多轮对话不断线</h3>
+<pre><code>from langgraph.checkpoint.memory import MemorySaver
+
+checkpointer = MemorySaver()
+app = graph.compile(checkpointer=checkpointer)  # 编译时挂上 Checkpointer
+config = {"configurable": {"thread_id": "user-1"}}  # 一次对话一个编号
+
+# 第 1 轮：问天气，图跑完，状态存进 thread_id=user-1 的快照
+app.invoke({"messages": [HumanMessage("深圳今天天气怎么样？")]}, config)
+# 第 2 轮：同一个 thread_id，图读快照接着跑，记得上一轮问过天气
+app.invoke({"messages": [HumanMessage("那明天呢？")]}, config)
+# 换一个 thread_id，就是一次全新的对话，互不干扰
+app.invoke({"messages": [HumanMessage("你好")]}, {"configurable": {"thread_id": "user-2"}})</code></pre>
+<h3>示例 2：中断后从快照继续（概念代码）</h3>
+<pre><code># 第 1 次 invoke 跑到第 2 步后中断（比如进程崩了、或人工点了停）
+# 第 2 次 invoke 用同一个 thread_id，什么都不用多做：
+state = app.get_state(config)  # 看看现在跑到哪了：停在第 2 步，状态里有两轮消息
+app.invoke(None, config)       # 不传新输入，从快照继续跑，不重跑前两步
+# 工具不会重复执行：已经执行过的工具调用，在快照里有结果，不会再跑一次</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给 Day 4 的 ReAct 图挂上 MemorySaver，用同一个 thread_id 问两轮问题，验证第二轮记得第一轮的内容；再换一个 thread_id，验证是全新对话。<br>
+2. 用 get_state 看看跑完之后的状态：下一步是哪个节点？messages 里有几条？<br>
+3. 把进程重启一次（重新跑脚本），再用同一个 thread_id 接着问，看看还记不记得——为什么不记得了？生产里该换什么？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. Checkpoint 是什么？</strong></p><button data-i="0">图每步跑完存的状态快照：跑到哪一步、状态长什么样、下一步去哪</button><button data-i="1">模型的权重文件</button><button data-i="2">一段日志</button><div class="ans">解析：选 A。没有 Checkpoint，图断了就没了；有了它，断了可以从最近的快照继续。</div></div>
+<div class="q" data-answer="1"><p><strong>2. thread_id 是干嘛的？</strong></p><button data-i="0">给模型起名字</button><button data-i="1">一次对话一个编号：同一个 thread_id 的多次调用共享状态和快照，不同的互不干扰</button><button data-i="2">限制步数</button><div class="ans">解析：选 B。thread_id 通常就是用户 ID 或会话 ID，忘传它，每次都是全新对话。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 断点续跑要用什么特殊 API？</strong></p><button data-i="0">resume() 函数</button><button data-i="1">重新编译一张图</button><button data-i="2">不用特殊 API：同一 thread_id 再 invoke 一次，图自动读快照接着跑</button><div class="ans">解析：选 C。之前跑过的步不重跑，工具不会重复执行。</div></div>
+<div class="q" data-answer="0"><p><strong>4. get_state 是干嘛的？</strong></p><button data-i="0">读出当前状态和下一步去哪，排错和做“继续”按钮都靠它</button><button data-i="1">删除状态</button><button data-i="2">修改模型参数</button><div class="ans">解析：选 A。结合 Day 6 的中断：停在审核前时，get_state 能看到停在哪一步、状态里有什么。</div></div>
+<div class="q" data-answer="1"><p><strong>5. MemorySaver 有什么局限？</strong></p><button data-i="0">只能存一条消息</button><button data-i="1">存在内存里，进程重启快照全丢；生产里要换 PostgresSaver、RedisSaver 这种持久化的</button><button data-i="2">不能和 thread_id 一起用</button><div class="ans">解析：选 B。MemorySaver 是学习用的，不是上线用的。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 续跑时，已经执行过的工具会怎样？</strong></p><button data-i="0">再执行一次</button><button data-i="1">被跳过，结果丢了</button><button data-i="2">不重跑：结果在快照里，直接用</button><div class="ans">解析：选 C。工具不会重复执行，钱不会重复花。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Checkpoint 是什么？断点续跑是怎么实现的？</summary><p>Checkpoint 是图每步跑完存的状态快照，由 Checkpointer 存。编译时挂上 Checkpointer，invoke 时传 thread_id，图每次跑完一步就存一个快照；中断后用同一 thread_id 再 invoke，图读最近的快照接着跑，不重跑之前的步。</p></details>
+<details><summary>Q2：thread_id 是干嘛的？不传会怎样？</summary><p>一次对话一个编号，同一个 thread_id 的多次调用共享状态和快照，不同的互不干扰。通常就是用户 ID 或会话 ID。不传它，每次调用都是全新对话，上下文全丢了。</p></details>
+<details><summary>Q3：MemorySaver 和生产用的 Checkpointer 差在哪？</summary><p>MemorySaver 存在内存里，进程重启快照全丢，只适合学习和演示。生产里用 PostgresSaver、RedisSaver 这种持久化的，重启也不丢。</p></details>
+<details><summary>Q4：续跑时工具会不会重复执行？</summary><p>不会。已经执行过的工具调用，结果在快照里，续跑时直接用，不重跑。钱不会重复花，消息不会重复发。</p></details>
+<details><summary>Q5：get_state 有什么用？</summary><p>读出当前状态和下一步要去哪。排错靠它，做“继续”按钮靠它，Day 6 人工审核前看停在哪一步、状态里有什么，也靠它。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Checkpoint 上线前，先问三个问题：thread_id 怎么定（用户 ID 还是会话 ID）？快照存哪（内存还是数据库）？快照保留多久（过期清理做了吗）？三问有一个答不上来，断点续跑就别上。</p>
+<p><strong>简历讲法：</strong>别写“会用 Checkpoint”，写“编译时挂 MemorySaver、invoke 传 thread_id 做会话隔离，中断后同一 thread_id 再 invoke 从快照续跑，工具不重执行，生产换 PostgresSaver 持久化”。前者是名词，后者是可追问的机制。</p>
+<p><strong>明日预告：</strong>Day 6 讲人工介入与中断：interrupt、human-in-the-loop、审核后继续。</p>
+</div>
+<div class="nav"><span><a href="day04.html">← Day 4</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day06.html">Day 6 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

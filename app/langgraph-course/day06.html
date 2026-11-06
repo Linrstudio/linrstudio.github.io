@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 6：人工介入与中断：interrupt、human-in-the-loop、审核后继续 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 6 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 6：人工介入与中断：interrupt、human-in-the-loop、审核后继续</h1>
+<p>Agent 能自己跑，但不是每一步都能自己跑：发全员消息、删文件、扣款这种高危操作，执行前必须停下来、等人看一眼。LangGraph 的中断就是干这个的：图跑到指定的节点前停住，等人审核完，再决定继续、改了再继续，还是不继续。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="人工介入：图在 tools 前停住，等人审核后继续或修改">
+<rect x="20" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="89" text-anchor="middle" font-size="13" fill="#222">agent</text>
+<line x1="140" y1="84" x2="180" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="180,84 168,78 168,90" fill="#0b62d6"/>
+<rect x="180" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="250" y="89" text-anchor="middle" font-size="13" fill="#222">⏸ 中断：等人审核</text>
+<line x1="320" y1="84" x2="360" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="360,84 348,78 348,90" fill="#0b62d6"/>
+<rect x="360" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="420" y="89" text-anchor="middle" font-size="13" fill="#222">tools</text>
+<line x1="480" y1="84" x2="520" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="520,84 508,78 508,90" fill="#0b62d6"/>
+<rect x="520" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="580" y="89" text-anchor="middle" font-size="13" fill="#222">END</text>
+<text x="20" y="140" font-size="13" fill="#222">审核后三条路：继续（原样执行）、改了再继续、拒绝（不执行）</text>
+</svg>
+<h3>1. 中断是什么：图在指定节点前停住</h3>
+<p>中断就是让图在某个节点前停下来，等外部输入。编译时传 <code>interrupt_before=["tools"]</code>，图每次跑到 tools 节点前就停住、返回当前状态，不执行工具。停住不是报错，是正常状态：快照已经存好（所以中断必须配 Checkpointer，Day 5 的内容），人什么时候回来，图就从停住的地方接着跑。</p>
+<h3>2. human-in-the-loop 是什么：人是图里的一步</h3>
+<p>human-in-the-loop 的意思是：人不是图的旁观者，是图里的一步。高危操作执行前，图停下来，把“要做什么、参数是什么、影响是什么”展示给人，人看完再决定。审核的界面可以是一个按钮、一个工单、一封邮件，但逻辑都一样：图等人的决定，人的决定是图继续跑的输入。</p>
+<h3>3. 审核后三条路：继续、改了再继续、拒绝</h3>
+<p>人审核完，有三条路：<strong>继续</strong>——原样执行，用 <code>Command(resume=...)</code> 或再 invoke 一次（什么都不改），图接着跑；<strong>改了再继续</strong>——参数不对，人改掉再跑，用 <code>update_state</code> 改状态里的工具调用参数，再继续；<strong>拒绝</strong>——不执行，图走到 END 或走一条“拒绝”的分支，回答里写清楚“已拒绝执行”。三条路都要有，缺了“改”和“拒绝”，审核就只剩一个摆设按钮。</p>
+<h3>4. 节点内中断：interrupt() 函数</h3>
+<p>除了编译时定死的中断点，节点里也可以用 <code>interrupt()</code> 函数（从 <code>langgraph.types</code> 导入）动态停住：节点跑到一半，调 <code>interrupt("请确认是否发送")</code>，图停住并把这句话返回给人；人回复后，<code>interrupt()</code> 的返回值就是人的回复，节点接着跑。编译时中断适合“固定检查点”，节点内中断适合“跑到一半才知道要不要问人”的场景。</p>
+<div class="warn"><strong>容易踩的坑：</strong>中断了，但没配 Checkpointer。没有 Checkpointer，图停住后状态没地方存，人回来时图已经忘了跑到哪了。中断和 Checkpoint 是一对：Day 5 是 Day 6 的前置条件。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：tools 节点前中断，审核后继续（先看形状）</h3>
+<pre><code>from langgraph.types import Command
+from langgraph.checkpoint.memory import MemorySaver
+
+checkpointer = MemorySaver()
+# 编译时定中断点：每次跑到 tools 节点前就停住
+app = graph.compile(checkpointer=checkpointer, interrupt_before=["tools"])
+config = {"configurable": {"thread_id": "user-1"}}
+
+# 第 1 次 invoke：图跑到 tools 前停住，返回当前状态
+app.invoke({"messages": [HumanMessage("给全员发一条通知")]}, config)
+state = app.get_state(config)  # 看看停在哪：下一步是 tools，工具调用是 send_broadcast
+# 人看完，觉得没问题，继续：
+app.invoke(Command(resume="继续执行"), config)  # 从停住的地方接着跑
+# 人觉得参数不对，先改状态再继续：
+# app.update_state(config, {"messages": [...]})  # 改掉工具调用参数
+# app.invoke(None, config)  # 再从停住的地方接着跑</code></pre>
+<h3>示例 2：节点内用 interrupt() 动态问人</h3>
+<pre><code>from langgraph.types import interrupt
+
+def send_node(state):
+    # 节点跑到一半，动态停住问人；人的回复就是 interrupt() 的返回值
+    decision = interrupt("要给全员发这条通知吗？内容是：明天放假一天。")
+    if decision == "拒绝":
+        return {"messages": [AIMessage("已拒绝发送。")]}
+    return {"messages": [send_broadcast()]}
+
+# 第 1 次 invoke 跑到 interrupt() 停住；人回复“继续”后，
+# 第 2 次 invoke 传 Command(resume="继续")，节点从 interrupt() 处接着跑</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给 Day 4 的 ReAct 图加 <code>interrupt_before=["tools"]</code>，问它“给全员发一条通知”，用 get_state 看看停在哪一步、工具调用的参数是什么。<br>
+2. 分别走三条路：继续（原样执行）、改参数再继续（把收件人从“全员”改成“测试群”）、拒绝（不执行），每条路跑一遍，看最终回答有什么不同。<br>
+3. 把 Checkpointer 忘掉再跑一次中断，看看会发生什么——为什么中断必须配 Checkpoint？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 中断是什么？</strong></p><button data-i="0">图在指定节点前停住，等外部输入，快照已存好，人回来从停住处接着跑</button><button data-i="1">图报错退出了</button><button data-i="2">图跑完了</button><div class="ans">解析：选 A。停住不是报错，是正常状态；中断必须配 Checkpointer。</div></div>
+<div class="q" data-answer="1"><p><strong>2. human-in-the-loop 是什么意思？</strong></p><button data-i="0">人只能看日志</button><button data-i="1">人是图里的一步：高危操作前图停下来等人的决定，人的决定是继续跑的输入</button><button data-i="2">人代替模型写代码</button><div class="ans">解析：选 B。审核界面可以是按钮、工单、邮件，但逻辑都一样。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 审核后有哪三条路？</strong></p><button data-i="0">只有继续</button><button data-i="1">继续和拒绝</button><button data-i="2">继续、改了再继续、拒绝</button><div class="ans">解析：选 C。缺了“改”和“拒绝”，审核就只剩一个摆设按钮。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 怎么让图在 tools 节点前停住？</strong></p><button data-i="0">编译时传 interrupt_before=["tools"]</button><button data-i="1">在 tools 节点里抛错</button><button data-i="2">把 tools 节点删掉</button><div class="ans">解析：选 A。编译时中断适合固定检查点，节点内 interrupt() 适合跑到一半才知道要问人的场景。</div></div>
+<div class="q" data-answer="1"><p><strong>5. interrupt() 函数是干嘛的？</strong></p><button data-i="0">中断整个程序</button><button data-i="1">节点内动态停住问人，人的回复就是它的返回值，节点接着跑</button><button data-i="2">删除状态</button><div class="ans">解析：选 B。从 langgraph.types 导入，适合跑到一半才知道要不要问人的场景。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 中断为什么必须配 Checkpointer？</strong></p><button data-i="0">为了跑得更快</button><button data-i="1">为了省内存</button><button data-i="2">没有它，图停住后状态没地方存，人回来时图忘了跑到哪了</button><div class="ans">解析：选 C。中断和 Checkpoint 是一对，Day 5 是 Day 6 的前置条件。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：LangGraph 的中断是怎么实现的？</summary><p>两种：编译时传 interrupt_before=["tools"]，图每次跑到 tools 节点前停住；节点内调 interrupt()，跑到一半动态停住问人。停住是正常状态，快照已存好，人回来从停住处接着跑，所以中断必须配 Checkpointer。</p></details>
+<details><summary>Q2：human-in-the-loop 是什么意思？</summary><p>人是图里的一步：高危操作执行前，图停下来，把要做什么、参数、影响展示给人，人看完再决定继续、改了再继续、还是拒绝。人的决定是图继续跑的输入。</p></details>
+<details><summary>Q3：审核后怎么继续？怎么改参数再继续？</summary><p>继续：再 invoke 一次，或传 Command(resume=...)，图从停住处接着跑。改了再继续：用 update_state 改状态里的工具调用参数，再 invoke。拒绝：不执行，走 END 或“拒绝”分支，回答写清楚已拒绝。</p></details>
+<details><summary>Q4：interrupt_before 和 interrupt() 有什么区别？</summary><p>interrupt_before 是编译时定死的固定检查点；interrupt() 是节点内动态中断，跑到一半才知道要不要问人时用，人的回复就是它的返回值。</p></details>
+<details><summary>Q5：哪些操作必须人工介入？</summary><p>高危操作：删文件、发全员消息、扣款、改线上配置。判断标准是“执行错了能不能撤销、影响有多大”，不能撤销、影响大的，都要停下来等人看一眼。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>人工介入上线前，先问三个问题：哪些节点前要中断（高危操作清单）？审核超时了怎么办（一直等，还是超时自动拒绝）？审核记录留了吗（谁、什么时候、批了什么）？三问有一个答不上来，人就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过人工审核”，写“tools 节点前 interrupt_before 中断 + Command(resume=...) 续跑，审核三条路（继续、改参数再继续、拒绝），中断配 MemorySaver 存快照”。前者是名词，后者是可追问的机制。</p>
+<p><strong>明日预告：</strong>Day 7 讲子图、多 Agent 图与复盘：子图、Supervisor 图、7 天复盘与面试讲法。</p>
+</div>
+<div class="nav"><span><a href="day05.html">← Day 5</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day07.html">Day 7 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

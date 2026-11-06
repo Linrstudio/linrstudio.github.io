@@ -30,6 +30,35 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 为什么要多个 Agent：单 Agent 的三块天花板</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Supervisor 分发给子 Agent，校验后合成的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="80" y="43" text-anchor="middle" font-size="13" fill="#222">任务</text>
+<line x1="140" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">Supervisor 主管</text>
+<line x1="300" y1="60" x2="300" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="600" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="120" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="82" x2="600" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="120" y="131" text-anchor="middle" font-size="13" fill="#222">Planner 规划</text>
+<rect x="260" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">Knowledge 检索</text>
+<rect x="500" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="131" text-anchor="middle" font-size="13" fill="#222">Tool 执行</text>
+<line x1="120" y1="148" x2="120" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="148" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="600" y1="148" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="170" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="250" y1="170" x2="250" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="170" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="250" y="219" text-anchor="middle" font-size="13" fill="#222">Verifier 校验</text>
+<line x1="330" y1="214" x2="388" y2="214" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="390" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="470" y="219" text-anchor="middle" font-size="13" fill="#222">Composer 合成</text>
+</svg>
 <p>第一，上下文天花板：一个 Agent 要同时记住规划、检索结果、工具输出、校验意见，上下文越长越容易顾此失彼；分工后，每个子 Agent 只看自己那部分，上下文反而变干净了。第二，能力天花板：检索、执行、校验是三种不同的活，一个提示词很难同时把三件事都做到最好，分开写提示词、分开配工具，各自才能调优。第三，并行天花板：单 Agent 只能一步一步来，多个子 Agent 可以同时动手，总耗时从“各步相加”变成“最慢的那步”。</p>
 <h3>2. Supervisor 模式：一张图，主管 + 子图</h3>
 <p>Supervisor 是图的中心节点：它收到任务，先判断该派给谁；子 Agent 做完，把结果写回共享状态；Supervisor 再判断是继续派、打回重做，还是收口汇总。子 Agent 本身也可以是一张小图（比如 Knowledge 子 Agent 内部就是检索循环），这就是“图里套图”。主管不直接干活，只做三件事：分发、判断、汇总——主管一旦开始自己动手查资料、自己写答案，分工就乱了。</p>

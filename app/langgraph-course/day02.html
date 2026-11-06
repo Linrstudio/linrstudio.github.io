@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 2：状态与 Reducer：AgentState、add_messages、为什么状态要可合并 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 2 / 7</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 2：状态与 Reducer：AgentState、add_messages、为什么状态要可合并</h1>
+<p>Day 1 说过：节点只返回它改了的那一部分，图会把它合并进旧状态。今天讲合并的规矩——Reducer。没有 Reducer，两个节点同时改同一个字段，谁后写谁就赢，消息列表会被新消息整个盖掉，聊天记录直接丢了。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="Reducer 合并：旧状态加节点更新等于新状态">
+<rect x="20" y="45" width="180" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="110" y="74" text-anchor="middle" font-size="13" fill="#222">旧状态 messages</text>
+<text x="215" y="74" font-size="13" fill="#222">+</text>
+<rect x="240" y="45" width="180" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="330" y="74" text-anchor="middle" font-size="13" fill="#222">节点更新（新消息）</text>
+<line x1="420" y1="69" x2="470" y2="69" stroke="#0b62d6" stroke-width="2"/><polygon points="470,69 458,63 458,75" fill="#0b62d6"/>
+<rect x="470" y="45" width="180" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="560" y="74" text-anchor="middle" font-size="13" fill="#222">新状态（追加后）</text>
+<text x="20" y="125" font-size="13" fill="#222">Reducer = 合并规则：messages 用 add_messages 追加，不是覆盖</text>
+</svg>
+<h3>1. AgentState 是什么：一张有类型的记事本</h3>
+<p>状态用 <code>TypedDict</code> 定义，每个字段都有类型。Agent 最常用的状态叫 <code>AgentState</code>，核心字段是 <code>messages</code>（消息列表）。类型写在前面有两个好处：写错字段名会报错，而不是默默地多出一个没人读的字段；每个节点拿到状态时，都知道里面有什么。</p>
+<h3>2. Reducer 是什么：旧值 + 更新 = 新值</h3>
+<p>Reducer 就是一个字段的合并规则，写在字段的 <code>Annotated</code> 里。没有 Reducer 的字段，默认值是“覆盖”：新值直接替换旧值。列表、计数、累加这种字段不能覆盖，必须显式指定 Reducer，比如消息列表用 <code>add_messages</code>（追加），数字用加法。Reducer 的意思是：节点不用操心旧状态长什么样，只管返回自己的更新，图负责按规则合并。</p>
+<h3>3. add_messages 是干嘛的：消息只能追加，不能覆盖</h3>
+<p><code>messages: Annotated[list, add_messages]</code> 是最常用的一行。节点返回 <code>{"messages": [新消息]}</code>，图不会用这一条消息替换整个列表，而是把它追加到列表末尾。没有它会怎样？模型节点返回一条 AI 消息，整个聊天记录就只剩这一条，之前用户问过什么全丢了，下一轮模型连上下文都没有。</p>
+<h3>4. 为什么状态要可合并：并行分支的需要</h3>
+<p>图里经常有并行分支：两个节点同时跑，同时往状态里写。没有 Reducer，两个写操作会互相覆盖，只剩一个；有了 Reducer，两个更新按规则合并，消息列表是两条消息都追加，计数是两个增量都加上。Reducer 让“并发写状态”从竞态变成确定性的合并。这也是为什么节点只返回更新、不返回整个状态——返回整个状态，合并就没意义了。</p>
+<div class="warn"><strong>容易踩的坑：</strong>在节点里直接改传入的 state（比如 <code>state["messages"].append(...)</code>）。节点应该返回更新，让图去合并；直接改传入的状态，图不知道你改了什么，Checkpoint 存下来的可能是改之前的状态，断点续跑会丢数据。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：AgentState + add_messages（先看形状）</h3>
+<pre><code>from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage, AIMessage
+
+# 状态：messages 字段的 Reducer 是 add_messages（追加，不是覆盖）
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+    steps: int  # 没有 Reducer 的字段：默认覆盖
+
+def agent_node(state: AgentState):
+    # 节点只返回更新：一条新消息 + 步数加 1 的增量写法要小心，
+    # steps 没有 Reducer，这里返回的是“新值”不是“增量”
+    return {
+        "messages": [AIMessage(content="我来查一下。")],
+        "steps": state["steps"] + 1,
+    }
+
+# 跑两步之后，messages 里是两条消息（追加），不是只剩最后一条</code></pre>
+<h3>示例 2：没有 add_messages 会怎样（对比实验）</h3>
+<pre><code>class BadState(TypedDict):
+    messages: list  # 没有 Reducer：默认覆盖
+
+def bad_node(state: BadState):
+    return {"messages": [AIMessage(content="新消息")]}
+
+# 初始 messages = [HumanMessage("你好")]
+# 跑完 bad_node 后，messages = [AIMessage("新消息")]——用户的“你好”丢了！
+# 这就是为什么 messages 字段一定要配 add_messages</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给 AgentState 加一个 <code>found: Annotated[list, add_messages]</code> 字段（检索到的资料块），写一个节点往里追加两块资料，验证列表是追加不是覆盖。<br>
+2. 给 steps 加一个 Reducer（用 <code>operator.add</code>），让节点返回 <code>{"steps": 1}</code> 就能累加，再对比没有 Reducer 时要怎么写。<br>
+3. 故意在节点里直接 <code>state["messages"].append(...)</code> 再返回 <code>{}</code>，看看图会不会把这条消息存下来——为什么不应该这么写？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. Reducer 是干嘛的？</strong></p><button data-i="0">规定一个字段的旧值和更新怎么合并成新值</button><button data-i="1">减少状态的大小</button><button data-i="2">给状态加密</button><div class="ans">解析：选 A。Reducer 写在 Annotated 里，没有 Reducer 的字段默认是覆盖。</div></div>
+<div class="q" data-answer="1"><p><strong>2. messages 字段为什么要用 add_messages？</strong></p><button data-i="0">为了让消息变短</button><button data-i="1">消息只能追加不能覆盖，否则新消息会把整个聊天记录盖掉</button><button data-i="2">为了让模型跑得更快</button><div class="ans">解析：选 B。没有 add_messages，模型节点返回一条消息后，之前的对话全丢了。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 节点应该怎么改状态？</strong></p><button data-i="0">直接改传入的 state 字典</button><button data-i="1">返回整个新状态</button><button data-i="2">返回它改了的那一部分更新，让图按 Reducer 合并</button><div class="ans">解析：选 C。直接改传入的状态，图不知道你改了什么，Checkpoint 可能存下改之前的状态。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 没有 Reducer 的字段，更新时发生什么？</strong></p><button data-i="0">新值直接覆盖旧值</button><button data-i="1">新值追加到旧值后面</button><button data-i="2">更新被忽略</button><div class="ans">解析：选 A。覆盖是默认行为，列表、计数这类需要累加的字段必须显式配 Reducer。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 为什么状态要可合并？</strong></p><button data-i="0">为了省内存</button><button data-i="1">并行分支同时写状态时，更新要按规则合并，而不是互相覆盖</button><button data-i="2">为了让代码变短</button><div class="ans">解析：选 B。Reducer 让并发写状态从竞态变成确定性的合并。</div></div>
+<div class="q" data-answer="2"><p><strong>6. AgentState 最核心的字段是？</strong></p><button data-i="0">steps</button><button data-i="1">thread_id</button><button data-i="2">messages（消息列表，配 add_messages）</button><div class="ans">解析：选 C。messages 是 Agent 状态的主干，Day 4 的 ReAct 循环就是围着它转的。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Reducer 是什么？为什么需要它？</summary><p>Reducer 是一个字段的合并规则：旧值 + 更新 = 新值，写在 Annotated 里。没有它，字段默认是覆盖；并行分支同时写状态时会互相覆盖。有了它，消息列表追加、计数累加，并发写变成确定性的合并。</p></details>
+<details><summary>Q2：add_messages 做了什么？</summary><p>它是 messages 字段的 Reducer：节点返回的新消息追加到列表末尾，而不是替换整个列表。没有它，模型节点返回一条消息后，之前的对话记录全丢了。</p></details>
+<details><summary>Q3：节点为什么不能直接改传入的 state？</summary><p>节点应该返回更新，让图按 Reducer 合并。直接改传入的状态，图不知道你改了什么，Checkpoint 存下来的可能是改之前的状态，断点续跑会丢数据。</p></details>
+<details><summary>Q4：一个字段没有 Reducer，会怎样？</summary><p>默认覆盖：新值直接替换旧值。计数、列表这类需要累加的字段，必须显式配 Reducer，比如数字用 operator.add。</p></details>
+<details><summary>Q5：AgentState 一般长什么样？</summary><p>TypedDict，核心字段是 messages: Annotated[list, add_messages]，再按需加 steps、found（检索到的资料）、plan（计划）等字段。每个字段的合并规则都要事先想清楚。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>定义状态之前先列一张表：每个字段是什么类型、Reducer 是什么、谁会写它。并行分支会同时写的字段，一定要配 Reducer；只读字段可以不配。</p>
+<p><strong>简历讲法：</strong>别写“会定义 AgentState”，写“messages 配 add_messages 追加、计数配 operator.add 累加，节点只返回更新、图按 Reducer 合并，并行分支写状态不丢数据”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 3 讲条件边与路由：tools_condition 怎么按条件分流，循环怎么终止，步数上限是干嘛的。</p>
+</div>
+<div class="nav"><span><a href="day01.html">← Day 1</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day03.html">Day 3 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

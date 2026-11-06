@@ -30,6 +30,35 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 为什么拆成 DAG：步骤之间只有两种关系</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planner 把任务拆成 DAG：分层并行，关键路径串行的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="80" y="43" text-anchor="middle" font-size="13" fill="#222">任务</text>
+<line x1="140" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">Planner 拆 DAG</text>
+<line x1="300" y1="60" x2="300" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="360" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="110" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="110" y="131" text-anchor="middle" font-size="13" fill="#222">检索 2024 版</text>
+<rect x="270" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">检索 2025 版</text>
+<line x1="200" y1="126" x2="268" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="234" y="120" text-anchor="middle" font-size="11" fill="#222">依赖</text>
+<text x="575" y="131" text-anchor="middle" font-size="12" fill="#222">同层可并行</text>
+<line x1="110" y1="148" x2="110" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="148" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="170" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="260" y1="170" x2="260" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="170" y="192" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="260" y="219" text-anchor="middle" font-size="13" fill="#222">对照差异</text>
+<line x1="350" y1="214" x2="388" y2="214" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="390" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="470" y="219" text-anchor="middle" font-size="13" fill="#222">合成答案</text>
+<text x="625" y="219" text-anchor="middle" font-size="12" fill="#222">依赖成圈即死锁</text>
+</svg>
 <p>DAG 的意思是：步骤之间有箭头（依赖），但箭头不能绕成圈。两个步骤之间只有两种关系：有依赖（A 的输出是 B 的输入，必须先 A 后 B），没依赖（可以并行）。把关系画成图，Supervisor 就不用凭感觉派活：看图就知道哪步能跑、哪步要等、哪步卡住了。依赖成圈（A 等 B、B 等 A）是死锁，Planner 输出的第一件事就是检查有没有圈。</p>
 <h3>2. 拆的粒度：一步只做一件事，验收标准写在前面</h3>
 <p>每个步骤只做一件事：检索、执行、校验、合成，各是一步；“查资料并写答案”这种一步包两件事的拆法，失败时说不清是哪半步错了。每个步骤还要在动手前写清三样：<strong>输入</strong>（需要什么）、<strong>输出</strong>（交出什么格式）、<strong>验收标准</strong>（怎么算做完，比如“检索命中至少 2 块相关资料”或“测试全部通过”）。验收标准写在前面，Verifier 才有标准可查；动手后再定标准，等于自己给自己打分。</p>

@@ -30,6 +30,16 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 重排是干嘛的：向量排的是方向，重排排的是“对这个问题有没有用”</h3>
+<svg viewBox="0 0 720 170" width="100%" role="img" aria-label="重排引用校验流程图：召回、重排、生成带引用、校验，不通过打回重生成" style="max-width:720px;display:block;margin:12px auto" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="30" y="30" width="150" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="105" y="52" text-anchor="middle" font-size="13" fill="#222">召回</text><text x="105" y="70" text-anchor="middle" font-size="13" fill="#222">Top 50</text>
+<rect x="200" y="30" width="150" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="275" y="52" text-anchor="middle" font-size="13" fill="#222">重排</text><text x="275" y="70" text-anchor="middle" font-size="13" fill="#222">Top 5</text>
+<rect x="370" y="30" width="150" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="445" y="61" text-anchor="middle" font-size="13" fill="#222">生成带引用</text>
+<rect x="540" y="30" width="150" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="615" y="61" text-anchor="middle" font-size="13" fill="#222">校验三道关</text>
+<line x1="182" y1="56" x2="198" y2="56" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="352" y1="56" x2="368" y2="56" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/><line x1="522" y1="56" x2="538" y2="56" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M615,84 V130 H105 V86" fill="none" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<text x="360" y="152" text-anchor="middle" font-size="12" fill="#666">校验不通过 → 打回重生成，上限 2–3 次</text>
+</svg>
 <p>向量检索按语义方向排，方向接近不等于对这个问题有用：比如问题问“退货要几天”，向量可能先返回“退货流程很顺”而不是“退货 7 天内”。重排就是第二遍排序：用一个更强的打分方式（比如交叉编码器、或者让模型自己判断相关性），把真正回答问题的块往前放，把方向接近但答非所问的往后放。重排的代价是多一次计算，所以只对 TopK 里取出来的小批（比如前 20）重排，不对全库重排。</p>
 <h3>2. 重排的分数怎么合：向量分 + 关键词分 + 新鲜度，封顶 1.0</h3>
 <p>一个可用的合分公式是：向量相似度打底，关键词精确命中加分，文档越新加分越少越旧扣分，总分封顶 1.0。公式本身不重要，重要的是：<strong>分数要可解释</strong>——排错了，你要能说出是哪一项把错的块顶上来的，否则调参就是碰运气。</p>

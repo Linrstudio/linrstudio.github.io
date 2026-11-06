@@ -30,6 +30,21 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 前缀匹配的漏洞：先承认 Day 8 的简化版不够</h3>
+<svg viewBox="0 0 720 170" width="100%" role="img" style="margin:12px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="10" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="70" y="44" text-anchor="middle" font-size="13" fill="#222">命令进来</text>
+<rect x="155" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="215" y="44" text-anchor="middle" font-size="13" fill="#222">拒绝元字符</text>
+<rect x="300" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="44" text-anchor="middle" font-size="13" fill="#222">不用 shell</text>
+<rect x="445" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="505" y="44" text-anchor="middle" font-size="13" fill="#222">参数精确匹配</text>
+<rect x="590" y="16" width="120" height="46" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="650" y="44" text-anchor="middle" font-size="13" fill="#222">跑测试</text>
+<line x1="130" y1="39" x2="153" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="275" y1="39" x2="298" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="420" y1="39" x2="443" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="565" y1="39" x2="588" y2="39" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<path d="M650,62 V130 H70 V66" fill="none" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr)"/>
+<text x="360" y="122" text-anchor="middle" font-size="12" fill="#222">测试不过：报错贴回，改完再跑（步数上限 5 步）</text>
+</svg>
+
 <p>Day 8 的示例用的是前缀匹配：命令以白名单某一项开头就放行。这个版本有个洞：<code>pytest; rm -rf /</code> 是以 <code>pytest</code> 开头的，前缀匹配会放行，shell 一执行，分号后面的命令也跟着跑了。所以前缀匹配只能当演示，生产版必须升级，承认简化版的边界，是这课最重要的一点。</p>
 <h3>2. 生产版白名单：三条规则一起上</h3>
 <ul>

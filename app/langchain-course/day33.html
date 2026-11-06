@@ -30,6 +30,24 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 
 <h2>一、核心解释</h2>
 <h3>1. 从流水线到子 Agent：多出来的三样能力</h3>
+<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Knowledge Agent 的 Multi-hop 检索循环图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="90" y="43" text-anchor="middle" font-size="13" fill="#222">分解问题</text>
+<line x1="160" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="290" y="43" text-anchor="middle" font-size="13" fill="#222">检索 TopK 5</text>
+<line x1="360" y1="38" x2="418" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="420" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="490" y="43" text-anchor="middle" font-size="13" fill="#222">判断够不够</text>
+<line x1="490" y1="60" x2="490" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="505" y="88" font-size="12" fill="#222">够了</text>
+<rect x="420" y="104" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="490" y="131" text-anchor="middle" font-size="13" fill="#222">带出处交付</text>
+<text x="490" y="172" text-anchor="middle" font-size="12" fill="#222">超 3–5 跳 → 停，诚实回答</text>
+<path d="M560,38 L620,38 L620,214 L290,214 L290,62" fill="none" stroke="#0b62d6" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+<text x="455" y="208" text-anchor="middle" font-size="12" fill="#222">不够 → 换词再查</text>
+</svg>
 <p>流水线是固定顺序：切块、向量、检索、生成，一步走完就结束。子 Agent 多了三样：<strong>判断</strong>（这次检索够不够回答？不够就再查）、<strong>换策略</strong>（关键词查不到就换同义词、换向量查、换上一跳的结果当查询词）、<strong>止损</strong>（查了几轮还是不够，就停下来、诚实回答）。这三样让 Knowledge Agent 能处理流水线处理不了的复杂问题，比如 Day 21 补充过的 Multi-hop 问题。</p>
 <h3>2. Multi-hop 检索循环：分解、检索、判断、再检索</h3>
 <p>循环是四步：<strong>分解</strong>（原问题拆成有依赖的子问题）、<strong>检索</strong>（每跳查一次，TopK 不宜太大，5 左右就够）、<strong>判断</strong>（本跳的结果能不能回答本跳的子问题？能不能为下一跳提供查询词？）、<strong>再检索</strong>（不够就用新信息生成下一跳的查询）。比如“某产品 2024 版政策和 2025 版改了什么”：第一跳查 2024 版，第二跳用第一跳拿到的条款编号查 2025 版变更，第三跳对照两版回答。每跳的查询、命中块、判断结论都要写进状态，答错了才能定位是哪一跳歪了。</p>
