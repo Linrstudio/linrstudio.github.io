@@ -29,7 +29,15 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p>Multi-Agent 的第一步不是动手，而是拆：Planner 把一个复杂任务拆成步骤、标出依赖、定出并行度。拆得好不好，决定了后面并行能不能跑、失败能不能隔离、结果能不能验收。拆问题这件事，第 3 周的混合问答已经练过一次，这课把它系统化：拆成 DAG（有向无环图），每个步骤都有输入、输出和验收标准。</p>
 
 <h2>一、核心解释</h2>
-<h3>1. 为什么拆成 DAG：步骤之间只有两种关系</h3>
+<h3>1. DAG 是什么：有向、无环、图，三个词拆开看</h3>
+<p>DAG 是 Directed Acyclic Graph 的缩写，<strong>有向无环图</strong>。三个词拆开看：<strong>图</strong>，就是节点加边，节点是步骤、边是依赖；<strong>有向</strong>，箭头有方向，A→B 表示 A 的输出是 B 的输入，A 必须先跑；<strong>无环</strong>，箭头不能绕回起点，A→B→A 这样的圈不允许出现。合起来一句话：DAG 就是一张<strong>能排成先后顺序的依赖图</strong>——只要没有圈，总能找到一个执行顺序，让每个步骤跑的时候它的依赖都已完成，这个顺序叫<strong>拓扑排序</strong>。</p>
+<p>为什么必须无环？有圈的图排不出顺序：A 等 B、B 等 A，谁都动不了，就是死锁。所以 Planner 输出计划的第一件事就是判圈，判出圈就重拆，而不是等执行跑到一半卡住。判圈的办法就是拓扑排序：反复取“依赖都已完成”的步骤，取到最后还有剩下的步骤，说明剩下的互相依赖、成圈了（示例 3）。</p>
+<table><tr><th>形状</th><th>长什么样</th><th>和 DAG 的关系</th></tr>
+<tr><td>链</td><td>A→B→C，全串行</td><td>DAG 的特例，每步只有一个前置</td></tr>
+<tr><td>树</td><td>一父多子，只有一个根</td><td>DAG 的特例，一个步骤只有一个“父依赖”</td></tr>
+<tr><td>DAG</td><td>一个步骤可以有多个输入</td><td>最一般的形状；本课的“对照差异”同时依赖两个检索结果，就是 DAG 不是树</td></tr></table>
+<p><strong>注意别和 LangGraph 的图搞混：</strong>LangGraph 的图可以有环，循环边就是干这个的——ReAct 要一圈一圈跑，直到模型不再调工具。Planner 的任务 DAG 不能有环，因为任务计划是“做完就结束”的清单，有环就永远做不完。一个管循环执行、一个管一次性计划，环的允许与否是两者最大的区别。</p>
+<h3>2. 为什么拆成 DAG：步骤之间只有两种关系</h3>
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planner 把任务拆成 DAG：分层并行，关键路径串行的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
 <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
 <rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
@@ -60,11 +68,11 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="625" y="219" text-anchor="middle" font-size="12" fill="#222">依赖成圈即死锁</text>
 </svg>
 <p>DAG 的意思是：步骤之间有箭头（依赖），但箭头不能绕成圈。两个步骤之间只有两种关系：有依赖（A 的输出是 B 的输入，必须先 A 后 B），没依赖（可以并行）。把关系画成图，Supervisor 就不用凭感觉派活：看图就知道哪步能跑、哪步要等、哪步卡住了。依赖成圈（A 等 B、B 等 A）是死锁，Planner 输出的第一件事就是检查有没有圈。</p>
-<h3>2. 拆的粒度：一步只做一件事，验收标准写在前面</h3>
+<h3>3. 拆的粒度：一步只做一件事，验收标准写在前面</h3>
 <p>每个步骤只做一件事：检索、执行、校验、合成，各是一步；“查资料并写答案”这种一步包两件事的拆法，失败时说不清是哪半步错了。每个步骤还要在动手前写清三样：<strong>输入</strong>（需要什么）、<strong>输出</strong>（交出什么格式）、<strong>验收标准</strong>（怎么算做完，比如“检索命中至少 2 块相关资料”或“测试全部通过”）。验收标准写在前面，Verifier 才有标准可查；动手后再定标准，等于自己给自己打分。</p>
-<h3>3. 拆不干净怎么办：继续拆，直到每步只走一条路</h3>
+<h3>4. 拆不干净怎么办：继续拆，直到每步只走一条路</h3>
 <p>判断拆没拆干净的标准，和第 3 周混合问答一样：一个步骤是不是只走一条路、只用一类工具、只产出一种结果？如果一个步骤里既要检索又要执行，就继续拆。拆到不能再拆、或者再拆就没有意义（步骤小到“打开一个文件”这种原子操作），就停下来。拆太碎也有代价：步骤越多，通信和汇总成本越高，所以粒度停在“可独立验收”这一层就够了。</p>
-<h3>4. 并行度从图里算出来，不是拍脑袋定的</h3>
+<h3>5. 并行度从图里算出来，不是拍脑袋定的</h3>
 <p>图的“宽度”就是天然并行度：同一层没有依赖的步骤有几个，就能并行几个，但还要受 Day 31 的并行上限（3–5 个）和成本约束。图的“关键路径”是最长的一条依赖链，它决定了任务最少要花多久——优化要先优化关键路径上的步骤，并行再多，关键路径上的慢步骤不解决，总耗时也下不来。</p>
 <div class="warn"><strong>容易踩的坑：</strong>计划只写步骤、不写验收标准。没有验收标准，Verifier 只能凭感觉说“好像做完了”，子 Agent 交上来的半成品也会被当成成品汇总，错误一路传到最终答案。</div>
 
@@ -97,6 +105,22 @@ plan = [
             # 验收：不过就打回这一步，不重跑全图
             done[step["id"]] = verify_or_retry(step, result)
     return done</code></pre>
+<h3>示例 3：判圈：拓扑排序排不出来就是有圈（可跑）</h3>
+<pre><code>def has_cycle(plan):
+    # Kahn 算法：反复取依赖已满足的步骤；取完还有剩下的，就是成圈
+    deps = {s["id"]: set(s["deps"]) for s in plan}
+    done, progress = set(), True
+    while progress:
+        progress = False
+        for sid, ds in deps.items():
+            if sid not in done and ds &lt;= done:
+                done.add(sid); progress = True
+    return len(done) != len(plan)  # 还有没取出来的步骤，说明互相等、成圈了
+
+ok = [{"id": "a", "deps": []}, {"id": "b", "deps": ["a"]}]
+bad = [{"id": "a", "deps": ["b"]}, {"id": "b", "deps": ["a"]}]
+print(has_cycle(ok))   # False：能排完，没圈
+print(has_cycle(bad))  # True：A 等 B、B 等 A，死锁</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 拿“做一份某产品的竞品对比”当任务，拆成 4–5 步：每步的输入、输出、验收标准分别是什么？依赖关系画出来，有圈吗？<br>
@@ -120,6 +144,7 @@ plan = [
 <details><summary>Q3：并行度和关键路径是什么关系？</summary><p>图的宽度是天然并行度，关键路径是最长依赖链、决定最少耗时。优化先优化关键路径，并行度还要受上限和成本约束。</p></details>
 <details><summary>Q4：依赖成圈了怎么办？</summary><p>Planner 输出时就要检查出来，显式报错、让 Planner 重拆，而不是让执行跑到死锁才发现。执行里遇到 ready 为空，也要显式报错。</p></details>
 <details><summary>Q5：验收标准为什么必须写在前面？</summary><p>因为 Verifier 要按标准查：检索命中几块、测试过没过、每条结论有没有出处。动手后再定标准，执行者会按对自己有利的标准交差。</p></details>
+<details><summary>Q6：DAG 是什么？和 LangGraph 的图有什么区别？</summary><p>DAG 是有向无环图：节点是步骤、边是有方向的依赖、箭头不能绕成圈；没圈就能拓扑排序出合法执行顺序，有圈就是死锁。LangGraph 的图可以有环，循环边用来跑 ReAct 循环；Planner 的任务 DAG 不能有环，因为任务计划是做完就结束的清单。</p></details>
 
 <h2>五、加分项</h2>
 <div class="card">
