@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 26：全项目加固 1：README、架构图与可观测性 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 26 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 26：全项目加固 1：README、架构图与可观测性 | LangChain 30 天实战课</h1>
+<p>第 4 周是加固周：不再加新功能，而是把前面做过的三个项目——Mini Cursor、RAG + 深圳天气 Agent、Computer Use-lite——收拾成“别人能看懂、出了问题能查到、跑起来心里有数”的样子。今天做三件事：统一补 README 和架构图、把真实失败案例写下来、给项目装上可观测性（日志、追踪、成本统计）。加固不是写文档走形式，是让项目从“在我电脑上能跑”变成“换个人、换个时间也能跑、也能修”。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. README 怎么写：四个部分，缺一不可</h3>
+<svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="用户请求经过 Agent 到工具，再把日志、追踪和成本统计汇总成可观测性的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="18" width="110" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="75" y="45" text-anchor="middle" font-size="13" fill="#222">用户请求</text>
+<line x1="130" y1="40" x2="208" y2="40" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="210" y="18" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="285" y="45" text-anchor="middle" font-size="13" fill="#222">Agent（决策）</text>
+<line x1="360" y1="40" x2="438" y2="40" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="440" y="18" width="130" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="505" y="45" text-anchor="middle" font-size="13" fill="#222">工具 / 检索</text>
+<line x1="590" y1="40" x2="628" y2="40" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="630" y="18" width="70" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="665" y="45" text-anchor="middle" font-size="13" fill="#222">回答</text>
+<line x1="285" y1="62" x2="285" y2="92" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="92" x2="600" y2="92" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="92" x2="120" y2="112" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="92" x2="360" y2="112" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="92" x2="600" y2="112" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="114" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="120" y="141" text-anchor="middle" font-size="13" fill="#222">结构化日志</text>
+<rect x="260" y="114" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="141" text-anchor="middle" font-size="13" fill="#222">LangSmith 追踪</text>
+<rect x="500" y="114" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="141" text-anchor="middle" font-size="13" fill="#222">成本与耗时统计</text>
+<line x1="120" y1="158" x2="120" y2="180" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="158" x2="360" y2="180" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="600" y1="158" x2="600" y2="180" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="180" x2="600" y2="180" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="180" x2="360" y2="200" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="240" y="202" width="240" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="229" text-anchor="middle" font-size="13" fill="#222">可观测性：出了问题能定位</text>
+</svg>
+<p>一份能用的 README 只写四部分。第一，背景：这个项目解决什么问题、给谁用，一句话讲清，别写成产品宣传。第二，架构：一张图加几行字，说清请求从哪进、经过哪些节点、调了哪些工具、结果从哪出；图比一千字管用，三个项目各画一张，别共用一张“万能图”。第三，怎么跑：从零开始的命令，按顺序写，环境变量写名字不写值（密钥绝不进 README），跑通的标志是什么也写上。第四，失败案例：见下一节，这是最容易被省掉、也最有用的部分。检验标准很简单：一个没看过你代码的人，照着 README 能不能在半小时内跑起来、跑出问题时知不知道先查什么。</p>
+<h3>2. 失败案例：每个项目至少写一个真实失败场景</h3>
+<p>失败案例不是“可能出问题”，而是“已经出过的问题、当时看到了什么、最后怎么处理的”。只写真实发生过的，别编。三个项目各举一个例子。RAG + 深圳天气 Agent：检索为空——用户问了知识库里没有的内容，检索返回 0 条，Agent 却照着编了一个答案；处理是检索为空时直接说“知识库里没有”，并记一条日志，而不是让模型自由发挥。Mini Cursor：工具超时——调文件读写或命令工具时对方半天没回，Agent 一直等、最后整个任务卡死；处理是给每次工具调用设超时（比如 30 秒），超时就返回“工具超时，已跳过”，让 Agent 继续走别的路。Computer Use-lite：定位失败——屏幕截图里按钮位置变了，模型点的坐标落在空白处，点了三次都没反应；处理是点之前先校验“点下去之后界面有没有变化”，没变化就换一种定位方式（比如按文字再找一次），而不是原地重复点。写失败案例时固定写四行：现象、当时看到的证据、原因、处理和预防，下次再遇到同样现象，十分钟就能定位。</p>
+<h3>3. 结构化日志：每一步记什么，怎么记</h3>
+<p>结构化日志就是“每行日志都是固定字段的记录”，而不是一句随手写的人话。为什么？因为人话日志只能人眼看，结构化日志能被程序筛、能统计、能报警。每一步至少记五个字段：时间、步骤名（比如检索、调工具、生成答案）、输入摘要、输出摘要、耗时。调用模型时再加两个：Token 数和模型名。记输入输出摘要时注意两点：只记摘要和长度，别把整段用户隐私、整份文件原样打进日志；出错时记错误类型和关键信息，别只记“出错了”。日志分三级就够了：INFO 记正常步骤，WARNING 记“还能继续但不对劲”（比如检索为空、重试了一次），ERROR 记“这一步失败了”。级别乱用，报警就没人信了。</p>
+<h3>4. LangSmith 追踪与成本耗时统计：看得见，才管得住</h3>
+<p>LangSmith 是 LangChain 官方的追踪工具：打开追踪后，每次调用的输入、输出、耗时、Token 数都会按调用链记下来，像录像回放一样能一层层点开看。出问题时不用猜“模型到底看到了什么”，直接打开那次调用看输入输出。接法很简单：配好环境变量（开关和密钥）就能用，不用改业务代码。成本和耗时统计是另一半：每次调用记下 Token 数和耗时，攒起来汇总成一张表——按步骤、按天、按项目汇总，总 Token、总耗时、平均耗时、最慢的一步，一眼能看到。表里所有价格数字都写“示例”，按你自己的账单单价替换，千万别把示例价当成真实价去汇报。统计的目的是回答三个问题：钱花在哪一步、时间耗在哪一步、哪一步最值得先优化；答不上来，日志记再多也没用。</p>
+<div class="warn"><strong>容易踩的坑：</strong>加固周最容易犯的错是“只写文档、不跑验证”。README 写完一定要照着从零跑一遍，跑不通就改文档；失败案例写完要确认处理逻辑真的在代码里，而不是只写在文档里；日志和统计接完要真的跑一次请求，看日志里有没有那条记录、表里有没有这一行。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：结构化日志，每步记固定字段</h3>
+<pre><code>import json, logging, time
+
+# 日志只输出 JSON，一行一条，之后能用程序筛、能统计
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger("agent")
+
+def log_step(step, input_summary, output_summary, seconds, tokens=0):
+    log.info(json.dumps({
+        "level": "INFO", "step": step,
+        "input": input_summary, "output": output_summary,
+        "seconds": round(seconds, 2), "tokens": tokens,
+    }, ensure_ascii=False))
+
+# 用法：每步前后计时，调用完记一条
+start = time.time()
+result = "检索到 3 条，最高分 0.81"   # 这里换成真实的检索结果摘要
+log_step("retrieve", "深圳今天天气如何", result, time.time() - start)</code></pre>
+<h3>示例 2：成本与耗时统计，汇总成一张表</h3>
+<pre><code># 每次调用记一条（Token 数、耗时），攒起来汇总成表
+# 单价是示例，按自己账单替换：比如每 1000 个 Token 0.01 元
+PRICE_PER_1K = 0.01  # 示例单价，单位：元 / 1000 Token
+
+calls = [
+    {"step": "retrieve", "tokens": 120, "seconds": 0.4},
+    {"step": "generate", "tokens": 850, "seconds": 2.1},
+    {"step": "generate", "tokens": 640, "seconds": 1.8},
+]
+
+total_tokens = sum(c["tokens"] for c in calls)
+total_seconds = sum(c["seconds"] for c in calls)
+cost = total_tokens / 1000 * PRICE_PER_1K
+print(f"调用 {len(calls)} 次，总 Token {total_tokens}，总耗时 {total_seconds:.1f} 秒")
+print(f"示例成本 {cost:.4f} 元（示例单价，按自己账单替换）")
+slowest = max(calls, key=lambda c: c["seconds"])
+print(f"最慢的一步：{slowest['step']}，{slowest['seconds']} 秒")</code></pre>
+<h3>示例 3：LangSmith 追踪，只配环境变量（概念代码，先看形状）</h3>
+<pre><code># LangSmith 不用改业务代码，配好三个环境变量就开始追踪：
+# LANGSMITH_TRACING=true
+# LANGSMITH_API_KEY=你的密钥（只放 .env，不进代码、不进 README）
+# LANGSMITH_PROJECT=mini-cursor   # 三个项目各用一个项目名，别混在一起
+#
+# 打开后，在 LangSmith 里能看到每次调用的输入、输出、耗时、Token 数，
+# 按调用链一层层点开，出问题先看追踪，再决定改哪里。
+# 注意：追踪会把输入输出发到 LangSmith 服务，含隐私的内容先脱敏再开追踪。</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给 RAG + 深圳天气 Agent 写 README 的四部分提纲：背景一句话、架构图画哪几个框、怎么跑的三条命令、一个真实失败案例。<br>
+2. 在你自己的项目里加一行结构化日志：记一次检索的步骤名、输入摘要、输出摘要、耗时。<br>
+3. 照示例 2 的形状，记下最近三次调用的 Token 数和耗时，算出总成本（示例单价）和最慢的一步。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 一份能用的 README 必须包括哪四部分？</strong></p><button data-i="0">背景、功能列表、更新日志</button><button data-i="1">安装、截图、致谢</button><button data-i="2">背景、架构、怎么跑、失败案例</button><div class="ans">解析：选 C。缺了“怎么跑”跑不起来，缺了“失败案例”出了问题不知道先查什么。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 架构图最应该讲清什么？</strong></p><button data-i="0">代码写得有多优雅</button><button data-i="1">请求从哪进、经过哪些节点、调了哪些工具、结果从哪出</button><button data-i="2">用了哪些酷炫的技术名词</button><div class="ans">解析：选 B。架构图是给后来人指路的，讲清流向比堆名词重要。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 检索为空时，Agent 正确的做法是？</strong></p><button data-i="0">照着编一个看起来合理的答案</button><button data-i="1">直接说知识库里没有，并记一条日志</button><button data-i="2">默默返回空结果，什么都不说</button><div class="ans">解析：选 B。编答案是幻觉的源头，没检索到就老实说没有。</div></div>
+<div class="q" data-answer="2"><p><strong>4. 结构化日志每步至少记哪几个字段？</strong></p><button data-i="0">只记一句话人话</button><button data-i="1">只记时间</button><button data-i="2">时间、步骤名、输入摘要、输出摘要、耗时</button><div class="ans">解析：选 C。固定字段才能被程序筛、被统计，人话日志只能人眼看。</div></div>
+<div class="q" data-answer="0"><p><strong>5. LangSmith 追踪最大的用处是？</strong></p><button data-i="0">像录像回放一样看到每次调用的输入、输出、耗时、Token 数</button><button data-i="1">让模型回答得更快</button><button data-i="2">自动修好所有 Bug</button><div class="ans">解析：选 A。出问题不用猜模型看到了什么，直接打开那次调用看。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 成本与耗时统计表，最想回答的问题是？</strong></p><button data-i="0">项目用了多少行代码</button><button data-i="1">钱花在哪一步、时间耗在哪一步、哪一步最值得先优化</button><button data-i="2">团队有多少人</button><div class="ans">解析：选 B。统计不是为了记数字，是为了决定先优化哪一步。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：README 里最容易被省掉、但最有用的部分是什么？</summary><p>失败案例。背景、架构、怎么跑讲的是“正常时怎么样”，失败案例讲的是“出问题时怎么办”；面试官想听的是你有没有从真实故障里沉淀出“现象、证据、原因、处理”这四行，而不是只会写 happy path。</p></details>
+<details><summary>Q2：结构化日志和普通 print 有什么区别？</summary><p>普通 print 是给人看的一句话，结构化日志是固定字段的记录，能被程序筛、能统计、能报警；每步记时间、步骤名、输入输出摘要、耗时，调模型再加 Token 数和模型名，级别分 INFO / WARNING / ERROR 三级，乱用级别报警就没人信了。</p></details>
+<details><summary>Q3：LangSmith 是什么？什么时候用？</summary><p>LangChain 官方追踪工具，配好环境变量就能用，不改业务代码；每次调用的输入、输出、耗时、Token 数按调用链记下来，能一层层点开回放。出问题先看追踪再改代码，含隐私的内容先脱敏再开追踪。</p></details>
+<details><summary>Q4：怎么统计一次 Agent 任务的成本和耗时？</summary><p>每次调用记 Token 数和耗时，攒起来按步骤、按天、按项目汇总：总 Token、总耗时、平均耗时、最慢的一步；成本用 Token 数乘单价算，单价按自己账单填，示例价不能当真实价汇报。统计的目的是定位最值得先优化的那一步。</p></details>
+<details><summary>Q5：工具超时、检索为空、定位失败，这三个失败怎么处理？</summary><p>共同点是“失败要显式处理，不要假装成功”：工具超时设超时时间，超时返回“已跳过”让 Agent 继续；检索为空直接说没有并记日志，不编答案；定位失败先校验界面有没有变化，没变化就换定位方式，不原地重复点。三件事都要写进失败案例，方便下次十分钟定位。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>可观测性上线前先问三件事：日志里能不能按步骤筛出一次完整任务？LangSmith 里能不能点开看到模型到底看到了什么？成本表里能不能说出最贵、最慢的那一步？三问有一个答不上来，出了问题就只能靠猜。</p>
+<p><strong>简历讲法：</strong>别写“给项目加了日志”，写“结构化日志（步骤、输入输出摘要、耗时、Token）+ LangSmith 全链路追踪 + 按步骤汇总的成本耗时表，检索为空、工具超时、定位失败三个真实故障都有失败案例和处理”。前者是名词，后者是可追问的工程量。</p>
+<p><strong>明日预告：</strong>Day 27 讲全项目加固 2：版本管理与灰度发布——Prompt、模型、工具一改就是新版本，怎么写版本号、怎么做变更日志，金丝雀怎么从 1% 放到 100%，护栏指标变差怎么自动回滚。</p>
+</div>
+<div class="nav"><span><a href="day25.html">← Day 25</a></span><span><a href="day27.html">Day 27 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

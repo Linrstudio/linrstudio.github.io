@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 22：Computer Use 总览：为什么让 Agent 操作电脑 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 22 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 22：Computer Use 总览：为什么让 Agent 操作电脑 | LangChain 30 天实战课</h1>
+<p>第 4 周开篇，先讲清一个大问题：Agent 不只会调 API，还能像人一样操作电脑。API 是软件留好的“后门”，有 API 当然好；但很多软件没有 API，或者 API 不全，这时 Agent 就直接看屏幕、点按钮、敲键盘，把活干完。这就是 Computer Use：让 Agent 操作电脑。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 为什么让 Agent 操作电脑：没有 API 也能干活</h3>
+<p>先说清两条路的区别。调 API 是走“官方通道”：快、稳、结果结构化，但前提是对方给了 API，而且给了你要的那个接口。操作电脑是走“人走的路”：看界面、点按钮、填表单，软件长什么样，Agent 就怎么用。它的价值就一句话：<strong>能操作一切有界面的软件，不依赖 API</strong>。没有 API 的老系统、只做了网页版没做开放接口的工具、需要点几下鼠标才能完成的小流程，都能用这条路兜底。</p>
+<p>但也要认清代价：操作电脑比调 API 慢，一步步点，还要等界面反应；而且界面一改版，坐标和按钮位置就可能变。所以原则是：<strong>有 API 优先用 API，没有 API 再用 Computer Use</strong>。Computer Use 是补位，不是首选。</p>
+<h3>2. 它能干什么、不能干什么：能力边界与安全红线</h3>
+<svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agent 看截图、做判断、点按钮，危险操作先找人确认的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="90" y="43" text-anchor="middle" font-size="13" fill="#222">任务：帮我操作</text>
+<line x1="160" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">截图：看屏幕</text>
+<line x1="380" y1="38" x2="438" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="440" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="510" y="43" text-anchor="middle" font-size="13" fill="#222">判断：点哪里</text>
+<line x1="580" y1="38" x2="638" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="640" y="56" width="60" height="0" fill="none" stroke="none"/>
+<rect x="600" y="16" width="100" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="650" y="43" text-anchor="middle" font-size="13" fill="#222">危险？</text>
+<line x1="650" y1="60" x2="650" y2="82" stroke="#d99a00" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="560" y="84" width="180" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="650" y="111" text-anchor="middle" font-size="13" fill="#222">停下，等人确认</text>
+<line x1="560" y1="106" x2="430" y2="106" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="430" y1="106" x2="430" y2="128" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="330" y="128" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="430" y="155" text-anchor="middle" font-size="13" fill="#222">安全：点 / 输 / 打开</text>
+<line x1="430" y1="172" x2="430" y2="194" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="330" y="196" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="430" y="223" text-anchor="middle" font-size="13" fill="#222">再截图：确认结果</text>
+</svg>
+<p>能做的事就三类：<strong>能看</strong>（截图、读屏幕文字，知道现在界面是什么状态）、<strong>能点</strong>（点按钮、点菜单、点链接）、<strong>能输</strong>（在输入框里打字、按快捷键）。这三类组合起来，大部分“人坐在电脑前能做的事”，Agent 都能做。</p>
+<p>不能碰的，也要先划线。第一，<strong>没有授权的操作不能碰</strong>：没让你登录的账号、没让你打开的文件、没让你进的系统，一律不动。第二，<strong>删、发、支付类操作一律人工确认</strong>：删除文件、发送消息或邮件、提交订单和付款，这些动作一旦做了就很难撤回，Agent 必须先停下，把“要做什么、影响是什么”说清楚，等人点头再执行。第三，<strong>不确定的不猜</strong>：屏幕上看不清、按钮意思不明、弹了没见过的确认框，先截图问人，别凭感觉点下去。</p>
+<div class="warn"><strong>安全红线要写进代码，不是写在提示词里：</strong>只在提示词里写“别乱删东西”是拦不住的，模型可能忘了、也可能理解错。删、发、支付这类动作，必须在代码层设一道关卡：没拿到人工确认，函数直接拒绝执行。这条后面示例 2 会写出来。</div>
+<h3>3. 工具集：截图、点击、输入、打开、读屏</h3>
+<p>Computer Use 不需要几十个工具，五个就够搭起骨架。每个工具要说清两件事：它是干什么的、它返回什么。</p>
+<table>
+<tr><th>工具</th><th>是干什么的</th><th>返回什么</th></tr>
+<tr><td>screenshot</td><td>给当前屏幕拍一张照，是 Agent 的“眼睛”</td><td>一张图片，Agent 靠它看界面状态</td></tr>
+<tr><td>click(x, y)</td><td>在坐标 (x, y) 处点一下鼠标</td><td>是否点上了，一般要再截图确认效果</td></tr>
+<tr><td>type(text)</td><td>往当前焦点处输入一段文字</td><td>是否输入完成，输入前要先点中输入框</td></tr>
+<tr><td>open_app</td><td>打开指定的应用或网址</td><td>应用是否打开、窗口是否出现</td></tr>
+<tr><td>read_screen_text</td><td>把屏幕上的文字读出来，变成文本</td><td>一段文本，Agent 靠它做判断、做校验</td></tr>
+</table>
+<p>注意这个循环：<strong>截图 → 判断 → 点 / 输 → 再截图确认</strong>。Agent 不是闭着眼睛连点十下，而是每做一步就看一眼结果，确认这步生效了再走下一步。跳过“再截图确认”这步，是 Computer Use 最常见的翻车原因：点了没反应、输错了地方，后面全跟着错。</p>
+<h3>4. 先浏览器，后桌面：顺序不是随便定的</h3>
+<p>学 Computer Use 有个推荐顺序：<strong>先做浏览器，再做桌面</strong>。原因有三条。第一，浏览器可控：页面能刷新、能重开、环境相对干净，出了问题从头再来成本低。第二，浏览器可复现：同一个网址，别人打开也是一样的页面，方便调试、方便复盘，桌面软件在不同电脑上长得可能不一样。第三，浏览器能截图留痕：每步的页面状态都能存下来，出问题时有据可查。</p>
+<p>桌面为什么放后面？桌面变量多、风险大：窗口位置会变、弹窗会抢焦点、不同系统和版本长得不一样，而且一不小心就可能动到真实文件和系统设置。先在浏览器里把“看—判断—点—确认”这个循环练熟，再去碰桌面，翻车的面会小很多。第 4 周就是按这个顺序排的：Day 23 先讲浏览器操作，桌面放到后面几天。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：五个工具的骨架（概念代码，先看形状）</h3>
+<pre><code># 五个工具，先看形状：每个工具只做一件事，返回值要说清
+# 注意：这里是骨架，真正的截图和点击要接具体驱动（如 Playwright / 系统驱动）
+
+def screenshot():
+    """给当前屏幕拍照，返回一张图片。Agent 的眼睛，每步之前先看一眼。"""
+    return take_screenshot()  # 返回图片数据
+
+def click(x, y):
+    """在坐标 (x, y) 点一下。点之前必须先截图，确认这个坐标确实是目标。"""
+    return mouse_click(x, y)  # 返回是否点上了
+
+def type_text(text):
+    """往当前焦点处输入文字。输入前要先点中输入框，不然字会打到别处。"""
+    return keyboard_type(text)  # 返回是否输入完成
+
+def open_app(name):
+    """打开指定的应用或网址。返回应用是否打开、窗口是否出现。"""
+    return launch(name)
+
+def read_screen_text():
+    """把屏幕上的文字读成文本。Agent 靠它做判断、做校验。"""
+    return ocr_screen()  # 返回一段文本
+
+# Agent 的一轮循环：截图 -> 判断 -> 点 / 输 -> 再截图确认
+# 跳过最后一步确认，是最常见的翻车原因</code></pre>
+<h3>示例 2：危险操作的人工确认关卡（可运行，纯 Python）</h3>
+<pre><code># 安全红线写进代码：删 / 发 / 支付，先过确认关卡，没确认直接拒绝
+DANGEROUS = {"delete", "send", "pay"}
+
+def needs_confirm(action):
+    """判断这个动作是否属于删 / 发 / 支付类，需要人工确认。"""
+    return action in DANGEROUS
+
+def run_action(action, confirmed=False):
+    """执行动作前先过关卡：危险动作没确认就拒绝，不执行。"""
+    if needs_confirm(action) and not confirmed:
+        return "拒绝执行：%s 属于危险操作，需人工确认后再执行" % action
+    return "已执行：%s" % action
+
+if __name__ == "__main__":
+    for action in ["click", "delete", "send", "pay", "type"]:
+        print(action, "->", run_action(action))
+    print("delete + 已确认 ->", run_action("delete", confirmed=True))</code></pre>
+<p>上面这段是纯 Python，本地可以直接跑，预期输出是：click 和 type 直接执行，delete / send / pay 没确认时被拒绝，delete 在 confirmed=True 时才执行。成本数字这里不涉及；如果后面要接真实模型调用，费用按示例写，替换成自己的账单数字。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 找一个你每天要做、又没有 API 的小流程（比如去某个网站查一个数、填一张表），写出它用 Computer Use 的步骤：每步是截图、点、输里的哪一个？<br>
+2. 这个流程里哪一步属于删 / 发 / 支付类？写出确认时要向人展示的一句话（要做什么、影响是什么）。<br>
+3. 如果第一步截图就看不清目标，你的 Agent 应该停下问人，还是猜一个坐标点下去？为什么？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Computer Use 最大的价值是什么？</strong></p><button data-i="0">只能调 API，比 API 更快</button><button data-i="1">能操作一切有界面的软件，不依赖 API</button><button data-i="2">只能截图，不能操作</button><div class="ans">解析：选 B。没有 API 的软件也能用，Computer Use 是 API 的补位。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 下面哪个操作必须先人工确认？</strong></p><button data-i="0">截图看一眼屏幕</button><button data-i="1">读屏幕上的文字</button><button data-i="2">删除文件、发送消息、付款</button><div class="ans">解析：选 C。删、发、支付做了很难撤回，一律先停下等人点头。</div></div>
+<div class="q" data-answer="0"><p><strong>3. screenshot 工具返回什么？</strong></p><button data-i="0">一张当前屏幕的图片</button><button data-i="1">一段 API 返回的 JSON</button><button data-i="2">一个文件路径列表</button><div class="ans">解析：选 A。截图是 Agent 的眼睛，靠它看界面现在是什么状态。</div></div>
+<div class="q" data-answer="1"><p><strong>4. click(x, y) 之前最应该先做什么？</strong></p><button data-i="0">直接点，错了再说</button><button data-i="1">先截图，确认这个坐标确实是目标</button><button data-i="2">先关掉所有窗口</button><div class="ans">解析：选 B。闭着眼睛点，点错了后面全跟着错。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 为什么先学浏览器操作，再学桌面操作？</strong></p><button data-i="0">因为桌面操作不重要</button><button data-i="1">因为浏览器没有截图功能</button><button data-i="2">因为浏览器可控、可复现、能截图留痕，桌面变量多、风险大</button><div class="ans">解析：选 C。先在低风险环境把“看—判断—点—确认”循环练熟。</div></div>
+<div class="q" data-answer="1"><p><strong>6. read_screen_text 是用来干什么的？</strong></p><button data-i="0">往屏幕上写字</button><button data-i="1">把屏幕文字读成文本，供 Agent 判断和校验</button><button data-i="2">打开一个新应用</button><div class="ans">解析：选 B。读出来的文本是 Agent 做判断、做校验的依据。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：什么是 Computer Use？</summary><p>让 Agent 像人一样操作电脑：看截图、读屏幕文字、点按钮、输文字、打开应用，不依赖 API。核心循环是截图 → 判断 → 点 / 输 → 再截图确认，每步做完都要看一眼结果。</p></details>
+<details><summary>Q2：Computer Use 和 API 调用比，优势和风险各是什么？</summary><p>优势：能操作一切有界面的软件，不依赖 API，没有 API 的老系统和网页流程也能兜底。风险：比 API 慢，要一步步等界面反应；界面一改版，坐标和定位就可能失效；还可能误点、误输，删、发、支付类操作一旦做错很难撤回。所以有 API 优先用 API，Computer Use 是补位，危险动作必须人工确认。</p></details>
+<details><summary>Q3：Computer Use 的工具集有哪些，各返回什么？</summary><p>五个：screenshot 返回当前屏幕图片，是 Agent 的眼睛；click(x, y) 在坐标点一下，返回是否点上；type(text) 往焦点处输文字，返回是否输完；open_app 打开应用或网址，返回是否打开；read_screen_text 把屏幕文字读成文本，供判断和校验。</p></details>
+<details><summary>Q4：安全红线在工程上怎么落地？</summary><p>写进代码，不只写在提示词里：删、发、支付类动作在代码层设确认关卡，没拿到人工确认直接拒绝执行；没有授权的账号、文件、系统一律不动；看不清、不确定的先停下问人，别猜着点。</p></details>
+<details><summary>Q5：为什么先浏览器，后桌面？</summary><p>浏览器可控、可复现、能截图留痕，出问题重开成本低，适合先练“看—判断—点—确认”这个循环；桌面变量多、风险大，窗口位置会变、弹窗会抢焦点，还可能动到真实文件，等循环练熟了再碰。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Computer Use 上线前先问三件事：危险动作的确认关卡写在代码里了吗？每步有没有截图留痕，出问题能复盘吗？界面改版后，定位失效时是停下报错，还是会猜着点下去？三问有一个答不上来，就别上生产。</p>
+<p><strong>简历讲法：</strong>别写“做过 Computer Use”，写“截图—判断—点输—再截图确认的循环，删 / 发 / 支付类动作代码层人工确认，先浏览器后桌面”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 23 讲 Playwright 浏览器操作：定位、等待与截图留痕，role / text / test-id 怎么选，等待为什么不能用固定 sleep，填表时 fill 和 type 有什么区别。</p>
+</div>
+<div class="nav"><span><a href="day21.html">← Day 21</a></span><span><a href="day23.html">Day 23 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

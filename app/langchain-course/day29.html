@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 29：面试模拟 1：项目深挖讲稿 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 29 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 29：面试模拟 1：项目深挖讲稿</h1>
+<p>简历上的项目，面试官一定会深挖：“讲讲你这个项目。”很多人一开口就背流水账：用了什么技术、写了多少代码，三分钟还没讲到重点。这一课给三个课程项目各准备一段 5 分钟讲稿，结构固定：背景 → 架构 → 最难的 Bug → 怎么评测 → 如果重做会改什么。先说清楚：讲稿不是背诵稿，是按这个结构现场组织语言的骨架；结构熟了，现场怎么问都不慌。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 五段结构：背景 → 架构 → 最难的 Bug → 评测 → 重做</h3>
+<svg viewBox="0 0 720 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="五段讲稿结构流程图：背景、架构、最难的 Bug、评测、重做" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="10" y="40" width="110" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="65" y="71" text-anchor="middle" font-size="13" fill="#222">1. 背景</text>
+<line x1="120" y1="66" x2="142" y2="66" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="144" y="40" width="110" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="199" y="71" text-anchor="middle" font-size="13" fill="#222">2. 架构</text>
+<line x1="254" y1="66" x2="276" y2="66" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="278" y="40" width="130" height="52" rx="8" fill="#fff7e6" stroke="#f5d68a" stroke-width="1.5"/>
+<text x="343" y="71" text-anchor="middle" font-size="13" fill="#222">3. 最难的 Bug</text>
+<line x1="408" y1="66" x2="430" y2="66" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="432" y="40" width="110" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="487" y="71" text-anchor="middle" font-size="13" fill="#222">4. 评测</text>
+<line x1="542" y1="66" x2="564" y2="66" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="566" y="40" width="144" height="52" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="638" y="71" text-anchor="middle" font-size="13" fill="#222">5. 重做会改什么</text>
+<text x="360" y="130" text-anchor="middle" font-size="13" fill="#666">每段约 1 分钟，讲稿不是背诵，是按结构现场组织</text>
+</svg>
+<p>五段各约 1 分钟，合起来 5 分钟。第一段<strong>背景</strong>：一句话讲清项目解决什么问题、给谁用，别讲技术。第二段<strong>架构</strong>：画出数据怎么流——用户输入进来，经过哪几个节点、调了哪些工具、答案怎么出来，只讲主干，别报菜名。第三段<strong>最难的 Bug</strong>：这是面试官最想听的一段，讲一个你真卡住过的坑、你怎么定位、最后怎么修的。第四段<strong>评测</strong>：你怎么证明它好用——跑了多少条测试、准确率多少、有没有人工抽查。第五段<strong>重做会改什么</strong>：讲你现在回头看，哪个设计最想推翻，这一段最显水平，因为它证明你不是“做完就忘”，而是真复盘过。</p>
+<h3>2. 三个项目的讲稿骨架：每个项目一句话定位</h3>
+<table>
+<tr><th>项目</th><th>一句话定位</th><th>架构主干</th><th>评测抓手</th></tr>
+<tr><td>Mini Cursor（第 2 周）</td><td>命令行里的迷你编程助手：说一句话，它改代码</td><td>用户指令 → 意图解析 → 白名单工具执行 → 结果回显</td><td>固定指令集回归：每条指令跑通、越权指令被拦住</td></tr>
+<tr><td>RAG + 深圳天气 Agent（第 3 周）</td><td>会查资料、会查天气的问答 Agent：答案有出处</td><td>问题 → 检索知识库 → 调天气工具 → 带引用生成答案</td><td>引用准确率：答案里的引用是不是真出自原文</td></tr>
+<tr><td>Computer Use-lite（第 4 周）</td><td>能看屏幕、能点按钮的电脑操作 Agent</td><td>截图 → 定位元素 → 执行点击 / 输入 → 校验结果</td><td>任务成功率：10 个常用操作里几个一次做对</td></tr>
+</table>
+<p>讲的时候先报定位，再走五段结构。三个项目别讲成三个流水账，要讲出区别：Mini Cursor 讲的是“安全边界怎么守”，RAG 讲的是“答案怎么可信”，Computer Use 讲的是“不确定的界面怎么操作”。面试官听完三个，应该记住三个不同的关键词，而不是三个相似的故事。</p>
+<h3>3. 最难的 Bug 怎么讲：现象 → 定位 → 根因 → 修复 → 防再犯</h3>
+<p>讲 Bug 不要只讲“修好了”，要讲你是怎么找到根因的。每个项目准备一个例子：<strong>Mini Cursor：命令白名单绕过。</strong>现象是用户一句话绕过了白名单、让 Agent 执行了不该执行的命令。定位时发现白名单只校验了命令的开头，没校验拼接后的完整命令。根因是“校验点放错了位置”——应该在执行前校验最终要跑的完整命令，而不是用户输入的前几个字。修复是执行前对完整命令做二次校验，防再犯是加一条回归测试：专门写越权指令，看它能不能被拦住。<strong>RAG：检索命中但引用错位。</strong>现象是答案看着对，引用却指向了另一段原文。定位发现检索返回的片段是对的，但生成时引用的编号和片段对不上。根因是引用编号在拼接上下文时错位了。修复是引用和片段绑定在一起传，不再靠序号对齐；防再犯是评测里加一项“引用准确率”，每次跑测试都查。<strong>Computer Use：按钮位置变化定位失败。</strong>现象是昨天能点的按钮，今天点不到了。定位发现按钮坐标变了，但截图里的按钮明明还在。根因是定位只靠固定坐标，没做视觉匹配。修复是先视觉定位再点，坐标只做兜底；防再犯是操作后加校验——点完截图确认页面真的变了，没变就重试一次。讲 Bug 的公式就是：现象一句话、定位讲方法、根因讲本质、修复讲动作、防再犯讲机制。</p>
+<h3>4. 追问应对：把话题引回自己准备好的点上</h3>
+<p>面试官一定会追问，追问不是坏事，是送分题。应对就三招。第一招，<strong>承认不知道</strong>：真不会的就说“这个我没做过，我的思路是……”，别编，编的一追就穿。第二招，<strong>桥接</strong>：不管对方问什么，答完一两句就搭桥回自己的准备点，比如“这个问题和我当时处理白名单绕过很像，当时的做法是……”。第三招，<strong>反问确认</strong>：“您是指执行层面的校验，还是提示词层面的约束？”——反问既争取了思考时间，也让回答更对路。还有一条底线：讲稿不是背诵，背诵一卡壳就全崩；结构熟了，现场忘词也能顺着五段往下走。面试前把三个讲稿各讲两遍，录下来自己听一遍，超时就砍细节，卡壳就补过渡句。</p>
+<div class="warn"><strong>容易踩的坑：</strong>讲稿写成技术清单。“用了 LangGraph、用了向量库、用了三个工具”——面试官听完只记得名词。每一项技术后面都要跟一句“为什么用它、不用它会怎样”，技术才有说服力。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：讲稿结构自查小工具（能跑的纯 Python，检查五段齐不齐）</h3>
+<pre><code># 检查讲稿有没有走完五段结构，并按语速估算时长
+# 语速按每分钟约 200 字估算（示例），按自己的语速替换
+WORDS_PER_MINUTE = 200
+
+def check_talk(title, sections):
+    """sections 是五段文字的列表，顺序：背景、架构、Bug、评测、重做"""
+    names = ["背景", "架构", "最难的 Bug", "评测", "重做会改什么"]
+    total = 0
+    for name, text in zip(names, sections):
+        words = len(text)
+        total += words
+        print(f"{name}：{words} 字，约 {words / WORDS_PER_MINUTE:.1f} 分钟")
+    print(f"{title} 合计 {total} 字，约 {total / WORDS_PER_MINUTE:.1f} 分钟")
+    if len(sections) &lt; 5:
+        print("缺段！五段要齐，缺哪段补哪段")
+    if total / WORDS_PER_MINUTE &gt; 6:
+        print("超时了！砍细节，5 分钟讲稿别超过 1000 字")
+
+check_talk("Mini Cursor", [
+    "命令行里的迷你编程助手：说一句话，它改代码。",
+    "用户指令先进意图解析，再走白名单工具执行，最后回显结果。",
+    "最难的是白名单绕过：校验只看了命令开头，没看拼接后的完整命令。",
+    "固定指令集回归测试：每条指令跑通，越权指令被拦住。",
+    "重做会把校验移到执行前，对完整命令做二次校验。",
+])</code></pre>
+<h3>示例 2：讲稿大纲的数据结构（概念代码，先看形状）</h3>
+<pre><code># 三个项目的讲稿大纲：每个项目五段，每段一句话要点
+# 面试前照这个结构默写一遍，比背整篇稿子管用
+talks = {
+    "Mini Cursor": {
+        "背景": "命令行迷你编程助手：说一句话，它改代码",
+        "架构": "意图解析 → 白名单工具执行 → 结果回显",
+        "最难的 Bug": "白名单绕过：校验只看了开头，没看拼接后的完整命令",
+        "评测": "固定指令集回归，越权指令必须被拦住",
+        "重做": "校验移到执行前，对完整命令二次校验",
+    },
+    "RAG + 深圳天气 Agent": {
+        "背景": "会查资料、会查天气的问答 Agent，答案有出处",
+        "架构": "检索知识库 → 调天气工具 → 带引用生成",
+        "最难的 Bug": "检索命中但引用错位：编号和片段对不上",
+        "评测": "引用准确率：引用是不是真出自原文",
+        "重做": "引用和片段绑定传，不再靠序号对齐",
+    },
+    "Computer Use-lite": {
+        "背景": "能看屏幕、能点按钮的电脑操作 Agent",
+        "架构": "截图 → 视觉定位 → 点击 / 输入 → 校验结果",
+        "最难的 Bug": "按钮位置变化定位失败：只靠固定坐标",
+        "评测": "任务成功率：10 个常用操作几个一次做对",
+        "重做": "先视觉定位再点，操作后截图校验",
+    },
+}</code></pre>
+<h3>示例 3：追问桥接句模板（概念代码）</h3>
+<pre><code># 追问应对：先答一两句，再搭桥回自己准备好的点
+# 模板不是背诵，是现场组织语言的骨架
+BRIDGES = {
+    "安全": "这个问题和我处理 Mini Cursor 白名单绕过很像，当时的做法是……",
+    "可信度": "这让我想到 RAG 的引用错位问题，我的解法是把引用和片段绑定……",
+    "稳定性": "Computer Use 定位失败那次也是这样，定位只靠坐标不行，后来改成……",
+}
+
+def bridge(topic, answer):
+    """先给简短回答，再用桥接句引回准备好的点"""
+    print(answer)
+    print(BRIDGES.get(topic, "这个问题我没直接做过，我的思路是……"))</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 挑一个项目（建议先写 Mini Cursor），按五段结构写出每段一句话要点，跑示例 1 的自查工具，看总时长是不是在 5 分钟左右。<br>
+2. 把三个项目“最难的 Bug”各写成五句：现象、定位、根因、修复、防再犯。<br>
+3. 找个朋友或对着手机录音讲一遍 5 分钟讲稿，听回放：超时就砍细节，卡壳的地方补一句过渡句。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 5 分钟项目讲稿的固定结构是？</strong></p><button data-i="0">技术栈 → 代码量 → 上线时间</button><button data-i="1">背景 → 架构 → 最难的 Bug → 评测 → 重做会改什么</button><button data-i="2">自我介绍 → 优缺点 → 职业规划</button><div class="ans">解析：选 B。五段各约 1 分钟，结构固定，现场按结构组织语言就不会跑偏。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 讲稿应该怎么准备？</strong></p><button data-i="0">全文背诵，一字不差</button><button data-i="1">记熟结构和每段要点，现场组织语言</button><button data-i="2">不用准备，现场自由发挥</button><div class="ans">解析：选 B。背诵一卡壳就全崩，结构熟了，忘词也能顺着五段往下走。</div></div>
+<div class="q" data-answer="1"><p><strong>3. Mini Cursor 准备的“最难的 Bug”例子是？</strong></p><button data-i="0">模型回答太慢</button><button data-i="1">命令白名单绕过：校验只看了开头，没看完整命令</button><button data-i="2">界面配色不好看</button><div class="ans">解析：选 B。根因是校验点放错了位置，修复是执行前对完整命令二次校验。</div></div>
+<div class="q" data-answer="1"><p><strong>4. RAG 项目“检索命中但引用错位”说明什么问题？</strong></p><button data-i="0">检索本身没找到相关内容</button><button data-i="1">检索到了，但生成时引用编号和片段对不上</button><button data-i="2">模型拒绝回答问题</button><div class="ans">解析：选 B。片段是对的，引用编号在拼接上下文时错位了，解法是引用和片段绑定传。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 面试官追问到不会的问题，正确做法是？</strong></p><button data-i="0">编一个答案，先蒙过去</button><button data-i="1">承认没做过、讲思路，再桥接回自己准备好的点</button><button data-i="2">直接说不知道，然后沉默</button><div class="ans">解析：选 B。编的一追就穿；承认加思路显诚实，桥接句能把话题引回你的主场。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 每个项目的讲稿讲多长合适？</strong></p><button data-i="0">越长越好，讲满 15 分钟</button><button data-i="1">约 5 分钟，每段约 1 分钟</button><button data-i="2">30 秒讲完，越短越好</button><div class="ans">解析：选 B。5 分钟、每段 1 分钟是面试官最容易跟上的长度，超时就砍细节。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：讲讲你做的 Mini Cursor 项目。</summary><p>面试官想听的点：定位 + 架构 + 一个真 Bug。答：命令行迷你编程助手，说一句话它改代码；架构是意图解析 → 白名单工具执行 → 结果回显；最难的是白名单绕过，校验只看了命令开头、没看拼接后的完整命令，修复是执行前对完整命令二次校验，并加了越权指令回归测试。</p></details>
+<details><summary>Q2：你的 RAG Agent 怎么保证答案可信？</summary><p>面试官想听的点：引用机制 + 评测指标。答：答案必须带引用，引用和原文片段绑定传，不靠序号对齐；评测看引用准确率——答案里的引用是不是真出自原文；还遇到过检索命中但引用错位的问题，根因就是编号和片段对不上，修完后评测里一直查这一项。</p></details>
+<details><summary>Q3：Computer Use 定位失败，你是怎么解决的？</summary><p>面试官想听的点：根因分析 + 兜底设计。答：按钮位置一变就点不到，根因是定位只靠固定坐标；改成先视觉定位再点，坐标只做兜底；操作后加校验，点完截图确认页面真的变了，没变就重试一次。</p></details>
+<details><summary>Q4：如果重做这三个项目，你会改什么？</summary><p>面试官想听的点：复盘深度，不是客套话。答：Mini Cursor 会把校验移到执行前；RAG 会把引用和片段绑定传；Computer Use 会先视觉定位、操作后截图校验。每个“改什么”背后都是一个真踩过的坑，改动要具体到机制，不要说“会做得更好”这种空话。</p></details>
+<details><summary>Q5：你怎么评测自己的 Agent？</summary><p>面试官想听的点：指标 + 方法 + 数字。答：分项目定指标：Mini Cursor 用固定指令集回归，越权指令必须被拦住；RAG 用引用准确率；Computer Use 用任务成功率，10 个常用操作里几个一次做对。指标之外还要人工抽查，自动评测看不出来的问题，抽查能补上。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>面试讲稿和生产复盘是同一套结构：背景是需求，架构是设计，Bug 是故障复盘，评测是验收标准，重做是迭代计划。工作中写复盘、写事故报告，照这个结构写，别人一眼就能看懂你做了什么、学到了什么。</p>
+<p><strong>简历讲法：</strong>简历上的项目描述，就是讲稿的压缩版：每行写“做了什么 + 怎么评测 + 数字”。比如 Mini Cursor 写“白名单执行 + 越权指令回归测试”，RAG 写“引用准确率评测”，Computer Use 写“10 个常用操作任务成功率”。面试官顺着简历上的词追问，问到的每一点你都有准备好的讲稿。</p>
+<p><strong>明日预告：</strong>Day 30 讲面试模拟 2：系统设计追问。面试官从项目深挖转到系统设计时会怎么问：Agent 规模变大十倍怎么扛？多用户并发怎么隔离？上下文爆炸、成本失控怎么办？提前准备好这套追问的答法。</p>
+</div>
+<div class="nav"><span><a href="day28.html">← Day 28</a></span><span><a href="day30.html">Day 30 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

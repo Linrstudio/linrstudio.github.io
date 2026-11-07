@@ -118,7 +118,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h2>六、补充：Multi-hop Decomposition：复杂问题多步拆解（结合岗位要求）</h2>
 <p>单步检索只够回答“答案就在某一块里”的问题，复杂问题要 <strong>Multi-hop 分解</strong>：把原问题拆成有依赖关系的子问题，第一步的检索结果决定第二步问什么。比如“某产品 2024 年的退货政策和 2025 年改了什么”就不能一次检索了事：第一步先检索 2024 版政策，第二步用第一步拿到的条款编号、生效日期去检索 2025 版变更，第三步再把两版对照着回答。</p>
 <p>落地的循环是：<strong>分解 → 检索 → 判断够不够 → 不够就用新信息生成下一跳的查询 → 直到答案完整或达到跳数上限</strong>。三个要点：<strong>一、每跳都要留痕</strong>，第几跳、查了什么、命中了哪几块，都写进状态，答错了才能定位是哪一跳歪了；<strong>二、跳数要设上限</strong>（通常 3–5 跳），超了就停下来、老实说“资料不足以完整回答”，不要无限追下去；<strong>三、每跳单独评测</strong>，只看最终答案对不对，会掩盖中间跳的错误，评测集里要记每跳的命中情况。第 5 周的 Knowledge Agent 就是把这套循环交给一个专门的子 Agent 去跑。</p>
-<div class="nav"><span><a href="day20.html">← Day 20</a> &nbsp; <a href="index.html">课程首页</a></span><span>第 4 周：Computer Use + 上线加固 →</span></div>
+<div class="nav"><span><a href="day20.html">← Day 20</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day22.html">Day 22 →</a></span></div>
 <script>
 let score = 0, answered = 0;
 document.querySelectorAll('.q').forEach(function(box){

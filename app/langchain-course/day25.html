@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 25：演示任务：多步闭环与按钮位置变化的兜底 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 25 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 25：演示任务：多步闭环与按钮位置变化的兜底 | LangChain 30 天实战课</h1>
+<p>会点鼠标只是开始，能把一个多步任务从头做到尾、做对了才算数。这课拿一个最常见的演示任务练手：打开测试页，填表单，提交，截图确认结果。四步里任何一步都可能出岔子——页面没加载完、按钮挪了位置、提交后没反应。Agent 的本事不在“执行了”，而在“每步都验收、错了会兜底、兜不住会报错”。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 演示任务：四步闭环，每步都要验收</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="四步闭环流程图：打开页面、填表单、提交、截图确认，失败回退重试" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="90" y="43" text-anchor="middle" font-size="13" fill="#222">1. 打开页面</text>
+<line x1="160" y1="38" x2="200" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="202" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="272" y="43" text-anchor="middle" font-size="13" fill="#222">2. 填表单</text>
+<line x1="342" y1="38" x2="382" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="384" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="454" y="43" text-anchor="middle" font-size="13" fill="#222">3. 提交</text>
+<line x1="524" y1="38" x2="564" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="566" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="636" y="43" text-anchor="middle" font-size="13" fill="#222">4. 截图确认</text>
+<line x1="636" y1="60" x2="636" y2="92" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="496" y="94" width="280" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="636" y="121" text-anchor="middle" font-size="13" fill="#222">验收：结果对了吗？</text>
+<line x1="496" y1="116" x2="160" y2="116" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="160" y1="116" x2="160" y2="160" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="40" y="162" width="240" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="160" y="189" text-anchor="middle" font-size="13" fill="#222">通过 → 完成；失败 → 兜底 / 报错</text>
+<line x1="280" y1="184" x2="440" y2="184" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="442" y="162" width="240" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="562" y="189" text-anchor="middle" font-size="13" fill="#222">兜底失败 → 停下，不继续</text>
+</svg>
+<p>任务是四步：打开页面 → 填表单 → 提交 → 截图确认结果。关键在箭头回来的那一步：每步做完都要验收，验收过了才走下一步。打开页面，验收是“表单真的出现了”；填表单，验收是“填进去的值和要填的一致”；提交，验收是“提交成功的结果出现了”；最后截图确认，是把结果留下来当证据。没有验收的执行，只是“看着像做完了”。</p>
+<h3>2. 验收怎么做：不要只看“执行了”，要看“结果对了”</h3>
+<p>新手最容易写的验收是“这步跑完了，没报错”。但“没报错”不等于“做对了”：点击了提交按钮，按钮可能根本没反应；填了表单，值可能填进了错误的框。好的验收看的是<strong>结果状态</strong>，不是执行动作。打开页面后，等表单元素出现再往下走；填完后，把框里的值读出来，和要填的值比对；提交后，等“提交成功”那行字出现，截图存证。验收要写成能返回“通过 / 不通过”的检查，而不是一句“跑完了”。验收失败时，也别急着重试——先看失败截图，分清是“页面还没加载完”（等一等就能好）还是“真的错了”（重试也没用）。</p>
+<h3>3. 按钮位置变化的 case：重试定位，还是直接失败？</h3>
+<p>最常见的翻车是：昨天按钮还在 (500, 300)，今天窗口一变、页面一改，按钮挪到 (500, 380) 了。按老坐标点下去，点的可能是空白，也可能是别的按钮。这时候 Agent 面临选择：重试定位，还是直接失败？答案是：<strong>先重试定位，但重试要有章法、有上限</strong>。无章法的重试是“同一个坐标连点三次”，点三次错的还是错的；有章法的重试是“换一种定位方式再找一次”。重试超过上限（通常 2–3 次），就直接失败、报错停下——不要静默继续，更不要猜着点。猜着点下去，点中删除按钮的代价，比任务失败大得多。</p>
+<h3>4. 兜底策略：多定位器降级、相对定位、失败截图 + 报错</h3>
+<p>定位不准时的兜底有三招，按顺序用：</p>
+<table>
+<tr><th>兜底</th><th>做法</th><th>什么时候用</th></tr>
+<tr><td>多定位器依次降级</td><td>先用最稳的找：role（按钮角色）→ text（按钮文字）→ test-id（测试标识）→ 坐标，一个找不到就换下一个</td><td>定位方式失效时，先换方式，不换坐标</td></tr>
+<tr><td>相对定位</td><td>找一个位置稳定的元素当锚点（比如表单标题），再按“锚点下方 80 像素”去找目标</td><td>目标本身会动，但它和锚点的相对位置不变时</td></tr>
+<tr><td>失败截图 + 报错</td><td>兜底都失败了，截图保存当前屏幕，报错停下，不静默继续、不猜着点</td><td>所有定位方式都失效时，最后的防线</td></tr>
+</table>
+<p>顺序不能乱：先降级换方式，再相对定位找，最后截图报错。直接跳到“猜坐标点一下试试”，就是把一次定位失败变成一次误操作。记住一条红线：<strong>定位不准时，宁可任务失败，也不要猜着点</strong>——失败可以重跑，点错了可能要人来收拾。</p>
+<div class="warn"><strong>容易踩的坑：</strong>验收只写“没报错就通过”，定位只用一套坐标。演示时页面固定、网络顺畅，两处都看不出问题；一到真实页面，加载慢半秒、按钮挪几个像素，任务就悄悄“做完了”——结果全是错的。验收看结果状态，定位留降级余地，这两条要在演示任务里就养成。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：四步闭环的骨架，每步带验收（概念代码，先看形状）</h3>
+<pre><code># 每步 = 执行 + 验收；验收不过就停，不走到下一步
+from playwright.sync_api import sync_playwright, expect
+
+def run_demo():
+    with sync_playwright() as p:
+        page = p.chromium.launch().new_page()
+        # 第 1 步：打开页面，验收是表单真的出现了
+        page.goto("https://example.com/form")
+        expect(page.locator("#name")).to_be_visible()
+        # 第 2 步：填表单，验收是框里的值和要填的一致
+        page.fill("#name", "Arale")
+        assert page.input_value("#name") == "Arale", "填进去的值不对"
+        # 第 3 步：提交，验收是成功提示出现了
+        page.click("text=提交")
+        expect(page.locator("text=提交成功")).to_be_visible()
+        # 第 4 步：截图确认结果，留作证据
+        page.screenshot(path="result.png")
+        print("四步都通过，结果已截图")</code></pre>
+<h3>示例 2：多定位器依次降级（概念代码，先看形状）</h3>
+<pre><code># 定位器按稳定程度排队：role → text → test-id → 坐标，依次降级
+def find_submit(page):
+    locators = [
+        page.get_by_role("button", name="提交"),  # 最稳：按角色和名字找
+        page.get_by_text("提交"),                  # 其次：按文字找
+        page.get_by_test_id("submit-btn"),        # 再其次：按测试标识找
+    ]
+    for loc in locators:
+        if loc.count() &gt; 0:        # 找到了就用它，不再往下试
+            return loc
+    # 都找不到才退到坐标，且坐标是最后手段、要打日志
+    print("警告：定位器全部失效，退到坐标定位")
+    return None
+
+submit = find_submit(page)
+if submit is None:
+    page.screenshot(path="locate_failed.png")
+    raise SystemExit("提交按钮定位失败，截图已存 locate_failed.png")</code></pre>
+<h3>示例 3：相对定位 + 失败截图（概念代码，先看形状）</h3>
+<pre><code># 相对定位：以稳定的表单标题为锚点，目标在锚点下方找
+anchor = page.get_by_text("报名表单")   # 锚点：位置稳定、不常改
+box = anchor.bounding_box()            # 锚点的坐标和大小
+if box is None:
+    page.screenshot(path="anchor_failed.png")
+    raise SystemExit("锚点没找到，截图已存 anchor_failed.png")
+
+# 目标在锚点下方约 80 像素处找，不用死记绝对坐标
+target = page.locator("button").nth(0)
+target_box = target.bounding_box()
+if target_box is None or abs(target_box["y"] - (box["y"] + 80)) &gt; 120:
+    # 目标离锚点太远：要么找错了，要么页面变了，停下不猜
+    page.screenshot(path="relative_failed.png")
+    raise SystemExit("相对位置对不上，截图已存 relative_failed.png")
+target.click()</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 拿任意一个有表单的测试页，照示例 1 写四步闭环：把每步的验收条件写出来（比如“提交后哪行字必须出现”），再故意把其中一步的验收写错，看它能不能拦住你。<br>
+2. 把示例 2 的定位器顺序换成“坐标优先”，想一想：页面一改版，第一个挂掉的是哪一步？<br>
+3. 模拟按钮挪位：把提交按钮的定位器全删掉，只留坐标，跑一次，看失败截图 + 报错那条路是不是真的走了。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 四步闭环里，每步做完最该干什么？</strong></p><button data-i="0">立刻走下一步，越快越好</button><button data-i="1">截图就行，不用检查</button><button data-i="2">验收：结果对了才走下一步</button><div class="ans">解析：选 C。没有验收的执行只是“看着像做完了”，结果对了才是真的做完了。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 好的验收应该看什么？</strong></p><button data-i="0">这步跑完了、没报错</button><button data-i="1">结果状态：比如框里的值、成功提示出现了没有</button><button data-i="2">这步花了多长时间</button><div class="ans">解析：选 B。“没报错”不等于“做对了”，验收要看结果状态，不是执行动作。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 按钮位置变了，第一次该怎么办？</strong></p><button data-i="0">换一种定位方式再找一次，有章法地重试</button><button data-i="1">同一个坐标连点三次</button><button data-i="2">直接猜个新坐标点下去</button><div class="ans">解析：选 A。重试要有章法：换定位方式，不是同一个错坐标反复点。</div></div>
+<div class="q" data-answer="2"><p><strong>4. 多定位器降级的正确顺序是？</strong></p><button data-i="0">坐标 → test-id → text → role</button><button data-i="1">随便哪个先找到用哪个</button><button data-i="2">role → text → test-id → 坐标</button><div class="ans">解析：选 C。先用最稳的，坐标是最后手段，顺序反了等于先用最不可靠的。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 相对定位里的“锚点”应该是什么样的元素？</strong></p><button data-i="0">最容易变的那个按钮</button><button data-i="1">位置稳定、不常改的元素，比如表单标题</button><button data-i="2">屏幕左上角的像素点</button><div class="ans">解析：选 B。锚点本身要稳，目标和锚点的相对位置不变，相对定位才有意义。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 所有兜底都失败了，正确做法是？</strong></p><button data-i="0">截图保存、报错停下，不静默继续、不猜着点</button><button data-i="1">静默跳过这步，继续往下走</button><button data-i="2">随便点一个看着像的按钮试试</button><div class="ans">解析：选 A。定位不准时宁可任务失败，也不要猜着点，失败可以重跑，点错了要人收拾。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：屏幕元素定位不准时，你有哪些兜底策略？</summary><p>三招按顺序用：多定位器依次降级，先 role 再 text 再 test-id，最后才退到坐标；相对定位，找位置稳定的元素当锚点，按锚点的相对位置去找目标；兜底都失败就截图保存、报错停下，不静默继续、不猜着点。重试要有上限，通常 2–3 次，超了就直接失败。</p></details>
+<details><summary>Q2：多步任务里，验收应该怎么写？</summary><p>验收看结果状态，不看执行动作：打开页面看表单出现了没有，填完把框里的值读出来比对，提交后等成功提示出现，最后截图存证。每步验收不过就停，不走到下一步；验收要能返回通过 / 不通过，而不是一句“跑完了”。</p></details>
+<details><summary>Q3：按钮位置变化时，重试定位还是直接失败？</summary><p>先有章法地重试，再失败：换一种定位方式再找，而不是同一个坐标连点三次；重试超过 2–3 次就直接失败、报错停下。不要静默继续，更不要猜着点——猜中删除按钮的代价比任务失败大得多。</p></details>
+<details><summary>Q4：相对定位和绝对坐标定位，各适合什么情况？</summary><p>绝对坐标只适合页面完全不动的演示；目标会动、但和锚点的相对位置不变时，用相对定位——先找稳定的锚点（比如表单标题），再按“锚点下方多少像素”去找目标。坐标是最后手段，不是第一选择。</p></details>
+<details><summary>Q5：一个演示任务跑通了，怎么证明它是真的跑通了？</summary><p>四样东西：每步的验收记录（结果状态通过了哪几项）、最后的截图（提交成功的结果在图里）、失败时的截图和报错（兜底那条路走没走）、步数和重试次数（没超过上限）。只有“执行了”的日志，没有验收和截图，不算跑通。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>演示任务上线前，先问三个问题：每步的验收是不是看结果状态、而不是“没报错”？定位器是不是按 role → text → test-id → 坐标排了降级顺序？兜底失败时，截图 + 报错那条路真的跑通过吗？三问有一个答不上来，多步任务就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过自动化演示”，写“四步闭环每步结果验收、多定位器 role/text/test-id/坐标依次降级、相对定位锚点、失败截图报错、重试上限 2–3 次”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 26 讲全项目加固 1：给三个项目统一补 README、架构图、失败案例，再加上可观测性——日志、LangSmith 追踪、成本与耗时统计。</p>
+</div>
+<div class="nav"><span><a href="day24.html">← Day 24</a></span><span><a href="day26.html">Day 26 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

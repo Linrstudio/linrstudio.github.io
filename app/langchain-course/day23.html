@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 23：Playwright 浏览器操作：定位、等待与截图留痕 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 23 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 23：Playwright 浏览器操作：定位、等待与截图留痕 | LangChain 30 天实战课</h1>
+<p>Day 22 说了先浏览器、后桌面，今天就讲浏览器这一步怎么做。工具用 Playwright：它能打开真实浏览器、点按钮、填表单、截图，Computer Use 在浏览器里的活，基本都由它来干。今天只讲四个基本功：定位、等待、填表、截图留痕。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 定位：role / text / test-id 优先，坐标是最后手段</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="定位优先级从高到低：role、text、test-id，最后才是坐标" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="110" y="43" text-anchor="middle" font-size="13" fill="#222">1. role：按钮 / 输入框</text>
+<line x1="200" y1="38" x2="258" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="260" y="16" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="350" y="43" text-anchor="middle" font-size="13" fill="#222">2. text：按文字找</text>
+<line x1="440" y1="38" x2="498" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="500" y="16" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="590" y="43" text-anchor="middle" font-size="13" fill="#222">3. test-id：专属标记</text>
+<line x1="590" y1="60" x2="590" y2="82" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="500" y="84" width="180" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="590" y="111" text-anchor="middle" font-size="13" fill="#222">4. 坐标：最后手段</text>
+<line x1="500" y1="106" x2="400" y2="106" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="400" y1="106" x2="400" y2="128" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="240" y="128" width="320" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="400" y="155" text-anchor="middle" font-size="13" fill="#222">定位到元素 → 等可见 → 再点 / 再填</text>
+<line x1="400" y1="172" x2="400" y2="194" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="240" y="196" width="320" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="400" y="223" text-anchor="middle" font-size="13" fill="#222">截图留痕：证明这步做完了</text>
+</svg>
+<p>定位就是告诉 Playwright“要点的是哪个元素”。优先级记住一条线：<strong>role / text / test-id 优先，坐标是最后手段</strong>。role 是按元素的角色找，比如“提交按钮”“搜索框”，语义最清楚；text 是按页面上显示的文字找，比如“登录”这两个字；test-id 是开发给元素打的专属标记，最稳，但前提是页面真的打了这个标记。</p>
+<p>坐标为什么排最后？因为坐标最脆：窗口一变大变小、页面一滚动、布局一改版，坐标就全错了。坐标只用在实在没有别的办法的时候，比如画布里的点、没有文字也没有角色的图标。能用 role、text、test-id 找到的，就别用坐标。</p>
+<h3>2. 等待：等条件，不等固定时间</h3>
+<p>浏览器操作最常见的错，不是点错了，而是<strong>点早了</strong>：页面还没加载完、按钮还没出现，代码就去点了，结果自然是失败。新手最爱写的办法是固定 sleep：睡 3 秒再点。别这么写。</p>
+<p>固定 sleep 有两个毛病。第一，睡少了还是会失败：网一慢，3 秒根本不够。第二，睡多了纯浪费时间：页面 0.5 秒就好了，你还在睡，十步下来就多等几十秒。正确做法是<strong>等条件</strong>：等元素可见、等网络空闲。元素可见就是“这个按钮已经出现、能点了”；网络空闲就是“页面暂时没有新的网络请求了”。条件到了立刻往下走，条件不到就一直等到超时——又快又稳。</p>
+<div class="warn"><strong>容易踩的坑：</strong>等网络空闲不等于页面永远空闲。有些页面会一直发请求（比如轮询、埋点），等网络空闲可能一直等不到。做法是：先等关键元素可见，再等网络空闲做辅助，两者取个平衡，超时时间也要设上限，别无限等下去。</div>
+<h3>3. 填表：fill 和 type 的区别，提交前先校验</h3>
+<p>填表有两个常用方法：fill 和 type，别混用。<strong>fill 是直接把值填进去</strong>：先清空输入框，再把整段文字一次写进去，又快又干净，适合大多数表单。<strong>type 是模拟一个字一个字敲键盘</strong>：慢一些，但会触发页面监听键盘的逻辑，比如输入时实时联想、边输边校验，这种场景就得用 type。</p>
+<p>怎么选？默认用 fill；如果填完发现页面的联想、校验没触发，再换 type 试试。还有一步不能省：<strong>提交前先校验</strong>。点提交之前，先把每个字段读出来对一遍：必填的填了没有、格式对不对、数字是不是数字。提交之后再发现填错了，撤回的成本比校验大得多。</p>
+<h3>4. 截图留痕：每步一张，失败那张最值钱</h3>
+<p>截图留痕的意思是：<strong>每步截图，失败截图</strong>。每做完一步就截一张图，存下来；出问题时，把失败那一刻的截图也存下来。这么做的好处有三条。第一，复盘有据：Agent 说“点了提交”，截图能证明它到底点没点、点完页面变成什么样了。第二，定位问题快：失败截图一眼就能看出是页面没加载、元素没找到，还是填错了值。第三，方便给人看：把截图贴给用户，比说一百句“我觉得没问题”都有用。</p>
+<p>截图要存好名字，别全叫 screenshot.png：按步骤编号、带上时间，比如 step-03-after-fill.png，失败的单独放一个文件夹。等你以后把 Agent 交给别人用，这些截图就是最直接的证据链。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：打开页面、定位、点击、填表、截图（概念代码，先看形状）</h3>
+<pre><code># 真实 Playwright Python 同步 API：先看形状
+# 本地没有浏览器环境时跑不起来，这里只看写法，不直接运行
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)  # 打开浏览器
+    page = browser.new_page()
+    page.goto("https://example.com/login")  # 打开登录页
+    # 定位优先用 role / text：按角色和文字找，不用坐标
+    page.get_by_role("textbox", name="用户名").fill("demo")
+    page.get_by_role("textbox", name="密码").fill("demo123")
+    page.get_by_role("button", name="登录").click()
+    page.screenshot(path="step-01-after-login.png")  # 每步截图留痕
+    browser.close()</code></pre>
+<h3>示例 2：等条件、填表校验、失败截图（概念代码，先看形状）</h3>
+<pre><code># 等条件而不是固定 sleep；提交前校验；失败了也要截图
+# 概念代码，先看形状：本地没有浏览器环境时不直接运行
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto("https://example.com/form")
+    # 等元素可见，再等网络空闲：条件到了立刻走，不用固定 sleep
+    page.wait_for_selector("text=提交")
+    page.wait_for_load_state("networkidle")
+    # fill 直接填值；需要触发键盘联想时，再换成 type 一个字一个字敲
+    page.get_by_test_id("email").fill("demo@example.com")
+    # 提交前校验：读出来对一遍，错了就停下，别急着提交
+    value = page.get_by_test_id("email").input_value()
+    assert "@" in value, "邮箱格式不对，先别提交"
+    try:
+        page.get_by_role("button", name="提交").click()
+    except Exception:
+        page.screenshot(path="failed-submit.png")  # 失败截图最值钱
+        raise
+    page.screenshot(path="step-02-after-submit.png")
+    browser.close()</code></pre>
+<h3>示例 3：定位优先级怎么选（可运行，纯 Python）</h3>
+<pre><code># 定位优先级：role / text / test-id 优先，坐标是最后手段
+# 纯 Python，本地可以直接跑，看输出就懂优先级
+
+def pick_locator(role=None, text=None, test_id=None, x=None, y=None):
+    """按优先级选定位方式：有 role 用 role，有 text 用 text，坐标只兜底。"""
+    if role:
+        return "role: %s" % role
+    if text:
+        return "text: %s" % text
+    if test_id:
+        return "test-id: %s" % test_id
+    if x is not None and y is not None:
+        return "坐标: (%s, %s)，最后手段" % (x, y)
+    return "没有可用的定位方式，先停下"
+
+if __name__ == "__main__":
+    print(pick_locator(role="button", text="登录", x=100, y=200))
+    print(pick_locator(text="提交"))
+    print(pick_locator(test_id="email"))
+    print(pick_locator(x=100, y=200))
+    print(pick_locator())</code></pre>
+<p>示例 3 是纯 Python，本地可以直接跑，预期输出是：role 优先于 text 和坐标，text 优先于 test-id，只有坐标时明确标出“最后手段”，什么都没有时提示停下。示例 1 和示例 2 用的是真实 Playwright 同步 API，但本地没有浏览器环境，标为概念代码、先看形状；要跑通它们，需要先装好浏览器环境，费用方面不涉及真实模型调用。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 打开一个你常用的登录页，写出“用户名框、密码框、登录按钮”分别用 role、text、test-id 怎么定位，哪个最稳？<br>
+2. 把示例 1 里的登录流程改写一遍：哪一步要等元素可见、哪一步要等网络空闲？为什么不能只用固定 sleep？<br>
+3. 假设提交时失败了，你的截图文件应该叫什么名字、存在哪里？写出命名规则。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 定位元素时，最优先用什么？</strong></p><button data-i="0">屏幕坐标 (x, y)</button><button data-i="1">页面颜色</button><button data-i="2">role / text / test-id</button><div class="ans">解析：选 C。role、text、test-id 按语义找，最稳；坐标最脆，排最后。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 坐标为什么是最后手段？</strong></p><button data-i="0">窗口大小、滚动、改版都会让坐标失效</button><button data-i="1">坐标写起来太难</button><button data-i="2">坐标不能用来点按钮</button><div class="ans">解析：选 A。坐标依赖布局，布局一变就全错，所以只做兜底。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 等待页面时，正确做法是？</strong></p><button data-i="0">固定 sleep 3 秒再点</button><button data-i="1">等元素可见、等网络空闲，条件到了立刻走</button><button data-i="2">不等，直接点，失败了再说</button><div class="ans">解析：选 B。固定 sleep 睡少了会失败、睡多了浪费时间，等条件又快又稳。</div></div>
+<div class="q" data-answer="2"><p><strong>4. fill 和 type 的区别是什么？</strong></p><button data-i="0">没有区别，随便用</button><button data-i="1">type 更快，fill 更慢</button><button data-i="2">fill 直接填整段值，type 模拟逐字敲键盘、能触发键盘监听</button><div class="ans">解析：选 C。默认用 fill，需要触发输入联想、边输边校验时换 type。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 点提交之前，最应该先做什么？</strong></p><button data-i="0">把每个字段读出来校验一遍</button><button data-i="1">直接提交，错了再改</button><button data-i="2">先关掉浏览器</button><div class="ans">解析：选 A。提交后发现填错了，撤回成本比校验大得多。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 截图留痕怎么做才对？</strong></p><button data-i="0">只在成功时截图</button><button data-i="1">每步截图，失败那一刻也要截图，按步骤编号存好</button><button data-i="2">不用截图，凭记忆复盘</button><div class="ans">解析：选 B。失败截图最值钱，是复盘和定位问题最直接的证据。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Playwright 里定位元素，优先级怎么排？为什么？</summary><p>role、text、test-id 优先，坐标最后。role 按角色找、text 按文字找、test-id 按专属标记找，都是按语义找，改版也不容易失效；坐标依赖布局，窗口大小、滚动、改版都会让它失效，只能做最后的兜底。</p></details>
+<details><summary>Q2：等待为什么不能用固定 sleep？</summary><p>固定 sleep 睡少了还是会失败，网一慢就不够；睡多了纯浪费时间。正确做法是等条件：等元素可见、等网络空闲，条件到了立刻往下走，条件不到等到超时为止，又快又稳。</p></details>
+<details><summary>Q3：fill 和 type 怎么选？</summary><p>默认用 fill：直接把整段值填进去，又快又干净。需要触发键盘监听时用 type：比如输入联想、边输边校验，要模拟逐字敲键盘才能触发。选错了的表现就是填上了值，但页面的联想和校验没反应。</p></details>
+<details><summary>Q4：填表提交前要做什么？</summary><p>先校验再提交：把每个字段读出来对一遍，必填的填了没有、格式对不对、数字是不是数字。提交之后再发现填错，撤回成本比校验大得多。</p></details>
+<details><summary>Q5：截图留痕在生产里有什么用？</summary><p>每步截图、失败截图，按步骤编号存好。复盘时有据可查，定位问题快，失败截图一眼就能看出是页面没加载、元素没找到还是填错了值；交给别人用时，截图就是最直接的证据链。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Playwright 上线前先问三件事：定位是不是都用的 role / text / test-id，坐标是不是只剩兜底？等待是不是等条件，固定 sleep 是不是清干净了？失败截图是不是按步骤编号存好了，出问题能不能十分钟内定位？三问有一个答不上来，就别上生产。</p>
+<p><strong>简历讲法：</strong>别写“会用 Playwright”，写“role / text / test-id 优先定位、等元素可见与网络空闲代替固定 sleep、fill 与 type 按场景区分、提交前校验、每步截图留痕”。前者是名词，后者是可追问的做法。</p>
+<p><strong>明日预告：</strong>Day 24 讲桌面操作入门：从浏览器走到桌面，窗口、弹窗和焦点怎么处理，桌面变量多、风险大时怎么收敛。</p>
+</div>
+<div class="nav"><span><a href="day22.html">← Day 22</a></span><span><a href="day24.html">Day 24 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

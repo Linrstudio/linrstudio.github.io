@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 24：pyautogui 桌面操作与沙箱规则 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 24 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 24：pyautogui 桌面操作与沙箱规则 | LangChain 30 天实战课</h1>
+<p>第 4 周进入 Computer Use：让 Agent 不只调用 API，还能直接操作桌面——移动鼠标、点按钮、敲键盘。pyautogui 就是干这活的 Python 库：它不关心应用内部长什么样，只模拟人的手。能力越大，风险越大：会点鼠标的 Agent 也会点错、删错，所以这课一半讲操作，一半讲沙箱规则——先学会刹车，再踩油门。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. pyautogui 是什么：模拟人的手，不读应用的内部</h3>
+<p>pyautogui 不调接口、不读 DOM，它只做三件事：移动鼠标、点击、敲键盘。对 Agent 来说，它是“最后的通用工具”：没有 API 的老应用、必须点几下的桌面软件，只有它能碰。但代价也在这里——它不知道自己点的是什么，只知道坐标。点对了是自动化，点错了就是事故。所以桌面操作的第一课不是“怎么点”，而是“点之前怎么确认、点错了怎么停”。</p>
+<h3>2. 键鼠三件套 + FAILSAFE：先会停，再会动</h3>
+<p>最常用的就四个 API：<code>moveTo(x, y)</code> 把鼠标移到坐标，<code>click(x, y)</code> 点一下，<code>typewrite("文字")</code> 打字，<code>hotkey("ctrl", "c")</code> 按组合键。每个操作前最好先 <code>pyautogui.position()</code> 确认鼠标在哪、<code>pyautogui.size()</code> 确认屏幕多大——坐标超出屏幕，操作就毫无意义。</p>
+<p>最重要的一行是 <code>pyautogui.FAILSAFE = True</code>（默认就是 True，别关掉它）。它的意思是：鼠标一旦被甩到屏幕左上角（0, 0），立刻抛异常、整个脚本停下。这是给人留的急停按钮：Agent 失控乱点时，你把鼠标一甩，程序就停了。还有 <code>pyautogui.PAUSE = 0.5</code>，让每步操作之间停半秒——操作太快，人来不及反应，截图也来不及看清。</p>
+<h3>3. 窗口与图像定位：先找对窗口，再找对按钮</h3>
+<p>桌面上有十几个窗口时，直接按坐标点，点的可能是别的窗口。正确顺序是两步：先找窗口、激活窗口，再在窗口里找按钮。找窗口用 <code>pygetwindow</code> 这个库：<code>getWindowsWithTitle("记事本")</code> 按标题找窗口，拿到后调 <code>.activate()</code> 把它提到最前面、获得焦点；之后再操作，点的才是它。</p>
+<p>窗口里找按钮靠 <code>locateOnScreen("按钮.png")</code>：拿一张按钮的小截图当模板，在屏幕上找长得一样的地方，找到就返回坐标，找不到返回 <code>None</code>。找不到时千万别硬点——<code>None</code> 就是“没找到”，必须当失败处理。但它有三个硬伤，要记牢：<strong>分辨率变了</strong>（换台显示器、换了缩放比例），模板就对不上；<strong>系统缩放变了</strong>（125% 改成 100%），按钮大小变了，也对不上；<strong>主题变了</strong>（浅色切深色、换了图标样式），颜色一变就认不出来。所以图像定位只能当“最后一招”，不能当唯一依赖——Day 25 会讲它的兜底策略。</p>
+<h3>4. 沙箱规则：四条红线，写进 README 供面试引用</h3>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="沙箱四层防线流程图：白名单、人工确认、步数上限、截图留痕" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="95" y="43" text-anchor="middle" font-size="13" fill="#222">1. 白名单应用</text>
+<line x1="170" y1="38" x2="205" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="207" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="282" y="43" text-anchor="middle" font-size="13" fill="#222">2. 人工确认</text>
+<line x1="357" y1="38" x2="392" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="394" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="469" y="43" text-anchor="middle" font-size="13" fill="#222">3. 步数上限 20 步</text>
+<line x1="544" y1="38" x2="579" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="581" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="641" y="43" text-anchor="middle" font-size="13" fill="#222">4. 截图留痕</text>
+<line x1="641" y1="60" x2="641" y2="92" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="481" y="94" width="320" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="641" y="121" text-anchor="middle" font-size="13" fill="#222">任一层拦住 → 停下，不执行</text>
+<line x1="481" y1="116" x2="200" y2="116" stroke="#d99a00" stroke-width="1.5"/>
+<line x1="200" y1="116" x2="200" y2="160" stroke="#d99a00" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="80" y="162" width="240" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="200" y="189" text-anchor="middle" font-size="13" fill="#222">四层都通过 → 执行这一步</text>
+</svg>
+<p>桌面 Agent 的沙箱规则就四条，背下来，面试能直接引用：</p>
+<table>
+<tr><th>规则</th><th>内容</th><th>防什么</th></tr>
+<tr><td>白名单应用</td><td>Agent 只能操作白名单里的应用，不在名单里的应用，碰都不碰</td><td>误操作别的软件、越权访问</td></tr>
+<tr><td>删 / 发 / 支付类操作必须人工确认</td><td>删除文件、发送消息、支付扣款这类不可逆操作，执行前停下来等人确认</td><td>一次误判造成不可逆损失</td></tr>
+<tr><td>单任务步数上限 20 步</td><td>一个任务最多走 20 步，超了就停、报失败，不许一直试下去</td><td>死循环、无限重试拖垮系统</td></tr>
+<tr><td>每步截图留痕</td><td>每执行一步都截图保存，操作前、操作后各一张</td><td>出事后无法复盘、说不清哪步错了</td></tr>
+</table>
+<p>这四条是层层叠加的：白名单拦“不该碰的”，人工确认拦“不该做的”，步数上限拦“没完没了的”，截图留痕让“出了事能查”。少任何一层，防线就有口子。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只在演示时开沙箱，上线时嫌麻烦关掉。演示环境没有真实文件，删错了也没事；生产环境删的就是真数据。沙箱规则要写进代码里当默认值，而不是写在文档里当建议——能关掉的规则，等于没有规则。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：键鼠基本操作（概念代码，先看形状）</h3>
+<pre><code>import pyautogui
+
+pyautogui.FAILSAFE = True   # 急停开关：鼠标甩到左上角就停，默认 True，别关
+pyautogui.PAUSE = 0.5       # 每步之间停 0.5 秒，给人反应时间，也给截图留时间
+
+# 先确认屏幕多大、鼠标在哪，再动手
+width, height = pyautogui.size()
+print("屏幕：", width, height)
+print("鼠标现在：", pyautogui.position())
+
+# 三件套：移到、点、打字；组合键用 hotkey
+pyautogui.moveTo(500, 300, duration=0.5)   # 慢速移过去，别瞬移
+pyautogui.click(500, 300)                  # 点一下
+pyautogui.typewrite("hello", interval=0.05)  # 打字，每个字母间隔 0.05 秒
+pyautogui.hotkey("ctrl", "s")              # 保存：Ctrl+S</code></pre>
+<h3>示例 2：找窗口、激活窗口、图像定位（概念代码，先看形状）</h3>
+<pre><code>import pyautogui
+import pygetwindow as gw
+
+# 第一步：按标题找窗口，激活它，再操作
+wins = gw.getWindowsWithTitle("记事本")
+if not wins:
+    raise SystemExit("没找到记事本窗口，先打开它")
+win = wins[0]
+win.activate()                 # 提到最前、获得焦点
+pyautogui.sleep(1)             # 等窗口切过来，别抢跑
+
+# 第二步：图像定位找按钮，找不到就当失败，不硬点
+pos = pyautogui.locateOnScreen("save_button.png", confidence=0.9)
+if pos is None:
+    pyautogui.screenshot("locate_failed.png")  # 失败先截图，再报错
+    raise SystemExit("没找到保存按钮，截图已存 locate_failed.png")
+pyautogui.click(pyautogui.center(pos))  # 点按钮中心，别点边角</code></pre>
+<h3>示例 3：沙箱守门函数——四条规则落到代码里</h3>
+<pre><code># 四条沙箱规则：白名单、人工确认、步数上限、截图留痕
+ALLOWED_APPS = {"记事本", "计算器"}   # 规则 1：白名单应用
+DANGEROUS = {"删除文件", "发送消息", "支付扣款"}  # 规则 2：高危操作清单
+MAX_STEPS = 20                        # 规则 3：单任务步数上限
+
+def run_step(step_no, app, action, do_it, confirm, shot):
+    # 规则 1：应用不在白名单，直接拒绝
+    if app not in ALLOWED_APPS:
+        return {"ok": False, "reason": f"应用 {app} 不在白名单"}
+    # 规则 3：步数超上限，直接停
+    if step_no &gt; MAX_STEPS:
+        return {"ok": False, "reason": f"步数超上限 {MAX_STEPS}，任务终止"}
+    # 规则 2：高危操作必须人工确认，没确认不执行
+    if action in DANGEROUS and not confirm(action):
+        return {"ok": False, "reason": f"高危操作 {action} 未获人工确认"}
+    # 规则 4：执行前后各截图一张，留痕
+    shot(f"step{step_no}_before.png")
+    result = do_it()
+    shot(f"step{step_no}_after.png")
+    return {"ok": True, "result": result}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在本机跑示例 3 的守门函数：传一个不在白名单的应用、一个没确认的删除操作、一个步数 21 的调用，看三条分别返回什么。<br>
+2. 把示例 2 的 <code>confidence=0.9</code> 改成 0.7 再跑一次：定位变“宽松”了会带来什么新问题？（提示：认错按钮。）<br>
+3. 写出你自己的白名单：你的 Agent 允许碰哪 3 个应用？删除、发送、支付三类操作里，哪类你要求必须人工确认？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. pyautogui 和 API 调用最大的区别是？</strong></p><button data-i="0">它模拟人的键鼠操作，不读应用内部</button><button data-i="1">它速度比 API 快得多</button><button data-i="2">它只能操作浏览器</button><div class="ans">解析：选 A。pyautogui 只模拟手，不知道自己点的是什么，所以点错的风险也在这里。</div></div>
+<div class="q" data-answer="1"><p><strong>2. pyautogui.FAILSAFE 是干什么的？</strong></p><button data-i="0">让操作跑得更快</button><button data-i="1">鼠标甩到屏幕左上角就立刻停下，是急停开关</button><button data-i="2">自动截图保存</button><div class="ans">解析：选 B。Agent 失控乱点时，人把鼠标甩到左上角就能停下它，默认 True，别关。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 有多个窗口时，正确的操作顺序是？</strong></p><button data-i="0">直接按坐标点，点的就是目标</button><button data-i="1">先截图再说</button><button data-i="2">先找窗口、激活窗口，再在窗口里找按钮</button><div class="ans">解析：选 C。不激活窗口就点，点的可能是别的窗口，先找对窗口再动手。</div></div>
+<div class="q" data-answer="1"><p><strong>4. locateOnScreen 找不到按钮时，正确做法是？</strong></p><button data-i="0">猜个坐标点下去</button><button data-i="1">当失败处理：先截图，再报错停下</button><button data-i="2">把 confidence 调到 0 再试一次</button><div class="ans">解析：选 B。返回 None 就是没找到，硬点只会点错地方，失败要留痕、要报错。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 沙箱四条规则里，哪一条防“死循环、无限重试”？</strong></p><button data-i="0">单任务步数上限 20 步</button><button data-i="1">白名单应用</button><button data-i="2">每步截图留痕</button><div class="ans">解析：选 A。步数上限是给任务设的“最多试多少次”，超了就停，不许一直试下去。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 换了显示器、改了系统缩放后，locateOnScreen 最可能怎么了？</strong></p><button data-i="0">变得更准了</button><button data-i="1">不受任何影响</button><button data-i="2">模板对不上，定位失效</button><div class="ans">解析：选 C。分辨率、缩放、主题变化都会让模板失效，图像定位不能当唯一依赖。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：pyautogui 是什么？适合什么场景？</summary><p>模拟人键鼠操作的 Python 库，不调接口、不读内部，只移动鼠标、点击、打字。适合没有 API 的老应用和必须点几下的桌面软件，是“最后的通用工具”；代价是不知道自己点的是什么，点错风险高，所以必须配沙箱规则。</p></details>
+<details><summary>Q2：一个 Agent 误操作删了文件，你的系统哪一层能拦住？</summary><p>四层都能拦，各拦一段：白名单先拦——删文件的应用不在白名单，碰都不让碰；人工确认再拦——删除属于高危操作，执行前必须停下来等人确认；步数上限兜底——即使前面都漏了，单任务最多 20 步，不会无限删下去；审计留痕收尾——每步截图保存，出事后能定位是哪一步、哪个操作删的。四层叠加，单点失效不等于全线失守。</p></details>
+<details><summary>Q3：FAILSAFE 是什么？为什么默认不能关？</summary><p>鼠标甩到屏幕左上角（0, 0）就抛异常、整个脚本停下，是给人留的急停按钮。Agent 失控乱点时，这是人最快叫停它的办法；关掉它，等于拆掉刹车。</p></details>
+<details><summary>Q4：locateOnScreen 有哪些局限？</summary><p>三个：分辨率变了模板对不上，系统缩放变了按钮大小变了对不上，主题变了颜色样式变了认不出来。所以它只能当最后一招，不能当唯一依赖，要配合多定位器降级和相对定位（Day 25 讲）。</p></details>
+<details><summary>Q5：桌面 Agent 的沙箱规则有哪四条？</summary><p>白名单应用、删 / 发 / 支付类操作必须人工确认、单任务步数上限 20 步、每步截图留痕。这四条要写进代码当默认值，不是写在文档里当建议——能关掉的规则，等于没有规则。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>桌面 Agent 上线前，先问三个问题：白名单是不是代码里的默认值、关不掉？高危确认里写清了“要做什么、影响什么”吗？步数上限和截图留痕在演示环境和生产环境是一套吗？三问有一个答不上来，桌面操作就别上。</p>
+<p><strong>简历讲法：</strong>别写“用过 pyautogui”，写“pyautogui 键鼠 + 窗口激活 + 图像定位，白名单应用、高危人工确认、20 步上限、每步截图留痕四层沙箱”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 25 讲演示任务：多步闭环与按钮位置变化的兜底——打开页面、填表单、提交、截图确认，每步都要验收；按钮位置变了，Agent 是重试定位还是直接失败。</p>
+</div>
+<div class="nav"><span><a href="day23.html">← Day 23</a></span><span><a href="day25.html">Day 25 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

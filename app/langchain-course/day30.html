@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 30：面试模拟 2：系统设计、手写代码与复盘 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 30 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 30：面试模拟 2：系统设计、手写代码与复盘 | LangChain 30 天实战课</h1>
+<p>先说一句取舍：冲刺计划里这一段原本是 3 天——项目深挖、系统设计、手写代码各一天。Day 29 已经做了项目深挖，剩下两天的内容并进这一课：系统设计和手写代码合在一起讲，再加一个复盘错题的收尾。不硬塞成 3 天，是因为这三件事面试时本来就是一道题：先画架构，再手写核心循环，最后讲你怎么从错里长进。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 系统设计模拟：设计一个“客服 Agent”</h3>
+<svg viewBox="0 0 720 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="客服 Agent 架构图：用户问题经路由器分给查订单工具、知识库检索或人工接管，再合成回答，底线是降级、评测与安全" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="80" y="43" text-anchor="middle" font-size="13" fill="#222">用户问题</text>
+<line x1="140" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">路由器：分给谁</text>
+<line x1="300" y1="60" x2="300" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="600" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="120" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="82" x2="600" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="120" y="131" text-anchor="middle" font-size="13" fill="#222">查订单工具</text>
+<rect x="260" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">知识库检索</text>
+<rect x="500" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="131" text-anchor="middle" font-size="13" fill="#222">人工接管</text>
+<line x1="120" y1="148" x2="120" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="148" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="600" y1="148" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="170" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="170" x2="360" y2="192" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="260" y="192" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="219" text-anchor="middle" font-size="13" fill="#222">合成回答</text>
+<rect x="20" y="256" width="680" height="40" rx="8" fill="#fff7e6" stroke="#f5d68a" stroke-width="1.5"/>
+<text x="360" y="281" text-anchor="middle" font-size="13" fill="#222">底线：降级（模型挂了走缓存 / 人工）· 评测（离线评测集 + 线上抽查）· 安全（不泄露数据，敏感操作人工确认）</text>
+</svg>
+<p>面试官让你“设计一个客服 Agent”，他不是要你背架构图，是要看你脑子里有没有分层。<strong>是什么：</strong>一个能回答用户问题、能查订单、答不上来就转人工的 Agent。<strong>为什么这样分：</strong>用户的问题分三类——查状态的（走工具）、问政策的（走知识库）、吵架和敏感操作的（走人工），三类问题用同一种办法处理，迟早有一类翻车。<strong>怎么做：</strong>先画路由器，再画三条路，最后画三条底线。</p>
+<p><strong>路由（问题分给谁）：</strong>路由器先看问题类型：带订单号的去查订单工具，问“能不能退货”的去知识库，情绪激烈或涉及退款、改地址、删账号的直接转人工。路由规则先用关键词和意图分类写死，别一上来就让模型临场判断——规则可测，临场发挥不可测。</p>
+<p><strong>降级（坏了怎么办）：</strong>模型挂了，走缓存答案或直接转人工，并告诉用户“系统繁忙，已转人工”，不要假装正常；知识库检索为空，不要编答案，要说“没查到相关政策”，同时给两个选项：换个问法，或转人工。降级的核心就一句话：宁可承认不会，也别编一个错的。</p>
+<p><strong>评测（怎么知道它变好了）：</strong>离线先建评测集——50 到 100 条真实问题，每条写好标准答案和打分点，每次改提示词或换模型都跑一遍，看分数是升是降；线上再抽查——每天随机抽 5% 的真实对话，人工看有没有答错、答偏、泄露信息。只看线上好评率没用，好评率涨可能是用户懒得点差评。</p>
+<p><strong>安全（红线在哪）：</strong>两条红线不能碰。第一，用户数据不出界：订单号、地址、手机号只能传给有权限的工具，不能原样塞进提示词发给第三方模型，更不能出现在日志里；第二，敏感操作必须人工确认：退款、改地址、删账号这类动作，Agent 只能起草，不能直接执行，点确认的人必须是真人。</p>
+<div class="warn"><strong>容易踩的坑：</strong>一上来就画十几个框的“完美架构”。面试里先画最小闭环——路由 + 一条工具路 + 一条知识库路 + 人工接管 + 一条降级线，画完再问面试官“要不要展开评测和安全”，让他带你往深里走。</div>
+<h3>2. 手写代码模拟：不用 LangChain，手写 Tool Calling 循环</h3>
+<p>面试官让你“不用框架写一个 Agent”，他想看的是你懂不懂循环的本质。<strong>是什么：</strong>Tool Calling 循环就四步——把用户消息发给模型；模型要么直接给答案，要么说“我要调工具 X，参数是 Y”；你执行工具，把结果追加进消息列表；再问模型，直到它给答案或到最大步数。<strong>为什么不用框架也行：</strong>LangChain、LangGraph 都是把这个循环包了一层，循环本身只是个 <code>for</code> 加 <code>if</code>。你能手写出来，说明你不是只会调 API。<strong>怎么做：</strong>先写一个本地桩模型（stub）代替真模型——按关键词决定调哪个工具，不调真实 API、不用 Key，循环跑通了再换真模型，循环一行不用改。最大步数必须设（通常 4–5 步），否则模型一直调工具，循环永远停不下来。示例 1 就是这段循环的完整实现，本地真跑通过，输出写在代码注释里了。</p>
+<h3>3. RAG 检索函数：先看懂“打分 + 取前 K”</h3>
+<p>检索听起来高大上，骨架就两步：给每篇文档打个分，按分取前 K 篇。<strong>是什么：</strong><code>retrieve(问题)</code> 返回最相关的几篇文档，Agent 再拿着它们生成答案。<strong>为什么先学关键词版：</strong>向量检索只是把“打分”换成向量相似度，骨架一模一样——先看懂骨架，再换打分方法，就不会被新名词吓住。<strong>怎么做：</strong>示例 2 用本地 3 篇小语料：问题按字切，文档里命中词越多分越高，取前 2 篇。注意它的短板：第三个测试问题“今天天气怎么样？”明明和语料无关，却因为共用了一个“天”字，误命中了退货政策那篇——关键词只看字面重合，既会误命中，也认不出同义词（“包邮”和“免运费”它就认不出来）。生产里的做法是加两道保险：分数低于阈值就返回空、走降级；再把打分换成向量相似度。先跑通关键词版，再升级，这就是从能跑到能用的路。</p>
+<h3>4. 复盘错题：错题本的四步，错一次要长一智</h3>
+<p>面试官最爱问“讲一个你搞砸过的事”，他不是想听你认错，是想看你有没有复盘能力。<strong>是什么：</strong>错题本就四列——错题、根因、改法、再测。<strong>为什么四步缺一不可：</strong>只记错题不找根因，下次换个样子照样错；找到根因不改，等于没复盘；改了不重测，你根本不知道改没改对。<strong>怎么做：</strong>拿 Day 15 的 RAG 实验举例。错题：检索回来的文档答非所问；根因：切块太大，一篇文档里塞了三个主题，检索命中了主题 A 却拿去答主题 B；改法：按小节切块，每块只讲一个主题；再测：同一批问题重跑一遍，看命中率从多少升到多少，数字写下来。复盘到这一步，错题就变成了面试里的加分项：你讲的不是“我错过”，而是“我错过、找到原因、改了、测了、数字变好了”——面试官听到这套，就知道你上线后出问题也能自己兜住。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：手写 Tool Calling 循环 + 本地桩模型（能跑的代码）</h3>
+<pre><code># 手写 Tool Calling 循环：纯 Python，不调真实 API，不需要 Key
+# 桩模型 stub_llm 只按关键词做决定——真模型换掉它，循环不用动
+
+def check_order(order_id):
+    return f"订单 {order_id}：已发货，快递单号 SF888，昨天 18:00 已揽收。"
+
+TOOLS = {"check_order": check_order}
+
+def stub_llm(messages):
+    tool_msgs = [m for m in messages if m["role"] == "tool"]
+    if tool_msgs:
+        return {"answer": f"查到了：{tool_msgs[-1]['content']}预计明天送达。"}
+    last = messages[-1]["content"]
+    if "订单" in last and "12345" in last:
+        return {"tool": "check_order", "args": {"order_id": "12345"}}
+    return {"answer": "已收到，我来帮你处理。"}
+
+def run_agent(user_msg, max_steps=4):
+    messages = [{"role": "user", "content": user_msg}]
+    for step in range(max_steps):
+        out = stub_llm(messages)
+        if "answer" in out:
+            return out["answer"]
+        result = TOOLS[out["tool"]](**out["args"])
+        print(f"第 {step + 1} 步：调工具 {out['tool']}，拿到：{result}")
+        messages.append({"role": "tool", "content": result})
+    return "已到最大步数，转人工接管。"
+
+print(run_agent("我的订单 12345 到哪了？"))
+
+# 本地实跑输出（python3 day30_ex1.py）：
+# 第 1 步：调工具 check_order，拿到：订单 12345：已发货，快递单号 SF888，昨天 18:00 已揽收。
+# 查到了：订单 12345：已发货，快递单号 SF888，昨天 18:00 已揽收。预计明天送达。</code></pre>
+<h3>示例 2：RAG 检索函数（能跑的代码）</h3>
+<pre><code># RAG 检索函数：本地小语料 + 关键词打分，不调真实 API
+DOCS = [
+    {"id": 1, "text": "退货政策：7 天内无理由退货，商品需保持完好。"},
+    {"id": 2, "text": "运费说明：满 99 元包邮，未满收 8 元运费。"},
+    {"id": 3, "text": "换货流程：先申请换货，寄回旧品后发出新品。"},
+]
+
+def retrieve(query, top_k=2):
+    # 思路：把问题按字切，命中词越多分越高；真实做法是向量相似度，
+    # 关键词版能跑通，先看懂“检索 = 打分 + 取前 K”的形状
+    scored = []
+    for doc in DOCS:
+        score = sum(1 for ch in query if ch in doc["text"])
+        scored.append((score, doc))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [doc for score, doc in scored[:top_k] if score > 0]
+
+print(retrieve("我想退货怎么办？"))
+print(retrieve("运费多少钱？"))
+print(retrieve("今天天气怎么样？"))
+
+# 本地实跑输出（python3 day30_ex2.py）：
+# [{'id': 1, 'text': '退货政策：7 天内无理由退货，商品需保持完好。'},
+#  {'id': 3, 'text': '换货流程：先申请换货，寄回旧品后发出新品。'}]
+# [{'id': 2, 'text': '运费说明：满 99 元包邮，未满收 8 元运费。'}]
+# [{'id': 1, 'text': '退货政策：7 天内无理由退货，商品需保持完好。'}]
+# 注意第三行：问天气却命中了退货政策，只因共用一个“天”字。
+# 这就是关键词检索的短板——生产里要加分数阈值，低于阈值返回空、走降级。</code></pre>
+<h3>示例 3：降级与人工接管的守门函数（概念代码，先看形状）</h3>
+<pre><code># 概念代码，先看形状：降级与人工接管的守门函数
+def answer_with_fallback(user_msg):
+    try:
+        result = run_agent(user_msg)   # 示例 1 的循环
+    except Exception:
+        return handoff(user_msg, reason="模型调用失败")
+    if not result or "不知道" in result:
+        return handoff(user_msg, reason="知识库没有相关内容")
+    if is_sensitive(user_msg):  # 退款、改地址、删账号等敏感操作
+        return handoff(user_msg, reason="敏感操作，需人工确认")
+    return result
+# 形状就三层：先抓异常、再判空答案、最后拦敏感操作。
+# 每一层失败都走同一条路：转人工，并写清原因，方便复盘。</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再改一个问题（比如问“订单 99999 到哪了？”），看桩模型回什么——它回“已收到，我来帮你处理”，因为关键词没命中。这就是桩模型的局限，也是你该换真模型的原因。<br>
+2. 给示例 2 加一道阈值：分数小于 2 的文档不要，问天气时返回空列表，再接上示例 3 的守门函数，让它走“转人工”。<br>
+3. 写你自己的一条错题：按“错题 → 根因 → 改法 → 再测”四列写，根因那一列不许写“粗心”，必须写到具体的技术点。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 客服 Agent 里“路由”解决什么问题？</strong></p><button data-i="0">把问题分给对的工具、知识库或人工</button><button data-i="1">让模型跑得更快</button><button data-i="2">把答案写得更长</button><div class="ans">解析：选 A。路由就是分流：查状态的走工具，问政策的走知识库，敏感的走人工。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 模型挂了，正确的降级做法是？</strong></p><button data-i="0">直接报错关掉，不告诉用户</button><button data-i="1">走缓存答案或转人工，并告诉用户</button><button data-i="2">编一个看起来像的答案顶上</button><div class="ans">解析：选 B。降级的底线是：宁可承认不会，也别编一个错的答案。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 知识库检索为空时，该怎么办？</strong></p><button data-i="0">编一段看起来像的答案</button><button data-i="1">反复查同一遍，直到查出东西</button><button data-i="2">说没查到，给换个问法或转人工的选项</button><div class="ans">解析：选 C。检索为空是正常情况，说没查到、给下一步选项，才是合格的处理。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 手写 Tool Calling 循环里，模型返回工具调用后，下一步是？</strong></p><button data-i="0">执行工具、把结果追加进消息、再问模型</button><button data-i="1">直接把工具名发给用户</button><button data-i="2">结束对话</button><div class="ans">解析：选 A。循环的四步就是：问模型 → 调工具 → 把结果喂回去 → 再问模型，直到给答案。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 关键词检索最大的短板是？</strong></p><button data-i="0">只看字面重合，会误命中、也认不出同义词</button><button data-i="1">速度太慢，跑不起来</button><button data-i="2">占内存太大，放不下</button><div class="ans">解析：选 A。问天气命中退货政策就是例子：只看字面，不懂意思。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 错题本最有价值的一步是？</strong></p><button data-i="0">把错题抄下来</button><button data-i="1">错题攒得越多越好</button><button data-i="2">写清根因和改法，改完再测一遍</button><div class="ans">解析：选 C。只记错题不找根因、改了不重测，错题本就白记了。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：设计一个客服 Agent，架构怎么画？</summary><p>先画最小闭环：用户问题 → 路由器 → 三条路（查订单工具、知识库检索、人工接管）→ 合成回答，底下再画三条底线（降级、评测、安全）。路由规则先写死、不靠模型临场判断；敏感操作必须人工确认；模型挂了、知识库空了都有降级线。画完问面试官要不要展开评测和安全，让他带你往深里走。</p></details>
+<details><summary>Q2：模型挂了 / 知识库空了，你怎么降级？</summary><p>模型挂了走缓存答案或直接转人工，并告诉用户“系统繁忙，已转人工”；知识库空了就说没查到，给换个问法或转人工的选项。核心一句话：宁可承认不会，也别编一个错的答案。还要补一句：降级要写日志，不然复盘时不知道哪条路兜的底。</p></details>
+<details><summary>Q3：不用 LangChain，手写 Tool Calling 循环怎么写？</summary><p>四步循环：发消息给模型 → 模型要么给答案、要么返回工具调用 → 执行工具、把结果追加进消息 → 再问模型，直到给答案或到最大步数（4–5 步）。先拿本地桩模型跑通循环，换真模型时循环不用改。能说出“最大步数防死循环”和“工具结果要追加进消息”这两点，就过关了。</p></details>
+<details><summary>Q4：RAG 检索怎么做？关键词和向量有什么区别？</summary><p>骨架一样：给每篇文档打分、取前 K 篇。关键词版按字面命中打分，能跑通但会误命中、认不出同义词；向量版按语义相似度打分，更准，但要先把文档切块、向量化、建索引。生产里还要加分数阈值，低于阈值返回空、走降级。</p></details>
+<details><summary>Q5：讲一个你复盘过的错。</summary><p>按“错题 → 根因 → 改法 → 再测”讲：比如 RAG 检索答非所问，根因是切块太大、一块里塞了三个主题，改法是按小节切块、每块一个主题，再测是同一批问题重跑、命中率从多少升到多少。面试官想听的不是你错过，而是你定位到具体技术点、改了、拿数字验证了。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>系统设计题答完，面试官心里其实在勾三个框：有没有路由（不是所有问题一个打法）、有没有降级（坏了怎么办）、有没有评测（怎么知道变好了）。三框勾满，再补一句安全红线（数据不出界、敏感操作人工确认），这道题就稳了。手写代码题同理：循环写对只是及格，答出“最大步数防死循环”和“桩模型先跑通”才是加分。</p>
+<p><strong>简历讲法：</strong>别写“设计过客服 Agent”，写“路由器分流三类问题（工具 / 知识库 / 人工），模型故障走缓存或转人工，离线评测集 50 条 + 线上 5% 抽查，敏感操作人工确认”。也别写“会手写 Agent”，写“手写 Tool Calling 循环（桩模型跑通，最大步数 4 步防死循环）+ 本地 RAG 检索（打分取前 K，加阈值降级）”。前者是名词，后者是面试官能顺着追问的设计。</p>
+<p><strong>收尾：</strong>Day 30 是 LangChain 30 天主线的最后一课。30 天里你从 Tool Calling、提示词、工具、RAG、LangGraph 图，一路走到了今天的系统设计、手写代码与复盘——从“会调 API”走到了“能讲清一个 Agent 为什么这样设计、坏了怎么办、错了怎么改”。接下来第 5 周往 Multi-Agent + MCP 走：一个 Agent 干不了的活，怎么拆成一个团队分工干；外部工具越来越多，怎么用一套统一的协议接进来。主线收尾，下一段路见。</p>
+</div>
+<div class="nav"><span><a href="day29.html">← Day 29</a></span><span><a href="day31.html">Day 31 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

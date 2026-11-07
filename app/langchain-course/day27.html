@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 27：全项目加固 2：版本管理与灰度发布 | LangChain 30 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 27 / 37</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 27：全项目加固 2：版本管理与灰度发布 | LangChain 30 天实战课</h1>
+<p>昨天是让项目“看得见”，今天是让项目“改得起、发得稳”。Agent 项目最怕两件事：一是改了一行提示词，不知道改坏了什么，也回不去；二是新版本一上线就全量推给所有用户，出问题才发现。这节课讲版本管理和灰度发布：每次改动都留一个不可变的快照，新版本先小流量试、指标没问题再放大，指标变差自动回滚。这是今天的重点课，也是面试最爱追问的一课。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 版本管理：改了就是新版本，旧版本永远不动</h3>
+<svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="金丝雀从 1% 放量到 100%，每步检查护栏指标，变差自动回滚到旧版本的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="18" width="110" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="75" y="45" text-anchor="middle" font-size="13" fill="#222">旧版本 v1.2.2</text>
+<line x1="130" y1="40" x2="208" y2="40" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="210" y="18" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="285" y="45" text-anchor="middle" font-size="13" fill="#222">新版本 v1.3.0</text>
+<line x1="285" y1="62" x2="285" y2="92" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="94" width="110" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="75" y="121" text-anchor="middle" font-size="13" fill="#222">1% 流量</text>
+<line x1="130" y1="116" x2="178" y2="116" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="180" y="94" width="110" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="235" y="121" text-anchor="middle" font-size="13" fill="#222">5% → 25%</text>
+<line x1="290" y1="116" x2="338" y2="116" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="340" y="94" width="110" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="395" y="121" text-anchor="middle" font-size="13" fill="#222">50% → 100%</text>
+<line x1="450" y1="116" x2="498" y2="116" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="500" y="94" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="121" text-anchor="middle" font-size="13" fill="#222">护栏指标每步必查</text>
+<line x1="600" y1="138" x2="600" y2="168" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="470" y="170" width="260" height="44" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="1.5"/>
+<text x="600" y="197" text-anchor="middle" font-size="13" fill="#222">指标变差 → 自动回滚到 v1.2.2</text>
+<line x1="470" y1="192" x2="150" y2="192" stroke="#d99a00" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+<line x1="150" y1="192" x2="150" y2="66" stroke="#d99a00" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+<text x="360" y="250" text-anchor="middle" font-size="13" fill="#666">每一步放量前，先看护栏；回滚不用等人半夜爬起来</text>
+</svg>
+<p>Agent 的“版本”不只是代码版本。Prompt、模型、工具、配置这四样，任何一样改了，都产生一个新版本：提示词改了一句话是新版本，模型换了一个是新版本，工具加了一个参数、温度从 0.2 调到 0.7，都是新版本。为什么要这么严？因为 Agent 的行为是这四样共同决定的，只记代码版本，出了问题根本不知道是哪一样变了。版本是不可变快照：一个版本一旦生成就冻结，改了就是新版本，旧版本原样不动；旧版本要一直保留，随时能回滚——回滚不是“把代码改回去”，而是“把流量切回旧版本”，一分钟就能完成。版本号用语义化版本：v1.2.3 里的 1 是主版本号（不兼容的大改，比如换了工具、改了输出格式）、2 是次版本号（加了功能但兼容，比如多了一个工具）、3 是修订号（小修小补，比如改了一句提示词、修了一个 Bug）。每次发版再配一份变更日志：写清这一版改了什么、为什么改、预期影响什么，回滚时不用翻代码、看日志就知道该回哪个版本。</p>
+<h3>2. 金丝雀发布：先放 1%，再 5% → 25% → 50% → 100%</h3>
+<p>金丝雀发布就是“先让一小部分用户试新版本，没问题再慢慢放大”。顺序固定：1% → 5% → 25% → 50% → 100%，每一步都要停下来看护栏指标，指标没问题才走下一步。为什么从 1% 开始？因为 1% 的用户出问题，影响小、能及时发现；直接 100% 上线，出问题就是全量事故。1% 也不是随便跑几分钟就放：要跑够一定的量（比如几百次调用），样本太少，指标根本看不出差别。放量节奏也要写死在流程里，不能凭感觉“看着还行就全放了”——每一步放多大、观察多久、看哪些指标，提前写好，执行时只按表操作。金丝雀还有一个好处：新旧版本同时在线，同一个问题能直接对比——新版本真的更好，还是只是运气好，数据会说话。</p>
+<h3>3. 护栏指标与自动回滚：指标变差就回滚，不要等人</h3>
+<p>护栏指标是每一步放量前必须看的四项。第一，错误率：调用失败、工具报错、超时占总调用的比例，变高说明新版本不稳定。第二，延迟（p95）：把所有耗时从小到大排，排在 95% 位置的那个值——p95 关注的是“慢的那批用户”，平均耗时好看、p95 爆了，照样是事故。第三，Token 成本：每次调用平均花多少 Token、多少钱，新版本回答变长了、调模型次数多了，成本会悄悄翻倍。第四，幻觉率：回答里没有依据、编造内容的比例，这是 Agent 独有的护栏——别的指标都好看，幻觉率上去了，照样不能放量。四个指标每个都要设阈值（比如错误率超过 2% 就停），任何一个超标就自动回滚：流量立刻切回旧版本，同时报警通知人。自动回滚的关键是“自动”——不要等人半夜爬起来看仪表盘再手动切，机器发现、机器回滚，人第二天再看日志复盘。回滚后也别急着再推：先看追踪和日志，定位是哪一次改动惹的祸，修好、发一个新版本、重新从 1% 走一遍。</p>
+<h3>4. 四种发布方式怎么选：蓝绿、影子、A/B、功能开关</h3>
+<table>
+<tr><th>方式</th><th>怎么做</th><th>优点</th><th>缺点 / 适用</th></tr>
+<tr><td>金丝雀</td><td>新版本先 1%，再 5% → 25% → 50% → 100%，每步看护栏</td><td>风险最小，出问题只影响小部分用户</td><td>放量慢；日常发版的首选</td></tr>
+<tr><td>蓝绿</td><td>两套环境同时在线：蓝是旧版，绿是新版，全量切到绿，出问题秒切回蓝</td><td>切换快、回滚就是再切一次</td><td>要养两套环境，成本高；适合大版本、能全量切换的场景</td></tr>
+<tr><td>影子流量</td><td>新版本跑真实流量，但结果不返回用户，只拿它的输出和旧版对比</td><td>用户完全无感知，能提前发现输出差异</td><td>新版本要真实跑，成本翻倍；适合想先看输出、不敢让用户看到的场景</td></tr>
+<tr><td>A/B</td><td>两组用户各跑一个版本，对照实验看业务指标（比如任务完成率）</td><td>能回答“新版是不是真的更好”</td><td>要跑够样本量、要等业务指标；适合验证效果，不适合救火</td></tr>
+<tr><td>功能开关</td><td>开关控制新功能开给谁：按用户、按比例切流，紧急时一键关闭</td><td>最灵活，紧急关闭不用重新部署</td><td>开关本身要管好，开关烂了等于没开关；适合按用户切流、需要紧急关闭的场景</td></tr>
+</table>
+<p>选型就一句话：日常发版用金丝雀，大版本切换用蓝绿，想先看输出用影子流量，想验证“是不是真的更好”用 A/B，需要按用户切流或紧急关闭用功能开关。它们不是互斥的：金丝雀后面可以挂功能开关做紧急关闭，影子流量跑完再走金丝雀上线，都是常见组合。面试常问“这几种有什么区别”，答的时候先说“用户看不看得到、流量怎么切、回滚有多快”，再举一个适用场景，比背定义强得多。</p>
+<div class="warn"><strong>容易踩的坑：</strong>最常见的三个错。第一，只给代码记版本，Prompt、模型、配置改了不记——出问题时根本不知道回滚哪一样。第二，金丝雀只看平均耗时不看 p95、只看错误率不看幻觉率——指标好看不等于新版本真的好。第三，回滚靠人：半夜指标变差，没人看仪表盘，事故拖到天亮。记住：版本要全、指标要全、回滚要自动。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：版本快照的数据结构（可跑，纯 Python）</h3>
+<pre><code>from dataclasses import dataclass, field
+
+# 一个版本 = Prompt + 模型 + 工具 + 配置的不可变快照
+# frozen=True：建好就改不了，改了就是新版本，旧版本原样不动
+@dataclass(frozen=True)
+class AgentVersion:
+    version: str          # 语义化版本，如 v1.3.0
+    prompt: str           # 提示词全文快照
+    model: str            # 模型名，如 gpt-4o-mini（示例）
+    tools: tuple          # 工具名列表
+    temperature: float    # 配置：温度
+    changelog: str = ""   # 变更日志：这一版改了什么、为什么
+
+# 版本仓库：旧版本一直保留，随时可回滚
+REGISTRY = {}
+
+def publish(v):
+    REGISTRY[v.version] = v
+    return v
+
+def rollback_to(version):
+    return REGISTRY[version]   # 回滚 = 切回旧版本，不是把代码改回去
+
+v122 = publish(AgentVersion("v1.2.2", "你是天气助手。", "gpt-4o-mini",
+                            ("weather",), 0.2, "首版"))
+v130 = publish(AgentVersion("v1.3.0", "你是天气助手，先检索再回答。",
+                            "gpt-4o-mini", ("weather", "search"), 0.2,
+                            "次版本：新增 search 工具，提示词要求先检索"))
+print("当前版本：", v130.version, "| 工具：", v130.tools)
+print("回滚到：", rollback_to("v1.2.2").version)</code></pre>
+<h3>示例 2：金丝雀放量 + 护栏检查（可跑，纯 Python 逻辑）</h3>
+<pre><code># 护栏阈值：任何一项超标就自动回滚，不要等人
+GUARDS = {"error_rate": 0.02, "p95_seconds": 5.0,
+          "cost_per_call": 0.05, "hallucination_rate": 0.01}
+# 成本数字是示例，按自己账单替换
+
+def p95(values):
+    ordered = sorted(values)
+    return ordered[int(0.95 * len(ordered)) - 1]
+
+def check_guards(metrics):
+    # metrics：这一阶段观测到的指标；返回 (通过吗, 原因)
+    if metrics["error_rate"] &gt; GUARDS["error_rate"]:
+        return False, "错误率超标"
+    if p95(metrics["latencies"]) &gt; GUARDS["p95_seconds"]:
+        return False, "p95 延迟超标"
+    if metrics["cost_per_call"] &gt; GUARDS["cost_per_call"]:
+        return False, "Token 成本超标"
+    if metrics["hallucination_rate"] &gt; GUARDS["hallucination_rate"]:
+        return False, "幻觉率超标"
+    return True, "护栏全部通过"
+
+# 每阶段的观测指标是示例数据：实际用时换成真实统计
+STAGES = [
+    (1,  {"error_rate": 0.005, "latencies": [1.2, 1.5, 2.0], "cost_per_call": 0.02, "hallucination_rate": 0.0}),
+    (5,  {"error_rate": 0.008, "latencies": [1.3, 1.6, 2.1], "cost_per_call": 0.02, "hallucination_rate": 0.005}),
+    (25, {"error_rate": 0.04,  "latencies": [1.4, 1.8, 6.5], "cost_per_call": 0.03, "hallucination_rate": 0.01}),
+]
+
+current = "v1.2.2"   # 回滚目标：一直是旧版本，放量通过也不改这个值
+for percent, metrics in STAGES:
+    ok, reason = check_guards(metrics)
+    print(f"放量 {percent}%：{reason}")
+    if not ok:
+        print(f"自动回滚：新版本下线，流量切回 {current}")
+        break
+else:
+    print("全部放量完成，当前版本：v1.3.0")</code></pre>
+<h3>示例 3：功能开关，按用户切流、紧急关闭（可跑，纯 Python）</h3>
+<pre><code>import hashlib
+
+# 开关：新功能只开给一部分用户，紧急时一键关闭，不用重新部署
+FLAGS = {"new_retriever": {"enabled": True, "percent": 25}}
+
+def flag_on(flag_name, user_id):
+    flag = FLAGS[flag_name]
+    if not flag["enabled"]:
+        return False   # 紧急关闭：开关一关，所有人都走旧逻辑
+    # 按用户 ID 哈希取模：同一用户每次结果一致，不会一会儿新一会儿旧
+    bucket = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % 100
+    return bucket &lt; flag["percent"]
+
+for user in ["user-001", "user-004", "user-005"]:
+    print(user, "走新检索" if flag_on("new_retriever", user) else "走旧检索")
+
+FLAGS["new_retriever"]["enabled"] = False   # 模拟紧急关闭
+print("关掉开关后：", flag_on("new_retriever", "user-004"))</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给你的 RAG 项目写三个版本：v1.2.2（现状）、v1.2.3（只改一句提示词）、v1.3.0（加一个工具），每个版本写一行变更日志。<br>
+2. 照示例 2 的形状，给四个护栏指标各定一个阈值，写下来贴在你的发布清单里。<br>
+3. 假设 25% 阶段幻觉率超标，写出你的处理：回滚到哪个版本？修好后从哪一步重新放量？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 以下哪种改动会产生一个新版本？</strong></p><button data-i="0">只有改代码才算</button><button data-i="1">Prompt、模型、工具、配置任何一样改了都算</button><button data-i="2">只有换模型才算</button><div class="ans">解析：选 B。Agent 的行为由这四样共同决定，只记代码版本，出问题不知道是哪一样变了。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 版本为什么要是不可变快照？</strong></p><button data-i="0">为了省磁盘空间</button><button data-i="1">为了让版本号好看</button><button data-i="2">改了就是新版本，旧版本原样不动，随时能回滚</button><div class="ans">解析：选 C。旧版本能被改掉，回滚就不可靠；冻结旧版本，回滚才是切流量。</div></div>
+<div class="q" data-answer="0"><p><strong>3. v1.2.3 里，三个数字分别是什么意思？</strong></p><button data-i="0">主版本.次版本.修订号：大改.加功能.小修小补</button><button data-i="1">年.月.日</button><button data-i="2">随便写的三个数字</button><div class="ans">解析：选 A。主版本是不兼容的大改，次版本是兼容的新功能，修订号是小修小补。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 金丝雀发布的放量顺序是？</strong></p><button data-i="0">直接 100% 上线</button><button data-i="1">1% → 5% → 25% → 50% → 100%，每步看护栏指标</button><button data-i="2">50% → 100%，越快越好</button><div class="ans">解析：选 B。每一步停下来看护栏，指标没问题才放大，出问题只影响小部分用户。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 护栏指标包括哪四项？</strong></p><button data-i="0">代码行数、文件数、团队人数</button><button data-i="1">平均耗时、总调用量、在线人数</button><button data-i="2">错误率、延迟 p95、Token 成本、幻觉率</button><div class="ans">解析：选 C。p95 看的是慢的那批用户，幻觉率是 Agent 独有的护栏，四项缺一不可。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 护栏指标变差时，正确做法是？</strong></p><button data-i="0">等有人半夜爬起来手动切</button><button data-i="1">自动回滚到旧版本，同时报警，人第二天再复盘</button><button data-i="2">继续放量，赌它自己变好</button><div class="ans">解析：选 B。回滚的关键是自动，机器发现、机器回滚，别拿全量用户赌运气。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Agent 项目的版本管理，和普通代码版本管理有什么不同？</summary><p>普通代码只记代码版本，Agent 要把 Prompt、模型、工具、配置四样一起记进版本：任何一样改了都是新版本。版本是不可变快照，旧版本冻结保留，回滚是切流量不是改代码；再配语义化版本和变更日志，出问题能立刻定位是哪一样变了、该回哪个版本。</p></details>
+<details><summary>Q2：讲讲金丝雀发布怎么做？</summary><p>新版本先放 1% 流量，跑够样本量、看护栏指标，没问题再 5% → 25% → 50% → 100%，每一步都要停下来看指标。放量比例、观察时长、看哪些指标提前写死，不凭感觉放量；新旧版本同时在线，同一个问题能直接对比效果。</p></details>
+<details><summary>Q3：护栏指标有哪些？为什么要有幻觉率？</summary><p>四项：错误率、延迟 p95、Token 成本、幻觉率。p95 看的是慢的那批用户，平均耗时好看不代表没人卡；幻觉率是 Agent 独有的——回答编造了没有依据的内容，别的指标再好看也不能放量。每个指标都要设阈值，超标自动回滚。</p></details>
+<details><summary>Q4：蓝绿、影子流量、A/B、功能开关怎么选？</summary><p>先说三点区别：用户看不看得到、流量怎么切、回滚有多快。日常发版用金丝雀；大版本全量切换用蓝绿，出问题秒切回；想先看真实输出又不敢让用户看到，用影子流量；想验证新版是不是真的更好，用 A/B 对照业务指标；按用户切流或要紧急关闭，用功能开关。它们可以组合用。</p></details>
+<details><summary>Q5：半夜护栏指标变差了，你怎么办？</summary><p>不靠人爬起来：指标超阈值就自动回滚，流量立刻切回旧版本，同时报警；人第二天看追踪和日志定位是哪次改动惹的祸，修好、发一个新版本、重新从 1% 走一遍。面试官想听的是“自动回滚 + 事后复盘”，不是“我会熬夜盯着仪表盘”。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>发版前先问四件事：这次改动记进版本了吗（Prompt、模型、工具、配置四样全不全）？金丝雀的放量表和观察时长写死了吗？四个护栏指标的阈值定了吗？自动回滚真的跑通过吗（别只在文档里写“自动回滚”）？四问有一个答不上来，就别发版。</p>
+<p><strong>简历讲法：</strong>别写“做过灰度发布”，写“版本快照（Prompt / 模型 / 工具 / 配置四要素、语义化版本 + 变更日志）+ 金丝雀 1% → 100% 分段放量 + 四项护栏（错误率、p95、Token 成本、幻觉率）自动回滚”。前者是名词，后者是可追问的设计。</p>
+<p><strong>明日预告：</strong>Day 28 讲全项目加固 3：成本、限流与降级——Token 成本怎么算、速率限制超了怎么办、降级三招（小模型路由、缓存、摘要）怎么选。</p>
+</div>
+<div class="nav"><span><a href="day26.html">← Day 26</a></span><span><a href="day28.html">Day 28 →</a></span></div>
+
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
