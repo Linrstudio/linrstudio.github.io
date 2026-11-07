@@ -40,16 +40,27 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>④ 再决策或收尾</td><td>回到第 ② 步</td><td>没有 tool_calls 就收尾；跑满上限就返回 max_steps</td></tr>
 </table>
 <p>记住这句口头禅：<strong>模型决策 → 调工具 → 结果回填 → 再决策</strong>。Agent 不是一个更聪明的模型，而是一个让模型能反复“看结果再决定”的循环。</p>
-<h3>2. 工具调用的三种消息，分工不能乱</h3>
+<h3>2. ReAct 是什么：CoT 加上行动，每步都有外部反馈</h3>
+<p>先分清两个词。<strong>CoT（Chain-of-Thought，思维链）</strong>是让模型把推理过程一步一步写出来再给答案：只动脑不动手，答案一次性输出，适合纯推理题（数学、逻辑、阅读理解）。它的弱点是推理错了没法发现——模型是“闭着眼睛想”，中间没有任何外部信息纠正它。</p>
+<p><strong>ReAct（Reasoning + Acting）</strong>就是 CoT 加上行动，Thought → Action → Observation 不停循环：Thought 是 CoT 推理（“我需要先算出 X，再查 Y”），Action 是调工具，Observation 是工具返回的结果，下一轮 Thought 看着 Observation 再想。关键就一句：<strong>每步都有外部反馈，能自我纠正</strong>——算错了工具会返回错误，查不到工具会返回空，模型下一轮能换个办法，而不是一路错到底。</p>
+<p>本课的手写循环就是 ReAct 的原生实现，对上号看：Thought = 模型决策（AIMessage，可能带 tool_calls），Action = 执行 tool_call，Observation = ToolMessage 回填。唯一的区别是 Action 怎么表达：老 ReAct（2022 年论文的做法）靠提示词格式，让模型输出 <code>Thought: ... / Action: calculator[37*41] / Observation: ...</code> 这样的文本，再由代码解析；新版靠模型原生 tool_calls，结构化输出，不用解析文本。循环思想一样，只是行动的载体从“文本格式”换成了“原生调用”。</p>
+<table><tr><th></th><th>普通 CoT</th><th>ReAct</th></tr>
+<tr><td>工具</td><td>没有</td><td>有，行动就是调工具</td></tr>
+<tr><td>轮数</td><td>单轮，一次性输出</td><td>多轮，Thought/Action/Observation 循环</td></tr>
+<tr><td>反馈</td><td>无，推理错了不知道</td><td>每步有 Observation，能纠正</td></tr>
+<tr><td>适用</td><td>纯推理，不需要外部数据</td><td>要查资料、要操作、答案依赖外部结果</td></tr>
+<tr><td>代价</td><td>便宜，Token 少</td><td>多轮调用，Token 多，可能死循环（靠 max_steps 兜底）</td></tr></table>
+<p>什么时候只用 CoT？不需要外部数据、一步能算完、或者调工具有成本和风险时。常见的好模式是“先想后动”：先用 CoT 想清楚要什么，再决定调哪个工具——CoT 是 ReAct 里 Thought 的那部分，不是它的对立面。</p>
+<h3>3. 工具调用的三种消息，分工不能乱</h3>
 <ul>
 <li><strong>HumanMessage</strong>：用户的原始问题，是循环的起点。</li>
 <li><strong>AIMessage（带 tool_calls）</strong>：模型本轮的决策。tool_calls 里的每一项是一个字典：<code>{"name": 工具名, "args": 参数字典, "id": 本次调用的编号}</code>。</li>
 <li><strong>ToolMessage</strong>：工具的执行结果。最关键的一点是 <code>tool_call_id</code> 必须和那次 tool_call 的 <code>id</code> 一模一样，模型才能把“结果”对应回“它刚才调的那一次工具”。id 对不上会报错——这是你 10 月 29 日小考第 3 题答对过的点：漏回填 ToolMessage，下一步调用会因 tool_call 未配对而报错。</li>
 </ul>
 <p>还有一个容易忽略的细节：<strong>模型本轮的 AIMessage 本身也要追加进 history</strong>，下一轮模型才能看到它自己刚才调了什么工具。不追加，模型就等于失忆，会反复调同一个工具。</p>
-<h3>3. 一轮可以调多个工具</h3>
+<h3>4. 一轮可以调多个工具</h3>
 <p>模型一轮的 tool_calls 是个列表，不是单个。所以执行那一步是 for 循环：逐个执行、逐个回填。你的 <code>run_agent</code> 里就是这么写的——<code>result.tool_calls</code> 累计的是执行次数，不是轮数。</p>
-<h3>4. 三条底线：工具报错不崩、未知工具不崩、死循环有上限</h3>
+<h3>5. 三条底线：工具报错不崩、未知工具不崩、死循环有上限</h3>
 <p>这是脚手架离线测试 3/3 PASS 验证过的三条线，也是面试时最能体现工程意识的地方：</p>
 <ul>
 <li><strong>工具执行抛异常 → 转成 ToolMessage 发回给模型</strong>，让模型自己纠错或换工具，而不是让整个循环崩掉。工具的输入永远不可信，模型给的参数也要当成不可信输入处理。</li>
@@ -57,7 +68,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <li><strong>模型一直调工具 → 步数上限兜底</strong>。<code>max_steps</code> 跑满后返回 <code>status="max_steps"</code>，而不是报错，更不是死循环。调用方看到这个状态就知道是“被上限拦住了”，而不是“模型坏了”，可以据此决定是否继续追问、换策略，或者把已走过的轨迹拿去复盘。</li>
 </ul>
 <div class="warn"><strong>容易踩的坑：</strong>把 history 直接传给循环、让循环在上面追加。你的 <code>run_agent</code> 里第一句就是 <code>history = list(messages)</code>——复制一份再追加，避免污染调用方的数据。另一个坑：把模型调用失败也当成普通异常往外抛；正确做法是返回 <code>status="error"</code> 并保留轨迹，复盘时才有东西可看。</div>
-<h3>5. 手写循环 vs AgentExecutor，选哪个</h3>
+<h3>6. 手写循环 vs AgentExecutor，选哪个</h3>
 <p>AgentExecutor 是旧版 LangChain 封装好的黑盒：传 llm、tools、prompt 就能跑，省事，但中间每一步发生了什么、失败时卡在哪一步，你看不见。<strong>版本注意：LangChain 1.x 里 AgentExecutor 已经被删了，<code>from langchain.agents import AgentExecutor</code> 会报 ImportError；新版对应的工厂是 <code>from langchain.agents import create_agent</code>，而 LangGraph 里的 <code>create_react_agent</code> 也已标记为废弃、指向同一个 create_agent。</strong>所以本课不依赖它，手写循环才是不会随版本失效的骨架。手写循环的价值恰恰是“每一步都看得见”：面试能口述流程，出问题能定位到某一步，步数、Token、工具调用次数都能自己记进日志（你的脚手架就有 <code>runs/log.jsonl</code>）。结论和 Day 3 的小考结论一致：<strong>单步简单调用不用框架，反复调工具才需要循环，流程分支与人工确认才上 LangGraph</strong>——Day 7 会讲后者。</p>
 
 <h2>二、代码示例</h2>
@@ -111,6 +122,21 @@ def calculator(expression: str) -> str:
 # 剧本 2：算非法表达式，工具报错回填后模型仍能收尾
 # 剧本 3：模型一直调工具，循环在 max_steps 停下，状态是 max_steps
 # 运行：python -m tests.test_loop —— 3/3 PASS</code></pre>
+<h3>示例 4：同一问题，CoT 和 ReAct 的轨迹对照（对照示例）</h3>
+<pre><code># 问题：23 和 17 的和，再乘以 6，是多少？
+# CoT（只动脑）：提示词里写“请一步一步想”，模型一次性输出：
+#   “23+17=40，40*6=240。答案是 240。”
+#   推理全在模型肚子里，算错了没人发现，答案直接交卷。
+#
+# ReAct（手写循环跑同一题，轨迹长这样）：
+#   Thought: 先算 23+17，再乘 6。调 calculator。
+#   Action: calculator("23+17")        → Observation: "40"
+#   Thought: 和是 40，再算 40*6。调 calculator。
+#   Action: calculator("40*6")         → Observation: "240"
+#   Thought: 两步都算完了，可以收尾。
+#   Final Answer: "240"
+# 对比：CoT 便宜、一步到位；ReAct 每步都有工具结果作证，
+# 算错一步下一轮能发现。代价是多调两轮模型、多花 Token。</code></pre>
 <h3>动手任务（15 分钟）</h3>
 <div class="card">
 <p>1. 在脚手架里把 max_steps 从 5 改成 2，跑剧本 3，看状态是不是 max_steps、轨迹里是不是正好 2 轮。<br>
@@ -186,6 +212,7 @@ def calculator(expression: str) -> str:
 <details><summary>Q5：什么时候用手写循环，什么时候用 AgentExecutor / LangGraph？</summary>
 <p>单步简单调用不用框架；反复调工具、要讲清流程、要记日志排障时用手写循环；流程出现分支、要人工确认、要状态管理时上 LangGraph。选型看的是“流程复杂度”，不是“工具新旧”。另注意：AgentExecutor 是旧版 API，LangChain 1.x 已删除，不要再按旧教程抄 <code>from langchain.agents import AgentExecutor</code>；要现成工厂时用 <code>from langchain.agents import create_agent</code>。</p>
 </details>
+<details><summary>Q6：ReAct 和普通 CoT 有什么区别？什么时候只用 CoT？</summary><p>CoT 只推理不行动、一次性输出，错了没法发现；ReAct 是 Thought → Action → Observation 循环，每步有工具结果纠正。本课的手写循环就是 ReAct 的原生实现（Thought 是模型决策，Action 是 tool_call，Observation 是 ToolMessage 回填），老 ReAct 靠提示词文本格式解析行动，新版靠原生 tool_calls。只用 CoT 当不需要外部数据、一步能算完、或者调工具有成本和风险时。</p></details>
 
 <h2>五、加分项</h2>
 <div class="card">
