@@ -20,6 +20,15 @@ code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:n
 .ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
 details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
 summary{cursor:pointer;font-weight:bold}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.widget label{display:block;margin:8px 0 4px;font-size:14px}
+.widget input[type=text]{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
+.pg-out{margin-top:12px;border-radius:10px;padding:12px 14px;background:#fff;border:1px solid #e5e5e5;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7}
+.pg-out.ok{border-color:#22a35a;background:#f0fdf4}
+.pg-out.err{border-color:#d33;background:#fef2f2}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 </style>
 </head>
@@ -44,7 +53,7 @@ summary{cursor:pointer;font-weight:bold}
 ])</code></pre>
 <p>想带历史时，再加一个 <code>MessagesPlaceholder("history")</code>，历史消息就直接插进这个位置——这就是第 6 天记忆和提示词接起来的地方。</p>
 <h3>3. 模板缺变量：先防，后兜底</h3>
-<p>模板里写了 <code>{goal}</code>，调用时没传 <code>goal</code>，格式化时就报 KeyError。处理顺序是：<strong>事前校验</strong>传参是否覆盖了模板的 <code>input_variables</code>，或用 <code>partial</code> 给常用变量预填默认值；<code>try/except</code> 只留着当最后一道防线。事后救火救不了“到底缺了哪个变量”，也拦不住错误数据流进去。</p>
+<p>模板里写了 <code>{goal}</code>，调用时没传 <code>goal</code>，格式化时就报 KeyError。处理顺序是：<strong>事前校验</strong>传参是否覆盖了模板的 <code>input_variables</code>，或用 <code>partial</code> 给常用变量预填默认值；<code>try/except</code> 只留着当最后一道防线。事后救火救不了“到底缺了哪个变量”，也拦不住错误数据流进去。代码见下面的<a href="#ex3">示例 3</a>，先点一点 playground 再往下看。</p>
 <h3>4. FewShot：不是魔法，就是把样例贴进提示词</h3>
 <p>FewShot 有三部分：<code>prefix</code>（指令）、<code>examples + example_prompt</code>（样例和样例格式）、<code>suffix</code>（新问题，留空等模型填）。模型照着样例的格式学，不用你长篇解释格式。选哪个版本，一句话：</p>
 <ul>
@@ -112,6 +121,107 @@ prompt = ChatPromptTemplate.from_messages([
 chain = prompt | llm | StrOutputParser()
 print(chain.invoke({"input": "外卖半小时就到了，还热乎"}))</code></pre>
 <p>这回模型看到的不是一段文本，而是一串消息：system 指令 → 两对 human/ai 样例 → 新问题。原理和文本版一样，只是格式换成了对话，角色不会混。</p>
+<h3 id="ex3">示例 3：事前校验 input_variables + partial 给默认值（正解）</h3>
+<p>Day 1 小测第 2 题的正解就是这一段：缺变量不要等 <code>format</code> 抛 KeyError 才知道。先用 <code>input_variables</code> 算出缺了谁，拦在调用之前；常用变量用 <code>partial</code> 预填默认值，调用时只传剩下的，传了还能覆盖默认值。</p>
+<pre><code>from langchain_core.prompts import PromptTemplate
+
+template = PromptTemplate(
+    input_variables=["role", "goal", "tone"],
+    template="你是一名{role}，目标是{goal}，语气是{tone}。",
+)
+
+def format_safe(prompt, values):
+    missing = [v for v in prompt.input_variables if v not in values]
+    if missing:
+        raise ValueError(f"缺变量：{missing}，请先补齐再 invoke")
+    return prompt.format(**values)
+
+# 1. 缺变量：事前拦住，不等 format 抛 KeyError
+try:
+    format_safe(template, {"goal": "写周报"})
+except ValueError as e:
+    print("拦住了：", e)
+# 拦住了： 缺变量：['role', 'tone']，请先补齐再 invoke
+
+# 2. partial 预填默认值，input_variables 只剩 goal
+prompt2 = template.partial(role="助手", tone="简洁")
+print("partial 后 input_variables：", prompt2.input_variables)
+# ['goal']
+print(prompt2.format(goal="写周报"))
+# 你是一名助手，目标是写周报，语气是简洁。
+
+# 3. 调用时还能覆盖 partial 的默认值
+print(prompt2.format(goal="写周报", tone="活泼"))
+# 你是一名助手，目标是写周报，语气是活泼。
+
+# 4. 对照：不校验直接 format，抛 KeyError，只告诉你缺的第一个
+try:
+    template.format(goal="写周报")
+except KeyError as e:
+    print("直接 format 抛 KeyError：", e)
+# 直接 format 抛 KeyError： 'role'</code></pre>
+<p>三点记住：<strong>校验要列出全部缺失变量</strong>（上面一次报出 <code>['role', 'tone']</code>，KeyError 只报第一个）；<strong>partial 只预填“调用时大概率不变”的变量</strong>（角色、语气），每次都变的值别预填；<strong>try/except 仍要留着</strong>，它是最后一道防线，不是第一道。</p>
+<div class="widget">
+<h4>动手玩：缺变量 playground —— 试试漏传、partial、覆盖</h4>
+<p>模板：<code>你是一名{role}，目标是{goal}，语气是{tone}。</code><br>下面模拟示例 3 的逻辑，不调模型，只拼字符串。先点“校验并格式化”看它怎么拦，再勾上 partial 看缺变量怎么消失。</p>
+<p>当前 <code>input_variables</code>：<code id="pg-vars">['role', 'goal', 'tone']</code></p>
+<label><input type="checkbox" id="pg-partial"> 用 partial 预填默认值：role = 助手，tone = 简洁（只剩 goal 要传）</label>
+<label for="pg-goal">goal（每次都变，别预填）</label>
+<input type="text" id="pg-goal" value="写周报">
+<label for="pg-role">role</label>
+<input type="text" id="pg-role" value="" placeholder="没填就缺这个变量">
+<label for="pg-tone">tone（填了会覆盖 partial 的“简洁”）</label>
+<input type="text" id="pg-tone" value="" placeholder="留空就用 partial 的默认值">
+<button class="wbtn primary" id="pg-run">校验并格式化</button>
+<button class="wbtn" id="pg-miss">一键漏传：清空 role / tone</button>
+<button class="wbtn" id="pg-reset">重置</button>
+<div class="pg-out" id="pg-out">点“校验并格式化”开始。默认只填了 goal，role 和 tone 都缺着。</div>
+</div>
+<script>
+(function(){
+  var goalEl = document.getElementById('pg-goal');
+  var roleEl = document.getElementById('pg-role');
+  var toneEl = document.getElementById('pg-tone');
+  var partialEl = document.getElementById('pg-partial');
+  var varsEl = document.getElementById('pg-vars');
+  var outEl = document.getElementById('pg-out');
+  function refreshVars(){
+    varsEl.textContent = partialEl.checked ? "['goal']" : "['role', 'goal', 'tone']";
+  }
+  function run(){
+    refreshVars();
+    var goal = goalEl.value.trim();
+    var role = roleEl.value.trim();
+    var tone = toneEl.value.trim();
+    var fromPartial = [];
+    if (partialEl.checked) {
+      if (!role) { role = '助手'; fromPartial.push('role=助手'); }
+      if (!tone) { tone = '简洁'; fromPartial.push('tone=简洁'); }
+    }
+    var missing = [];
+    if (!role) missing.push('role');
+    if (!goal) missing.push('goal');
+    if (!tone) missing.push('tone');
+    if (missing.length) {
+      outEl.className = 'pg-out err';
+      outEl.textContent = '❌ 拦住了：缺变量：[\'' + missing.join('\', \'') + '\']，请先补齐再 invoke\n\nKeyError 只会报第一个缺的变量，事前校验一次全报出来。\n试试：勾上 partial，role 和 tone 就有默认值了；或者把上面两个框填上。';
+      return;
+    }
+    outEl.className = 'pg-out ok';
+    var note = fromPartial.length ? '\n（其中 ' + fromPartial.join('、') + ' 来自 partial 默认值' + (toneEl.value.trim() ? '，tone 被你填的值覆盖了' : '') + '）' : '';
+    outEl.textContent = '✅ 校验通过，格式化结果：\n你是一名' + role + '，目标是' + goal + '，语气是' + tone + '。' + note;
+  }
+  document.getElementById('pg-run').addEventListener('click', run);
+  document.getElementById('pg-miss').addEventListener('click', function(){
+    partialEl.checked = false; roleEl.value = ''; toneEl.value = ''; run();
+  });
+  document.getElementById('pg-reset').addEventListener('click', function(){
+    partialEl.checked = false; goalEl.value = '写周报'; roleEl.value = ''; toneEl.value = '';
+    outEl.className = 'pg-out'; outEl.textContent = '已重置。默认只填了 goal，role 和 tone 都缺着。'; refreshVars();
+  });
+  partialEl.addEventListener('change', refreshVars);
+})();
+</script>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 只拼提示词、不调模型，分别打印两个版本的最终提示词，对照上面两段“模型实际看到的”核对。<br>
