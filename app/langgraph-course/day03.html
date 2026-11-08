@@ -22,17 +22,6 @@ summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
 
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn:disabled{opacity:.4;cursor:default}
-.wbtn.primary{background:#0b62d6;color:#fff}
-.wbtn.sel{background:#0b62d6;color:#fff}
-.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
-.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
-.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
-.wnode.done{border-color:#22a35a;background:#dcfce7}
-.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -60,14 +49,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>4. 循环怎么终止：两个保险</h3>
 <p><strong>业务终止条件</strong>：模型不再调工具，tools_condition 返回 END；<strong>步数上限</strong>：recursion_limit 默认 25 步，超过就抛错停下，防止死循环把账单跑爆。</p>
 <div class="warn"><strong>容易踩的坑：</strong>路由函数返回了映射表里没有的名字。比如映射表只有 {"tools": "tools", END: END}，路由函数却返回了 "retry"，图会直接报错。路由函数的返回值必须和映射表的键一一对应，写完先对一遍表。</div>
-<div class="widget">
-<h4>动手玩：路由模拟器 —— 你来当模型，决定走哪条边</h4>
-<p>先选模型这次返回了什么，再点“运行路由”，看 tools_condition 会把图送去哪。选“带工具调用”会去 tools 节点、跑完回边到 agent；选“直接回答”就走 END。</p>
-<p><button class="wbtn sel" id="d3-a">模型返回：带 tool_calls</button>
-<button class="wbtn" id="d3-b">模型返回：直接回答（无工具调用）</button></p>
-<p><button class="wbtn primary" id="d3-run">运行路由 ▶</button> <button class="wbtn" id="d3-reset">重置</button></p>
-<div><span class="wnode" id="d3-tools">tools 节点</span> <span class="wnode" id="d3-end">END</span></div>
-<div class="wlog" id="d3-log">还没运行。先选一种模型输出，再点“运行路由”。</div>
+<div class="card" style="border:2px solid #58cc02;background:#f0ffd7">
+<p><strong>🎮 去闯关：</strong>这课的 Duolingo 闯关在独立页：3 张场景图 + 10 关闯关（满分 100 XP），进度存在浏览器里。</p>
+<p><a href="../duo/lg03.html" style="font-weight:bold;color:#46a302">🦉 开始闯关 →</a></p>
 </div>
 
 <h2>二、代码示例</h2>
@@ -147,35 +131,6 @@ document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
 </script>
-<script>
-(function(){
-var choice='tools';
-var a=document.getElementById('d3-a'), b=document.getElementById('d3-b');
-var log=document.getElementById('d3-log');
-function pick(which){
-  choice=which;
-  a.className='wbtn'+(which==='tools'?' sel':'');
-  b.className='wbtn'+(which==='end'?' sel':'');
-}
-a.addEventListener('click',function(){ pick('tools'); });
-b.addEventListener('click',function(){ pick('end'); });
-document.getElementById('d3-run').addEventListener('click',function(){
-  var t=document.getElementById('d3-tools'), e=document.getElementById('d3-end');
-  if(choice==='tools'){
-    t.className='wnode on'; e.className='wnode';
-    log.textContent='tools_condition 看最后一条 AI 消息：有 tool_calls → 返回 "tools"\n→ 去 tools 节点执行工具，跑完沿回边回到 agent，再调一次模型。';
-  } else {
-    t.className='wnode'; e.className='wnode on';
-    log.textContent='tools_condition 看最后一条 AI 消息：没有 tool_calls → 返回 END\n→ 图结束，循环终止，返回最后的状态。';
-  }
-});
-document.getElementById('d3-reset').addEventListener('click',function(){
-  pick('tools');
-  document.getElementById('d3-tools').className='wnode';
-  document.getElementById('d3-end').className='wnode';
-  log.textContent='还没运行。先选一种模型输出，再点“运行路由”。';
-});
-})();
-</script>
+
 </body>
 </html>

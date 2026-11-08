@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5 闯关：Checkpoint 与断点续跑 | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 5 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day05.html">📖 看原文课</a> &nbsp; <span class="tag">LangGraph 7 天课</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 5：Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续</h1>
+<p>手写循环跑到一半断了，只能从头再跑；LangGraph 的图跑到一半断了，可以从断的地方继续。靠的就是 Checkpoint：每跑完一步，图就把状态存一个快照，下次接着跑时，先读快照、再继续走。先看图，再闯关。</p>
+<svg style="max-width:100%;height:auto;display:block;margin:16px 0" viewBox="0 0 728 170" width="100%" role="img" aria-label="Checkpoint：每步存快照，中断后从快照继续">
+<rect x="20" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="89" text-anchor="middle" font-size="13" fill="#222">第 1 步</text>
+<line x1="140" y1="84" x2="180" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="180,84 168,78 168,90" fill="#0b62d6"/>
+<rect x="180" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="240" y="89" text-anchor="middle" font-size="13" fill="#222">第 2 步</text>
+<line x1="300" y1="84" x2="340" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="340,84 328,78 328,90" fill="#0b62d6"/>
+<rect x="340" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="400" y="89" text-anchor="middle" font-size="13" fill="#222">中断 ✕</text>
+<line x1="460" y1="84" x2="500" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="500,84 488,78 488,90" fill="#0b62d6"/>
+<rect x="500" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="560" y="89" text-anchor="middle" font-size="13" fill="#222">续跑（从快照）</text>
+<text x="20" y="140" font-size="13" fill="#222">每步存一个 Checkpoint；续跑时读最近的快照，不用从头再跑</text>
+</svg>
+
+<h2>Checkpoint：三幅图</h2>
+<div class="ceiling">
+<p><strong>场景 1：快照存档点</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="每步存一个快照，中断后从快照续跑" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">每跑完一步，图就存一个快照（像游戏存档点）</text><rect x="20" y="40" width="100" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="70" y="63" text-anchor="middle" font-size="12" fill="#222">第 1 步 ✓</text><text x="132" y="63" font-size="14" fill="#22a35a">→</text><rect x="150" y="40" width="100" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="200" y="63" text-anchor="middle" font-size="12" fill="#222">第 2 步 ✓</text><text x="262" y="63" font-size="14" fill="#d33">→</text><rect x="280" y="40" width="100" height="36" rx="8" fill="#fee2e2" stroke="#d33"/><text x="330" y="63" text-anchor="middle" font-size="12" fill="#222">中断 ✕</text><text x="392" y="63" font-size="14" fill="#22a35a">→</text><rect x="410" y="40" width="150" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="485" y="63" text-anchor="middle" font-size="12" fill="#222">从快照续跑 ✓</text><text x="20" y="110" font-size="12" fill="#22a35a">✓ 续跑时读最近的快照，不用从头再跑</text><text x="20" y="132" font-size="12" fill="#222">之前跑过的步骤不重跑——工具不会重复执行，钱不会重复花</text><text x="20" y="162" font-size="12" fill="#666">快照里有：跑到哪一步、状态长什么样、下一步去哪</text></svg>
+<p>Checkpoint 就是图在每一步跑完后存的状态快照。没有它，图就是一次性的，断了就没了；有了它，断了可以从最近的快照继续。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 2：thread_id 是房间号</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="thread_id 隔离会话，不同 thread 互不干扰" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">一次对话一个编号：同一个 thread 共享状态，不同的互不干扰</text><rect x="20" y="40" width="300" height="80" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="170" y="66" text-anchor="middle" font-size="12" fill="#222">房间 user-1：第 1 轮问天气</text><text x="170" y="88" text-anchor="middle" font-size="12" fill="#222">第 2 轮问“那明天呢？”——记得上一轮</text><text x="170" y="108" text-anchor="middle" font-size="12" fill="#22a35a">✓ 同一 thread，接着跑</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><rect x="380" y="40" width="300" height="80" rx="8" fill="#fef3c7" stroke="#d97706"/><text x="530" y="66" text-anchor="middle" font-size="12" fill="#222">房间 user-2：全新对话</text><text x="530" y="88" text-anchor="middle" font-size="12" fill="#222">不记得 user-1 问过什么</text><text x="530" y="108" text-anchor="middle" font-size="12" fill="#d97706">换一个 thread，就是全新对话</text><text x="20" y="150" font-size="12" fill="#666">thread_id 通常就是用户 ID 或会话 ID；忘传它，每次都是全新对话</text></svg>
+<p>每次 invoke 在 config 里传 {"configurable": {"thread_id": "user-1"}}，同一个 thread_id 的多次调用共享同一份状态、同一串快照，不同 thread 互不干扰。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 3：MemorySaver vs 生产</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="MemorySaver 存在内存重启会丢，生产用持久化存储" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">MemorySaver：存在内存里，进程重启快照全丢</text><rect x="20" y="40" width="300" height="80" rx="8" fill="#fee2e2" stroke="#d33"/><text x="170" y="66" text-anchor="middle" font-size="12" fill="#222">内存便签 📝</text><text x="170" y="88" text-anchor="middle" font-size="12" fill="#222">进程重启 → 全丢了</text><text x="170" y="108" text-anchor="middle" font-size="12" fill="#d33">✗ 只在同一次运行里有效</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><text x="380" y="24" font-size="13" fill="#222">生产：PostgresSaver、RedisSaver</text><rect x="380" y="40" width="300" height="80" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="530" y="66" text-anchor="middle" font-size="12" fill="#222">数据库保险柜 🗄️</text><text x="530" y="88" text-anchor="middle" font-size="12" fill="#222">进程重启 → 还在</text><text x="530" y="108" text-anchor="middle" font-size="12" fill="#22a35a">✓ 持久化，重启不丢</text><text x="20" y="150" font-size="12" fill="#666">MemorySaver 是学习用的，不是上线用的</text></svg>
+<p>MemorySaver 存在内存里，进程一重启，快照全丢了。生产里要换持久化的 Checkpointer（比如 PostgresSaver、RedisSaver），否则“断点续跑”只在同一次运行里有效。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day05.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+  {
+    "type": "choice",
+    "q": "第 1 关：Checkpoint 是什么？",
+    "opts": [
+      "图每步跑完存的状态快照：跑到哪一步、状态长什么样、下一步去哪",
+      "模型的权重文件",
+      "一段日志"
+    ],
+    "ans": 0,
+    "why": "没有 Checkpoint，图断了就没了；有了它，断了可以从最近的快照继续。"
+  },
+  {
+    "type": "choice",
+    "q": "第 2 关：thread_id 是干嘛的？",
+    "opts": [
+      "给模型起名字",
+      "一次对话一个编号：同一个 thread_id 的多次调用共享状态和快照，不同的互不干扰",
+      "限制步数"
+    ],
+    "ans": 1,
+    "why": "thread_id 通常就是用户 ID 或会话 ID，忘传它，每次都是全新对话。"
+  },
+  {
+    "type": "choice",
+    "q": "第 3 关：断点续跑要用什么特殊 API？",
+    "opts": [
+      "resume() 函数",
+      "重新编译一张图",
+      "不用特殊 API：同一 thread_id 再 invoke 一次，图自动读快照接着跑"
+    ],
+    "ans": 2,
+    "why": "之前跑过的步不重跑，工具不会重复执行。"
+  },
+  {
+    "type": "assign",
+    "q": "第 4 关：点一种情况，再点会发生什么，把 3 个分完。",
+    "tasks": [
+      "同一 thread_id 再 invoke",
+      "换一个 thread_id",
+      "进程重启后用同一 thread_id 问"
+    ],
+    "agents": [
+      "从快照续跑，不重跑",
+      "全新对话，互不干扰",
+      "MemorySaver 快照丢了，不记得"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "同一 thread 接着跑、换 thread 全新开始、MemorySaver 只在内存里。"
+  },
+  {
+    "type": "choice",
+    "q": "第 5 关：get_state 是干嘛的？",
+    "opts": [
+      "读出当前状态和下一步去哪，排错和做“继续”按钮都靠它",
+      "删除状态",
+      "修改模型参数"
+    ],
+    "ans": 0,
+    "why": "结合 Day 6 的中断：停在审核前时，get_state 能看到停在哪一步、状态里有什么。"
+  },
+  {
+    "type": "choice",
+    "q": "第 6 关：MemorySaver 有什么局限？",
+    "opts": [
+      "只能存一条消息",
+      "存在内存里，进程重启快照全丢；生产里要换 PostgresSaver、RedisSaver 这种持久化的",
+      "不能和 thread_id 一起用"
+    ],
+    "ans": 1,
+    "why": "MemorySaver 是学习用的，不是上线用的。"
+  },
+  {
+    "type": "choice",
+    "q": "第 7 关：续跑时，已经执行过的工具会怎样？",
+    "opts": [
+      "再执行一次",
+      "被跳过，结果丢了",
+      "不重跑：结果在快照里，直接用"
+    ],
+    "ans": 2,
+    "why": "工具不会重复执行，钱不会重复花。"
+  },
+  {
+    "type": "choice",
+    "q": "第 8 关：编译时 Checkpointer 挂在哪？",
+    "opts": [
+      "graph.compile(checkpointer=...)",
+      "invoke 时传进去",
+      "写在节点函数里"
+    ],
+    "ans": 0,
+    "why": "编译时挂上 Checkpointer，invoke 时传 thread_id。"
+  },
+  {
+    "type": "choice",
+    "q": "第 9 关：中断后想看看停在哪一步、状态里有什么，用什么？",
+    "opts": [
+      "get_state(config)",
+      "再 invoke 一次",
+      "重新 compile"
+    ],
+    "ans": 0,
+    "why": "get_state 读出当前状态和下一步要去哪，排错靠它。"
+  },
+  {
+    "type": "assign",
+    "q": "第 10 关：点一种存法，再点它的特点，把 3 个分完。",
+    "tasks": [
+      "MemorySaver",
+      "PostgresSaver、RedisSaver",
+      "没有 Checkpointer"
+    ],
+    "agents": [
+      "内存，重启丢，学习用",
+      "持久化，重启还在，生产用",
+      "断了就没了，没法续跑"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "存哪决定了重启后还在不在：内存只在同一次运行里有效。"
+  }
+];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('lg05-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('lg05-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day 5 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。Checkpoint 现在对应三幅图：每步一个快照、thread_id 是房间号、MemorySaver 只在内存里。</p>';
+      showFb(true, '🏆 通关奖励：Checkpoint + thread_id + get_state + 续跑不重执行，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('lg05-best-xp', String(best)); } clears++; localStorage.setItem('lg05-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

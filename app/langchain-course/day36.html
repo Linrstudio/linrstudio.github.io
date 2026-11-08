@@ -21,28 +21,6 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
-.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
-.ceiling p{margin:8px 0 0}
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
-.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
-.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
-.duo-q{font-size:16px;margin:12px 0}
-.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
-.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
-.duo-opt.wrong{background:#fee2e2;border-color:#d33}
-.duo-opt:disabled{cursor:default}
-.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.duo-chip.sel{background:#0b62d6;color:#fff}
-.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
-.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
-.duo-box.sel{border-style:solid;background:#eef4ff}
-.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
-.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
-.duo-fb.err{border-color:#d33;background:#fef2f2}
-.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -89,25 +67,10 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>schema</td><td>输出格式对不对：字段全不全、类型对不对</td><td>打回按格式重交</td></tr>
 </table>
 <p>三项标准要事先写死，不能由执行者现场定，也不能由 Verifier 临场发挥。标准写死的好处是：打回有依据，执行者知道改哪里；复盘时也能看出来，是标准太松，还是执行者没达标。</p>
-<div class="ceiling">
-<p><strong>场景：工厂质检 —— 每件产品过三道检查，数字 / 日期 / 出处对不上就打回</strong></p>
-<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="工厂传送带上三件产品过三道质检，数字对不上的一件被打回" style="max-width:720px;display:block;margin:8px 0"><rect x="20" y="120" width="680" height="18" rx="9" fill="#94a3b8"/><circle cx="80" cy="140" r="7" fill="#475569"/><circle cx="200" cy="140" r="7" fill="#475569"/><circle cx="320" cy="140" r="7" fill="#475569"/><circle cx="440" cy="140" r="7" fill="#475569"/><circle cx="560" cy="140" r="7" fill="#475569"/><circle cx="660" cy="140" r="7" fill="#475569"/><rect x="30" y="80" width="46" height="40" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="53" y="105" text-anchor="middle" font-size="13" fill="#222">答案</text><rect x="250" y="80" width="46" height="40" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="273" y="105" text-anchor="middle" font-size="13" fill="#222">答案</text><rect x="470" y="80" width="46" height="40" rx="6" fill="#fee2e2" stroke="#d33" stroke-width="1.5"/><text x="493" y="105" text-anchor="middle" font-size="13" fill="#222">答案</text><circle cx="53" cy="42" r="14" fill="none" stroke="#0b62d6" stroke-width="3"/><line x1="63" y1="52" x2="74" y2="64" stroke="#0b62d6" stroke-width="3"/><text x="53" y="24" text-anchor="middle" font-size="11" fill="#222">① 测试</text><text x="53" y="170" text-anchor="middle" font-size="12" fill="#22a35a">✓ 全过</text><circle cx="273" cy="42" r="14" fill="none" stroke="#0b62d6" stroke-width="3"/><line x1="283" y1="52" x2="294" y2="64" stroke="#0b62d6" stroke-width="3"/><text x="273" y="24" text-anchor="middle" font-size="11" fill="#222">② 引用</text><text x="273" y="170" text-anchor="middle" font-size="12" fill="#22a35a">✓ 找得到出处</text><circle cx="493" cy="42" r="14" fill="none" stroke="#d33" stroke-width="3"/><line x1="483" y1="32" x2="503" y2="52" stroke="#d33" stroke-width="3"/><line x1="503" y1="32" x2="483" y2="52" stroke="#d33" stroke-width="3"/><text x="493" y="24" text-anchor="middle" font-size="11" fill="#222">③ schema</text><text x="493" y="170" text-anchor="middle" font-size="12" fill="#d33">✗ 数字对不上 → 打回</text><text x="610" y="105" font-size="13" fill="#22a35a">✓ 过关 → 合成</text><path d="M493 170 L493 192 L60 192" fill="none" stroke="#d33" stroke-width="2" stroke-dasharray="5,4"/><text x="280" y="190" text-anchor="middle" font-size="11" fill="#d33">打回：附上哪项不过、哪条结论、原始材料</text></svg>
-<p>质检员不看工人说“做完了”，只看三样东西：测试跑没跑过、数字能不能在资料里找到、格式对不对。一项对不上，整件产品打回重做——但打回单上要写清错在哪。</p>
-</div>
 <h3>3. 打回与重试上限：打回不是无限循环</h3>
 <p>打回要带意见：哪项标准不过、具体是哪条结论、原始材料是什么，不带意见的打回（“再改改”）只会让执行者瞎改。重试也要有上限，通常 2–3 次：超了就停下来，把“校验不过”本身写进结果，交给 Supervisor 决定——是换一路、降级，还是诚实告诉用户这部分没通过。没有上限的打回循环，成本和延迟都会炸，还掩盖了“这路根本做不出来”的事实。</p>
-<div class="ceiling">
-<p><strong>场景：后厨返工 —— 只返工坏掉的那道菜，不重做整桌</strong></p>
-<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="一桌四道菜，只有一道糊了被端回厨房重做，其余三道不动" style="max-width:720px;display:block;margin:8px 0"><ellipse cx="180" cy="110" rx="150" ry="60" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/><circle cx="90" cy="95" r="26" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="90" y="99" text-anchor="middle" font-size="13" fill="#222">✓</text><text x="90" y="140" text-anchor="middle" font-size="11" fill="#222">凉菜</text><circle cx="180" cy="80" r="26" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="180" y="84" text-anchor="middle" font-size="13" fill="#222">✓</text><text x="180" y="125" text-anchor="middle" font-size="11" fill="#222">汤</text><circle cx="270" cy="95" r="26" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="270" y="99" text-anchor="middle" font-size="13" fill="#222">✓</text><text x="270" y="140" text-anchor="middle" font-size="11" fill="#222">主食</text><circle cx="180" cy="160" r="20" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="180" y="164" text-anchor="middle" font-size="13" fill="#d33">✗</text><text x="360" y="100" font-size="13" fill="#222">糊了的那道菜</text><text x="360" y="122" font-size="12" fill="#666">只端它回厨房（打回 1 次）</text><text x="360" y="144" font-size="12" fill="#666">其余三道不动，整桌不重做</text><path d="M330 155 L560 155 L560 60 L600 60" fill="none" stroke="#d33" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arr2)"/><defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d33"/></marker></defs><rect x="600" y="30" width="100" height="56" rx="8" fill="#fff7e6" stroke="#f5c542" stroke-width="1.5"/><text x="650" y="54" text-anchor="middle" font-size="12" fill="#222">厨房重做</text><text x="650" y="72" text-anchor="middle" font-size="11" fill="#666">上限 2–3 次</text><text x="360" y="185" font-size="12" fill="#d33">2–3 次还糊 → 别再做了，写进菜单：这道菜今日无货</text></svg>
-<p>校验不过只打回坏掉的那一路，别的路不用重跑；重试 2–3 次还不过，就把“这道菜做不出来”写进结果，交给 Supervisor 定夺，而不是无限返工。</p>
-</div>
 <h3>4. Composer 怎么合成：分段、标出处、冲突听校验</h3>
 <p>Composer 的合成规则是三条：<strong>分段</strong>，每路结果各成一段，不要混写；<strong>标出处</strong>，每段标自己的来源（工具结果标工具名，文档结论标 [资料 N]）；<strong>冲突时听校验</strong>：两路结论冲突了，不看谁说得自信、看谁通过了校验——通过测试、有出处、格式对的那路为准；两路都没通过，就都写出来、标清冲突，让用户或 Supervisor 定夺，不要由 Composer 偷偷选一个。Composer 不生产新结论，只合成已校验的结论；合成时现编一句话，就是新的幻觉来源。</p>
-<div class="ceiling">
-<p><strong>场景：拼图编辑 —— 只拼带出处的碎片，没出处的不进终稿</strong></p>
-<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="三块带出处标签的拼图拼成终稿，一块没出处标签的碎片被挡在外面" style="max-width:720px;display:block;margin:8px 0"><g><path d="M40 40 h60 v40 h20 v20 h-20 v40 h-60 v-40 h-20 v-20 h20 z" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="70" y="95" text-anchor="middle" font-size="12" fill="#222">A 段</text><text x="70" y="130" text-anchor="middle" font-size="11" fill="#22a35a">[资料 1]</text></g><g><path d="M180 40 h60 v40 h20 v20 h-20 v40 h-60 v-40 h-20 v-20 h20 z" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="210" y="95" text-anchor="middle" font-size="12" fill="#222">B 段</text><text x="210" y="130" text-anchor="middle" font-size="11" fill="#22a35a">工具：天气 API</text></g><g><path d="M320 40 h60 v40 h20 v20 h-20 v40 h-60 v-40 h-20 v-20 h20 z" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="350" y="95" text-anchor="middle" font-size="12" fill="#222">C 段</text><text x="350" y="130" text-anchor="middle" font-size="11" fill="#22a35a">[资料 2]</text></g><text x="210" y="165" text-anchor="middle" font-size="12" fill="#22a35a">✓ 三块都带出处，拼成终稿</text><line x1="430" y1="60" x2="470" y2="60" stroke="#0b62d6" stroke-width="2"/><rect x="480" y="30" width="120" height="60" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="540" y="56" text-anchor="middle" font-size="12" fill="#222">终稿</text><text x="540" y="74" text-anchor="middle" font-size="11" fill="#666">A + B + C，分段标出处</text><g><path d="M480 130 h60 v30 h20 v20 h-20 v30 h-60 v-30 h-20 v-20 h20 z" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="510" y="178" text-anchor="middle" font-size="12" fill="#d33">碎片 ✗</text></g><text x="640" y="165" text-anchor="middle" font-size="12" fill="#d33">没出处 → 不进终稿</text><text x="640" y="185" text-anchor="middle" font-size="11" fill="#666">现编一句 = 新的幻觉</text></svg>
-<p>Composer 是拼图编辑，不是作者：每块碎片必须带出处标签才能拼进终稿，没出处的那块再顺眼也不拼；两块碎片拼不到一起（结论冲突），就按校验结果取舍，都没通过就把冲突写出来。</p>
-</div>
 <div class="warn"><strong>容易踩的坑：</strong>Composer 偷偷做取舍。两路冲突，Composer 凭“哪个读起来顺”选一个，还不告诉用户有冲突——用户看到的是一个干净但可能错的答案。冲突必须显式写出来，取舍要有依据。</div>
 
 <h2>二、代码示例</h2>
@@ -148,96 +111,11 @@ MAX_VERIFY_RETRY = 2</code></pre>
 2. 假设执行者被打回两次还是不过，写出 Supervisor 的三种选择（换一路、降级、诚实告诉用户），你选哪种、为什么？<br>
 3. 假设两路结论冲突，一路通过了引用校验、一路没通过，Composer 该怎么写最终答案？写出分段和出处。</p>
 </div>
-<div class="widget" id="duo">
-<h4>动手玩：Day36 闯关 —— 像 Duolingo 一样玩过去</h4>
-<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
-<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
-<div class="duo-bar"><i id="duo-bar"></i></div>
-<div id="duo-body"></div>
-<div class="duo-fb" id="duo-fb" style="display:none"></div>
-<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
-<button class="wbtn" id="duo-restart">重新开始</button>
-<p style="font-size:13px;color:#666" id="duo-best"></p>
+<div class="card">
+<p>🎮 去闯关：Day36 的 10 关 Duolingo 闯关（独立页）</p>
+<p><a href="../duo/lc36.html">开始闯关 →</a></p>
 </div>
-<script>
-(function(){
-  var LEVELS = [
-    {type:'choice', q:'第 1 关：执行者自己写答案、自己说“没问题”，这能算校验吗？', opts:['能，自己最了解自己的答案','不能，自己改、自己验等于没验','能，只要写得够仔细'], ans:1, why:'执行者写答案时已经认定自己是对的，只会找支持自己的证据。Verifier 必须是另一个节点、另一套提示词、另一类标准，还要看测试结果、引用块这些原始材料。'},
-    {type:'choice', q:'第 2 关：结论里的数字和日期能不能在资料里找到、代码测试全过没过、输出字段全不全——这是 Verifier 的哪三项标准？', opts:['速度、长度、格式','测试、引用、schema','模型、工具、成本'], ans:1, why:'三项标准事先写死：测试查代码、引用查数字日期人名、schema 查字段和类型。不能由执行者现场定，也不能由 Verifier 临场发挥。'},
-    {type:'assign', q:'第 3 关：点一个活儿，再点它该归谁，把 4 个活儿分完。', tasks:['查测试是不是全过了','每段标上 [资料 N]','超上限后决定换一路还是降级','按格式重交输出'], agents:['Verifier 校验','Composer 合成','Supervisor 主管','执行者'], map:[0,1,2,3], why:'Verifier 查三项标准、Composer 分段标出处、Supervisor 在超上限后定夺、执行者按打回意见重交。分对了，校验和合成才不会互相抢活。'},
-    {type:'choice', q:'第 4 关：执行者被打回 2–3 次还是不过，接下来该怎么办？', opts:['继续打回，直到过为止','停下来，把“校验不过”写进结果，交给 Supervisor 定夺','直接当成通过，照常合成'], ans:1, why:'重试上限通常 2–3 次。没有上限的打回循环会炸成本和延迟，还掩盖了“这路根本做不出来”的事实。'},
-    {type:'choice', q:'第 5 关：两路结论冲突了，一路通过了引用校验、一路没通过，Composer 该怎么办？', opts:['听谁说得更自信','听通过校验的那路；都没通过就都写出来、标清冲突','偷偷选一个读起来顺的，不告诉用户'], ans:1, why:'冲突听校验，不看谁说得自信。两路都没通过就都写出来、标清冲突，让用户或 Supervisor 定夺；Composer 不生产新结论。'}
-  ];
-  var body = document.getElementById('duo-body');
-  var fb = document.getElementById('duo-fb');
-  var nextBtn = document.getElementById('duo-next');
-  var heartsEl = document.getElementById('duo-hearts');
-  var levelEl = document.getElementById('duo-level');
-  var xpEl = document.getElementById('duo-xp');
-  var barEl = document.getElementById('duo-bar');
-  var bestEl = document.getElementById('duo-best');
-  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
-  var best = 0, clears = 0;
-  try { best = parseInt(localStorage.getItem('day36-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day36-clears') || '0', 10) || 0; } catch(e) {}
-  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
-  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
-  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
-  function hideFb(){ fb.style.display = 'none'; }
-  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
-  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
-  function render(){
-    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
-    if (idx >= LEVELS.length) {
-      barEl.style.width = '100%';
-      body.innerHTML = '<p class="duo-q">🎉 通关！Day36 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。Verifier 三项标准、打回带意见、重试上限 2–3 次、Composer 分段标出处、冲突听校验，现在对应三幅图：工厂质检、后厨返工、拼图编辑。</p>';
-      showFb(true, '通关奖励：独立校验 + 三项标准 + 打回上限 + 合成三条规则，全齐了。去做下面的 6 道小测验，看看还记得多少。');
-      try { if (xp > best) { best = xp; localStorage.setItem('day36-best-xp', String(best)); } clears++; localStorage.setItem('day36-clears', String(clears)); } catch(e) {}
-      showBest(); return;
-    }
-    var L = LEVELS[idx];
-    if (L.type === 'choice') {
-      var h = '<p class="duo-q">' + L.q + '</p>';
-      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
-      body.innerHTML = h;
-      body.querySelectorAll('.duo-opt').forEach(function(btn){
-        btn.addEventListener('click', function(){
-          if (btn.disabled) return;
-          var i = parseInt(btn.dataset.i, 10);
-          if (i === L.ans) {
-            btn.classList.add('correct'); btn.disabled = true;
-            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
-            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
-            passLevel();
-          } else {
-            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
-            loseHeart();
-          }
-        });
-      });
-    } else {
-      var a = '<p class="duo-q">' + L.q + '</p><p>活儿（点一个）：</p><div id="duo-tasks"></div><p>角色（再点一个）：</p><div id="duo-agents"></div>';
-      body.innerHTML = a;
-      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
-      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
-      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
-        if (selTask < 0) { showFb(false, '先点一个活儿，再点它该归谁。'); return; }
-        if (L.map[selTask] === i) {
-          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
-          chip.classList.add('done'); chip.classList.remove('sel');
-          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
-          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
-          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
-        } else {
-          levelClean = false; showFb(false, '❌ 分错了：这个活儿不归 ' + g + '。再看看第 3 关的图，分工是有依据的。'); loseHeart();
-        }
-      }); gBox.appendChild(b); });
-    }
-  }
-  nextBtn.addEventListener('click', function(){ idx++; render(); });
-  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
-  showBest(); render();
-})();
-</script>
+
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>

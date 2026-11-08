@@ -22,17 +22,6 @@ summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
 
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn:disabled{opacity:.4;cursor:default}
-.wbtn.primary{background:#0b62d6;color:#fff}
-.wbtn.sel{background:#0b62d6;color:#fff}
-.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
-.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
-.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
-.wnode.done{border-color:#22a35a;background:#dcfce7}
-.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -58,12 +47,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>4. 图比手写循环好在哪：三句话</h3>
 <p><strong>流程看得见</strong>：循环、分支在图里是边，一眼能看出 Agent 会走哪条路；<strong>状态有规矩</strong>：形状写在状态类型里；<strong>能断点续跑</strong>：跑一半可以停下来、存下来，下次接着跑。</p>
 <div class="warn"><strong>容易踩的坑：</strong>节点函数返回了整个新状态，而不是“更新”。节点应该只返回它改了的那一部分，比如 <code>{"messages": [新消息]}</code>，图会按 Reducer 把它合并进旧状态；返回一整个新状态会把别的字段覆盖掉。Day 2 讲 Reducer 就是讲这个。</div>
-<div class="widget">
-<h4>动手玩：迷你图运行器 —— 点“下一步”，看图怎么跑</h4>
-<p>这张图只有一个节点 greet：输入名字，输出一句问候。点下一步，状态会一步步变。</p>
-<div><span class="wnode" id="d1-n0">START</span> → <span class="wnode" id="d1-n1">greet 节点</span> → <span class="wnode" id="d1-n2">END</span></div>
-<p><button class="wbtn primary" id="d1-next">下一步 ▶</button> <button class="wbtn" id="d1-reset">重置</button></p>
-<div class="wlog" id="d1-log"></div>
+<div class="card" style="border:2px solid #58cc02;background:#f0ffd7">
+<p><strong>🎮 去闯关：</strong>这课的 Duolingo 闯关在独立页：3 张场景图 + 10 关闯关（满分 100 XP），进度存在浏览器里。</p>
+<p><a href="../duo/lg01.html" style="font-weight:bold;color:#46a302">🦉 开始闯关 →</a></p>
 </div>
 
 <h2>二、代码示例</h2>
@@ -153,29 +139,6 @@ document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
 </script>
-<script>
-(function(){
-var step=0;
-var log=document.getElementById('d1-log');
-var next=document.getElementById('d1-next');
-var nodes=['d1-n0','d1-n1','d1-n2'];
-var states=[
-'当前节点：START\n状态：{"name": "小明", "greeting": ""}',
-'当前节点：greet 节点\n节点执行：greeting = "你好，小明！"\n状态：{"name": "小明", "greeting": "你好，小明！"}',
-'当前节点：END\n图停了，返回最后的状态：{"name": "小明", "greeting": "你好，小明！"}'
-];
-function render(){
-  for(var i=0;i<3;i++){
-    var el=document.getElementById(nodes[i]);
-    el.className='wnode'+(i<step?' done':(i===step?' on':''));
-  }
-  log.textContent=states[step];
-  next.disabled=(step>=2);
-}
-next.addEventListener('click',function(){ if(step<2){step++; render();} });
-document.getElementById('d1-reset').addEventListener('click',function(){ step=0; render(); });
-render();
-})();
-</script>
+
 </body>
 </html>

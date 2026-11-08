@@ -21,29 +21,11 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
-.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
-.ceiling p{margin:8px 0 0}
 .widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
 .widget h4{margin:0 0 8px;font-size:16px}
 .wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
 .wbtn.primary{background:#0b62d6;color:#fff}
 .hop-out{margin-top:12px;border-radius:10px;padding:12px 14px;background:#fff;border:1px solid #e5e5e5;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
-.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
-.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
-.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
-.duo-q{font-size:16px;margin:12px 0}
-.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
-.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
-.duo-opt.wrong{background:#fee2e2;border-color:#d33}
-.duo-opt:disabled{cursor:default}
-.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.duo-chip.sel{background:#0b62d6;color:#fff}
-.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
-.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
-.duo-box.sel{border-style:solid;background:#eef4ff}
-.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
-.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
-.duo-fb.err{border-color:#d33;background:#fef2f2}
 </style>
 </head>
 <body>
@@ -75,24 +57,6 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>2. Multi-hop 检索循环：分解、检索、判断、再检索</h3>
 <p>循环是四步：<strong>分解</strong>（原问题拆成有依赖的子问题）、<strong>检索</strong>（每跳查一次，TopK 不宜太大，5 左右就够）、<strong>判断</strong>（本跳的结果能不能回答本跳的子问题？能不能为下一跳提供查询词？）、<strong>再检索</strong>（不够就用新信息生成下一跳的查询）。比如“某产品 2024 版政策和 2025 版改了什么”：第一跳查 2024 版，第二跳用第一跳拿到的条款编号查 2025 版变更，第三跳对照两版回答。每跳的查询、命中块、判断结论都要写进状态，答错了才能定位是哪一跳歪了。</p>
 <p>先记住一句话：<strong>多跳不是查得多，而是上一跳的答案变成下一跳的查询词。</strong>下面三个例子，一个比一个更能说明这句话。</p>
-<div class="ceiling">
-<p><strong>例 A：退货政策 2024 vs 2025 —— 三跳，每跳的查询词都来自上一跳</strong></p>
-<p>问题：“某产品 2024 版退货政策和 2025 版改了什么？”一次查全句查不到，因为你还不知道 2024 版的条款编号，而 2025 版的变更公告是按条款编号写的。</p>
-<svg viewBox="0 0 720 240" width="100%" role="img" aria-label="退货政策三跳：跳一查2024版拿到条款编号，跳二用编号查2025版变更，跳三对照回答" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar33a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs><rect x="20" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="120" y="42" text-anchor="middle" font-size="12" fill="#222">跳 1 查询：2024 版退货政策</text><line x1="120" y1="54" x2="120" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="20" y="76" width="200" height="52" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="96" text-anchor="middle" font-size="12" fill="#222">命中：手册第 3 章</text><text x="120" y="114" text-anchor="middle" font-size="12" fill="#222">退货 30 天，条款 R-2024-07</text><line x1="220" y1="102" x2="248" y2="102" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="252" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="352" y="42" text-anchor="middle" font-size="12" fill="#222">跳 2 查询：R-2024-07 变更</text><line x1="352" y1="54" x2="352" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="252" y="76" width="200" height="52" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="352" y="96" text-anchor="middle" font-size="12" fill="#222">命中：2025 变更公告</text><text x="352" y="114" text-anchor="middle" font-size="12" fill="#222">该条款改为 15 天</text><line x1="452" y1="102" x2="480" y2="102" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="484" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="584" y="42" text-anchor="middle" font-size="12" fill="#222">跳 3：对照两版，回答</text><line x1="584" y1="54" x2="584" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="484" y="76" width="200" height="52" rx="6" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="584" y="96" text-anchor="middle" font-size="12" fill="#222">2024 版 30 天 → 2025 版 15 天</text><text x="584" y="114" text-anchor="middle" font-size="12" fill="#222">带出处 [资料 1][资料 2]</text><text x="352" y="160" text-anchor="middle" font-size="12" fill="#d33">↑ 跳 2 的查询词“R-2024-07”，是跳 1 的结果里拿到的</text><text x="352" y="182" text-anchor="middle" font-size="12" fill="#666">一开始你根本不知道这个编号，所以一次查全句查不到</text><text x="352" y="204" text-anchor="middle" font-size="12" fill="#666">每跳判断：够回答本跳吗？能给下一跳提供查询词吗？</text></svg>
-<p>关键在跳 1 到跳 2 的交接：跳 2 的查询词不是模型凭空想的，是跳 1 命中的资料里白纸黑字写着的“条款 R-2024-07”。这就是“分解、检索、判断、再检索”里“判断”那一步的真正工作：从本跳结果里挑出下一跳要用的词。</p>
-</div>
-<div class="ceiling">
-<p><strong>例 B：电影导演的上一部作品拿了什么奖 —— 两跳，问题里藏着一个你不知道的答案</strong></p>
-<p>问题（虚构例子）：“《海边小镇》的导演，上一部作品拿了什么奖？”一次查全句会失败：资料里没有哪一块同时出现“海边小镇”和“奖项”这两个词。必须先查出导演是谁，再拿导演名去查奖。</p>
-<svg viewBox="0 0 720 230" width="100%" role="img" aria-label="一次查全句查不到因为缺导演名，先查电影得导演再查导演得奖项" style="max-width:720px;display:block;margin:8px 0"><rect x="20" y="16" width="320" height="40" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="180" y="41" text-anchor="middle" font-size="12" fill="#222">一次查全句：“《海边小镇》导演…奖”</text><text x="180" y="76" text-anchor="middle" font-size="13" fill="#d33">✗ 0 命中：没有一块资料同时含电影名和奖项名</text><line x1="360" y1="20" x2="360" y2="200" stroke="#ddd" stroke-width="2"/><rect x="390" y="16" width="300" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="540" y="38" text-anchor="middle" font-size="12" fill="#222">跳 1 查询：《海边小镇》导演是谁</text><rect x="390" y="58" width="300" height="34" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="540" y="80" text-anchor="middle" font-size="12" fill="#222">命中：导演是李明，上一部是《山那边》</text><rect x="390" y="104" width="300" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="540" y="126" text-anchor="middle" font-size="12" fill="#222">跳 2 查询：李明《山那边》获奖</text><rect x="390" y="146" width="300" height="34" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="540" y="168" text-anchor="middle" font-size="12" fill="#222">命中：金鸡奖最佳影片 ✓ 回答</text><text x="540" y="200" text-anchor="middle" font-size="12" fill="#666">导演名“李明”是跳 1 查出来的，不是问题里给的</text></svg>
-<p>判断一个问题要不要多跳，就看这一条：<strong>问题里是不是藏着一个你还不知道的中间答案</strong>（这里是导演名）。藏着，就必须先跳过去把它查出来；没有，一次检索就够了。</p>
-</div>
-<div class="ceiling">
-<p><strong>例 C：缩短了几天 —— 第三跳不是检索，是对照 + 计算</strong></p>
-<p>问题：“某产品 2025 版退货期限比 2024 版缩短了几天？”跳 1 查到 2024 版 30 天，跳 2 查到 2025 版 15 天，答案还不在资料里——资料里没有“缩短了几天”这句话，得在跳 3 自己算：30 − 15 = 15 天。</p>
-<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="跳一30天跳二15天，跳三对照计算30减15等于15天" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar33b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs><rect x="40" y="30" width="160" height="44" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="57" text-anchor="middle" font-size="12" fill="#222">跳 1：2024 版 30 天</text><rect x="40" y="90" width="160" height="44" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="117" text-anchor="middle" font-size="12" fill="#222">跳 2：2025 版 15 天</text><line x1="200" y1="52" x2="280" y2="52" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33b)"/><line x1="200" y1="112" x2="280" y2="112" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33b)"/><rect x="290" y="52" width="220" height="60" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="400" y="78" text-anchor="middle" font-size="13" fill="#222">跳 3：30 − 15 = 15 天</text><text x="400" y="98" text-anchor="middle" font-size="12" fill="#222">对照 + 计算，不是再查一次</text><text x="400" y="140" text-anchor="middle" font-size="12" fill="#666">结论仍要标出处：30 天 [资料 1]，15 天 [资料 2]</text><text x="400" y="162" text-anchor="middle" font-size="12" fill="#666">算出来的 15 天也要能从两块资料里推出</text></svg>
-<p>所以多跳的最后一跳经常不是检索：对照、比较、计算、汇总，都是合法的“跳”。每跳的任务不同，但规矩一样——每跳的输入、输出、判断结论都要留痕，答错了才能定位是哪一跳歪了。</p>
-</div>
 <div class="warn"><strong>什么时候不用多跳：</strong>问题里只有一个不知道的东西，比如“2024 版退货期限是几天”，一次检索就够了。硬拆成多跳，只会多出成本和出错点。判断标准和例 B 一样：问题里藏没藏着中间答案。</div>
 <h3>3. 引用与出处：子 Agent 的交付标准</h3>
 <p>Knowledge Agent 交给 Supervisor 的不是“答案”，而是“带出处的结果”：每条结论后面标 [资料 N]，每块资料带标题路径和原文片段。Supervisor 和 Composer 汇总时，只汇总带出处的部分，没出处的不进最终答案。引用还有一道 Day 18 的校验：结论里的数字、日期、人名，必须能在标的那块资料里找到，找不到就改写或删除，不把“引用对了出处、内容却是编的”放过去。</p>
@@ -160,96 +124,9 @@ result = {
 })();
 </script>
 
-<div class="widget" id="duo">
-<h4>动手玩：Day33 闯关 —— 像 Duolingo 一样玩过去</h4>
-<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
-<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
-<div class="duo-bar"><i id="duo-bar"></i></div>
-<div id="duo-body"></div>
-<div class="duo-fb" id="duo-fb" style="display:none"></div>
-<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
-<button class="wbtn" id="duo-restart">重新开始</button>
-<p style="font-size:13px;color:#666" id="duo-best"></p>
+<div class="card">
+<p>🎮 <a href="../duo/lc33.html">去闯关：Day33 的 10 关 Duolingo 闯关（独立页）</a> —— 像 Duolingo 一样玩过去，答对 +10 XP，答错扣 1 颗 ❤️，通关成绩存在浏览器本地。</p>
 </div>
-<script>
-(function(){
-  var LEVELS = [
-    {type:'choice', q:'第 1 关：Knowledge Agent 和 RAG 流水线最大的区别是？', opts:['用的模型不一样','能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说','查得更快'], ans:1, why:'流水线是查一次答一次，子 Agent 是带判断的检索循环。'},
-    {type:'choice', q:'第 2 关：Multi-hop 检索循环是哪四步？', opts:['分解、检索、判断、再检索','切块、向量、检索、生成','提问、回答、再提问、再回答'], ans:0, why:'每跳的查询、命中块、判断结论都要写进状态，答错才能定位是哪一跳歪了。'},
-    {type:'assign', q:'第 3 关：把循环的四步按顺序排好。点一步，再点它在第几步。', tasks:['判断够不够','再检索','分解','检索'], agents:['第 1 步','第 2 步','第 3 步','第 4 步'], map:[2,3,0,1], why:'先分解成有依赖的子问题，再检索，判断够不够、能不能给下一跳提供查询词，不够就再检索。'},
-    {type:'choice', q:'第 4 关：检索失败时，正确的做法是？', opts:['用模型训练知识填空','停下来，写清查了几轮、用什么词、为什么判定没查到，最终说资料里没有','换个问题重新问用户'], ans:1, why:'用户能接受没查到，不能接受查到了假的。'},
-    {type:'choice', q:'第 5 关：检索循环为什么要设跳数上限？', opts:['为了让代码好看','防无限转下去，成本和延迟炸掉，通常 3–5 跳','跳数越多越好'], ans:1, why:'超上限就停、诚实回答，不要无限追下去。'}
-  ];
-  var body = document.getElementById('duo-body');
-  var fb = document.getElementById('duo-fb');
-  var nextBtn = document.getElementById('duo-next');
-  var heartsEl = document.getElementById('duo-hearts');
-  var levelEl = document.getElementById('duo-level');
-  var xpEl = document.getElementById('duo-xp');
-  var barEl = document.getElementById('duo-bar');
-  var bestEl = document.getElementById('duo-best');
-  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
-  var best = 0, clears = 0;
-  try { best = parseInt(localStorage.getItem('day33-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day33-clears') || '0', 10) || 0; } catch(e) {}
-  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
-  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
-  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
-  function hideFb(){ fb.style.display = 'none'; }
-  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
-  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
-  function render(){
-    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
-    if (idx >= LEVELS.length) {
-      barEl.style.width = '100%';
-      body.innerHTML = '<p class="duo-q">🎉 通关！Day33 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。Multi-hop 现在对应一句话：上一跳的答案变成下一跳的查询词。</p>';
-      showFb(true, '通关奖励：判断、换策略、止损、多跳循环、带出处交付，全齐了。去做下面的 6 道小测验，看看还记得多少。');
-      try { if (xp > best) { best = xp; localStorage.setItem('day33-best-xp', String(best)); } clears++; localStorage.setItem('day33-clears', String(clears)); } catch(e) {}
-      showBest(); return;
-    }
-    var L = LEVELS[idx];
-    if (L.type === 'choice') {
-      var h = '<p class="duo-q">' + L.q + '</p>';
-      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
-      body.innerHTML = h;
-      body.querySelectorAll('.duo-opt').forEach(function(btn){
-        btn.addEventListener('click', function(){
-          if (btn.disabled) return;
-          var i = parseInt(btn.dataset.i, 10);
-          if (i === L.ans) {
-            btn.classList.add('correct'); btn.disabled = true;
-            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
-            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
-            passLevel();
-          } else {
-            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
-            loseHeart();
-          }
-        });
-      });
-    } else {
-      var a = '<p class="duo-q">' + L.q + '</p><p>步骤（点一个）：</p><div id="duo-tasks"></div><p>顺序（再点一个）：</p><div id="duo-agents"></div>';
-      body.innerHTML = a;
-      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
-      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
-      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
-        if (selTask < 0) { showFb(false, '先点一个步骤，再点它在第几步。'); return; }
-        if (L.map[selTask] === i) {
-          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
-          chip.classList.add('done'); chip.classList.remove('sel');
-          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
-          assigned++; selTask = -1; showFb(true, '✅ 排对了！' + L.why);
-          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 步全排对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前排错过，这次不加 XP）')); passLevel(); }
-        } else {
-          levelClean = false; showFb(false, '❌ 排错了：这一步不在 ' + g + '。再想想循环的顺序：先拆，再查，再判断。'); loseHeart();
-        }
-      }); gBox.appendChild(b); });
-    }
-  }
-  nextBtn.addEventListener('click', function(){ idx++; render(); });
-  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
-  showBest(); render();
-})();
-</script>
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>
 <div class="q" data-answer="1"><p><strong>1. Knowledge Agent 和 RAG 流水线最大的区别是？</strong></p><button data-i="0">用的模型不一样</button><button data-i="1">能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说</button><button data-i="2">查得更快</button><div class="ans">解析：选 B。流水线是查一次答一次，子 Agent 是带判断的检索循环。</div></div>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 7 闯关：子图、多 Agent 图与复盘 | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 7 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day07.html">📖 看原文课</a> &nbsp; <span class="tag">LangGraph 7 天课</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 7：子图、多 Agent 图与复盘：子图、Supervisor 图、7 天复盘与面试讲法</h1>
+<p>最后一课，把前面 6 天拼成一张大图：一个 Agent 是一张图，多个 Agent 协作就是多张图拼起来——子图是拼起来的零件，Supervisor 是拼起来的总指挥。今天先把拼法讲清，再把 7 天复盘成一个能放进简历的项目。先看图，再闯关。</p>
+<svg style="max-width:100%;height:auto;display:block;margin:16px 0" viewBox="0 0 728 170" width="100%" role="img" aria-label="Supervisor 图：总指挥分发给检索、工具、校验三个子图">
+<rect x="284" y="10" width="160" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="39" text-anchor="middle" font-size="13" fill="#222">Supervisor（总指挥）</text>
+<line x1="324" y1="58" x2="180" y2="100" stroke="#0b62d6" stroke-width="2"/><polygon points="180,100 192,96 188,108" fill="#0b62d6"/>
+<line x1="364" y1="58" x2="364" y2="100" stroke="#0b62d6" stroke-width="2"/><polygon points="364,100 358,88 370,88" fill="#0b62d6"/>
+<line x1="404" y1="58" x2="548" y2="100" stroke="#0b62d6" stroke-width="2"/><polygon points="548,100 536,96 540,108" fill="#0b62d6"/>
+<rect x="80" y="100" width="200" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="180" y="129" text-anchor="middle" font-size="13" fill="#222">检索子图（RAG）</text>
+<rect x="264" y="100" width="200" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="129" text-anchor="middle" font-size="13" fill="#222">工具子图（ReAct）</text>
+<rect x="448" y="100" width="200" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="548" y="129" text-anchor="middle" font-size="13" fill="#222">校验子图（引用检查）</text>
+<text x="20" y="165" font-size="13" fill="#222">子图跑完把结果写回共享状态，Supervisor 汇总；某一路失败只重试那一路</text>
+</svg>
+
+<h2>拼图与复盘：三幅图</h2>
+<div class="ceiling">
+<p><strong>场景 1：子图是乐高零件</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="子图是一张编译好的小图，当成节点拼进大图" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">小图拼成大图里的一个节点</text><rect x="20" y="40" width="130" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="85" y="63" text-anchor="middle" font-size="12" fill="#222">检索</text><text x="162" y="63" font-size="14" fill="#0b62d6">→</text><rect x="180" y="40" width="130" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="245" y="63" text-anchor="middle" font-size="12" fill="#222">重排</text><text x="322" y="63" font-size="14" fill="#22a35a">↓ 拼成一个节点</text><rect x="20" y="110" width="290" height="40" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="165" y="135" text-anchor="middle" font-size="12" fill="#222">检索子图（RAG）：大图里的一个节点</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><text x="380" y="24" font-size="13" fill="#222">大图只关心：进去什么样，出来什么样</text><rect x="380" y="40" width="300" height="60" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="530" y="66" text-anchor="middle" font-size="12" fill="#222">进去时状态长什么样</text><text x="530" y="88" text-anchor="middle" font-size="12" fill="#222">出来时状态变成什么样</text><text x="380" y="140" font-size="12" fill="#666">子图内部的节点和边，大图不用管</text></svg>
+<p>子图就是一张已经 compile() 好的小图，把它当成一个节点加进大图里。大图只关心：进去时状态长什么样，出来时状态变成什么样。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 2：Supervisor 总指挥</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="Supervisor 分发给三个子图，汇总后某一路失败只重试那一路" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">总指挥分发 → 三个子图 → 回总指挥汇总</text><rect x="270" y="36" width="180" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="360" y="59" text-anchor="middle" font-size="12" fill="#222">Supervisor（总指挥）</text><line x1="300" y1="72" x2="160" y2="104" stroke="#0b62d6" stroke-width="2"/><line x1="360" y1="72" x2="360" y2="104" stroke="#0b62d6" stroke-width="2"/><line x1="420" y1="72" x2="560" y2="104" stroke="#0b62d6" stroke-width="2"/><rect x="60" y="104" width="200" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="160" y="127" text-anchor="middle" font-size="12" fill="#222">检索子图（RAG）</text><rect x="260" y="104" width="200" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="360" y="127" text-anchor="middle" font-size="12" fill="#222">工具子图（ReAct）</text><rect x="460" y="104" width="200" height="36" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="560" y="127" text-anchor="middle" font-size="12" fill="#222">校验子图（引用检查）</text><text x="20" y="170" font-size="12" fill="#22a35a">✓ 状态共享、交接显式、失败隔离：某一路挂了只重试那一路</text></svg>
+<p>一个 Supervisor 节点负责分发和收口，下面是几个子 Agent，每个都是一张子图。协作三条：状态共享、交接显式、失败隔离。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 3：7 天一张图</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="7 天成长线：图、状态、路由、ReAct、快照、审核、拼图" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">7 天拼成一张能放进简历的项目图</text><rect x="20" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="63" y="63" text-anchor="middle" font-size="11" fill="#222">Day1 图</text><text x="112" y="63" font-size="12" fill="#0b62d6">→</text><rect x="125" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="168" y="63" text-anchor="middle" font-size="11" fill="#222">Day2 状态</text><text x="217" y="63" font-size="12" fill="#0b62d6">→</text><rect x="230" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="273" y="63" text-anchor="middle" font-size="11" fill="#222">Day3 路由</text><text x="322" y="63" font-size="12" fill="#0b62d6">→</text><rect x="335" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="378" y="63" text-anchor="middle" font-size="11" fill="#222">Day4 ReAct</text><text x="427" y="63" font-size="12" fill="#0b62d6">→</text><rect x="440" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="483" y="63" text-anchor="middle" font-size="11" fill="#222">Day5 快照</text><text x="532" y="63" font-size="12" fill="#0b62d6">→</text><rect x="545" y="40" width="86" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="588" y="63" text-anchor="middle" font-size="11" fill="#222">Day6 审核</text><text x="637" y="63" font-size="12" fill="#0b62d6">→</text><rect x="20" y="100" width="200" height="40" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="120" y="125" text-anchor="middle" font-size="12" fill="#222">Day7 拼图：Supervisor 图</text><text x="240" y="125" font-size="12" fill="#666">分发怎么分、子图怎么拼、失败怎么隔离、快照怎么存</text></svg>
+<p>7 天收束成一张能放进简历的项目图：Supervisor 多 Agent 图，带 Checkpoint 断点续跑和人工审核。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day07.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+  {
+    "type": "choice",
+    "q": "第 1 关：子图是什么？",
+    "opts": [
+      "一张编译好的小图，当成一个节点加进大图里",
+      "一张画在纸上的图",
+      "一个工具函数"
+    ],
+    "ans": 0,
+    "why": "大图只关心子图进去时状态长什么样、出来时变成什么样。"
+  },
+  {
+    "type": "choice",
+    "q": "第 2 关：Supervisor 图里，总指挥是干嘛的？",
+    "opts": [
+      "执行所有工具",
+      "分发和收口：收到任务判断派给谁，最后把各路结果汇总",
+      "只负责记日志"
+    ],
+    "ans": 1,
+    "why": "Supervisor 的分发就是条件边，只不过这次分的不是节点，是子图。"
+  },
+  {
+    "type": "choice",
+    "q": "第 3 关：子图之间协作，最重要的三条是？",
+    "opts": [
+      "跑得快、代码少、模型大",
+      "都用同一个模型",
+      "状态共享、交接显式、失败隔离"
+    ],
+    "ans": 2,
+    "why": "这三条是多 Agent 图和单 Agent 图最大的区别。"
+  },
+  {
+    "type": "assign",
+    "q": "第 4 关：点一个活，再点负责它的子图，把 3 个分完。",
+    "tasks": [
+      "查资料",
+      "调工具干活",
+      "核对答案"
+    ],
+    "agents": [
+      "检索子图（RAG）",
+      "工具子图（ReAct）",
+      "校验子图（引用检查）"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "检索子图查资料、工具子图干活、校验子图核对——各挂各的子图。"
+  },
+  {
+    "type": "choice",
+    "q": "第 5 关：某一路子图失败了，应该怎么办？",
+    "opts": [
+      "只重试那一路，不重跑整张图",
+      "整张图从头再跑",
+      "直接报错退出"
+    ],
+    "ans": 0,
+    "why": "失败隔离是多 Agent 图的基本要求。"
+  },
+  {
+    "type": "choice",
+    "q": "第 6 关：拼子图之前，先要对什么？",
+    "opts": [
+      "对一下模型版本",
+      "对状态表：子图进去时状态长什么样、出来时变成什么样",
+      "对一下代码行数"
+    ],
+    "ans": 1,
+    "why": "对不齐，子图读不到它要的字段，或者写回去的字段父图不认。"
+  },
+  {
+    "type": "choice",
+    "q": "第 7 关：7 天学完，你能拿出什么可演示的东西？",
+    "opts": [
+      "一堆工具函数的罗列",
+      "一个跑通一次的演示视频",
+      "一张 Supervisor 多 Agent 图：分发收口、三个子图、Checkpoint 断点续跑、人工审核"
+    ],
+    "ans": 2,
+    "why": "面试讲的时候按图讲：分发怎么分、子图怎么拼、失败怎么隔离、快照怎么存。"
+  },
+  {
+    "type": "choice",
+    "q": "第 8 关：Supervisor 的分发本质上是什么？",
+    "opts": [
+      "条件边，只不过分的不是节点，是子图",
+      "普通边",
+      "一个工具函数"
+    ],
+    "ans": 0,
+    "why": "Supervisor 的分发就是条件边，映射表里写的是子图的名字。"
+  },
+  {
+    "type": "choice",
+    "q": "第 9 关：子图和父图的状态类型不一样会怎样？",
+    "opts": [
+      "子图读不到它要的字段，或者写回去的字段父图不认",
+      "没关系，图会自动对齐",
+      "图跑得更快"
+    ],
+    "ans": 0,
+    "why": "拼图之前先对状态表：子图进去时状态长什么样、出来时变成什么样。"
+  },
+  {
+    "type": "assign",
+    "q": "第 10 关：点一天，再点那天的核心，把 4 天分完。",
+    "tasks": [
+      "Day 1",
+      "Day 3",
+      "Day 5",
+      "Day 6"
+    ],
+    "agents": [
+      "图是什么",
+      "条件边与路由",
+      "Checkpoint 断点续跑",
+      "人工介入与中断"
+    ],
+    "map": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "why": "7 天复盘表：Day 1 图、Day 2 状态、Day 3 路由、Day 4 ReAct、Day 5 快照、Day 6 审核、Day 7 拼图。"
+  }
+];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('lg07-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('lg07-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day 7 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。7 天现在对应三幅图：子图是乐高零件、Supervisor 是总指挥、7 天拼成一张项目图。</p>';
+      showFb(true, '🏆 通关奖励：子图 + Supervisor + 状态共享、交接显式、失败隔离，全齐了。7 天的图都拼完了，去原文课做 6 道小测验收尾。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('lg07-best-xp', String(best)); } clears++; localStorage.setItem('lg07-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 31 闯关：Multi-Agent 协作总览 | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 31 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day31.html">📖 看原文课</a> &nbsp; <span class="tag">第 5 周</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 31：Multi-Agent 协作总览：Supervisor 模式</h1>
+<p>一个任务不再由一个 Agent 从头做到尾，而是由一个 Supervisor（主管）分发给多个子 Agent，各自做完再汇总。先看图，再闯关。</p>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Supervisor 分发给子 Agent，校验后合成的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="80" y="43" text-anchor="middle" font-size="13" fill="#222">任务</text>
+<line x1="140" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">Supervisor 主管</text>
+<line x1="300" y1="60" x2="300" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="600" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="82" x2="120" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="600" y1="82" x2="600" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="120" y="131" text-anchor="middle" font-size="13" fill="#222">Planner 规划</text>
+<rect x="260" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">Knowledge 检索</text>
+<rect x="500" y="104" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="600" y="131" text-anchor="middle" font-size="13" fill="#222">Tool 执行</text>
+<line x1="120" y1="148" x2="120" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="148" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="600" y1="148" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="120" y1="170" x2="600" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="250" y1="170" x2="250" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="170" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="250" y="219" text-anchor="middle" font-size="13" fill="#222">Verifier 校验</text>
+<line x1="330" y1="214" x2="388" y2="214" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="390" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="470" y="219" text-anchor="middle" font-size="13" fill="#222">Composer 合成</text>
+</svg>
+
+<h2>为什么要多个 Agent：单 Agent 的三块天花板</h2>
+<div class="ceiling">
+<p><strong>天花板 1：上下文 —— 一个人全记住，越堆越高</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一个人抱着四摞文件顶到天花板，分工后每人只抱一摞" style="max-width:720px;display:block;margin:8px 0"><rect x="20" y="8" width="320" height="10" rx="4" fill="#d33"/><text x="180" y="34" text-anchor="middle" font-size="12" fill="#d33">天花板</text><rect x="110" y="42" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="58" text-anchor="middle" font-size="12" fill="#222">规划</text><rect x="110" y="68" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="84" text-anchor="middle" font-size="12" fill="#222">检索结果</text><rect x="110" y="94" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="110" text-anchor="middle" font-size="12" fill="#222">工具输出</text><rect x="110" y="120" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="136" text-anchor="middle" font-size="12" fill="#222">校验意见</text><circle cx="185" cy="158" r="11" fill="#f5c542" stroke="#222"/><path d="M185 169 L185 188 M170 178 L200 178" stroke="#222" stroke-width="2"/><text x="180" y="182" text-anchor="middle" font-size="12" fill="#666">一个人全记住</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><circle cx="430" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M430 91 L430 110 M418 100 L442 100" stroke="#222" stroke-width="2"/><rect x="405" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="430" y="62" text-anchor="middle" font-size="11" fill="#222">规划</text><circle cx="540" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M540 91 L540 110 M528 100 L552 100" stroke="#222" stroke-width="2"/><rect x="515" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="540" y="62" text-anchor="middle" font-size="11" fill="#222">检索</text><circle cx="650" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M650 91 L650 110 M638 100 L662 100" stroke="#222" stroke-width="2"/><rect x="625" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="650" y="62" text-anchor="middle" font-size="11" fill="#222">校验</text><text x="540" y="140" text-anchor="middle" font-size="12" fill="#22a35a">✓ 分工后：每人只看自己那部分</text><text x="540" y="162" text-anchor="middle" font-size="12" fill="#666">上下文反而变干净了</text></svg>
+<p>一个 Agent 要同时记住规划、检索结果、工具输出、校验意见，上下文越长越容易顾此失彼；分工后，每个子 Agent 只看自己那部分。</p>
+</div>
+<div class="ceiling">
+<p><strong>天花板 2：能力 —— 一把瑞士军刀，开不了三把锁</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一把瑞士军刀打不开三把锁，分开的放大镜扳手印章各开一把" style="max-width:720px;display:block;margin:8px 0"><rect x="50" y="60" width="180" height="46" rx="10" fill="#d33"/><text x="140" y="88" text-anchor="middle" font-size="13" fill="#fff">瑞士军刀</text><rect x="80" y="38" width="10" height="24" fill="#999"/><rect x="140" y="38" width="10" height="24" fill="#999"/><rect x="200" y="38" width="10" height="24" fill="#999"/><text x="140" y="140" text-anchor="middle" font-size="12" fill="#d33">✗ 一个提示词，三件事都做不好</text><text x="140" y="162" text-anchor="middle" font-size="12" fill="#666">检索 / 执行 / 校验是三种不同的活</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><circle cx="440" cy="70" r="22" fill="none" stroke="#0b62d6" stroke-width="4"/><line x1="456" y1="86" x2="472" y2="104" stroke="#0b62d6" stroke-width="4"/><text x="440" y="132" text-anchor="middle" font-size="12" fill="#222">检索 🔍</text><text x="440" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 放大镜</text><rect x="520" y="48" width="16" height="52" rx="6" fill="#f5c542" stroke="#222" transform="rotate(35 528 74)"/><text x="540" y="132" text-anchor="middle" font-size="12" fill="#222">执行 🔧</text><text x="540" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 扳手</text><rect x="620" y="48" width="44" height="30" rx="6" fill="#22a35a"/><rect x="634" y="78" width="16" height="24" fill="#22a35a"/><text x="642" y="132" text-anchor="middle" font-size="12" fill="#222">校验 ✅</text><text x="642" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 印章</text></svg>
+<p>检索、执行、校验是三种不同的活，一个提示词很难同时把三件事都做到最好；分开写提示词、分开配工具，各自才能调优。</p>
+</div>
+<div class="ceiling">
+<p><strong>天花板 3：并行 —— 单车道排队 vs 三车道同时开工</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="单Agent三步串行耗时相加，多Agent三路并行耗时只剩最慢一步" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">单 Agent：一步一步来</text><rect x="20" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="65" y="55" text-anchor="middle" font-size="12" fill="#222">检索 3分</text><text x="125" y="55" font-size="14" fill="#666">→</text><rect x="140" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="185" y="55" text-anchor="middle" font-size="12" fill="#222">执行 3分</text><text x="245" y="55" font-size="14" fill="#666">→</text><rect x="260" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="305" y="55" text-anchor="middle" font-size="12" fill="#222">校验 3分</text><rect x="20" y="76" width="330" height="12" rx="6" fill="#fca5a5"/><text x="370" y="87" font-size="12" fill="#d33">总耗时 3 + 3 + 3 = 9 分</text><line x1="20" y1="108" x2="700" y2="108" stroke="#ddd" stroke-width="2"/><text x="20" y="132" font-size="13" fill="#222">多 Agent：同时动手</text><rect x="20" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="65" y="161" text-anchor="middle" font-size="12" fill="#222">检索 3分</text><rect x="130" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="175" y="161" text-anchor="middle" font-size="12" fill="#222">执行 3分</text><rect x="240" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="285" y="161" text-anchor="middle" font-size="12" fill="#222">校验 3分</text><rect x="360" y="142" width="110" height="12" rx="6" fill="#86efac"/><text x="480" y="153" font-size="12" fill="#22a35a">总耗时 = 最慢的那步 3 分</text></svg>
+<p>单 Agent 只能一步一步来；多个子 Agent 可以同时动手，总耗时从“各步相加”变成“最慢的那步”。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day31.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：Supervisor 在 Multi-Agent 里主要负责什么？', opts:['直接查资料、写答案','分发、判断、汇总，不直接干活','只负责跑测试'], ans:1, why:'主管一旦开始自己动手，分工就乱了；分发、判断、汇总才是主管的三件事。'},
+    {type:'choice', q:'第 2 关：子 Agent 通信最推荐的做法是？', opts:['只靠模型口头传话','共享状态做底座、消息做过程记录、关键交接显式写清','每个子 Agent 各写各的，不共享'], ans:1, why:'三者混用：状态是底座，消息是过程，关键交接显式写清，出问题才能定位。'},
+    {type:'assign', q:'第 3 关：点一个任务，再点它该去的 Agent，把 4 个任务分完。', tasks:['把任务拆成步骤','去查退货政策原文','调用工具执行操作','核对答案里的数字对不对'], agents:['Planner 规划','Knowledge 检索','Tool 执行','Verifier 校验'], map:[0,1,2,3], why:'Planner 拆步骤、Knowledge 查资料、Tool 动手执行、Verifier 核对。分对了，主管才不用自己干活。'},
+    {type:'choice', q:'第 4 关：没有依赖的步骤和有依赖的步骤，分别怎么跑？', opts:['都并行跑，越快越好','没有依赖的并行、有依赖的串行','都串行跑，最稳妥'], ans:1, why:'并行跑有依赖的步骤，会读到还没出来的结果。'},
+    {type:'choice', q:'第 5 关：某一路子 Agent 失败了，正确做法是？', opts:['重跑整张图','只重试失败的那一路，超上限就把失败写进结果、继续走别的路','整个任务直接崩掉'], ans:1, why:'这就是失败隔离：局部失败不拖垮全局，重试也要有上限。'},
+    {type:'choice', q:'第 6 关：什么时候不该拆成 Multi-Agent？', opts:['任务复杂、需要并行时','每路有独立输入、工具和验收标准时','任务一步就能做完，拆开只多通信成本时'], ans:2, why:'为了多 Agent 而多 Agent，只会多出成本和出错点。'},
+    {type:'choice', q:'第 7 关：并行度为什么要设上限？', opts:['并行越多越好，不用设','防成本和模型限流炸掉，通常 3–5 个就够','为了让代码好看'], ans:1, why:'同时跑十个子 Agent，成本和限流都会炸，上限是工程约束。'},
+    {type:'choice', q:'第 8 关：任务是“查退货政策并对比两个版本”，怎么拆最合理？', opts:['拆三路：检索、执行、校验，各有独立输入和验收标准','一个人从头做到尾','拆成十路，每路只做一小步'], ans:0, why:'拆开后每路有独立的输入、工具、验收标准才值得拆；拆太碎通信成本反而上去。'},
+    {type:'choice', q:'第 9 关：Composer 是干嘛的？', opts:['汇总带出处的结果，不生产新结论','直接查资料、写答案','只负责跑测试'], ans:0, why:'Composer 只汇总带出处的部分，没出处的不进最终答案，也不编新结论。'},
+    {type:'assign', q:'第 10 关：点一个任务，再点它该去的 Agent，把 4 个任务分完。', tasks:['把任务拆成步骤','去查资料','合成最终答案','核对答案对不对'], agents:['Planner 规划','Knowledge 检索','Composer 合成','Verifier 校验'], map:[0,1,2,3], why:'Planner 拆、Knowledge 查、Verifier 核对、Composer 合成——顺序别搞反：先校验再合成。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('day31-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day31-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day31 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。三大天花板现在对应三幅图：上下文是抱四摞文件的人、能力是瑞士军刀、并行是单车道变三车道。</p>';
+      showFb(true, '🏆 通关奖励：三大天花板 + 分工 + 并行 + 失败隔离，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('day31-best-xp', String(best)); } clears++; localStorage.setItem('day31-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 32 闯关：Planner 与任务分解：把任务拆成 DAG | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 32 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day32.html">📖 看原文课</a> &nbsp; <span class="tag">第 5 周</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 32：Planner 与任务分解：把任务拆成 DAG</h1>
+<p>Multi-Agent 的第一步不是动手，而是拆：Planner 把一个复杂任务拆成步骤、标出依赖、定出并行度。拆得好不好，决定了后面并行能不能跑、失败能不能隔离、结果能不能验收。拆问题这件事，第 3 周的混合问答已经练过一次，这课把它系统化：拆成 DAG（有向无环图），每个步骤都有输入、输出和验收标准。先看图，再闯关。</p>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planner 把任务拆成 DAG：分层并行，关键路径串行的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="120" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="80" y="43" text-anchor="middle" font-size="13" fill="#222">任务</text>
+<line x1="140" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="300" y="43" text-anchor="middle" font-size="13" fill="#222">Planner 拆 DAG</text>
+<line x1="300" y1="60" x2="300" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="360" y2="82" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="82" x2="110" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="360" y1="82" x2="360" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="110" y="131" text-anchor="middle" font-size="13" fill="#222">检索 2024 版</text>
+<rect x="270" y="104" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="131" text-anchor="middle" font-size="13" fill="#222">检索 2025 版</text>
+<line x1="200" y1="126" x2="268" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="234" y="120" text-anchor="middle" font-size="11" fill="#222">依赖</text>
+<text x="575" y="131" text-anchor="middle" font-size="12" fill="#222">同层可并行</text>
+<line x1="110" y1="148" x2="110" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="360" y1="148" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="110" y1="170" x2="360" y2="170" stroke="#0b62d6" stroke-width="1.5"/>
+<line x1="260" y1="170" x2="260" y2="190" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="170" y="192" width="180" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="260" y="219" text-anchor="middle" font-size="13" fill="#222">对照差异</text>
+<line x1="350" y1="214" x2="388" y2="214" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="390" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="470" y="219" text-anchor="middle" font-size="13" fill="#222">合成答案</text>
+<text x="625" y="219" text-anchor="middle" font-size="12" fill="#222">依赖成圈即死锁</text>
+</svg>
+
+<h2>三幅图看懂 DAG</h2>
+<div class="ceiling">
+<p><strong>一张图看懂链、树、DAG、有圈：前三个能排顺序，最后一个是死锁</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="链全串行、树一父多子、DAG一步多个输入、有圈互相等死锁" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar32a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker><marker id="ar32r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d33"/></marker></defs><circle cx="90" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><line x1="90" y1="66" x2="90" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="90" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="109" text-anchor="middle" font-size="13" fill="#222">B</text><line x1="90" y1="120" x2="90" y2="142" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="90" cy="158" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="163" text-anchor="middle" font-size="13" fill="#222">C</text><text x="90" y="190" text-anchor="middle" font-size="12" fill="#222">链：全串行</text><line x1="180" y1="20" x2="180" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="270" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="270" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><line x1="258" y1="64" x2="238" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><line x1="282" y1="64" x2="302" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="230" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="230" y="109" text-anchor="middle" font-size="13" fill="#222">B</text><circle cx="310" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="310" y="109" text-anchor="middle" font-size="13" fill="#222">C</text><text x="270" y="150" text-anchor="middle" font-size="12" fill="#222">树：一父多子</text><text x="270" y="170" text-anchor="middle" font-size="12" fill="#666">每步只有一个父依赖</text><line x1="360" y1="20" x2="360" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="420" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="420" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><circle cx="500" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="500" y="55" text-anchor="middle" font-size="13" fill="#222">B</text><line x1="432" y1="64" x2="452" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><line x1="488" y1="64" x2="468" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="460" cy="104" r="16" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="460" y="109" text-anchor="middle" font-size="13" fill="#222">C</text><text x="460" y="150" text-anchor="middle" font-size="12" fill="#222">DAG：一步多个输入</text><text x="460" y="170" text-anchor="middle" font-size="12" fill="#666">对照差异同时依赖两版检索</text><line x1="540" y1="20" x2="540" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="630" cy="60" r="16" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="630" y="65" text-anchor="middle" font-size="13" fill="#222">A</text><circle cx="630" cy="130" r="16" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="630" y="135" text-anchor="middle" font-size="13" fill="#222">B</text><path d="M646 76 Q668 95 646 114" fill="none" stroke="#d33" stroke-width="2" marker-end="url(#ar32r)"/><path d="M614 114 Q592 95 614 76" fill="none" stroke="#d33" stroke-width="2" marker-end="url(#ar32r)"/><text x="630" y="170" text-anchor="middle" font-size="12" fill="#d33">有圈：A 等 B、B 等 A</text><text x="630" y="190" text-anchor="middle" font-size="12" fill="#d33">✗ 死锁，谁都动不了</text></svg>
+<p>链和树都是 DAG 的特例：链每步只有一个前置，树每步只有一个父依赖；DAG 最一般，一个步骤可以同时依赖两个检索结果。有圈排不出顺序，Planner 必须先判圈。</p>
+</div>
+<div class="ceiling">
+<p><strong>拆的粒度：一大步包两件事 vs 两小步各带验收标准</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一步包两件事失败说不清哪半步错了，两小步各带输入输出验收标准" style="max-width:720px;display:block;margin:8px 0"><rect x="40" y="36" width="260" height="92" rx="10" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="170" y="66" text-anchor="middle" font-size="14" fill="#222">查资料并写答案</text><text x="170" y="90" text-anchor="middle" font-size="12" fill="#666">检索 + 写作混在一个步骤里</text><text x="170" y="112" text-anchor="middle" font-size="12" fill="#666">没有验收标准</text><text x="170" y="152" text-anchor="middle" font-size="13" fill="#d33">✗ 失败了，说不清哪半步错了</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><rect x="390" y="30" width="140" height="86" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="460" y="54" text-anchor="middle" font-size="13" fill="#222">第 1 步：检索</text><text x="460" y="74" text-anchor="middle" font-size="11" fill="#222">输入：产品名</text><text x="460" y="90" text-anchor="middle" font-size="11" fill="#222">输出：资料块</text><text x="460" y="106" text-anchor="middle" font-size="11" fill="#222">验收：命中 ≥ 2 块</text><rect x="550" y="30" width="140" height="86" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="620" y="54" text-anchor="middle" font-size="13" fill="#222">第 2 步：写作</text><text x="620" y="74" text-anchor="middle" font-size="11" fill="#222">输入：资料块</text><text x="620" y="90" text-anchor="middle" font-size="11" fill="#222">输出：答案</text><text x="620" y="106" text-anchor="middle" font-size="11" fill="#222">验收：每条标出处</text><text x="540" y="152" text-anchor="middle" font-size="13" fill="#22a35a">✓ 一步一件事，验收写在前面</text><text x="540" y="172" text-anchor="middle" font-size="12" fill="#666">Verifier 按标准查，错了定位到步</text></svg>
+<p>粒度停在“可独立验收”这一层就够了：再拆就碎到“打开一个文件”这种原子操作，通信成本反而上去。</p>
+</div>
+<div class="ceiling">
+<p><strong>宽度是并行度，红线是关键路径：优化先动红线上的步骤</strong></p>
+<svg viewBox="0 0 720 230" width="100%" role="img" aria-label="同一层两个步骤可并行，红色关键路径是最长依赖链决定最少耗时" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar32b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker><marker id="ar32c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d33"/></marker></defs><rect x="80" y="24" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="145" y="47" text-anchor="middle" font-size="12" fill="#222">检索 2024 版</text><rect x="280" y="24" width="130" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="345" y="47" text-anchor="middle" font-size="12" fill="#222">检索 2025 版</text><text x="480" y="47" font-size="12" fill="#222">← 宽度 2：这层可并行 2 个</text><line x1="160" y1="60" x2="200" y2="88" stroke="#d33" stroke-width="3" marker-end="url(#ar32c)"/><line x1="330" y1="60" x2="290" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32b)"/><rect x="180" y="96" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="245" y="119" text-anchor="middle" font-size="12" fill="#222">对照差异</text><line x1="245" y1="132" x2="245" y2="158" stroke="#d33" stroke-width="3" marker-end="url(#ar32c)"/><rect x="180" y="164" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="245" y="187" text-anchor="middle" font-size="12" fill="#222">合成答案</text><text x="480" y="119" font-size="12" fill="#d33">红线 = 关键路径</text><text x="480" y="140" font-size="12" fill="#666">最长依赖链，决定最少耗时</text><text x="480" y="187" font-size="12" fill="#666">先优化红线上的慢步骤</text></svg>
+<p>并行度从图的宽度算，关键路径从图的最长链算：宽度告诉你能同时跑几个，关键路径告诉你最少要花多久。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day32.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：DAG 三个词拆开，D、A、G 各指什么？', opts:['有向、无环、图','有向、有环、图','无向、无环、图'], ans:0, why:'Directed 有向、Acyclic 无环、Graph 图：节点是步骤，边是有方向的依赖，箭头不能绕成圈。'},
+    {type:'choice', q:'第 2 关：计划里出现 A→B→A，会发生什么？', opts:['拓扑排序排不出来，死锁','跑得更快','像 LangGraph 那样循环跑就行'], ans:0, why:'A 等 B、B 等 A，谁都动不了。Planner 要先判圈、显式报错重拆。LangGraph 的图可以有环，任务 DAG 不能。'},
+    {type:'assign', q:'第 3 关：点一个步骤，再点它所在的层，把 4 步按依赖排好。', tasks:['对照差异','检索 2025 版','合成答案','检索 2024 版'], agents:['第 1 层：先跑','第 2 层','第 3 层','第 4 层：最后'], map:[2,1,3,0], why:'检索 2024 先跑，2025 依赖它的条款编号，对照依赖两版，合成最后。没依赖的同层可并行。'},
+    {type:'choice', q:'第 4 关：想缩短总耗时，先优化哪里？', opts:['并行最多的那层','关键路径上的步骤','最简单的步骤'], ans:1, why:'关键路径是最长依赖链，决定最少耗时；它不解决，并行再多也没用。'},
+    {type:'choice', q:'第 5 关：计划里没写验收标准，会导致什么？', opts:['没什么，凭感觉也行','半成品被当成成品汇总，错误一路传到最终答案','任务跑得更快'], ans:1, why:'没有标准，Verifier 只能凭感觉说“好像做完了”，错误一路传到最终答案。'},
+    {type:'choice', q:'第 6 关：DAG 和 LangGraph 的图有什么区别？', opts:['DAG 可以有环，LangGraph 的图不能有环','DAG 不能有环，LangGraph 的图可以有环（循环边跑 ReAct）','两者完全一样'], ans:1, why:'Planner 的任务 DAG 不能有环，因为任务计划是“做完就结束”的清单；LangGraph 的图可以有环，循环边就是用来一圈一圈跑 ReAct 的。'},
+    {type:'choice', q:'第 7 关：Planner 怎么判断计划有没有成圈？', opts:['等执行跑到一半卡住再看','拓扑排序：反复取“依赖都已完成”的步骤，取完还有剩下的就是成圈','凭感觉判断'], ans:1, why:'判圈的办法就是拓扑排序：反复取依赖都已完成的步骤，取到最后还有剩下的，说明剩下的互相依赖、成圈了。'},
+    {type:'choice', q:'第 8 关：一个步骤里既要检索又要执行，说明什么？', opts:['拆得正好','拆不干净：继续拆，直到每步只走一条路、只用一类工具、只产出一种结果','步骤太多了，该合并'], ans:1, why:'判断拆没拆干净的标准就是：一个步骤是不是只走一条路、只用一类工具、只产出一种结果。'},
+    {type:'choice', q:'第 9 关：图的某一层宽度是 2，并行上限是 3–5，这一层能并行几个？', opts:['2 个','5 个','10 个'], ans:0, why:'图的宽度就是天然并行度：同一层没有依赖的步骤有几个，就能并行几个，但还要受 3–5 个的并行上限和成本约束。'},
+    {type:'choice', q:'第 10 关：每个步骤动手前要写清哪三样？', opts:['输入、输出、验收标准','步骤名字、颜色、字体','负责人、截止日期、预算'], ans:0, why:'每个步骤动手前写清输入（需要什么）、输出（交出什么格式）、验收标准（怎么算做完），Verifier 才有标准可查。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('day32-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day32-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day32 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。DAG 现在对应三幅图：链、树、DAG、有圈四格对比、一步一件事带验收标准、宽度是并行度、红线是关键路径。</p>';
+      showFb(true, '🏆 通关奖励：DAG、判圈、分层并行、关键路径、验收标准，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('day32-best-xp', String(best)); } clears++; localStorage.setItem('day32-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>步骤（点一个）：</p><div id="duo-tasks"></div><p>层（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个步骤，再点它所在的层。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 排对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 步全排对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前排错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 排错了：这一步不在 ' + g + '。再看看依赖：谁的输出是谁的输入？'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

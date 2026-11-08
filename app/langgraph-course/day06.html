@@ -22,17 +22,6 @@ summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
 
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn:disabled{opacity:.4;cursor:default}
-.wbtn.primary{background:#0b62d6;color:#fff}
-.wbtn.sel{background:#0b62d6;color:#fff}
-.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
-.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
-.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
-.wnode.done{border-color:#22a35a;background:#dcfce7}
-.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -60,14 +49,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>4. 节点内中断：interrupt() 函数</h3>
 <p>节点里也可以调 <code>interrupt()</code> 动态停住：节点跑到一半，调 <code>interrupt("请确认是否发送")</code>，图停住并把这句话返回给人；人回复后，<code>interrupt()</code> 的返回值就是人的回复，节点接着跑。</p>
 <div class="warn"><strong>容易踩的坑：</strong>中断了，但没配 Checkpointer。没有 Checkpointer，图停住后状态没地方存，人回来时图已经忘了跑到哪了。中断和 Checkpoint 是一对：Day 5 是 Day 6 的前置条件。</div>
-<div class="widget">
-<h4>动手玩：人工介入演示 —— 你来当审核员</h4>
-<p>模型想调用 <code>send_broadcast</code> 发一条全员消息。先点“运行到 tools 前”，图会在工具执行前停住；再由你决定：批准就执行，拒绝就不执行。两种结果对比着看。</p>
-<p><button class="wbtn primary" id="d6-run">运行到 tools 前 ▶</button>
-<button class="wbtn" id="d6-approve">✅ 批准，继续执行</button>
-<button class="wbtn" id="d6-reject">❌ 拒绝，不执行</button>
-<button class="wbtn" id="d6-reset">重置</button></p>
-<div class="wlog" id="d6-log">还没运行。点“运行到 tools 前”，图会在高危工具前停住等你审核。</div>
+<div class="card" style="border:2px solid #58cc02;background:#f0ffd7">
+<p><strong>🎮 去闯关：</strong>这课的 Duolingo 闯关在独立页：3 张场景图 + 10 关闯关（满分 100 XP），进度存在浏览器里。</p>
+<p><a href="../duo/lg06.html" style="font-weight:bold;color:#46a302">🦉 开始闯关 →</a></p>
 </div>
 
 <h2>二、代码示例</h2>
@@ -151,40 +135,6 @@ document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
 </script>
-<script>
-(function(){
-var stage=0; // 0 未运行，1 已暂停等审核，2 已结束
-var log=document.getElementById('d6-log');
-var approve=document.getElementById('d6-approve');
-var reject=document.getElementById('d6-reject');
-function setButtons(){
-  approve.disabled=(stage!==1);
-  reject.disabled=(stage!==1);
-}
-document.getElementById('d6-run').addEventListener('click',function(){
-  stage=1;
-  log.textContent='⏸ 图在 tools 节点前停住了，等你审核。\n\n待执行的工具调用：\nsend_broadcast（发全员消息）\n参数：内容 = 「明天放假」\n影响：全体成员都会收到\n\n点“批准”就执行，点“拒绝”就不执行。';
-  setButtons();
-});
-approve.addEventListener('click',function(){
-  if(stage!==1){ return; }
-  stage=2;
-  log.textContent='✅ 你点了批准 → tools 执行：消息已发送\n→ END：图结束。最终状态里有一条“消息已发送”的记录。';
-  setButtons();
-});
-reject.addEventListener('click',function(){
-  if(stage!==1){ return; }
-  stage=2;
-  log.textContent='❌ 你点了拒绝 → 工具没执行\n→ 模型回答：已拒绝执行发全员消息。\n→ END：图结束。最终状态里没有发送记录，只有这句拒绝说明。';
-  setButtons();
-});
-document.getElementById('d6-reset').addEventListener('click',function(){
-  stage=0;
-  log.textContent='还没运行。点“运行到 tools 前”，图会在高危工具前停住等你审核。';
-  setButtons();
-});
-setButtons();
-})();
-</script>
+
 </body>
 </html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 33 闯关：Knowledge Agent：把 RAG 做成一个子 Agent | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 33 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day33.html">📖 看原文课</a> &nbsp; <span class="tag">第 5 周</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 33：Knowledge Agent：把 RAG 做成一个子 Agent</h1>
+<p>第 3 周的 RAG 是一条流水线，这课把它升级成一个子 Agent：Knowledge Agent。区别是，流水线是“查一次、答一次”，子 Agent 是“查不够就再查、查偏了就换词查、查不到就老实说”。Supervisor 把“需要查资料”的子任务派给它，它内部跑检索循环，最后交出带出处的结果，而不是一堆没整理的资料块。先看图，再闯关。</p>
+<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Knowledge Agent 的 Multi-hop 检索循环图" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="90" y="43" text-anchor="middle" font-size="13" fill="#222">分解问题</text>
+<line x1="160" y1="38" x2="218" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="220" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="290" y="43" text-anchor="middle" font-size="13" fill="#222">检索 TopK 5</text>
+<line x1="360" y1="38" x2="418" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="420" y="16" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="490" y="43" text-anchor="middle" font-size="13" fill="#222">判断够不够</text>
+<line x1="490" y1="60" x2="490" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="505" y="88" font-size="12" fill="#222">够了</text>
+<rect x="420" y="104" width="140" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="490" y="131" text-anchor="middle" font-size="13" fill="#222">带出处交付</text>
+<text x="490" y="172" text-anchor="middle" font-size="12" fill="#222">超 3–5 跳 → 停，诚实回答</text>
+<path d="M560,38 L620,38 L620,214 L290,214 L290,62" fill="none" stroke="#0b62d6" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+<text x="455" y="208" text-anchor="middle" font-size="12" fill="#222">不够 → 换词再查</text>
+</svg>
+
+<h2>多跳不是查得多：上一跳的答案变成下一跳的查询词</h2>
+<div class="ceiling">
+<p><strong>例 A：退货政策 2024 vs 2025 —— 三跳，每跳的查询词都来自上一跳</strong></p>
+<p>问题：“某产品 2024 版退货政策和 2025 版改了什么？”一次查全句查不到，因为你还不知道 2024 版的条款编号，而 2025 版的变更公告是按条款编号写的。</p>
+<svg viewBox="0 0 720 240" width="100%" role="img" aria-label="退货政策三跳：跳一查2024版拿到条款编号，跳二用编号查2025版变更，跳三对照回答" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar33a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs><rect x="20" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="120" y="42" text-anchor="middle" font-size="12" fill="#222">跳 1 查询：2024 版退货政策</text><line x1="120" y1="54" x2="120" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="20" y="76" width="200" height="52" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="96" text-anchor="middle" font-size="12" fill="#222">命中：手册第 3 章</text><text x="120" y="114" text-anchor="middle" font-size="12" fill="#222">退货 30 天，条款 R-2024-07</text><line x1="220" y1="102" x2="248" y2="102" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="252" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="352" y="42" text-anchor="middle" font-size="12" fill="#222">跳 2 查询：R-2024-07 变更</text><line x1="352" y1="54" x2="352" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="252" y="76" width="200" height="52" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="352" y="96" text-anchor="middle" font-size="12" fill="#222">命中：2025 变更公告</text><text x="352" y="114" text-anchor="middle" font-size="12" fill="#222">该条款改为 15 天</text><line x1="452" y1="102" x2="480" y2="102" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="484" y="20" width="200" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="584" y="42" text-anchor="middle" font-size="12" fill="#222">跳 3：对照两版，回答</text><line x1="584" y1="54" x2="584" y2="72" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33a)"/><rect x="484" y="76" width="200" height="52" rx="6" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="584" y="96" text-anchor="middle" font-size="12" fill="#222">2024 版 30 天 → 2025 版 15 天</text><text x="584" y="114" text-anchor="middle" font-size="12" fill="#222">带出处 [资料 1][资料 2]</text><text x="352" y="160" text-anchor="middle" font-size="12" fill="#d33">↑ 跳 2 的查询词“R-2024-07”，是跳 1 的结果里拿到的</text><text x="352" y="182" text-anchor="middle" font-size="12" fill="#666">一开始你根本不知道这个编号，所以一次查全句查不到</text><text x="352" y="204" text-anchor="middle" font-size="12" fill="#666">每跳判断：够回答本跳吗？能给下一跳提供查询词吗？</text></svg>
+<p>关键在跳 1 到跳 2 的交接：跳 2 的查询词不是模型凭空想的，是跳 1 命中的资料里白纸黑字写着的“条款 R-2024-07”。这就是“分解、检索、判断、再检索”里“判断”那一步的真正工作：从本跳结果里挑出下一跳要用的词。</p>
+</div>
+<div class="ceiling">
+<p><strong>例 B：电影导演的上一部作品拿了什么奖 —— 两跳，问题里藏着一个你不知道的答案</strong></p>
+<p>问题（虚构例子）：“《海边小镇》的导演，上一部作品拿了什么奖？”一次查全句会失败：资料里没有哪一块同时出现“海边小镇”和“奖项”这两个词。必须先查出导演是谁，再拿导演名去查奖。</p>
+<svg viewBox="0 0 720 230" width="100%" role="img" aria-label="一次查全句查不到因为缺导演名，先查电影得导演再查导演得奖项" style="max-width:720px;display:block;margin:8px 0"><rect x="20" y="16" width="320" height="40" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="180" y="41" text-anchor="middle" font-size="12" fill="#222">一次查全句：“《海边小镇》导演…奖”</text><text x="180" y="76" text-anchor="middle" font-size="13" fill="#d33">✗ 0 命中：没有一块资料同时含电影名和奖项名</text><line x1="360" y1="20" x2="360" y2="200" stroke="#ddd" stroke-width="2"/><rect x="390" y="16" width="300" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="540" y="38" text-anchor="middle" font-size="12" fill="#222">跳 1 查询：《海边小镇》导演是谁</text><rect x="390" y="58" width="300" height="34" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="540" y="80" text-anchor="middle" font-size="12" fill="#222">命中：导演是李明，上一部是《山那边》</text><rect x="390" y="104" width="300" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="540" y="126" text-anchor="middle" font-size="12" fill="#222">跳 2 查询：李明《山那边》获奖</text><rect x="390" y="146" width="300" height="34" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="540" y="168" text-anchor="middle" font-size="12" fill="#222">命中：金鸡奖最佳影片 ✓ 回答</text><text x="540" y="200" text-anchor="middle" font-size="12" fill="#666">导演名“李明”是跳 1 查出来的，不是问题里给的</text></svg>
+<p>判断一个问题要不要多跳，就看这一条：<strong>问题里是不是藏着一个你还不知道的中间答案</strong>（这里是导演名）。藏着，就必须先跳过去把它查出来；没有，一次检索就够了。</p>
+</div>
+<div class="ceiling">
+<p><strong>例 C：缩短了几天 —— 第三跳不是检索，是对照 + 计算</strong></p>
+<p>问题：“某产品 2025 版退货期限比 2024 版缩短了几天？”跳 1 查到 2024 版 30 天，跳 2 查到 2025 版 15 天，答案还不在资料里——资料里没有“缩短了几天”这句话，得在跳 3 自己算：30 − 15 = 15 天。</p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="跳一30天跳二15天，跳三对照计算30减15等于15天" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar33b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs><rect x="40" y="30" width="160" height="44" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="57" text-anchor="middle" font-size="12" fill="#222">跳 1：2024 版 30 天</text><rect x="40" y="90" width="160" height="44" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="120" y="117" text-anchor="middle" font-size="12" fill="#222">跳 2：2025 版 15 天</text><line x1="200" y1="52" x2="280" y2="52" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33b)"/><line x1="200" y1="112" x2="280" y2="112" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar33b)"/><rect x="290" y="52" width="220" height="60" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="400" y="78" text-anchor="middle" font-size="13" fill="#222">跳 3：30 − 15 = 15 天</text><text x="400" y="98" text-anchor="middle" font-size="12" fill="#222">对照 + 计算，不是再查一次</text><text x="400" y="140" text-anchor="middle" font-size="12" fill="#666">结论仍要标出处：30 天 [资料 1]，15 天 [资料 2]</text><text x="400" y="162" text-anchor="middle" font-size="12" fill="#666">算出来的 15 天也要能从两块资料里推出</text></svg>
+<p>所以多跳的最后一跳经常不是检索：对照、比较、计算、汇总，都是合法的“跳”。每跳的任务不同，但规矩一样——每跳的输入、输出、判断结论都要留痕，答错了才能定位是哪一跳歪了。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day33.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：Knowledge Agent 和 RAG 流水线最大的区别是？', opts:['用的模型不一样','能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说','查得更快'], ans:1, why:'流水线是查一次答一次，子 Agent 是带判断的检索循环。'},
+    {type:'choice', q:'第 2 关：Multi-hop 检索循环是哪四步？', opts:['分解、检索、判断、再检索','切块、向量、检索、生成','提问、回答、再提问、再回答'], ans:0, why:'每跳的查询、命中块、判断结论都要写进状态，答错才能定位是哪一跳歪了。'},
+    {type:'assign', q:'第 3 关：把循环的四步按顺序排好。点一步，再点它在第几步。', tasks:['判断够不够','再检索','分解','检索'], agents:['第 1 步','第 2 步','第 3 步','第 4 步'], map:[2,3,0,1], why:'先分解成有依赖的子问题，再检索，判断够不够、能不能给下一跳提供查询词，不够就再检索。'},
+    {type:'choice', q:'第 4 关：检索失败时，正确的做法是？', opts:['用模型训练知识填空','停下来，写清查了几轮、用什么词、为什么判定没查到，最终说资料里没有','换个问题重新问用户'], ans:1, why:'用户能接受没查到，不能接受查到了假的。'},
+    {type:'choice', q:'第 5 关：检索循环为什么要设跳数上限？', opts:['为了让代码好看','防无限转下去，成本和延迟炸掉，通常 3–5 跳','跳数越多越好'], ans:1, why:'超上限就停、诚实回答，不要无限追下去。'},
+    {type:'choice', q:'第 6 关：Knowledge Agent 交给 Supervisor 的应该是什么？', opts:['一堆没整理的资料块','带出处的结果：每条结论标 [资料 N]，每块带标题路径和原文','直接写好的最终答案'], ans:1, why:'没出处的部分不进最终答案，引用是交付标准。'},
+    {type:'choice', q:'第 7 关：引用一致性校验查的是什么？', opts:['引用格式好不好看','结论里的数字、日期、人名能不能在标的那块资料里找到','资料块够不够长'], ans:1, why:'引用对了出处、内容却是编的，校验就是防这一手。'},
+    {type:'choice', q:'第 8 关：例 B 里“《海边小镇》的导演上一部作品拿了什么奖”，判断要不要多跳看什么？', opts:['问题里是不是藏着一个你还不知道的中间答案','问题够不够长','资料块够不够多'], ans:0, why:'这里藏着导演名：先查出导演是谁，再拿导演名去查奖；没有中间答案，一次检索就够了。'},
+    {type:'choice', q:'第 9 关：例 C“2025 版比 2024 版缩短了几天”，第三跳是什么？', opts:['再查一次','对照 + 计算：30 − 15 = 15 天','用模型训练知识填空'], ans:1, why:'资料里没有“缩短了几天”这句话，得自己算；结论仍要标出处，算出来的 15 天也要能从两块资料里推出。'},
+    {type:'choice', q:'第 10 关：什么时候不用多跳？', opts:['问题里只有一个不知道的东西，比如“2024 版退货期限是几天”','问题里藏着中间答案时','每跳 TopK 太大时'], ans:0, why:'一次检索就够了，硬拆成多跳只会多出成本和出错点。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('day33-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day33-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day33 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。多跳现在对应一句话：上一跳的答案变成下一跳的查询词；判断、换策略、止损、带出处交付、诚实回答，全齐了。</p>';
+      showFb(true, '🏆 通关奖励：判断、换策略、止损、多跳循环、带出处交付，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('day33-best-xp', String(best)); } clears++; localStorage.setItem('day33-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>步骤（点一个）：</p><div id="duo-tasks"></div><p>顺序（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个步骤，再点它在第几步。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 排对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ ' + L.tasks.length + ' 步全排对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前排错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 排错了：这一步不在 ' + g + '。再想想循环的顺序：先拆，再查，再判断。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

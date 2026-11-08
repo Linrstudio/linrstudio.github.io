@@ -22,17 +22,6 @@ summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
 
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn:disabled{opacity:.4;cursor:default}
-.wbtn.primary{background:#0b62d6;color:#fff}
-.wbtn.sel{background:#0b62d6;color:#fff}
-.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
-.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
-.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
-.wnode.done{border-color:#22a35a;background:#dcfce7}
-.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -60,15 +49,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>4. get_state 是干嘛的：看看现在跑到哪了</h3>
 <p><code>app.get_state(config)</code> 读出当前状态和下一步要去哪，排错和做“继续”按钮都靠它。</p>
 <div class="warn"><strong>容易踩的坑：</strong>MemorySaver 存在内存里，进程一重启，快照全丢了。生产里要换持久化的 Checkpointer（比如 PostgresSaver、RedisSaver），否则“断点续跑”只在同一次运行里有效。MemorySaver 是学习用的，不是上线用的。</div>
-<div class="widget">
-<h4>动手玩：检查点演示 —— 先跑两步、存一个快照，再中断、再恢复</h4>
-<p>试试这个顺序：跑一步 → 跑一步 → 保存检查点 → 再跑一步 → 中断 → 从检查点恢复。看恢复后是从第几步继续的，消息有没有丢。再试试不保存检查点就中断恢复，会怎样。</p>
-<p><button class="wbtn primary" id="d5-step">跑一步 ▶</button>
-<button class="wbtn" id="d5-save">保存检查点</button>
-<button class="wbtn" id="d5-break">中断</button>
-<button class="wbtn" id="d5-resume">从检查点恢复</button>
-<button class="wbtn" id="d5-reset">重置</button></p>
-<div class="wlog" id="d5-log"></div>
+<div class="card" style="border:2px solid #58cc02;background:#f0ffd7">
+<p><strong>🎮 去闯关：</strong>这课的 Duolingo 闯关在独立页：3 张场景图 + 10 关闯关（满分 100 XP），进度存在浏览器里。</p>
+<p><a href="../duo/lg05.html" style="font-weight:bold;color:#46a302">🦉 开始闯关 →</a></p>
 </div>
 
 <h2>二、代码示例</h2>
@@ -142,45 +125,6 @@ document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
 </script>
-<script>
-(function(){
-var stepTexts=[
-'第 1 步 · agent：模型决定查深圳天气',
-'第 2 步 · tools：工具返回 26°C，晴',
-'第 3 步 · agent：模型回答：深圳今天 26°C，晴。'
-];
-var step=0, msgs=[], ckpt=null, interrupted=false;
-var log=document.getElementById('d5-log');
-function render(note){
-  var out='当前步数：第 '+step+' / 3 步\n检查点：'+(ckpt?('已保存（第 '+ckpt.step+' 步，消息 '+ckpt.msgs.length+' 条）'):'无')+'\n状态：'+(interrupted?'已中断 ⏸':'运行中')+'\n消息列表（共 '+msgs.length+' 条）：\n';
-  for(var i=0;i<msgs.length;i++){ out+=(i+1)+'. '+msgs[i]+'\n'; }
-  if(msgs.length===0){ out+='（空）\n'; }
-  if(note){ out+='\n'+note; }
-  log.textContent=out;
-}
-document.getElementById('d5-step').addEventListener('click',function(){
-  if(interrupted){ render('⚠️ 图已中断，先点“从检查点恢复”。'); return; }
-  if(step>=3){ render('已经跑完了。'); return; }
-  msgs.push(stepTexts[step]); step++; render();
-});
-document.getElementById('d5-save').addEventListener('click',function(){
-  ckpt={step: step, msgs: msgs.slice()};
-  render('✅ 检查点已保存：第 '+step+' 步，消息 '+msgs.length+' 条。');
-});
-document.getElementById('d5-break').addEventListener('click',function(){
-  interrupted=true;
-  render('⏸ 图在第 '+step+' 步中断了。快照已存，回来能接着跑。');
-});
-document.getElementById('d5-resume').addEventListener('click',function(){
-  if(!ckpt){ render('❌ 没有检查点，只能从头跑（点“重置”再跑一遍，记得先保存检查点）。'); return; }
-  step=ckpt.step; msgs=ckpt.msgs.slice(); interrupted=false;
-  render('✅ 从检查点恢复：第 '+step+' 步继续，之前的 '+msgs.length+' 条消息都在，不用重跑。');
-});
-document.getElementById('d5-reset').addEventListener('click',function(){
-  step=0; msgs=[]; ckpt=null; interrupted=false; render();
-});
-render();
-})();
-</script>
+
 </body>
 </html>

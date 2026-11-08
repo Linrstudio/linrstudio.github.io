@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4 闯关：工具节点与 ReAct | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 4 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day04.html">📖 看原文课</a> &nbsp; <span class="tag">LangGraph 7 天课</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 4：工具节点与 ReAct Agent：ToolNode、模型调工具、循环直到无工具调用</h1>
+<p>前三天把图的零件讲完了，今天把它们拼成一个真正能干活的 Agent：模型节点调模型、工具节点跑工具、条件边在中间分流，循环直到模型不再调工具。这就是 ReAct，用图画出来只有两个节点、两条边。先看图，再闯关。</p>
+<svg style="max-width:100%;height:auto;display:block;margin:16px 0" viewBox="0 0 728 170" width="100%" role="img" aria-label="ReAct 循环：agent 到 tools 再回到 agent，直到无工具调用去 END">
+<rect x="20" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="89" text-anchor="middle" font-size="13" fill="#222">agent（调模型）</text>
+<line x1="160" y1="84" x2="220" y2="40" stroke="#0b62d6" stroke-width="2"/><polygon points="220,40 208,44 214,52" fill="#0b62d6"/>
+<rect x="220" y="16" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="295" y="45" text-anchor="middle" font-size="13" fill="#222">tools（ToolNode）</text>
+<line x1="160" y1="84" x2="220" y2="128" stroke="#0b62d6" stroke-width="2"/><polygon points="220,128 208,124 214,132" fill="#0b62d6"/>
+<rect x="220" y="104" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="295" y="133" text-anchor="middle" font-size="13" fill="#222">END（无工具调用）</text>
+<path d="M 295 16 C 295 2, 90 2, 90 60" fill="none" stroke="#0b62d6" stroke-width="2"/><polygon points="90,60 84,48 96,48" fill="#0b62d6"/>
+<text x="400" y="45" font-size="13" fill="#222">tools 跑完回边到 agent</text>
+<text x="400" y="133" font-size="13" fill="#222">循环直到无工具调用</text>
+</svg>
+
+<h2>ReAct 是怎么跑的：三幅图</h2>
+<div class="ceiling">
+<p><strong>场景 1：ReAct 是想和做交替</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="ReAct：想、做、想、做交替直到直接回答" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">ReAct：推理和行动交替进行</text><rect x="20" y="40" width="130" height="40" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="85" y="57" text-anchor="middle" font-size="12" fill="#222">想：调哪个工具？</text><text x="85" y="73" text-anchor="middle" font-size="12" fill="#222">传什么参数？</text><text x="162" y="63" font-size="14" fill="#0b62d6">→</text><rect x="180" y="40" width="130" height="40" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="245" y="57" text-anchor="middle" font-size="12" fill="#222">做：执行工具</text><text x="245" y="73" text-anchor="middle" font-size="12" fill="#222">拿到工具结果</text><text x="322" y="63" font-size="14" fill="#22a35a">→</text><rect x="340" y="40" width="130" height="40" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="405" y="57" text-anchor="middle" font-size="12" fill="#222">再想：还要调吗？</text><text x="405" y="73" text-anchor="middle" font-size="12" fill="#222">看结果再决定</text><text x="482" y="63" font-size="14" fill="#22a35a">→</text><rect x="500" y="40" width="180" height="40" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="590" y="57" text-anchor="middle" font-size="12" fill="#222">不用调了，直接回答</text><text x="590" y="73" text-anchor="middle" font-size="12" fill="#222">tools_condition 返回 END</text><text x="20" y="120" font-size="12" fill="#222">模型先想，再做，看到工具结果再想、再做，直到它觉得不用调工具了</text><text x="20" y="150" font-size="12" fill="#666">图版和手写循环版是同一套逻辑，只是循环变成了边</text></svg>
+<p>模型先想（要不要调工具、调哪个、传什么参数），再做（执行工具），看到工具结果再想、再做，直到它觉得不用调工具了、直接回答。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 2：ToolNode 干的三件事</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="ToolNode 三件事：取调用、执行、包成 ToolMessage" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">ToolNode(tools) 干三件事，不用自己写样板代码</text><rect x="20" y="40" width="200" height="48" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="120" y="58" text-anchor="middle" font-size="12" fill="#222">1. 从 AI 消息里取出</text><text x="120" y="76" text-anchor="middle" font-size="12" fill="#222">tool_calls</text><text x="232" y="68" font-size="14" fill="#0b62d6">→</text><rect x="250" y="40" width="200" height="48" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="350" y="58" text-anchor="middle" font-size="12" fill="#222">2. 按名字找到工具函数</text><text x="350" y="76" text-anchor="middle" font-size="12" fill="#222">执行它</text><text x="462" y="68" font-size="14" fill="#0b62d6">→</text><rect x="480" y="40" width="200" height="48" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="580" y="58" text-anchor="middle" font-size="12" fill="#222">3. 结果包成 ToolMessage</text><text x="580" y="76" text-anchor="middle" font-size="12" fill="#222">追加回状态</text><text x="20" y="120" font-size="12" fill="#666">解析、查表、执行、打包的样板代码不用自己写</text><text x="20" y="142" font-size="12" fill="#666">但要知道它在背后做这些事，排错才知道去哪查</text></svg>
+<p>ToolNode(tools) 干三件事：从最后一条 AI 消息里取出工具调用，按名字找到对应的工具函数，执行它，把结果包成 ToolMessage 追加回状态。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 3：bind_tools 是钥匙</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="没绑定工具模型永远不调工具，绑定后才能调" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">没绑定：模型永远不调工具</text><rect x="20" y="40" width="300" height="60" rx="8" fill="#fee2e2" stroke="#d33"/><text x="170" y="66" text-anchor="middle" font-size="12" fill="#222">llm 没 bind_tools</text><text x="170" y="88" text-anchor="middle" font-size="12" fill="#d33">✗ 第一轮就走到 END</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><text x="380" y="24" font-size="13" fill="#222">绑定后：模型按描述决定调哪个</text><rect x="380" y="40" width="300" height="60" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="530" y="66" text-anchor="middle" font-size="12" fill="#222">llm.bind_tools(tools)</text><text x="530" y="88" text-anchor="middle" font-size="12" fill="#22a35a">✓ 需要时返回 tool_calls</text><text x="20" y="140" font-size="12" fill="#666">绑定的是工具的 schema：名字、参数、描述</text><text x="20" y="162" font-size="12" fill="#666">模型按描述决定调哪个、传什么参数</text></svg>
+<p>模型节点里，模型要先 llm.bind_tools(tools) 绑定工具列表，调模型时它才会在需要的时候返回 tool_calls。没绑定的模型永远不会调工具。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day04.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+  {
+    "type": "choice",
+    "q": "第 1 关：ReAct 是什么？",
+    "opts": [
+      "推理和行动交替：模型先想、再调工具、看结果再想，直到不用调工具直接回答",
+      "模型一次性回答，不调工具",
+      "工具先跑，模型后看"
+    ],
+    "ans": 0,
+    "why": "图版和手写循环版是同一套逻辑，只是循环变成了边。"
+  },
+  {
+    "type": "choice",
+    "q": "第 2 关：ToolNode 干哪三件事？",
+    "opts": [
+      "写提示词、调模型、生成回答",
+      "从 AI 消息里取工具调用、按名字找到工具函数执行、结果包成 ToolMessage 追加回状态",
+      "只负责记日志"
+    ],
+    "ans": 1,
+    "why": "不用自己写解析、查表、执行、打包的样板代码，但要知道它在背后做这些事。"
+  },
+  {
+    "type": "assign",
+    "q": "第 3 关：点一条消息，再点它的类型，把 4 条消息按顺序分完。",
+    "tasks": [
+      "用户提问",
+      "模型返回工具调用",
+      "工具结果",
+      "模型最终回答"
+    ],
+    "agents": [
+      "HumanMessage",
+      "AI（tool_calls）",
+      "ToolMessage",
+      "AI（直接回答）"
+    ],
+    "map": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "why": "messages 全程是 Human → AI（工具调用）→ Tool → AI（最终回答）。"
+  },
+  {
+    "type": "choice",
+    "q": "第 4 关：模型怎么才能调工具？",
+    "opts": [
+      "直接问它",
+      "把工具写进状态里",
+      "llm.bind_tools(tools) 绑定工具列表，模型才会在需要时返回 tool_calls"
+    ],
+    "ans": 2,
+    "why": "没绑定的模型永远不会调工具，图第一轮就走到 END。"
+  },
+  {
+    "type": "choice",
+    "q": "第 5 关：循环什么时候停？",
+    "opts": [
+      "模型某次返回的消息里没有 tool_calls，tools_condition 返回 END",
+      "工具跑完一次就停",
+      "跑满 25 步才停"
+    ],
+    "ans": 0,
+    "why": "步数上限只是保险，正常停靠的是模型不再调工具。"
+  },
+  {
+    "type": "choice",
+    "q": "第 6 关：为什么不用旧版 ReAct 工厂函数？",
+    "opts": [
+      "因为它跑得慢",
+      "它已弃用；手写图（StateGraph + ToolNode + tools_condition）每一步都看得见、改得动",
+      "因为它不支持工具"
+    ],
+    "ans": 1,
+    "why": "新版推荐做法就是今天这张手写图。"
+  },
+  {
+    "type": "choice",
+    "q": "第 7 关：工具结果以什么形式回到状态里？",
+    "opts": [
+      "直接覆盖 messages",
+      "写进一个单独的字段",
+      "包成 ToolMessage，追加到 messages 末尾"
+    ],
+    "ans": 2,
+    "why": "messages 全程是 Human → AI（工具调用）→ Tool → AI（最终回答）。"
+  },
+  {
+    "type": "choice",
+    "q": "第 8 关：bind_tools 不绑会怎样？",
+    "opts": [
+      "模型永远不会返回 tool_calls，图第一轮就走到 END",
+      "模型会自己猜工具",
+      "图直接报错"
+    ],
+    "ans": 0,
+    "why": "绑定的是工具的 schema（名字、参数、描述），模型按描述决定调哪个、传什么参数。"
+  },
+  {
+    "type": "choice",
+    "q": "第 9 关：模型一直调同一个工具（比如工具回答不了的问题），先修什么？",
+    "opts": [
+      "把 recursion_limit 调大",
+      "提示词里加一句“查不到就说查不到”",
+      "换一个工具"
+    ],
+    "ans": 1,
+    "why": "一直调工具要先修提示词或工具设计，步数上限只是保险丝。"
+  },
+  {
+    "type": "assign",
+    "q": "第 10 关：点一个步骤，再点负责它的节点，把 3 步分完。",
+    "tasks": [
+      "调模型，可能返回工具调用",
+      "执行工具调用",
+      "判断下一步去哪"
+    ],
+    "agents": [
+      "agent 节点",
+      "tools 节点（ToolNode）",
+      "tools_condition 条件边"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "agent 调模型、tools 执行、tools_condition 分流——两个节点加一条条件边，就是 ReAct。"
+  }
+];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('lg04-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('lg04-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day 4 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。ReAct 现在对应三幅图：推理和行动交替、ToolNode 三件事、bind_tools 是钥匙。</p>';
+      showFb(true, '🏆 通关奖励：ReAct + ToolNode + bind_tools + 循环终止，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('lg04-best-xp', String(best)); } clears++; localStorage.setItem('lg04-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

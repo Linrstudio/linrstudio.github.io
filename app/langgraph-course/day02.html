@@ -22,17 +22,6 @@ summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
 
-.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
-.widget h4{margin:0 0 8px;font-size:16px}
-.wbtn{margin:4px 6px 4px 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
-.wbtn:disabled{opacity:.4;cursor:default}
-.wbtn.primary{background:#0b62d6;color:#fff}
-.wbtn.sel{background:#0b62d6;color:#fff}
-.wlog{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;min-height:60px;white-space:pre-wrap}
-.wnode{display:inline-block;padding:8px 14px;border-radius:10px;border:2px solid #ccc;background:#fff;margin:4px;font-size:14px}
-.wnode.on{border-color:#0b62d6;background:#eef4ff;font-weight:bold}
-.wnode.done{border-color:#22a35a;background:#dcfce7}
-.winput{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px;width:65%}
 </style>
 </head>
 <body>
@@ -58,16 +47,9 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h3>4. 为什么状态要可合并：并行分支的需要</h3>
 <p>两个节点同时跑、同时往状态里写，没有 Reducer 会互相覆盖，只剩一个；有了 Reducer，两个更新按规则合并，消息都追加、计数都加上。</p>
 <div class="warn"><strong>容易踩的坑：</strong>在节点里直接改传入的 state（比如 <code>state["messages"].append(...)</code>）。节点应该返回更新，让图去合并；直接改传入的状态，图不知道你改了什么，Checkpoint 存下来的可能是改之前的状态，断点续跑会丢数据。</div>
-<div class="widget">
-<h4>动手玩：状态游乐场 —— 点一点，看 add_messages 怎么合并</h4>
-<p>在框里写一句话，选一种消息加进去。注意：新消息是追加到列表末尾的，旧消息不会丢。再点“试试覆盖”，看看不用 Reducer 会丢成什么样。</p>
-<p><input class="winput" id="d2-input" value="深圳今天天气怎么样？"> </p>
-<p><button class="wbtn primary" id="d2-human">+ HumanMessage</button>
-<button class="wbtn" id="d2-ai">+ AIMessage</button>
-<button class="wbtn" id="d2-tool">+ ToolMessage</button>
-<button class="wbtn" id="d2-overwrite">试试覆盖（错误示范）</button>
-<button class="wbtn" id="d2-reset">重置</button></p>
-<div class="wlog" id="d2-log"></div>
+<div class="card" style="border:2px solid #58cc02;background:#f0ffd7">
+<p><strong>🎮 去闯关：</strong>这课的 Duolingo 闯关在独立页：3 张场景图 + 10 关闯关（满分 100 XP），进度存在浏览器里。</p>
+<p><a href="../duo/lg02.html" style="font-weight:bold;color:#46a302">🦉 开始闯关 →</a></p>
 </div>
 
 <h2>二、代码示例</h2>
@@ -151,32 +133,6 @@ document.getElementById('showAll').addEventListener('click', function(){
   document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
 });
 </script>
-<script>
-(function(){
-var msgs=[];
-var log=document.getElementById('d2-log');
-var input=document.getElementById('d2-input');
-function render(note){
-  var out='messages（共 '+msgs.length+' 条，add_messages 追加）：\n';
-  for(var i=0;i<msgs.length;i++){ out+=(i+1)+'. ['+msgs[i].role+'] '+msgs[i].text+'\n'; }
-  if(msgs.length===0){ out+='（空列表，先加一条消息）\n'; }
-  if(note){ out+='\n'+note; }
-  log.textContent=out;
-}
-function add(role, text){
-  msgs.push({role: role, text: text});
-  render();
-}
-document.getElementById('d2-human').addEventListener('click',function(){ add('HumanMessage', input.value || '你好'); });
-document.getElementById('d2-ai').addEventListener('click',function(){ add('AIMessage', '我来查一下深圳天气。'); });
-document.getElementById('d2-tool').addEventListener('click',function(){ add('ToolMessage', '工具返回：26°C，晴。'); });
-document.getElementById('d2-overwrite').addEventListener('click',function(){
-  msgs=[{role: 'AIMessage', text: '我来查一下深圳天气。'}];
-  render('⚠️ 覆盖了！整个列表只剩最后这一条，之前用户问过什么全丢了——这就是不用 add_messages 的后果。');
-});
-document.getElementById('d2-reset').addEventListener('click',function(){ msgs=[]; render(); });
-render();
-})();
-</script>
+
 </body>
 </html>

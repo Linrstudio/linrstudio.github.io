@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 6 闯关：人工介入与中断 | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 6 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day06.html">📖 看原文课</a> &nbsp; <span class="tag">LangGraph 7 天课</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 6：人工介入与中断：interrupt、human-in-the-loop、审核后继续</h1>
+<p>Agent 能自己跑，但不是每一步都能自己跑：发全员消息、删文件、扣款这种高危操作，执行前必须停下来、等人看一眼。LangGraph 的中断就是干这个的：图跑到指定的节点前停住，等人审核完，再决定继续、改了再继续，还是不继续。先看图，再闯关。</p>
+<svg style="max-width:100%;height:auto;display:block;margin:16px 0" viewBox="0 0 728 170" width="100%" role="img" aria-label="人工介入：图在 tools 前停住，等人审核后继续或修改">
+<rect x="20" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="89" text-anchor="middle" font-size="13" fill="#222">agent</text>
+<line x1="140" y1="84" x2="180" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="180,84 168,78 168,90" fill="#0b62d6"/>
+<rect x="180" y="60" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="250" y="89" text-anchor="middle" font-size="13" fill="#222">⏸ 中断：等人审核</text>
+<line x1="320" y1="84" x2="360" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="360,84 348,78 348,90" fill="#0b62d6"/>
+<rect x="360" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="420" y="89" text-anchor="middle" font-size="13" fill="#222">tools</text>
+<line x1="480" y1="84" x2="520" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="520,84 508,78 508,90" fill="#0b62d6"/>
+<rect x="520" y="60" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="580" y="89" text-anchor="middle" font-size="13" fill="#222">END</text>
+<text x="20" y="140" font-size="13" fill="#222">审核后三条路：继续（原样执行）、改了再继续、拒绝（不执行）</text>
+</svg>
+
+<h2>人工介入：三幅图</h2>
+<div class="ceiling">
+<p><strong>场景 1：高危操作前停住，像过安检</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="图在 tools 前停住等人审核" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">图跑到 tools 节点前停住，等人审核——停住不是报错</text><rect x="20" y="40" width="100" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="70" y="63" text-anchor="middle" font-size="12" fill="#222">agent</text><text x="132" y="63" font-size="14" fill="#0b62d6">→</text><rect x="150" y="40" width="150" height="36" rx="8" fill="#fef3c7" stroke="#d97706"/><text x="225" y="63" text-anchor="middle" font-size="12" fill="#222">⏸ 中断：等人审核</text><text x="312" y="63" font-size="14" fill="#0b62d6">→</text><rect x="330" y="40" width="100" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="380" y="63" text-anchor="middle" font-size="12" fill="#222">tools</text><text x="442" y="63" font-size="14" fill="#0b62d6">→</text><rect x="460" y="40" width="80" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="500" y="63" text-anchor="middle" font-size="12" fill="#222">END</text><text x="20" y="110" font-size="12" fill="#222">编译时传 interrupt_before=["tools"]，每次跑到 tools 前就停住</text><text x="20" y="132" font-size="12" fill="#666">人看完再决定：要做什么、参数是什么、影响是什么，都展示给人</text><text x="20" y="162" font-size="12" fill="#d33">⚠️ 中断了但没配 Checkpointer？状态没地方存，人回来图就忘了跑到哪了</text></svg>
+<p>编译时传 interrupt_before=["tools"]，图每次跑到 tools 节点前就停住、返回当前状态，不执行工具。停住不是报错，是正常状态。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 2：审核后三条路</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="审核后三条路：继续、改了再继续、拒绝" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">审核后三条路，缺了“改”和“拒绝”，审核只剩摆设按钮</text><rect x="20" y="40" width="200" height="48" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="120" y="58" text-anchor="middle" font-size="12" fill="#222">✅ 继续：原样执行</text><text x="120" y="76" text-anchor="middle" font-size="12" fill="#222">Command(resume=...) 续跑</text><rect x="250" y="40" width="200" height="48" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="350" y="58" text-anchor="middle" font-size="12" fill="#222">✏️ 改了再继续</text><text x="350" y="76" text-anchor="middle" font-size="12" fill="#222">update_state 改参数再跑</text><rect x="480" y="40" width="200" height="48" rx="8" fill="#fee2e2" stroke="#d33"/><text x="580" y="58" text-anchor="middle" font-size="12" fill="#222">❌ 拒绝：不执行</text><text x="580" y="76" text-anchor="middle" font-size="12" fill="#222">回答写清楚“已拒绝执行”</text><text x="20" y="120" font-size="12" fill="#222">例子：发全员消息前停住——批准就发，改收件人成“测试群”再发，拒绝就不发</text><text x="20" y="150" font-size="12" fill="#666">三条路都要有，审核才不是走过场</text></svg>
+<p>审核后三条路：继续（原样执行）、改了再继续（用 update_state 改参数再跑）、拒绝（不执行，回答里写清楚“已拒绝执行”）。</p>
+</div>
+<div class="ceiling">
+<p><strong>场景 3：两种中断</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="interrupt_before 是固定检查点，interrupt 是节点内动态中断" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">interrupt_before：编译时定死，固定检查点</text><rect x="20" y="40" width="300" height="60" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="170" y="66" text-anchor="middle" font-size="12" fill="#222">compile(interrupt_before=["tools"])</text><text x="170" y="88" text-anchor="middle" font-size="12" fill="#222">每次跑到 tools 前都停</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><text x="380" y="24" font-size="13" fill="#222">interrupt()：节点内动态问人</text><rect x="380" y="40" width="300" height="60" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="530" y="66" text-anchor="middle" font-size="12" fill="#222">节点跑到一半调 interrupt()</text><text x="530" y="88" text-anchor="middle" font-size="12" fill="#222">人的回复就是它的返回值</text><text x="20" y="140" font-size="12" fill="#666">固定检查点 vs 动态问人：跑到一半才知道要不要问人时，用 interrupt()</text></svg>
+<p>interrupt_before 是编译时定死的固定检查点；interrupt() 是节点内动态中断，跑到一半才知道要不要问人时用，人的回复就是它的返回值。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langgraph-course/day06.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+  {
+    "type": "choice",
+    "q": "第 1 关：中断是什么？",
+    "opts": [
+      "图在指定节点前停住，等外部输入，快照已存好，人回来从停住处接着跑",
+      "图报错退出了",
+      "图跑完了"
+    ],
+    "ans": 0,
+    "why": "停住不是报错，是正常状态；中断必须配 Checkpointer。"
+  },
+  {
+    "type": "choice",
+    "q": "第 2 关：human-in-the-loop 是什么意思？",
+    "opts": [
+      "人只能看日志",
+      "人是图里的一步：高危操作前图停下来等人的决定，人的决定是继续跑的输入",
+      "人代替模型写代码"
+    ],
+    "ans": 1,
+    "why": "审核界面可以是按钮、工单、邮件，但逻辑都一样。"
+  },
+  {
+    "type": "choice",
+    "q": "第 3 关：审核后有哪三条路？",
+    "opts": [
+      "只有继续",
+      "继续和拒绝",
+      "继续、改了再继续、拒绝"
+    ],
+    "ans": 2,
+    "why": "缺了“改”和“拒绝”，审核就只剩一个摆设按钮。"
+  },
+  {
+    "type": "assign",
+    "q": "第 4 关：点一个审核决定，再点它的做法，把 3 个分完。",
+    "tasks": [
+      "继续",
+      "改了再继续",
+      "拒绝"
+    ],
+    "agents": [
+      "原样执行",
+      "update_state 改参数再跑",
+      "不执行，回答写清楚已拒绝"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "三条路都要有：继续、改参数再继续、拒绝。"
+  },
+  {
+    "type": "choice",
+    "q": "第 5 关：怎么让图在 tools 节点前停住？",
+    "opts": [
+      "编译时传 interrupt_before=[\"tools\"]",
+      "在 tools 节点里抛错",
+      "把 tools 节点删掉"
+    ],
+    "ans": 0,
+    "why": "编译时中断适合固定检查点，节点内 interrupt() 适合跑到一半才知道要问人的场景。"
+  },
+  {
+    "type": "choice",
+    "q": "第 6 关：interrupt() 函数是干嘛的？",
+    "opts": [
+      "中断整个程序",
+      "节点内动态停住问人，人的回复就是它的返回值，节点接着跑",
+      "删除状态"
+    ],
+    "ans": 1,
+    "why": "从 langgraph.types 导入，适合跑到一半才知道要不要问人的场景。"
+  },
+  {
+    "type": "choice",
+    "q": "第 7 关：中断为什么必须配 Checkpointer？",
+    "opts": [
+      "为了跑得更快",
+      "为了省内存",
+      "没有它，图停住后状态没地方存，人回来时图忘了跑到哪了"
+    ],
+    "ans": 2,
+    "why": "中断和 Checkpoint 是一对，Day 5 是 Day 6 的前置条件。"
+  },
+  {
+    "type": "choice",
+    "q": "第 8 关：哪些操作必须人工介入？",
+    "opts": [
+      "读天气、查资料",
+      "删文件、发全员消息、扣款、改线上配置",
+      "写日志"
+    ],
+    "ans": 1,
+    "why": "判断标准是“执行错了能不能撤销、影响有多大”，不能撤销、影响大的都要停下来等人看一眼。"
+  },
+  {
+    "type": "choice",
+    "q": "第 9 关：审核后想继续跑，用什么？",
+    "opts": [
+      "再 invoke 一次，或传 Command(resume=...)，图从停住处接着跑",
+      "重新编译一张图",
+      "换一个 thread_id"
+    ],
+    "ans": 0,
+    "why": "继续：再 invoke 一次，或传 Command(resume=...)；改参数：update_state 再 invoke。"
+  },
+  {
+    "type": "assign",
+    "q": "第 10 关：点一种场景，再点该用哪种中断，把 3 个分完。",
+    "tasks": [
+      "每次跑到 tools 前都要停",
+      "跑到一半才知道要问人",
+      "审核超时没人理"
+    ],
+    "agents": [
+      "interrupt_before 编译时定死",
+      "节点内 interrupt() 动态问",
+      "生产要定超时策略：等还是自动拒绝"
+    ],
+    "map": [
+      0,
+      1,
+      2
+    ],
+    "why": "固定检查点用 interrupt_before，动态问人用 interrupt()，超时策略是上线前要问的三个问题之一。"
+  }
+];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('lg06-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('lg06-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day 6 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。人工介入现在对应三幅图：高危操作前停住、审核后三条路、两种中断各管一种场景。</p>';
+      showFb(true, '🏆 通关奖励：interrupt_before + interrupt() + 审核三条路 + 中断配 Checkpoint，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('lg06-best-xp', String(best)); } clears++; localStorage.setItem('lg06-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>

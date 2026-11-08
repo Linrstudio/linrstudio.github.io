@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 35 闯关：工具安全纵深防御 | Agent 闯关大厅</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px 16px 64px;color:#3c3c3c;line-height:1.75;background:#fff}
+h1{font-size:24px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#1cb0f6;text-decoration:none} a:hover{text-decoration:underline}
+.topbar{position:sticky;top:0;background:#fff;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:2px solid #e5e5e5;font-weight:bold;font-size:15px}
+.topbar .mascot{font-size:22px}
+.duo-bar{height:16px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:12px 0}
+.duo-bar i{display:block;height:100%;background:#58cc02;width:0%;border-radius:999px;transition:width .3s}
+.card{border:2px solid #e5e5e5;border-radius:16px;padding:16px;margin:14px 0}
+.ceiling{border:2px solid #e5e5e5;border-radius:16px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.tag{display:inline-block;background:#eef4ff;color:#1cb0f6;border-radius:999px;padding:2px 10px;font-size:13px}
+.duo-q{font-size:18px;margin:14px 0;font-weight:bold}
+.duo-opt{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;cursor:pointer;font-size:16px;color:#3c3c3c}
+.duo-opt:active{transform:translateY(2px);border-bottom-width:2px}
+.duo-opt.correct{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;animation:pop .3s}
+.duo-opt.wrong{background:#ffdfe0;border-color:#ff4b4b;border-bottom-color:#ff4b4b;animation:shake .3s}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:10px 16px;border-radius:999px;border:2px solid #1cb0f6;border-bottom:4px solid #1cb0f6;background:#fff;color:#1cb0f6;cursor:pointer;font-size:15px;font-weight:bold}
+.duo-chip.sel{background:#1cb0f6;color:#fff}
+.duo-chip.done{background:#d7ffb8;border-color:#58cc02;border-bottom-color:#58cc02;color:#3c3c3c;cursor:default}
+.duo-box{border:2px dashed #1cb0f6;border-radius:16px;padding:12px;margin:10px 0;min-height:48px;background:#fff;font-size:15px}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:12px;border-radius:16px;padding:14px 16px;background:#fff;border:2px solid #e5e5e5;font-size:15px}
+.duo-fb.ok{border-color:#58cc02;background:#f0ffd7}
+.duo-fb.err{border-color:#ff4b4b;background:#fff0f0}
+.wbtn{margin:8px 8px 0 0;padding:12px 24px;border-radius:16px;border:2px solid #e5e5e5;border-bottom:4px solid #e5e5e5;background:#fff;color:#3c3c3c;cursor:pointer;font-size:16px;font-weight:bold}
+.wbtn:active{transform:translateY(2px);border-bottom-width:2px}
+.wbtn.primary{background:#58cc02;border-color:#58cc02;border-bottom-color:#46a302;color:#fff}
+.lottie-box{width:140px;height:140px;margin:8px auto;display:none}
+.lottie-box.show{display:block}
+.confetti{width:100%;height:120px;margin:8px auto;display:none}
+.confetti.show{display:block}
+.xp-float{color:#58cc02;font-weight:bold;animation:floatup 1s}
+@keyframes pop{0%{transform:scale(.95)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes floatup{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="topbar"><span><span class="mascot">🦉</span> Day 35 闯关</span><span id="duo-hearts">❤️❤️❤️</span><span id="duo-xp">⭐ 0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day35.html">📖 看原文课</a> &nbsp; <span class="tag">第 5 周</span> <span class="tag">10 关 · 满分 100 XP</span></p>
+<h1>Day 35：工具安全纵深防御：Schema、ACL、幂等</h1>
+<p>工具一接上，安全问题就来了：模型可能传错参数、调错工具、重复调用、调了不该调的高危操作。纵深防御的意思是：不靠任何一层兜底，每一层都拦一部分，层层叠加。这课按调用链路的顺序讲：Schema 白名单、Pydantic 校验、ACL、幂等键、超时、沙箱、审计日志、高危操作人工确认——第 2 周的白名单是其中一层，这课补全整条链。</p>
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="工具安全纵深防御：八层按调用链路顺序排列" style="max-width:100%;height:auto;display:block;margin:16px 0">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<rect x="20" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="95" y="43" text-anchor="middle" font-size="13" fill="#222">白名单</text>
+<line x1="170" y1="38" x2="188" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="190" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="265" y="43" text-anchor="middle" font-size="13" fill="#222">Pydantic 校验</text>
+<line x1="340" y1="38" x2="358" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="360" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="435" y="43" text-anchor="middle" font-size="13" fill="#222">ACL 查权</text>
+<line x1="510" y1="38" x2="528" y2="38" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="530" y="16" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="605" y="43" text-anchor="middle" font-size="13" fill="#222">幂等键</text>
+<line x1="605" y1="60" x2="605" y2="102" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="530" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="605" y="131" text-anchor="middle" font-size="13" fill="#222">超时</text>
+<line x1="530" y1="126" x2="512" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="360" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="435" y="131" text-anchor="middle" font-size="13" fill="#222">沙箱</text>
+<line x1="360" y1="126" x2="342" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="190" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="265" y="131" text-anchor="middle" font-size="13" fill="#222">审计日志</text>
+<line x1="190" y1="126" x2="172" y2="126" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="20" y="104" width="150" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="95" y="131" text-anchor="middle" font-size="13" fill="#222">人工确认</text>
+<path d="M95,148 L95,170 L360,170 L360,190" fill="none" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="260" y="192" width="200" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="360" y="219" text-anchor="middle" font-size="13" fill="#222">执行工具</text>
+<text x="480" y="219" font-size="12" fill="#222">缺一层 = 多一个口子</text>
+</svg>
+
+<h2>三幅图：纵深防御长什么样</h2>
+<div class="ceiling">
+<p><strong>纵深防御：城堡不是一道门，是三道门一道一道过</strong></p>
+<svg viewBox="0 0 720 210" width="100%" role="img" aria-label="城堡三道门：白名单、Pydantic 校验、ACL，坏调用在第一道门就被拦下" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="660" height="120" rx="8" fill="#f5f0e6" stroke="#b08968" stroke-width="2"/><rect x="30" y="30" width="660" height="26" rx="8" fill="#b08968"/><text x="360" y="48" text-anchor="middle" font-size="13" fill="#fff">🏰 工具城堡：每道门只放自己认得的调用过去</text><path d="M130 150 L130 100 Q130 78 152 78 Q174 78 174 100 L174 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="152" y="170" text-anchor="middle" font-size="12" fill="#222">① 白名单</text><text x="152" y="188" text-anchor="middle" font-size="11" fill="#666">工具名在清单里吗？</text><path d="M330 150 L330 100 Q330 78 352 78 Q374 78 374 100 L374 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="352" y="170" text-anchor="middle" font-size="12" fill="#222">② Pydantic 校验</text><text x="352" y="188" text-anchor="middle" font-size="11" fill="#666">值合法吗？</text><path d="M530 150 L530 100 Q530 78 552 78 Q574 78 574 100 L574 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="552" y="170" text-anchor="middle" font-size="12" fill="#222">③ ACL 查权</text><text x="552" y="188" text-anchor="middle" font-size="11" fill="#666">你有权限调它吗？</text><rect x="60" y="118" width="46" height="32" rx="6" fill="#fee2e2" stroke="#d33" stroke-width="1.5"/><text x="83" y="139" text-anchor="middle" font-size="14" fill="#d33">✗</text><text x="106" y="112" text-anchor="middle" font-size="11" fill="#d33">不在清单的工具</text><text x="106" y="202" text-anchor="middle" font-size="11" fill="#d33">第一道门就拦下</text><rect x="600" y="118" width="46" height="32" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="1.5"/><text x="623" y="139" text-anchor="middle" font-size="14" fill="#22a35a">✓</text><text x="623" y="202" text-anchor="middle" font-size="11" fill="#22a35a">三道门都过才执行</text><text x="205" y="130" font-size="16" fill="#22a35a">→</text><text x="405" y="130" font-size="16" fill="#22a35a">→</text></svg>
+<p>坏调用在第一道门就被拦下，好调用也要一道一道过完白名单、校验、查权三道门才轮到执行——这就是纵深防御：不靠任何一层兜底。</p>
+</div>
+<div class="ceiling">
+<p><strong>幂等键：盖了戳的快递单，重复送来也只处理一次</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="两张一模一样的快递单带着同一个幂等键，第一张执行并盖戳，第二张直接返回上次结果" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="220" height="110" rx="8" fill="#fff" stroke="#0b62d6" stroke-width="1.5"/><text x="140" y="58" text-anchor="middle" font-size="13" fill="#222">📦 快递单 ①</text><text x="140" y="82" text-anchor="middle" font-size="12" fill="#222">发消息：给群发通知</text><text x="140" y="104" text-anchor="middle" font-size="12" fill="#666">幂等键：u1 + t7 + send</text><circle cx="200" cy="122" r="26" fill="none" stroke="#d33" stroke-width="3"/><text x="200" y="128" text-anchor="middle" font-size="11" fill="#d33">已执行 ✓</text><text x="140" y="168" text-anchor="middle" font-size="12" fill="#22a35a">第一次：执行，存下键和结果</text><text x="275" y="95" font-size="22" fill="#0b62d6">→</text><rect x="300" y="30" width="220" height="110" rx="8" fill="#fff" stroke="#0b62d6" stroke-width="1.5"/><text x="410" y="58" text-anchor="middle" font-size="13" fill="#222">📦 快递单 ②（一模一样）</text><text x="410" y="82" text-anchor="middle" font-size="12" fill="#222">发消息：给群发通知</text><text x="410" y="104" text-anchor="middle" font-size="12" fill="#666">幂等键：u1 + t7 + send</text><text x="410" y="128" text-anchor="middle" font-size="12" fill="#d33">键已在，直接返回上次结果</text><text x="410" y="168" text-anchor="middle" font-size="12" fill="#d33">第二次：不执行，只回“已发送”</text><text x="545" y="95" font-size="22" fill="#0b62d6">→</text><rect x="570" y="55" width="120" height="60" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="1.5"/><text x="630" y="82" text-anchor="middle" font-size="13" fill="#222">只发了一次</text><text x="630" y="104" text-anchor="middle" font-size="12" fill="#22a35a">✓ 没有重复事故</text><text x="360" y="196" text-anchor="middle" font-size="11" fill="#666">关键：重试必须带同一个键——键要从固定信息算出来，不能用时间戳或随机数</text></svg>
+<p>同一张单子送来两次，第一次执行并盖戳，第二次认出是同一个键，直接把上次的结果递回去，绝不重发一次。</p>
+</div>
+<div class="ceiling">
+<p><strong>高危操作：保险柜要两把钥匙，缺一把都不开</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="保险柜要模型和人两把钥匙才开，门外只有白名单上的工具能进门" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="300" height="130" rx="12" fill="#374151" stroke="#111827" stroke-width="2"/><circle cx="180" cy="95" r="34" fill="#4b5563" stroke="#f5c542" stroke-width="3"/><circle cx="180" cy="95" r="8" fill="#f5c542"/><text x="180" y="162" text-anchor="middle" font-size="12" fill="#fff">🔒 高危操作保险柜</text><text x="180" y="182" text-anchor="middle" font-size="11" fill="#d1d5db">删文件 / 扣款 / 发全员消息</text><path d="M120 60 L120 40 M120 40 L140 40" stroke="#f5c542" stroke-width="4" fill="none"/><text x="130" y="28" text-anchor="middle" font-size="11" fill="#f5c542">🔑 模型申请</text><path d="M240 60 L240 40 M240 40 L260 40" stroke="#22a35a" stroke-width="4" fill="none"/><text x="250" y="28" text-anchor="middle" font-size="11" fill="#22a35a">🔑 人工确认</text><line x1="360" y1="20" x2="360" y2="190" stroke="#ddd" stroke-width="2"/><rect x="400" y="30" width="290" height="130" rx="12" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="545" y="54" text-anchor="middle" font-size="13" fill="#222">🚪 白名单大门</text><text x="545" y="80" text-anchor="middle" font-size="12" fill="#22a35a">✓ 查天气：进</text><text x="545" y="104" text-anchor="middle" font-size="12" fill="#22a35a">✓ 检索：进</text><text x="545" y="128" text-anchor="middle" font-size="12" fill="#d33">✗ 不在清单的工具：进不来</text><text x="545" y="182" text-anchor="middle" font-size="11" fill="#666">确认里要写清“做什么、影响什么”，不能只问“是否继续”</text></svg>
+<p>删文件、扣款这种高危操作像保险柜：模型一把钥匙、人一把钥匙，两把都到才开；门外还有白名单大门，不在清单上的工具连门都进不来。</p>
+</div>
+
+<h2>开始闯关 🎮</h2>
+<p><span id="duo-level">第 1 / 10 关</span> · 答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div id="duo-body"></div>
+<div class="lottie-box" id="lottie-check"></div>
+<div class="confetti" id="lottie-confetti"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#888" id="duo-best"></p>
+<p><a href="index.html">← 回大厅</a> &nbsp; <a href="../langchain-course/day35.html">📖 看原文课</a></p>
+
+<script>
+var CHECK_ANIM = {"v":"5.7.4","fr":30,"ip":0,"op":45,"w":200,"h":200,"layers":[
+{"ddd":0,"ind":1,"ty":4,"nm":"circle","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"i":{"x":[0.2,0.2,0.2],"y":[1,1,1]},"o":{"x":[0.8,0.8,0.8],"y":[0,0,0]},"t":0,"s":[0,0,100]},{"t":15,"s":[100,100,100]}]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"el","s":{"a":0,"k":[160,160]},"p":{"a":0,"k":[0,0]}},{"ty":"fl","c":{"a":0,"k":[0.345,0.8,0.008,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0},
+{"ddd":0,"ind":2,"ty":4,"nm":"check","sr":1,"ks":{"o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":10,"s":[0]},{"t":18,"s":[100]}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,100,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"v":[[-42,4],[-12,34],[46,-32]],"c":false}}},{"ty":"st","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100},"w":{"a":0,"k":14},"lc":2,"lj":2},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":45,"st":0}
+]};
+function confettiData(){
+  var colors = [[1,0.75,0,1],[0.11,0.69,0.96,1],[0.345,0.8,0.008,1],[1,0.29,0.29,1],[0.62,0.32,0.96,1]];
+  var layers = [];
+  for (var i = 0; i < 12; i++) {
+    var x0 = 20 + (i * 53) % 680, x1 = x0 + ((i % 3) - 1) * 40, rot = 180 + i * 137;
+    layers.push({"ddd":0,"ind":i+1,"ty":4,"nm":"c"+i,"sr":1,"ks":{
+      "o":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[100]},{"t":55,"s":[100]},{"t":60,"s":[0]}]},
+      "r":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[0]},{"t":60,"s":[rot]}]},
+      "p":{"a":1,"k":[{"i":{"x":[0.2],"y":[1]},"o":{"x":[0.8],"y":[0]},"t":0,"s":[x0,-10,0]},{"t":60,"s":[x1,130,0]}]},
+      "a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},
+      "ao":0,"shapes":[{"ty":"gr","it":[{"ty":"rc","s":{"a":0,"k":[14,20]},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":3}},{"ty":"fl","c":{"a":0,"k":colors[i % 5]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":60,"st":0});
+  }
+  return {"v":"5.7.4","fr":30,"ip":0,"op":60,"w":720,"h":140,"layers":layers};
+}
+</script>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：模型传了一个不在白名单里的参数，哪一层拦住它？', opts:['Schema 白名单','Pydantic 校验','幂等键'], ans:0, why:'白名单拦“不该调的”：参数名不在清单里，第一道关就直接拒绝，不走到执行。'},
+    {type:'choice', q:'第 2 关：同一个“发消息”调用因为网络重试发了两次，第二次会怎么样？', opts:['再执行一次，消息发两遍','直接返回上次的结果，不再执行','只在显示上去重，执行还是两次'], ans:1, why:'幂等键是去重执行，不是去重显示。执行过就直接返回上次的结果，可写操作必须有它。'},
+    {type:'assign', q:'第 3 关：点一个防护需求，再点它该归哪一层，把 4 个需求分完。', tasks:['只允许清单里的工具和参数名','值要合法：城市在清单里、金额是正数','普通用户不能调“发全员消息”','发消息重复发了只执行一次'], agents:['Schema 白名单','Pydantic 校验','ACL','幂等键'], map:[0,1,2,3], why:'白名单拦不该调的、Pydantic 拦调得不对的、ACL 拦没权限调的、幂等键拦重复执行的。'},
+    {type:'choice', q:'第 4 关：两个相同的调用同时到达，都查到“没执行过”，怎么防两个都执行？', opts:['查完再写就行','“查键”和“占键”必须是原子操作，比如 Redis SET NX 或数据库唯一约束','用时间戳当幂等键'], ans:1, why:'查完再写不算数，并发下两个调用都会执行。键还要可复现、设过期时间（比如 24 小时）。'},
+    {type:'choice', q:'第 5 关：要删文件了，执行前该怎么做？', opts:['直接执行，越快越好','停下来等人工确认，确认里写清要做什么、影响什么','多执行一次确认效果'], ans:1, why:'删文件、发全员消息、扣款、改线上配置都是高危操作，必须先停下来等人确认。'},
+    {type:'choice', q:'第 6 关：工具跑了很久还没完，正确做法是？', opts:['一直等它跑完','按超时停掉、返回失败，不要拖垮整张图','自动重跑全图'], ans:1, why:'超时是工程约束，比如 30 秒一到就停，一个挂住的工具不能拖垮整张图。'},
+    {type:'choice', q:'第 7 关：沙箱是干嘛的？', opts:['让工具跑得更快','把工具关在受限环境里，只能碰白名单里的文件和网络','只用来记日志'], ans:1, why:'跑测试、跑代码、跑命令都要进沙箱，不能直接跑在宿主机上。'},
+    {type:'choice', q:'第 8 关：审计日志要记什么？', opts:['只记工具名','谁、什么时候、调了什么、传了什么参数、结果如何','只记成功的那几次'], ans:1, why:'审计日志是出事后复盘的流水，缺一项就少一条线索。'},
+    {type:'choice', q:'第 9 关：幂等键为什么要设过期时间（比如 24 小时）？', opts:['键不能永久存，否则旧键会把合法的新调用也拦住','为了让键更好看','过期了调用就永远不能再执行'], ans:0, why:'键设 TTL（比如 24 小时），过期后同一键可以重新执行；键还要可复现，不能用时间戳或随机数。'},
+    {type:'assign', q:'第 10 关：点一个防护需求，再点它该归哪一层，把 4 个需求分完。', tasks:['工具跑 30 秒还没完，要停掉它','跑代码只能碰白名单里的文件和网络','出事后要复盘谁、在什么时候调了什么','删文件前停下来，等人点了确认才继续'], agents:['超时','沙箱','审计日志','人工确认'], map:[0,1,2,3], why:'超时停挂住的工具、沙箱管住执行环境、审计日志留住复盘流水、人工确认守住高危操作。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var checkBox = document.getElementById('lottie-check');
+  var confBox = document.getElementById('lottie-confetti');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0, checkAnim = null, confAnim = null;
+  try { best = parseInt(localStorage.getItem('day35-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day35-clears') || '0', 10) || 0; } catch(e) {}
+  try {
+    if (window.lottie) {
+      checkAnim = lottie.loadAnimation({container: checkBox, renderer: 'svg', loop: false, autoplay: false, animationData: CHECK_ANIM});
+      confAnim = lottie.loadAnimation({container: confBox, renderer: 'svg', loop: false, autoplay: false, animationData: confettiData()});
+    }
+  } catch(e) { checkAnim = null; confAnim = null; }
+  function playCheck(){ checkBox.classList.add('show'); try { if (checkAnim) checkAnim.goToAndPlay(0, true); } catch(e) {} setTimeout(function(){ checkBox.classList.remove('show'); }, 1200); }
+  function playConfetti(){ confBox.classList.add('show'); try { if (confAnim) confAnim.goToAndPlay(0, true); } catch(e) {} }
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关 🎉' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = '⭐ ' + xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) { xp += 10; playCheck(); } top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day35 的 10 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。纵深防御现在对应三幅图：城堡三道门、盖戳快递单、两把钥匙保险柜。</p>';
+      showFb(true, '🏆 通关奖励：白名单 + Pydantic + ACL + 幂等键 + 超时 + 沙箱 + 审计日志 + 人工确认，全齐了。去原文课做 6 道小测验，看看还记得多少。');
+      playConfetti();
+      try { if (xp > best) { best = xp; localStorage.setItem('day35-best-xp', String(best)); } clears++; localStorage.setItem('day35-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>防护需求（点一个）：</p><div id="duo-tasks"></div><p>防御层（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个防护需求，再点它该归哪一层。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个需求不归 ' + g + '。再看看正文第 1–3 节，每层拦的东西不一样。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+</body>
+</html>
