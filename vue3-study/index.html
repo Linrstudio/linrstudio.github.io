@@ -199,6 +199,17 @@ const totalPrice = computed(() =&gt;
           <pre><code>const numbers = [2, 3, 4]
 const total = numbers.reduce((sum, number) =&gt; sum + number, 0)
 // total === 9</code></pre>
+          <h3>例：用 <code>reduce</code> 把 1 加到 100</h3>
+          <p><code>Array.from()</code> 先生成 100 个数：它的下标从 <code>0</code> 到 <code>99</code>，所以用 <code>index + 1</code> 得到 <code>1</code> 到 <code>100</code>；接着 <code>reduce()</code> 从 <code>0</code> 开始逐个相加。</p>
+          <pre><code>const numbers1To100 = Array.from(
+  { length: 100 },
+  (_, index) =&gt; index + 1
+)
+const sum1To100 = numbers1To100.reduce(
+  (sum, number) =&gt; sum + number,
+  0
+)
+console.log(sum1To100) // 5050</code></pre>
           <div class="callout warning"><strong>养成习惯：明确传入初始值。</strong>求和从 <code>0</code> 开始；空数组配上 <code>0</code> 会得到 <code>0</code>。省略初始值时，空数组会报错，而且第一项会直接成为初始累加器。初始值也决定累加结果的类型：求和用 <code>0</code>，累积成对象常用 <code>{}</code>。</div>
           <p><code>map()</code> 和 <code>filter()</code> 通常返回新数组；<code>reduce()</code> 返回最终累计出的值（可以是数字、对象或数组）。在 Vue 中，把它放进 <code>computed()</code>，就能得到会随响应式数组变化而重新计算的汇总值。</p>
           <div class="callout warning"><strong>注意解构：</strong>直接把响应式对象上的普通字段解构到局部变量，可能会切断该变量与原代理属性的联系。需要独立 ref 时，可使用 <code>toRefs()</code>；Pinia store 则使用 <code>storeToRefs()</code>。</div>
