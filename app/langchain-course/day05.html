@@ -70,6 +70,18 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <div class="warn"><strong>容易踩的坑：</strong>把 history 直接传给循环、让循环在上面追加。你的 <code>run_agent</code> 里第一句就是 <code>history = list(messages)</code>——复制一份再追加，避免污染调用方的数据。另一个坑：把模型调用失败也当成普通异常往外抛；正确做法是返回 <code>status="error"</code> 并保留轨迹，复盘时才有东西可看。</div>
 <h3>6. 手写循环 vs AgentExecutor，选哪个</h3>
 <p>AgentExecutor 是旧版 LangChain 封装好的黑盒：传 llm、tools、prompt 就能跑，省事，但中间每一步发生了什么、失败时卡在哪一步，你看不见。<strong>版本注意：LangChain 1.x 里 AgentExecutor 已经被删了，<code>from langchain.agents import AgentExecutor</code> 会报 ImportError；新版对应的工厂是 <code>from langchain.agents import create_agent</code>，而 LangGraph 里的 <code>create_react_agent</code> 也已标记为废弃、指向同一个 create_agent。</strong>所以本课不依赖它，手写循环才是不会随版本失效的骨架。手写循环的价值恰恰是“每一步都看得见”：面试能口述流程，出问题能定位到某一步，步数、Token、工具调用次数都能自己记进日志（你的脚手架就有 <code>runs/log.jsonl</code>）。结论和 Day 3 的小考结论一致：<strong>单步简单调用不用框架，反复调工具才需要循环，流程分支与人工确认才上 LangGraph</strong>——Day 7 会讲后者。</p>
+<h3>7. Agent 与 Chain 的本质区别：控制权在谁手里</h3>
+<p>一句话：<strong>Chain 是人把流程写死，Agent 是模型自己决定走哪步。</strong>控制权在谁手里，就是本质区别。</p>
+<p><strong>Chain（链）</strong>的步骤和顺序在写代码时就定好了，数据沿固定路线流过去：输入 → 第 1 步 → 第 2 步 → 输出，像流水线。每步做什么、调哪个模型、用什么提示词，全是开发者定的，跑起来不拐弯。</p>
+<p><strong>Agent（智能体）</strong>只给目标和工具，路线由模型运行时自己定。它一圈圈跑：想一想 → 选个工具 → 看结果 → 再想一想 → 再选，直到觉得够了才停。本课的手写循环就是 Agent 的骨架，ReAct 就是这个循环。</p>
+<table><tr><th></th><th>Chain</th><th>Agent</th></tr>
+<tr><td>谁决定下一步</td><td>开发者（写死）</td><td>模型（推理决定）</td></tr>
+<tr><td>流程形状</td><td>固定，一般无环</td><td>动态，有循环</td></tr>
+<tr><td>工具</td><td>一般不用，或固定调一次</td><td>反复调，看结果再定</td></tr>
+<tr><td>适用</td><td>步骤固定、可预测</td><td>步骤不确定、要探索试错</td></tr>
+<tr><td>代价</td><td>便宜、稳定、可预测</td><td>灵活，但更贵更慢、可能绕圈</td></tr></table>
+<p>打个比方：Chain 像菜谱，备菜、下锅、调味一步步写好；Agent 像请了个厨师，你只说“做道川菜”，他自己决定查什么、买什么、尝一口再调味。</p>
+<p>还有一层关系：<strong>Agent 里往往套着 Chain。</strong>Agent 每想一步、调一次工具，里面可能就是一个小 Chain 在跑。所以 Chain 是零件，Agent 是会自己拼零件的工人。换成图来想也一样：Chain 的执行图是 DAG（无环、一次跑完），Agent 的执行图可以有环（循环推理）——这正是 Day 32 讲 DAG 时说的区别，Agent 比 Chain 多出来的就是那个环。</p>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：循环骨架（就是 loop.py 的 run_agent，注释精简版）</h3>
