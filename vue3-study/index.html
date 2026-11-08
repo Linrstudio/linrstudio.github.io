@@ -107,6 +107,7 @@
           <li><a href="#reactive">reactive 与数组</a></li>
           <li><a href="#computed-watch">computed 与 watch</a></li>
           <li><a href="#component">组件通信</a></li>
+          <li><a href="#slots">作用域插槽</a></li>
           <li><a href="#vmodel">组件 v-model</a></li>
           <li><a href="#composable">组合式函数</a></li>
           <li><a href="#form">表单与校验</a></li>
@@ -179,6 +180,27 @@ cart.push({ id: 'c', name: '便签', price: 5, quantity: 3 })</code></pre>
 const totalPrice = computed(() =&gt;
   cart.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0)
 )</code></pre>
+          <h3>reduce 每一轮在做什么？</h3>
+          <p>把 <code>reduce()</code> 想成“带着一个累计结果，从左到右逐项处理”。每一轮的回调接收当前的累计值和当前数组项；<strong>回调 return 的值会成为下一轮的新累计值</strong>。最后一项处理完后，<code>reduce()</code> 返回最终累计值。</p>
+          <div class="grid-2">
+            <div class="mini"><h3>累加器 <code>accumulator</code></h3><p>到目前为止累计出来的结果。第一轮使用初始值，后续每轮使用上一次回调的返回值。</p></div>
+            <div class="mini"><h3>当前项 <code>currentValue</code></h3><p>本轮正在处理的数组元素。回调还可接收可选的下标 <code>index</code> 和原数组 <code>array</code>。</p></div>
+          </div>
+          <pre><code>array.reduce((accumulator, currentValue, index, array) =&gt; {
+  return nextAccumulator
+}, initialValue)</code></pre>
+          <p>用 <code>[2, 3, 4]</code> 求和，并把初始值设为 <code>0</code>：</p>
+          <ol>
+            <li>开始：<code>sum = 0</code>。</li>
+            <li>当前项是 <code>2</code>：返回 <code>0 + 2 = 2</code>，下一轮的 <code>sum</code> 变成 <code>2</code>。</li>
+            <li>当前项是 <code>3</code>：返回 <code>2 + 3 = 5</code>，下一轮的 <code>sum</code> 变成 <code>5</code>。</li>
+            <li>当前项是 <code>4</code>：返回 <code>5 + 4 = 9</code>；遍历结束，最终结果是 <code>9</code>。</li>
+          </ol>
+          <pre><code>const numbers = [2, 3, 4]
+const total = numbers.reduce((sum, number) =&gt; sum + number, 0)
+// total === 9</code></pre>
+          <div class="callout warning"><strong>养成习惯：明确传入初始值。</strong>求和从 <code>0</code> 开始；空数组配上 <code>0</code> 会得到 <code>0</code>。省略初始值时，空数组会报错，而且第一项会直接成为初始累加器。初始值也决定累加结果的类型：求和用 <code>0</code>，累积成对象常用 <code>{}</code>。</div>
+          <p><code>map()</code> 和 <code>filter()</code> 通常返回新数组；<code>reduce()</code> 返回最终累计出的值（可以是数字、对象或数组）。在 Vue 中，把它放进 <code>computed()</code>，就能得到会随响应式数组变化而重新计算的汇总值。</p>
           <div class="callout warning"><strong>注意解构：</strong>直接把响应式对象上的普通字段解构到局部变量，可能会切断该变量与原代理属性的联系。需要独立 ref 时，可使用 <code>toRefs()</code>；Pinia store 则使用 <code>storeToRefs()</code>。</div>
         </section>
 
@@ -225,6 +247,30 @@ const emit = defineEmits(['add-to-cart'])
   @add-to-cart="addProduct(product)"
 /&gt;</code></pre>
           <p class="caption">不要直接修改子组件收到的 prop。若子组件需要编辑值，应发出事件，请父组件更新其状态。</p>
+          <h3 id="slots">作用域插槽：子组件给数据，父组件定制内容</h3>
+          <p>作用域插槽让子组件负责稳定的列表结构、父组件决定每一项怎么展示。子组件通过插槽属性（slot props）把当前项暴露出来；父组件接收后，可以展示名字、按钮或其他自定义内容。</p>
+          <pre><code>&lt;!-- 子组件 UserList.vue：负责列表结构，并把当前 user 交给插槽 --&gt;
+&lt;script setup&gt;
+const props = defineProps({
+  users: { type: Array, required: true },
+})
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;ul&gt;
+    &lt;li v-for="user in props.users" :key="user.id"&gt;
+      &lt;slot :user="user"&gt;{{ user.name }}&lt;/slot&gt;
+    &lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/template&gt;</code></pre>
+          <p>父组件用 <code>&lt;template #default="{ user }"&gt;</code> 接收子组件传出的 <code>user</code>，再决定每行的内容：</p>
+          <pre><code>&lt;UserList :users="users"&gt;
+  &lt;template #default="{ user }"&gt;
+    &lt;span&gt;{{ user.name }}&lt;/span&gt;
+    &lt;button @click="editUser(user)"&gt;编辑&lt;/button&gt;
+  &lt;/template&gt;
+&lt;/UserList&gt;</code></pre>
+          <div class="callout"><strong>默认内容（fallback）：</strong><code>&lt;slot :user="user"&gt;{{ user.name }}&lt;/slot&gt;</code> 中的 <code>{{ user.name }}</code> 是子组件提供的默认内容。使用 <code>&lt;UserList :users="users" /&gt;</code> 且不传默认插槽时，每行显示名字；传入 <code>#default</code> 后，则显示父组件的自定义内容。记忆方向：子组件提供数据和外壳，父组件定制插槽里的内容。</div>
         </section>
 
         <section id="vmodel">
