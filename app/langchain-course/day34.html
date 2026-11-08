@@ -21,6 +21,28 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -61,6 +83,11 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="600" y="229" text-anchor="middle" font-size="11" fill="#222">Tools · 资源 · 模板</text>
 </svg>
 <p>MCP 里有三方：<strong>Host</strong> 是用户直接用的应用（比如聊天客户端、IDE），它管界面、管模型调用、管把多个 Client 的结果汇总；<strong>Client</strong> 是 Host 里的一对一连接器，一个 Client 连一个 Server，负责按协议发请求、收结果；<strong>Server</strong> 是工具的提供方，它把自己的能力暴露出来，等 Client 来调。一个 Host 可以挂多个 Client，一个 Client 只连一个 Server——分工一清，出了问题就知道是界面、连接还是工具本身的问题。</p>
+<div class="ceiling">
+<p><strong>一张图记住三方分工：餐厅点菜</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="餐厅比喻：客人 Host 点菜，服务员 Client 一对一传话，厨房 Server 做菜上菜" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs><circle cx="100" cy="52" r="15" fill="#f5c542" stroke="#222" stroke-width="1.5"/><path d="M100 67 L100 108 M82 82 L118 82" stroke="#222" stroke-width="2"/><rect x="52" y="110" width="96" height="8" rx="3" fill="#999"/><line x1="66" y1="118" x2="66" y2="136" stroke="#999" stroke-width="3"/><line x1="134" y1="118" x2="134" y2="136" stroke="#999" stroke-width="3"/><rect x="118" y="88" width="26" height="20" rx="3" fill="#fff" stroke="#0b62d6"/><text x="131" y="102" text-anchor="middle" font-size="10" fill="#0b62d6">菜单</text><line x1="155" y1="60" x2="315" y2="60" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arrA)"/><text x="235" y="48" text-anchor="middle" font-size="12" fill="#0b62d6">点菜</text><circle cx="360" cy="52" r="15" fill="#bbf7d0" stroke="#222" stroke-width="1.5"/><path d="M360 67 L360 108 M342 82 L378 82" stroke="#222" stroke-width="2"/><line x1="378" y1="76" x2="408" y2="70" stroke="#222" stroke-width="2"/><ellipse cx="416" cy="68" rx="18" ry="4" fill="#ddd" stroke="#222"/><circle cx="416" cy="62" r="7" fill="#f5c542" stroke="#222"/><line x1="415" y1="60" x2="575" y2="60" stroke="#0b62d6" stroke-width="1.5" marker-end="url(#arrA)"/><text x="495" y="48" text-anchor="middle" font-size="12" fill="#0b62d6">传给厨房</text><rect x="580" y="34" width="120" height="84" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="1.5"/><rect x="600" y="66" width="80" height="34" rx="6" fill="#fff" stroke="#222" stroke-width="1.5"/><path d="M620 56 q4 -10 0 -14 M640 56 q4 -10 0 -14 M660 56 q4 -10 0 -14" stroke="#999" stroke-width="2" fill="none"/><text x="640" y="86" text-anchor="middle" font-size="12" fill="#222">锅 · 正在做</text><line x1="575" y1="150" x2="160" y2="150" stroke="#22a35a" stroke-width="1.5" marker-end="url(#arrA)"/><text x="368" y="140" text-anchor="middle" font-size="12" fill="#22a35a">上菜，原路返回</text><text x="100" y="168" text-anchor="middle" font-size="13" fill="#222">Host 客人</text><text x="100" y="186" text-anchor="middle" font-size="12" fill="#666">只管点菜、等上菜</text><text x="360" y="168" text-anchor="middle" font-size="13" fill="#222">Client 服务员</text><text x="360" y="186" text-anchor="middle" font-size="12" fill="#666">一对一传话</text><text x="640" y="168" text-anchor="middle" font-size="13" fill="#222">Server 厨房</text><text x="640" y="186" text-anchor="middle" font-size="12" fill="#666">只管做菜、给结果</text></svg>
+<p>客人（Host）只管点菜，服务员（Client）只负责把这桌的单传给厨房、把菜端回来，厨房（Server）只管做菜——菜上错了，先看是点错了、传错了，还是做错了，分工一清，问题就能定位。</p>
+</div>
 <h3>2. Server 暴露三种能力：Tools、Resources、Prompts</h3>
 <table>
 <tr><th>能力</th><th>是什么</th><th>例子</th></tr>
@@ -69,11 +96,21 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>Prompts</td><td>预置的提示词模板，Server 提供、Client 选用</td><td>“按这份模板写周报”的模板</td></tr>
 </table>
 <p>区分的关键是“能不能改东西”：Tools 能改（发消息、写文件），Resources 只读，Prompts 是模板。权限和审计都要按这个区分来定：只读的能力可以放宽，可写的工具必须过 Day 35 的纵深防御。</p>
+<div class="ceiling">
+<p><strong>一张图记住三种能力：工具箱、书架、菜谱</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="工具箱能改东西，书架只能读，菜谱是现成的模板" style="max-width:720px;display:block;margin:8px 0"><text x="120" y="28" text-anchor="middle" font-size="13" fill="#222">Tools 工具箱</text><rect x="52" y="58" width="136" height="58" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="1.5"/><rect x="96" y="44" width="48" height="16" rx="8" fill="none" stroke="#d33" stroke-width="2"/><rect x="80" y="72" width="14" height="34" rx="5" fill="#f5c542" stroke="#222" transform="rotate(30 87 89)"/><circle cx="150" cy="86" r="16" fill="none" stroke="#0b62d6" stroke-width="4"/><line x1="162" y1="98" x2="174" y2="112" stroke="#0b62d6" stroke-width="4"/><text x="120" y="140" text-anchor="middle" font-size="12" fill="#d33">✎ 能改东西</text><text x="120" y="160" text-anchor="middle" font-size="12" fill="#666">查天气 · 发消息</text><line x1="240" y1="10" x2="240" y2="180" stroke="#ddd" stroke-width="2"/><text x="360" y="28" text-anchor="middle" font-size="13" fill="#222">Resources 书架</text><rect x="292" y="48" width="136" height="68" rx="4" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><rect x="304" y="62" width="18" height="54" fill="#f5c542" stroke="#222"/><rect x="326" y="56" width="18" height="60" fill="#bbf7d0" stroke="#222"/><rect x="348" y="66" width="18" height="50" fill="#fca5a5" stroke="#222"/><rect x="370" y="60" width="18" height="56" fill="#eef4ff" stroke="#222"/><line x1="292" y1="116" x2="428" y2="116" stroke="#0b62d6" stroke-width="3"/><text x="360" y="140" text-anchor="middle" font-size="12" fill="#0b62d6">👁 只读，不能改</text><text x="360" y="160" text-anchor="middle" font-size="12" fill="#666">文件 · 数据库记录 · 网页</text><line x1="480" y1="10" x2="480" y2="180" stroke="#ddd" stroke-width="2"/><text x="600" y="28" text-anchor="middle" font-size="13" fill="#222">Prompts 菜谱</text><rect x="532" y="44" width="136" height="72" rx="8" fill="#fff" stroke="#22a35a" stroke-width="1.5"/><rect x="548" y="60" width="104" height="6" rx="3" fill="#86efac"/><rect x="548" y="74" width="80" height="6" rx="3" fill="#dcfce7"/><rect x="548" y="88" width="92" height="6" rx="3" fill="#dcfce7"/><text x="600" y="140" text-anchor="middle" font-size="12" fill="#22a35a">📋 模板，Server 提供</text><text x="600" y="160" text-anchor="middle" font-size="12" fill="#666">按这份模板写周报</text></svg>
+<p>工具箱里的东西是拿来动手改东西的，书架上的书只能翻、不能撕，菜谱是照着做的现成模板——分不清“能不能改”，权限就没法定。</p>
+</div>
 <h3>3. 发现机制：list_tools，先问有什么、再决定调什么</h3>
 <p>Client 连上 Server 后，第一件事不是直接调工具，而是先发 <strong>list_tools</strong> 问一句：“你都提供什么工具？每个工具的输入长什么样？”Server 回一张工具清单，每个工具带名字、描述和输入 schema。模型看到清单，才决定调哪个、传什么参数。发现机制的好处是：Server 加了新工具，Client 不用改代码，下次 list 一下就看到了；Server 下掉工具，Client 也不会再去调一个不存在的工具。</p>
 <h3>4. 传输方式：stdio 与 Streamable HTTP，本地和远程各一套</h3>
 <p>两种传输：<strong>stdio</strong> 是本地进程间通信，Client 把 Server 当子进程启动、通过标准输入输出对话，适合本地工具，延迟低、不用走网络；<strong>Streamable HTTP</strong> 是走 HTTP 的远程方式，适合 Server 在另一台机器、或要给多人共用的场景，可以复用 HTTP 的鉴权、负载均衡。选哪个看部署：工具在本地就用 stdio，工具要远程共用就用 HTTP，协议本身不变，换传输不用重写工具逻辑。</p>
 <div class="warn"><strong>容易踩的坑：</strong>把 MCP 当成“更快的本地函数调用”。MCP 的价值不在快，而在可移植：同一套工具，今天接 A 模型、明天接 B 平台，不用重写。只接一个模型、一个平台时，协议的收益不明显，成本（多一层协议、多一处故障点）反而先到。</div>
+<div class="ceiling">
+<p><strong>一张图记住可移植：万能插头 vs 每台机器配专用插头</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="写死工具像每台机器配专用插头，MCP像一个万能插头到处都能插" style="max-width:720px;display:block;margin:8px 0"><text x="180" y="24" text-anchor="middle" font-size="13" fill="#222">写死工具：专用插头</text><rect x="40" y="40" width="110" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="95" y="62" text-anchor="middle" font-size="12" fill="#222">A 模型</text><circle cx="180" cy="57" r="10" fill="none" stroke="#d33" stroke-width="3"/><text x="208" y="61" font-size="14" fill="#d33">✗</text><rect x="40" y="86" width="110" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="95" y="108" text-anchor="middle" font-size="12" fill="#222">B 平台</text><rect x="170" y="93" width="20" height="20" fill="none" stroke="#d33" stroke-width="3"/><text x="208" y="108" font-size="14" fill="#d33">✗</text><rect x="40" y="132" width="110" height="34" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="95" y="154" text-anchor="middle" font-size="12" fill="#222">C 工具</text><polygon points="180,138 196,162 164,162" fill="none" stroke="#d33" stroke-width="3"/><text x="208" y="154" font-size="14" fill="#d33">✗</text><text x="180" y="184" text-anchor="middle" font-size="12" fill="#d33">换一个就要重接一遍</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><text x="540" y="24" text-anchor="middle" font-size="13" fill="#222">MCP 协议：万能插头</text><circle cx="470" cy="80" r="28" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><line x1="494" y1="66" x2="520" y2="66" stroke="#22a35a" stroke-width="3"/><line x1="494" y1="80" x2="520" y2="80" stroke="#22a35a" stroke-width="3"/><line x1="494" y1="94" x2="520" y2="94" stroke="#22a35a" stroke-width="3"/><text x="470" y="84" text-anchor="middle" font-size="12" fill="#222">一套</text><text x="470" y="100" text-anchor="middle" font-size="12" fill="#222">工具</text><line x1="520" y1="66" x2="560" y2="52" stroke="#22a35a" stroke-width="2"/><line x1="520" y1="80" x2="560" y2="80" stroke="#22a35a" stroke-width="2"/><line x1="520" y1="94" x2="560" y2="108" stroke="#22a35a" stroke-width="2"/><rect x="560" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="605" y="56" text-anchor="middle" font-size="12" fill="#222">A 模型 ✓</text><rect x="560" y="66" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="605" y="86" text-anchor="middle" font-size="12" fill="#222">B 平台 ✓</text><rect x="560" y="96" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/><text x="605" y="116" text-anchor="middle" font-size="12" fill="#222">C 工具 ✓</text><text x="540" y="160" text-anchor="middle" font-size="12" fill="#22a35a">✓ 同一套工具，换模型、换平台</text><text x="540" y="180" text-anchor="middle" font-size="12" fill="#22a35a">都不用重写</text></svg>
+<p>本地写死工具，就像给每台机器各配一个专用插头，插口一换就得重做；MCP 是一套统一的插口，同一套工具今天接 A 模型、明天接 B 平台，插上去就能用——这就是协议买单的价值。</p>
+</div>
 
 <h2>二、代码示例</h2>
 <h3>示例 1：发现 + 调用的形状（协议示意，先看流程）</h3>
@@ -99,6 +136,96 @@ server_capabilities = {
 2. 假设 Server 新加了一个工具，Client 不改代码怎么用上它？写出 list_tools 之后的那一步。<br>
 3. 你的工具在本地还是远程？选 stdio 还是 Streamable HTTP？为什么？换传输方式时，工具逻辑本身要不要重写？</p>
 </div>
+<div class="widget" id="duo">
+<h4>动手玩：Day34 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：用户直接用的聊天客户端、IDE，管界面、管模型调用、管汇总结果，它是三方里的谁？', opts:['Host','Client','Server'], ans:0, why:'Host 是用户直接用的应用，管界面、模型调用和汇总；Client 是一对一连接器；Server 提供工具能力。'},
+    {type:'choice', q:'第 2 关：一个 Host 挂了三个 Client，它们一共连着几个 Server？', opts:['1 个','3 个','随便几个'], ans:1, why:'一个 Client 只连一个 Server，所以三个 Client 就是三个 Server——一对一，不能一对多。'},
+    {type:'assign', q:'第 3 关：点一个能力，再点它属于哪一种，把 3 个能力分完。', tasks:['调用查天气函数','读数据库里的记录','选用“写周报”模板'], agents:['Tools 可写','Resources 只读','Prompts 模板'], map:[0,1,2], why:'Tools 是可调用的函数、能改东西；Resources 是只读数据；Prompts 是 Server 提供的提示词模板。'},
+    {type:'choice', q:'第 4 关：Client 刚连上 Server，第一件事应该做什么？', opts:['直接调最常用的工具','先发 list_tools，问有什么工具、输入长什么样','让模型猜一个工具名试试'], ans:1, why:'先发现再调用。Server 加了新工具，Client 下次 list 一下就看到了，不用改代码。'},
+    {type:'choice', q:'第 5 关：工具在本地跑、远程也要给别人共用，传输方式怎么选？', opts:['本地用 stdio、远程共用用 Streamable HTTP，协议本身不变','都一样，随便选一个','换传输方式就要重写工具逻辑'], ans:0, why:'选哪个看部署：本地 stdio 延迟低、不走网络，远程 HTTP 能复用鉴权和负载均衡；换传输不用重写工具逻辑。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day34-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day34-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day34 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。三方分工现在对应餐厅：客人 Host 点菜、服务员 Client 传话、厨房 Server 做菜；三种能力是工具箱、书架、菜谱；可移植靠的是万能插头。</p>';
+      showFb(true, '通关奖励：三方分工 + 三种能力 + list_tools 发现 + 两种传输，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day34-best-xp', String(best)); } clears++; localStorage.setItem('day34-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>能力（点一个）：</p><div id="duo-tasks"></div><p>种类（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个能力，再点它属于哪一种。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 3 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个能力不属于 ' + g + '。再看看上面三种能力的表，关键是能不能改东西。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>

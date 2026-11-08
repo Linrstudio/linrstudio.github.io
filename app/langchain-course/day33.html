@@ -28,6 +28,22 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 .wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
 .wbtn.primary{background:#0b62d6;color:#fff}
 .hop-out{margin-top:12px;border-radius:10px;padding:12px 14px;background:#fff;border:1px solid #e5e5e5;font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
 </style>
 </head>
 <body>
@@ -144,6 +160,96 @@ result = {
 })();
 </script>
 
+<div class="widget" id="duo">
+<h4>动手玩：Day33 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：Knowledge Agent 和 RAG 流水线最大的区别是？', opts:['用的模型不一样','能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说','查得更快'], ans:1, why:'流水线是查一次答一次，子 Agent 是带判断的检索循环。'},
+    {type:'choice', q:'第 2 关：Multi-hop 检索循环是哪四步？', opts:['分解、检索、判断、再检索','切块、向量、检索、生成','提问、回答、再提问、再回答'], ans:0, why:'每跳的查询、命中块、判断结论都要写进状态，答错才能定位是哪一跳歪了。'},
+    {type:'assign', q:'第 3 关：把循环的四步按顺序排好。点一步，再点它在第几步。', tasks:['判断够不够','再检索','分解','检索'], agents:['第 1 步','第 2 步','第 3 步','第 4 步'], map:[2,3,0,1], why:'先分解成有依赖的子问题，再检索，判断够不够、能不能给下一跳提供查询词，不够就再检索。'},
+    {type:'choice', q:'第 4 关：检索失败时，正确的做法是？', opts:['用模型训练知识填空','停下来，写清查了几轮、用什么词、为什么判定没查到，最终说资料里没有','换个问题重新问用户'], ans:1, why:'用户能接受没查到，不能接受查到了假的。'},
+    {type:'choice', q:'第 5 关：检索循环为什么要设跳数上限？', opts:['为了让代码好看','防无限转下去，成本和延迟炸掉，通常 3–5 跳','跳数越多越好'], ans:1, why:'超上限就停、诚实回答，不要无限追下去。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day33-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day33-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day33 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。Multi-hop 现在对应一句话：上一跳的答案变成下一跳的查询词。</p>';
+      showFb(true, '通关奖励：判断、换策略、止损、多跳循环、带出处交付，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day33-best-xp', String(best)); } clears++; localStorage.setItem('day33-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>步骤（点一个）：</p><div id="duo-tasks"></div><p>顺序（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个步骤，再点它在第几步。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 排对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 步全排对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前排错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 排错了：这一步不在 ' + g + '。再想想循环的顺序：先拆，再查，再判断。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>
 <div class="q" data-answer="1"><p><strong>1. Knowledge Agent 和 RAG 流水线最大的区别是？</strong></p><button data-i="0">用的模型不一样</button><button data-i="1">能判断、换策略、止损：查不够就再查、查偏了换词查、查不到就老实说</button><button data-i="2">查得更快</button><div class="ans">解析：选 B。流水线是查一次答一次，子 Agent 是带判断的检索循环。</div></div>

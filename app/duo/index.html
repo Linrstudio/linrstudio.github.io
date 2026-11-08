@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 闯关大厅：LangChain + LangGraph 一起玩 | 闯关版</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:12px 0}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+.stats{display:flex;gap:12px;margin:16px 0}
+.stat{flex:1;border:2px solid #0b62d6;border-radius:12px;padding:12px;text-align:center;background:#f7faff}
+.stat b{display:block;font-size:24px;color:#0b62d6}
+.stat span{font-size:13px;color:#666}
+.lesson{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.lesson h3{margin:0 0 6px;font-size:16px}
+.lesson p{margin:6px 0;font-size:14px;color:#555}
+.lesson .st{font-size:13px;color:#0a7a42;font-weight:bold}
+.play{display:inline-block;margin:6px 8px 0 0;padding:8px 16px;border-radius:999px;background:#0b62d6;color:#fff;font-size:14px}
+.play:hover{text-decoration:none;background:#094ea6}
+.ghost{display:inline-block;margin:6px 0 0;padding:8px 16px;border-radius:999px;border:1px solid #0b62d6;color:#0b62d6;font-size:14px}
+.ghost:hover{text-decoration:none;background:#eef4ff}
+</style>
+</head>
+<body>
+<p><a href="../langchain-course/index.html">← LangChain 课首页</a> &nbsp; <a href="../langgraph-course/index.html">LangGraph 课首页 →</a></p>
+<h1>🎮 Agent 闯关大厅</h1>
+<p><span class="tag">LangChain + LangGraph 做在一起</span> <span class="tag">自由选课</span></p>
+<p>两门课在同一张地图上：<strong>第 5 周 Multi-Agent + MCP</strong> 和 <strong>LangGraph 7 天</strong>，各是一条轨道，互不挡路。点一课就开玩，不用按顺序打；每课 5 关，答对 +10 XP，答错扣 1 颗 ❤️，通关成绩存在浏览器本地。文字课全部保留，卡片里的“看原文”就是原来的课，代码和面试题都在那。</p>
+<div class="stats">
+<div class="stat"><b id="total-xp">0</b><span>总 XP</span></div>
+<div class="stat"><b id="total-clear">0 / 7</b><span>第 5 周已通关</span></div>
+<div class="stat"><b>❤️❤️❤️</b><span>每课 3 颗心</span></div>
+</div>
+<div class="note"><p><strong>玩法：</strong>第 5 周每课是 5 关闯关（选择、点选分工/排序、情景判断）；LangGraph 每课是一个可跑的动手组件，点进去直接玩。先做第 5 周 + LangGraph 7 课，第 1–4 周按这个模板往前补。</p></div>
+
+<h2>轨道一：第 5 周 Multi-Agent + MCP</h2>
+<div class="lesson" data-xp-key="day31-best-xp" data-clear-key="day31-clears">
+<h3>Day 31：Multi-Agent 协作总览：Supervisor 模式</h3>
+<p>为什么要用多 Agent：上下文、能力、并行三块天花板。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day31.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day31.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day32-best-xp" data-clear-key="day32-clears">
+<h3>Day 32：Planner 与任务分解：把任务拆成 DAG</h3>
+<p>链、树、DAG、有圈死锁；宽度是并行度，红线是关键路径。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day32.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day32.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day33-best-xp" data-clear-key="day33-clears">
+<h3>Day 33：Knowledge Agent：把 RAG 做成一个子 Agent</h3>
+<p>Multi-hop：上一跳的答案变成下一跳的查询词。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day33.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day33.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day34-best-xp" data-clear-key="day34-clears">
+<h3>Day 34：MCP 协议详解：Host、Client、Server</h3>
+<p>Tools、Resources、Prompts 三件套，协议为什么比本地写死工具更可移植。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day34.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day34.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day35-best-xp" data-clear-key="day35-clears">
+<h3>Day 35：工具安全纵深防御：Schema、ACL、幂等</h3>
+<p>Schema 白名单、Pydantic 校验、ACL、幂等键，四层防御。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day35.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day35.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day36-best-xp" data-clear-key="day36-clears">
+<h3>Day 36：Verifier 与 Composer：校验与合成</h3>
+<p>校验不过打回重做，合成只汇总带出处的部分。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day36.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day36.html">📖 看原文</a>
+</div>
+<div class="lesson" data-xp-key="day37-best-xp" data-clear-key="day37-clears">
+<h3>Day 37：第 5 周复盘：Multi-Agent 项目与面试讲法</h3>
+<p>第 5 周全复盘，完整链路与面试讲法。</p>
+<p class="st">—</p>
+<a class="play" href="../langchain-course/day37.html#duo">🎮 闯关 →</a><a class="ghost" href="../langchain-course/day37.html">📖 看原文</a>
+</div>
+
+<h2>轨道二：LangGraph 7 天</h2>
+<div class="lesson">
+<h3>LangGraph Day 1：图是什么：StateGraph、节点、边、END</h3>
+<p>玩法：迷你图运行器，点“下一步”看图怎么跑。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day01.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day01.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 2：状态与 Reducer</h3>
+<p>玩法：状态游乐场，消息怎么合并、覆盖为什么是错的。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day02.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day02.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 3：条件边与路由</h3>
+<p>玩法：路由模拟器，按条件分流、循环与终止。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day03.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day03.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 4：工具节点与 ReAct Agent</h3>
+<p>玩法：ReAct 步进器，模型调工具、循环直到无工具调用。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day04.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day04.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 5：Checkpoint 与断点续跑</h3>
+<p>玩法：检查点演示，MemorySaver、thread_id、从中断处继续。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day05.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day05.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 6：人工介入与中断</h3>
+<p>玩法：人工介入，interrupt、审核后继续。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day06.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day06.html">📖 看原文</a>
+</div>
+<div class="lesson">
+<h3>LangGraph Day 7：子图、多 Agent 图与复盘</h3>
+<p>玩法：Supervisor 派单板，子图、多 Agent 图与复盘。</p>
+<p class="st">动手组件 · 可跑</p>
+<a class="play" href="../langgraph-course/day07.html">▶️ 去玩 →</a><a class="ghost" href="../langgraph-course/day07.html">📖 看原文</a>
+</div>
+
+<script>
+(function(){
+  var totalXp = 0, cleared = 0, total = 0;
+  document.querySelectorAll('.lesson[data-xp-key]').forEach(function(card){
+    total++;
+    var best = 0, n = 0;
+    try {
+      best = parseInt(localStorage.getItem(card.dataset.xpKey) || '0', 10) || 0;
+      n = parseInt(localStorage.getItem(card.dataset.clearKey) || '0', 10) || 0;
+    } catch(e) {}
+    totalXp += best;
+    if (n > 0) cleared++;
+    var st = card.querySelector('.st');
+    if (st) st.textContent = n > 0 ? '✅ 已通关 ' + n + ' 次 · 最好 ' + best + ' XP' : (best > 0 ? '进行中 · 最好 ' + best + ' XP' : '未开始 · 满分 50 XP');
+  });
+  document.getElementById('total-xp').textContent = totalXp;
+  document.getElementById('total-clear').textContent = cleared + ' / 7';
+})();
+</script>
+</body>
+</html>

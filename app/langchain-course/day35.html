@@ -21,6 +21,28 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -61,13 +83,28 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="480" y="219" font-size="12" fill="#222">缺一层 = 多一个口子</text>
 </svg>
 <p><strong>Schema 白名单</strong>是第一道关：只允许清单里的工具、清单里的参数名，多一个参数、少一个必填参数、工具名不在清单里，直接拒绝，不走到执行。白名单在第 2 周 Day 11 已经讲过前缀匹配的漏洞：生产版要三条一起上——不用 shell（argv 执行）、拒绝元字符、参数元组精确匹配。<strong>Pydantic 校验</strong>是第二道关：参数名对了，值还要合法——类型对不对、范围对不对、枚举值在不在清单里，比如“城市”必须是白名单里的城市名、“金额”必须是正数。两道关分工不同：白名单拦“不该调的”，Pydantic 拦“调得不对的”。</p>
+<div class="ceiling">
+<p><strong>纵深防御：城堡不是一道门，是三道门一道一道过</strong></p>
+<svg viewBox="0 0 720 210" width="100%" role="img" aria-label="城堡三道门：白名单、Pydantic 校验、ACL，坏调用在第一道门就被拦下" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="660" height="120" rx="8" fill="#f5f0e6" stroke="#b08968" stroke-width="2"/><rect x="30" y="30" width="660" height="26" rx="8" fill="#b08968"/><text x="360" y="48" text-anchor="middle" font-size="13" fill="#fff">🏰 工具城堡：每道门只放自己认得的调用过去</text><path d="M130 150 L130 100 Q130 78 152 78 Q174 78 174 100 L174 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="152" y="170" text-anchor="middle" font-size="12" fill="#222">① 白名单</text><text x="152" y="188" text-anchor="middle" font-size="11" fill="#666">工具名在清单里吗？</text><path d="M330 150 L330 100 Q330 78 352 78 Q374 78 374 100 L374 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="352" y="170" text-anchor="middle" font-size="12" fill="#222">② Pydantic 校验</text><text x="352" y="188" text-anchor="middle" font-size="11" fill="#666">值合法吗？</text><path d="M530 150 L530 100 Q530 78 552 78 Q574 78 574 100 L574 150 Z" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="552" y="170" text-anchor="middle" font-size="12" fill="#222">③ ACL 查权</text><text x="552" y="188" text-anchor="middle" font-size="11" fill="#666">你有权限调它吗？</text><rect x="60" y="118" width="46" height="32" rx="6" fill="#fee2e2" stroke="#d33" stroke-width="1.5"/><text x="83" y="139" text-anchor="middle" font-size="14" fill="#d33">✗</text><text x="106" y="112" text-anchor="middle" font-size="11" fill="#d33">不在清单的工具</text><text x="106" y="202" text-anchor="middle" font-size="11" fill="#d33">第一道门就拦下</text><rect x="600" y="118" width="46" height="32" rx="6" fill="#dcfce7" stroke="#22a35a" stroke-width="1.5"/><text x="623" y="139" text-anchor="middle" font-size="14" fill="#22a35a">✓</text><text x="623" y="202" text-anchor="middle" font-size="11" fill="#22a35a">三道门都过才执行</text><text x="205" y="130" font-size="16" fill="#22a35a">→</text><text x="405" y="130" font-size="16" fill="#22a35a">→</text></svg>
+<p>坏调用在第一道门就被拦下，好调用也要一道一道过完白名单、校验、查权三道门才轮到执行——这就是纵深防御：不靠任何一层兜底。</p>
+</div>
 <h3>2. ACL：谁能调哪个工具，先查权限再执行</h3>
 <p>ACL（访问控制列表）是一张表：行是调用方（用户、角色、子 Agent），列是工具，格子里写能不能调。普通用户能调“查天气”，不能调“发消息给全员”；Knowledge 子 Agent 能调“检索”，不能调“写文件”。ACL 要在执行前查，查完还要记下来：谁、在什么时候、调了哪个工具、结果如何，审计日志就是这张表的流水。没有 ACL，模型一旦被提示词注入带偏，就能调到它本不该调的工具。</p>
 <h3>3. 幂等键：同一个调用重复发了，只执行一次</h3>
 <p>网络重试、Supervisor 重试、用户手抖点了两次，都会让同一个调用发两次。发消息、写文件、扣款这种操作执行两次就是事故。<strong>幂等键</strong>的做法是：调用方给每次调用带一个唯一键（比如用户 ID + 任务 ID + 工具调用 ID 的组合），服务端先查这个键有没有执行过——执行过就直接返回上次的结果，不再执行；没执行过才执行、并把结果和键一起存下来。幂等键不是“去重显示”，是“去重执行”，只读查询不需要它，可写操作必须有它。</p>
+<div class="ceiling">
+<p><strong>幂等键：盖了戳的快递单，重复送来也只处理一次</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="两张一模一样的快递单带着同一个幂等键，第一张执行并盖戳，第二张直接返回上次结果" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="220" height="110" rx="8" fill="#fff" stroke="#0b62d6" stroke-width="1.5"/><text x="140" y="58" text-anchor="middle" font-size="13" fill="#222">📦 快递单 ①</text><text x="140" y="82" text-anchor="middle" font-size="12" fill="#222">发消息：给群发通知</text><text x="140" y="104" text-anchor="middle" font-size="12" fill="#666">幂等键：u1 + t7 + send</text><circle cx="200" cy="122" r="26" fill="none" stroke="#d33" stroke-width="3"/><text x="200" y="128" text-anchor="middle" font-size="11" fill="#d33">已执行 ✓</text><text x="140" y="168" text-anchor="middle" font-size="12" fill="#22a35a">第一次：执行，存下键和结果</text><text x="275" y="95" font-size="22" fill="#0b62d6">→</text><rect x="300" y="30" width="220" height="110" rx="8" fill="#fff" stroke="#0b62d6" stroke-width="1.5"/><text x="410" y="58" text-anchor="middle" font-size="13" fill="#222">📦 快递单 ②（一模一样）</text><text x="410" y="82" text-anchor="middle" font-size="12" fill="#222">发消息：给群发通知</text><text x="410" y="104" text-anchor="middle" font-size="12" fill="#666">幂等键：u1 + t7 + send</text><text x="410" y="128" text-anchor="middle" font-size="12" fill="#d33">键已在，直接返回上次结果</text><text x="410" y="168" text-anchor="middle" font-size="12" fill="#d33">第二次：不执行，只回“已发送”</text><text x="545" y="95" font-size="22" fill="#0b62d6">→</text><rect x="570" y="55" width="120" height="60" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="1.5"/><text x="630" y="82" text-anchor="middle" font-size="13" fill="#222">只发了一次</text><text x="630" y="104" text-anchor="middle" font-size="12" fill="#22a35a">✓ 没有重复事故</text><text x="360" y="196" text-anchor="middle" font-size="11" fill="#666">关键：重试必须带同一个键——键要从固定信息算出来，不能用时间戳或随机数</text></svg>
+<p>同一张单子送来两次，第一次执行并盖戳，第二次认出是同一个键，直接把上次的结果递回去，绝不重发一次。</p>
+</div>
 <p>生产里还有三个坑，入门示例（Day 11）没讲：<strong>一、并发竞态</strong>——两个相同调用同时到达，可能都查到“没执行过”、都执行一遍，所以“查键”和“占键”必须是原子操作，比如 Redis 的 SET NX（不存在才写入），或数据库的唯一约束，查完再写不算数；<strong>二、键要过期</strong>——键不能永久存，设个过期时间（比如 24 小时），过期后同一键可以重新执行，否则旧键会把合法的新调用也拦住；<strong>三、键要可复现</strong>——重试时必须带同一个键，所以键要从用户 ID、任务 ID、工具调用 ID 这些固定信息算出来，不能用时间戳或随机数，否则重试带的键不一样，去重就失效了。内存字典只够讲形状，生产里键和结果要存数据库或 Redis。</p>
 <h3>4. 超时、沙箱、审计日志、人工确认：剩下的四层</h3>
 <p><strong>超时</strong>：每个工具设超时（比如 30 秒），超了就停、返回失败，不要让一个挂住的工具拖垮整张图。<strong>沙箱</strong>：工具在受限环境里跑，只能碰白名单里的文件和网络，跑测试、跑代码、跑命令都要进沙箱，不能直接跑在宿主机上。<strong>审计日志</strong>：每次调用记谁、什么时候、调了什么、传了什么参数、结果如何，出事后能复盘。<strong>人工确认</strong>：高危操作（删文件、发全员消息、扣款、改线上配置）执行前必须停下来、等人点了确认才继续，确认里要写清“要做什么、影响什么”，不能只写“是否继续”。</p>
+<div class="ceiling">
+<p><strong>高危操作：保险柜要两把钥匙，缺一把都不开</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="保险柜要模型和人两把钥匙才开，门外只有白名单上的工具能进门" style="max-width:720px;display:block;margin:8px 0"><rect x="30" y="30" width="300" height="130" rx="12" fill="#374151" stroke="#111827" stroke-width="2"/><circle cx="180" cy="95" r="34" fill="#4b5563" stroke="#f5c542" stroke-width="3"/><circle cx="180" cy="95" r="8" fill="#f5c542"/><text x="180" y="162" text-anchor="middle" font-size="12" fill="#fff">🔒 高危操作保险柜</text><text x="180" y="182" text-anchor="middle" font-size="11" fill="#d1d5db">删文件 / 扣款 / 发全员消息</text><path d="M120 60 L120 40 M120 40 L140 40" stroke="#f5c542" stroke-width="4" fill="none"/><text x="130" y="28" text-anchor="middle" font-size="11" fill="#f5c542">🔑 模型申请</text><path d="M240 60 L240 40 M240 40 L260 40" stroke="#22a35a" stroke-width="4" fill="none"/><text x="250" y="28" text-anchor="middle" font-size="11" fill="#22a35a">🔑 人工确认</text><line x1="360" y1="20" x2="360" y2="190" stroke="#ddd" stroke-width="2"/><rect x="400" y="30" width="290" height="130" rx="12" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="545" y="54" text-anchor="middle" font-size="13" fill="#222">🚪 白名单大门</text><text x="545" y="80" text-anchor="middle" font-size="12" fill="#22a35a">✓ 查天气：进</text><text x="545" y="104" text-anchor="middle" font-size="12" fill="#22a35a">✓ 检索：进</text><text x="545" y="128" text-anchor="middle" font-size="12" fill="#d33">✗ 不在清单的工具：进不来</text><text x="545" y="182" text-anchor="middle" font-size="11" fill="#666">确认里要写清“做什么、影响什么”，不能只问“是否继续”</text></svg>
+<p>删文件、扣款这种高危操作像保险柜：模型一把钥匙、人一把钥匙，两把都到才开；门外还有白名单大门，不在清单上的工具连门都进不来。</p>
+</div>
 <div class="warn"><strong>容易踩的坑：</strong>只做一层就以为安全了。只做白名单，参数值非法照样能捣乱；只做 Pydantic，越权调用照样能执行；只做幂等，超时挂住的工具照样拖垮全图。纵深防御的意思就是：每一层都拦一部分，缺一层就多一个口子。</div>
 
 <h2>二、代码示例</h2>
@@ -138,6 +175,96 @@ def call_once(user_id, task_id, tool_name, args, fn, ttl=86400):
 2. 给“发消息”这个可写操作设计一个幂等键：键里要含哪几部分？为什么不能只用时间戳当键？<br>
 3. 假设模型传了一个不在白名单里的参数，写出调用链路在哪一层拦住它、返回什么错误——对照示例 1 的顺序，指出是哪一步。</p>
 </div>
+<div class="widget" id="duo">
+<h4>动手玩：Day35 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：模型传了一个不在白名单里的参数，哪一层拦住它？', opts:['Schema 白名单','Pydantic 校验','幂等键'], ans:0, why:'白名单拦“不该调的”：参数名不在清单里，第一道关就直接拒绝，不走到执行。'},
+    {type:'choice', q:'第 2 关：同一个“发消息”调用因为网络重试发了两次，第二次会怎么样？', opts:['再执行一次，消息发两遍','直接返回上次的结果，不再执行','只在显示上去重，执行还是两次'], ans:1, why:'幂等键是去重执行，不是去重显示。执行过就直接返回上次的结果，可写操作必须有它。'},
+    {type:'assign', q:'第 3 关：点一个防护需求，再点它该归哪一层，把 4 个需求分完。', tasks:['只允许清单里的工具和参数名','值要合法：城市在清单里、金额是正数','普通用户不能调“发全员消息”','发消息重复发了只执行一次'], agents:['Schema 白名单','Pydantic 校验','ACL','幂等键'], map:[0,1,2,3], why:'白名单拦不该调的、Pydantic 拦调得不对的、ACL 拦没权限调的、幂等键拦重复执行的。'},
+    {type:'choice', q:'第 4 关：两个相同的调用同时到达，都查到“没执行过”，怎么防两个都执行？', opts:['查完再写就行','“查键”和“占键”必须是原子操作，比如 Redis SET NX 或数据库唯一约束','用时间戳当幂等键'], ans:1, why:'查完再写不算数，并发下两个调用都会执行。键还要可复现、设过期时间（比如 24 小时）。'},
+    {type:'choice', q:'第 5 关：要删文件了，执行前该怎么做？', opts:['直接执行，越快越好','停下来等人工确认，确认里写清要做什么、影响什么','多执行一次确认效果'], ans:1, why:'删文件、发全员消息、扣款、改线上配置都是高危操作，必须先停下来等人确认。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day35-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day35-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day35 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。纵深防御现在对应三幅图：城堡三道门、盖了戳的快递单、要两把钥匙的保险柜。</p>';
+      showFb(true, '通关奖励：白名单 + Pydantic + ACL + 幂等键 + 人工确认，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day35-best-xp', String(best)); } clears++; localStorage.setItem('day35-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>防护需求（点一个）：</p><div id="duo-tasks"></div><p>防御层（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个防护需求，再点它该归哪一层。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个需求不归 ' + g + '。再看看正文第 1–3 节，每层拦的东西不一样。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>

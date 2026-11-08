@@ -21,6 +21,28 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -77,10 +99,78 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 </table>
 <h3>2. 完整链路怎么走：一个任务从头到尾的顺序</h3>
 <p>拿“查某产品两版退货政策并对比”当例子，链路是：Supervisor 接到任务 → Planner 拆成 DAG（查 2024 版、查 2025 版、对照差异、合成）→ Knowledge Agent 跑 Multi-hop 检索（每跳留痕、带出处）→ 需要调工具时走 MCP（list_tools 发现、纵深防御过一遍）→ Verifier 按三项标准查（测试、引用、schema）→ 不过打回、超上限交给 Supervisor → Composer 分段合成、标出处、冲突显式写出。链路里的每一步都有名字、有标准、有留痕，面试时按这个顺序讲，面试官才能跟得上。</p>
+<div class="ceiling">
+<p><strong>接力赛：六棒交接，一棒掉棒整队都得等</strong></p>
+<svg viewBox="0 0 720 210" width="100%" role="img" aria-label="六名接力队员依次交棒：主管起跑，规划、检索、工具、校验依次接棒，最后合成冲线，校验不过打回重跑" style="max-width:720px;display:block;margin:8px 0">
+<rect x="10" y="60" width="700" height="70" rx="35" fill="#f7faff" stroke="#0b62d6" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="30" y="52" font-size="12" fill="#666">🏁 起跑线：任务进来</text>
+<text x="640" y="52" font-size="12" fill="#666">🏆 终点：答案交付</text>
+<g font-size="12" fill="#222" text-anchor="middle">
+<circle cx="80" cy="88" r="10" fill="#f5c542" stroke="#222"/><path d="M80 98 L80 116 M80 104 L68 112 M80 104 L92 112 M80 116 L72 130 M80 116 L88 130" stroke="#222" stroke-width="2" fill="none"/><text x="80" y="150">主管</text><text x="80" y="166" font-size="11" fill="#0b62d6">接任务</text>
+<path d="M100 92 L128 92" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37)"/><rect x="112" y="84" width="16" height="6" rx="3" fill="#d33"/>
+<circle cx="180" cy="88" r="10" fill="#bbf7d0" stroke="#222"/><path d="M180 98 L180 116 M180 104 L168 112 M180 104 L192 112 M180 116 L172 130 M180 116 L188 130" stroke="#222" stroke-width="2" fill="none"/><text x="180" y="150">规划</text><text x="180" y="166" font-size="11" fill="#0b62d6">拆 DAG</text>
+<path d="M200 92 L228 92" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37)"/><rect x="212" y="84" width="16" height="6" rx="3" fill="#d33"/>
+<circle cx="280" cy="88" r="10" fill="#bbf7d0" stroke="#222"/><path d="M280 98 L280 116 M280 104 L268 112 M280 104 L292 112 M280 116 L272 130 M280 116 L288 130" stroke="#222" stroke-width="2" fill="none"/><text x="280" y="150">检索</text><text x="280" y="166" font-size="11" fill="#0b62d6">查出处</text>
+<path d="M300 92 L328 92" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37)"/><rect x="312" y="84" width="16" height="6" rx="3" fill="#d33"/>
+<circle cx="380" cy="88" r="10" fill="#bbf7d0" stroke="#222"/><path d="M380 98 L380 116 M380 104 L368 112 M380 104 L392 112 M380 116 L372 130 M380 116 L388 130" stroke="#222" stroke-width="2" fill="none"/><text x="380" y="150">工具</text><text x="380" y="166" font-size="11" fill="#0b62d6">MCP 调用</text>
+<path d="M400 92 L428 92" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37)"/><rect x="412" y="84" width="16" height="6" rx="3" fill="#d33"/>
+<circle cx="480" cy="88" r="10" fill="#bbf7d0" stroke="#222"/><path d="M480 98 L480 116 M480 104 L468 112 M480 104 L492 112 M480 116 L472 130 M480 116 L488 130" stroke="#222" stroke-width="2" fill="none"/><text x="480" y="150">校验</text><text x="480" y="166" font-size="11" fill="#0b62d6">三项标准</text>
+<path d="M500 92 L528 92" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37)"/><rect x="512" y="84" width="16" height="6" rx="3" fill="#d33"/>
+<circle cx="580" cy="88" r="10" fill="#bbf7d0" stroke="#222"/><path d="M580 98 L580 116 M580 104 L568 112 M580 104 L592 112 M580 116 L572 130 M580 116 L588 130" stroke="#222" stroke-width="2" fill="none"/><text x="580" y="150">合成</text><text x="580" y="166" font-size="11" fill="#0b62d6">标出处</text>
+</g>
+<defs><marker id="arr37" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+<path d="M480 178 Q380 205 300 178" fill="none" stroke="#d33" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr37)"/>
+<text x="390" y="200" text-anchor="middle" font-size="12" fill="#d33">校验不过 → 打回重跑，超上限交给主管</text>
+</svg>
+<p>整条链路像一场接力：棒（任务）只能一棒一棒往下传，校验是裁判，不过就打回重跑，谁也不能自己改顺序抢跑。</p>
+</div>
+
 <h3>3. EvalHarness 怎么评测多 Agent：五个指标一起报</h3>
 <p>单 Agent 的评测只看最终答案对不对，多 Agent 还要看每路的表现。五个指标：<strong>任务成功率</strong>（最终答案通过全部校验的比例）、<strong>每路成功率</strong>（Planner 拆得稳不稳、Knowledge 命中率高不高、Verifier 拦截率多少，定位弱环就靠它）、<strong>成本</strong>（平均 Token 和调用次数，并行越多成本越高，要报出来）、<strong>延迟</strong>（关键路径耗时，并行省下的时间要算进去）、<strong>失败分布</strong>（失败都栽在哪一步：检索、工具、校验还是合成）。只报任务成功率，会掩盖“某一路一直在失败、靠别的路兜底”的问题；五个一起报，弱环藏不住。</p>
+<div class="ceiling">
+<p><strong>体检报告单：五个指标一起看，弱环藏不住</strong></p>
+<svg viewBox="0 0 720 250" width="100%" role="img" aria-label="EvalHarness 体检报告单：任务成功率82分，每路成功率里知识78分标红为弱环，成本12400 Token，延迟42秒，失败分布检索12工具5校验3" style="max-width:720px;display:block;margin:8px 0">
+<rect x="90" y="8" width="540" height="234" rx="10" fill="#fff" stroke="#0b62d6" stroke-width="2"/>
+<rect x="90" y="8" width="540" height="34" rx="10" fill="#eef4ff"/>
+<text x="360" y="31" text-anchor="middle" font-size="15" font-weight="bold" fill="#0b62d6">🩺 EvalHarness 体检报告单</text>
+<g font-size="13" fill="#222">
+<text x="120" y="70">任务成功率</text><rect x="240" y="56" width="246" height="16" rx="8" fill="#e5e5e5"/><rect x="240" y="56" width="202" height="16" rx="8" fill="#22a35a"/><text x="500" y="70" font-weight="bold">82%</text>
+<text x="120" y="106">每路成功率</text><rect x="240" y="92" width="246" height="16" rx="8" fill="#e5e5e5"/><rect x="240" y="92" width="192" height="16" rx="8" fill="#d33"/><text x="500" y="106" font-weight="bold" fill="#d33">知识 78% ⚠</text>
+<text x="120" y="142">成本</text><text x="240" y="142">平均 12,400 Token / 任务</text><text x="500" y="142" fill="#666">并行越贵</text>
+<text x="120" y="178">延迟</text><text x="240" y="178">关键路径 42 秒</text><text x="500" y="178" fill="#666">并行省时间</text>
+<text x="120" y="214">失败分布</text><text x="240" y="214">检索 12 · 工具 5 · 校验 3</text><text x="500" y="214" fill="#d33" font-weight="bold">弱环：检索</text>
+</g>
+<text x="360" y="238" text-anchor="middle" font-size="12" fill="#666">只看总分 82%，看不出知识那一路一直在掉链子</text>
+</svg>
+<p>只报任务成功率就像只看体检总分：82% 看着还行，但知识一路只有 78%、失败 12 次都栽在检索上——五个指标一起报，弱环才藏不住。</p>
+</div>
+
 <h3>4. 面试讲法：按任务讲，不要按名词讲</h3>
 <p>面试讲 Multi-Agent，最忌讳罗列名词：“我用过 Supervisor、MCP、Verifier”。要按任务讲：任务是什么、为什么要拆成多 Agent（单 Agent 的哪块天花板撞上了）、DAG 怎么拆的、每路的验收标准是什么、哪路失败过、怎么隔离和打回的、五个评测数是多少、如果重做会改哪里。讲的时候带一张图（Supervisor、Planner、Knowledge、Tool、Verifier、Composer 六个节点和箭头），图一摆，面试官就知道你不是背名词，是真搭过。</p>
+<div class="ceiling">
+<p><strong>讲故事三段式：像破案一样讲你的项目</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="面试讲法三段式：案发讲任务背景，最难的案子讲哪路失败怎么打回，结案讲如果重做会改哪里" style="max-width:720px;display:block;margin:8px 0">
+<g font-size="13" fill="#222" text-anchor="middle">
+<rect x="20" y="20" width="200" height="150" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="120" y="46" font-weight="bold">① 案发：背景</text>
+<circle cx="120" cy="88" r="22" fill="none" stroke="#0b62d6" stroke-width="4"/><line x1="136" y1="104" x2="152" y2="120" stroke="#0b62d6" stroke-width="4"/>
+<text x="120" y="140">任务是什么？</text><text x="120" y="160">为什么非拆不可？</text>
+<rect x="250" y="20" width="200" height="150" rx="10" fill="#fff7e6" stroke="#f5c542" stroke-width="1.5"/>
+<text x="350" y="46" font-weight="bold">② 破案：最难的 Bug</text>
+<path d="M310 96 L330 76 M330 96 L310 76" stroke="#d33" stroke-width="4"/><circle cx="375" cy="86" r="18" fill="none" stroke="#d33" stroke-width="3"/><path d="M375 78 L375 86 L383 90" stroke="#d33" stroke-width="3" fill="none"/>
+<text x="350" y="140">哪路失败过？</text><text x="350" y="160">怎么隔离、打回？</text>
+<rect x="480" y="20" width="200" height="150" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="1.5"/>
+<text x="580" y="46" font-weight="bold">③ 结案：如果重做</text>
+<path d="M540 100 L560 80 L580 100 L600 80 L620 100" fill="none" stroke="#22a35a" stroke-width="3"/>
+<text x="580" y="140">会改哪里？</text><text x="580" y="160">五个评测数是多少？</text>
+</g>
+<path d="M220 95 L250 95" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37b)"/>
+<path d="M450 95 L480 95" stroke="#0b62d6" stroke-width="2" marker-end="url(#arr37b)"/>
+<defs><marker id="arr37b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
+</svg>
+<p>别一上来就报名词：先讲案发（任务和拆的理由），再讲破案（最难的失败和打回），最后结案（重做改哪里、五个评测数）——面试官听的是一个真搭过的故事，不是名词清单。</p>
+</div>
+
 <div class="warn"><strong>容易踩的坑：</strong>复盘只写“学到了什么”，不写“哪里还不行”。第 5 周复盘必须写两栏：做对的（链路、标准、留痕）和没做好的（哪路成功率低、成本哪里高、哪次冲突处理得不好），没做好的那栏就是下一个项目的起点。</div>
 
 <h2>二、代码示例</h2>
@@ -115,6 +205,99 @@ report = {
 2. 拿你自己的一个任务，写出它的完整链路：Supervisor、Planner、Knowledge、Tool、Verifier、Composer 各一步，每步的验收标准是什么？<br>
 3. 写一份一页纸评测报告：任务成功率、每路成功率、成本、延迟、失败分布，五个指标各填一个数（没有实测就写“待实测”，不要编数），指出弱环是哪一路。</p>
 </div>
+
+
+<div class="widget" id="duo">
+<h4>动手玩：Day37 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：第 5 周完整链路的顺序是？', opts:['Supervisor、Planner、Knowledge、工具、Verifier、Composer','Composer、Verifier、Supervisor、Planner','Knowledge、Supervisor、Composer、Planner'], ans:0, why:'按这个顺序讲，面试官才能跟得上；每一步都有名字、有标准、有留痕。'},
+    {type:'choice', q:'第 2 关：评测多 Agent 时，只报任务成功率会掩盖什么？', opts:['什么都不会掩盖','某一路一直在失败、靠别的路兜底的问题','成本问题'], ans:1, why:'定位弱环要靠每路成功率，五个指标一起报，弱环藏不住。'},
+    {type:'assign', q:'第 3 关：点一个任务，再点它该去的 Agent，把 5 个任务分完。', tasks:['把任务拆成 DAG 步骤','跑 Multi-hop 检索、带出处交付','走 MCP 调用工具','按测试、引用、schema 三项标准校验','分段合成、标出处、冲突显式写出'], agents:['Planner 规划','Knowledge 检索','Tool 执行','Verifier 校验','Composer 合成'], map:[0,1,2,3,4], why:'Planner 拆步骤、Knowledge 查资料、Tool 动手执行、Verifier 核对、Composer 合成。分对了，整条链路才走得通。'},
+    {type:'choice', q:'第 4 关：评测报告里 Planner 95%、Knowledge 78%、Tool 90%、Verifier 88%，下一轮先优化哪一路？', opts:['Planner','Knowledge','Verifier'], ans:1, why:'弱环是 Knowledge（78%），下一轮先优化检索，而不是全图一起调。'},
+    {type:'choice', q:'第 5 关：面试讲 Multi-Agent 项目，应该怎么讲？', opts:['罗列名词：Supervisor、MCP、Verifier','按任务讲：为什么拆、怎么拆、验收标准、失败处理、评测数、重做改哪里','只讲最难的那部分'], ans:1, why:'按任务讲、带一张六节点图，面试官才知道你是真搭过。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day37-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day37-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day37 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。第 5 周现在收成了一条线：接力链路、体检报告单式的五个评测数、破案故事式的面试讲法。</p>';
+      showFb(true, '通关奖励：完整链路 + 五个评测指标 + 面试讲法，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day37-best-xp', String(best)); } clears++; localStorage.setItem('day37-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看上面的接力图，每一步都有自己的活。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
+
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>
