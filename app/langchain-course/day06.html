@@ -41,6 +41,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>摘要（Summary）</td><td>旧消息先摘要成一条，再带着摘要往下聊</td><td>关键信息还在，成本可控</td><td>摘要会失真，细节会被磨平</td></tr>
 </table>
 <p>生产里最常用的是组合：<strong>System 保留 + 最近 N 轮全量 + 中间折叠成摘要</strong>。这就是咱们脚手架 <code>memory.py</code> 的思路，也是今天代码示例要跑通的方案。</p>
+<p>顺带分清两个容易混的概念：<strong>滑窗是“留什么”的策略，Redis 是“存在哪”的持久化，两者不在一个层面，可以组合。</strong>滑窗只说“最近 N 轮留下、旧的丢掉”，至于这 N 轮放内存还是放 Redis，都可以。把最近 N 条存在 Redis 的 list 里（新消息推进来、满了从尾巴截掉），滑窗就持久化了，重启也不丢。咱们脚手架现在是内存版（<code>SimpleMemory</code>），没接 Redis；Redis 在课里出现的地方是 Day 11 / Day 35 的幂等键存储和 LangGraph Day 5 的 Checkpointer（<code>RedisSaver</code>），都是“生产换件”的持久化，不是滑窗本身。</p>
 <h3>3. 预算怎么定：三个数字要显式配置</h3>
 <ul>
 <li><strong>总预算</strong>：一次调用最多带多少字符 / Token，超过就触发折叠，不能等爆了再处理。</li>
