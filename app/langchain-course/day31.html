@@ -21,6 +21,28 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -59,7 +81,21 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <rect x="390" y="192" width="160" height="44" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="1.5"/>
 <text x="470" y="219" text-anchor="middle" font-size="13" fill="#222">Composer 合成</text>
 </svg>
-<p>第一，上下文天花板：一个 Agent 要同时记住规划、检索结果、工具输出、校验意见，上下文越长越容易顾此失彼；分工后，每个子 Agent 只看自己那部分，上下文反而变干净了。第二，能力天花板：检索、执行、校验是三种不同的活，一个提示词很难同时把三件事都做到最好，分开写提示词、分开配工具，各自才能调优。第三，并行天花板：单 Agent 只能一步一步来，多个子 Agent 可以同时动手，总耗时从“各步相加”变成“最慢的那步”。</p>
+<div class="ceiling">
+<p><strong>天花板 1：上下文 —— 一个人全记住，越堆越高</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一个人抱着四摞文件顶到天花板，分工后每人只抱一摞" style="max-width:720px;display:block;margin:8px 0"><rect x="20" y="8" width="320" height="10" rx="4" fill="#d33"/><text x="180" y="34" text-anchor="middle" font-size="12" fill="#d33">天花板</text><rect x="110" y="42" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="58" text-anchor="middle" font-size="12" fill="#222">规划</text><rect x="110" y="68" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="84" text-anchor="middle" font-size="12" fill="#222">检索结果</text><rect x="110" y="94" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="110" text-anchor="middle" font-size="12" fill="#222">工具输出</text><rect x="110" y="120" width="150" height="22" rx="4" fill="#fee2e2" stroke="#d33"/><text x="185" y="136" text-anchor="middle" font-size="12" fill="#222">校验意见</text><circle cx="185" cy="158" r="11" fill="#f5c542" stroke="#222"/><path d="M185 169 L185 188 M170 178 L200 178" stroke="#222" stroke-width="2"/><text x="180" y="182" text-anchor="middle" font-size="12" fill="#666">一个人全记住</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><circle cx="430" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M430 91 L430 110 M418 100 L442 100" stroke="#222" stroke-width="2"/><rect x="405" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="430" y="62" text-anchor="middle" font-size="11" fill="#222">规划</text><circle cx="540" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M540 91 L540 110 M528 100 L552 100" stroke="#222" stroke-width="2"/><rect x="515" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="540" y="62" text-anchor="middle" font-size="11" fill="#222">检索</text><circle cx="650" cy="80" r="11" fill="#bbf7d0" stroke="#222"/><path d="M650 91 L650 110 M638 100 L662 100" stroke="#222" stroke-width="2"/><rect x="625" y="48" width="50" height="20" rx="4" fill="#dcfce7" stroke="#22a35a"/><text x="650" y="62" text-anchor="middle" font-size="11" fill="#222">校验</text><text x="540" y="140" text-anchor="middle" font-size="12" fill="#22a35a">✓ 分工后：每人只看自己那部分</text><text x="540" y="162" text-anchor="middle" font-size="12" fill="#666">上下文反而变干净了</text></svg>
+<p>一个 Agent 要同时记住规划、检索结果、工具输出、校验意见，上下文越长越容易顾此失彼；分工后，每个子 Agent 只看自己那部分。</p>
+</div>
+<div class="ceiling">
+<p><strong>天花板 2：能力 —— 一把瑞士军刀，开不了三把锁</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一把瑞士军刀打不开三把锁，分开的放大镜扳手印章各开一把" style="max-width:720px;display:block;margin:8px 0"><rect x="50" y="60" width="180" height="46" rx="10" fill="#d33"/><text x="140" y="88" text-anchor="middle" font-size="13" fill="#fff">瑞士军刀</text><rect x="80" y="38" width="10" height="24" fill="#999"/><rect x="140" y="38" width="10" height="24" fill="#999"/><rect x="200" y="38" width="10" height="24" fill="#999"/><text x="140" y="140" text-anchor="middle" font-size="12" fill="#d33">✗ 一个提示词，三件事都做不好</text><text x="140" y="162" text-anchor="middle" font-size="12" fill="#666">检索 / 执行 / 校验是三种不同的活</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><circle cx="440" cy="70" r="22" fill="none" stroke="#0b62d6" stroke-width="4"/><line x1="456" y1="86" x2="472" y2="104" stroke="#0b62d6" stroke-width="4"/><text x="440" y="132" text-anchor="middle" font-size="12" fill="#222">检索 🔍</text><text x="440" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 放大镜</text><rect x="520" y="48" width="16" height="52" rx="6" fill="#f5c542" stroke="#222" transform="rotate(35 528 74)"/><text x="540" y="132" text-anchor="middle" font-size="12" fill="#222">执行 🔧</text><text x="540" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 扳手</text><rect x="620" y="48" width="44" height="30" rx="6" fill="#22a35a"/><rect x="634" y="78" width="16" height="24" fill="#22a35a"/><text x="642" y="132" text-anchor="middle" font-size="12" fill="#222">校验 ✅</text><text x="642" y="152" text-anchor="middle" font-size="12" fill="#22a35a">✓ 印章</text></svg>
+<p>检索、执行、校验是三种不同的活，一个提示词很难同时把三件事都做到最好；分开写提示词、分开配工具，各自才能调优。</p>
+</div>
+<div class="ceiling">
+<p><strong>天花板 3：并行 —— 单车道排队 vs 三车道同时开工</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="单Agent三步串行耗时相加，多Agent三路并行耗时只剩最慢一步" style="max-width:720px;display:block;margin:8px 0"><text x="20" y="24" font-size="13" fill="#222">单 Agent：一步一步来</text><rect x="20" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="65" y="55" text-anchor="middle" font-size="12" fill="#222">检索 3分</text><text x="125" y="55" font-size="14" fill="#666">→</text><rect x="140" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="185" y="55" text-anchor="middle" font-size="12" fill="#222">执行 3分</text><text x="245" y="55" font-size="14" fill="#666">→</text><rect x="260" y="36" width="90" height="30" rx="6" fill="#eef4ff" stroke="#0b62d6"/><text x="305" y="55" text-anchor="middle" font-size="12" fill="#222">校验 3分</text><rect x="20" y="76" width="330" height="12" rx="6" fill="#fca5a5"/><text x="370" y="87" font-size="12" fill="#d33">总耗时 3 + 3 + 3 = 9 分</text><line x1="20" y1="108" x2="700" y2="108" stroke="#ddd" stroke-width="2"/><text x="20" y="132" font-size="13" fill="#222">多 Agent：同时动手</text><rect x="20" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="65" y="161" text-anchor="middle" font-size="12" fill="#222">检索 3分</text><rect x="130" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="175" y="161" text-anchor="middle" font-size="12" fill="#222">执行 3分</text><rect x="240" y="142" width="90" height="30" rx="6" fill="#dcfce7" stroke="#22a35a"/><text x="285" y="161" text-anchor="middle" font-size="12" fill="#222">校验 3分</text><rect x="360" y="142" width="110" height="12" rx="6" fill="#86efac"/><text x="480" y="153" font-size="12" fill="#22a35a">总耗时 = 最慢的那步 3 分</text></svg>
+<p>单 Agent 只能一步一步来；多个子 Agent 可以同时动手，总耗时从“各步相加”变成“最慢的那步”。</p>
+</div>
 <h3>2. Supervisor 模式：一张图，主管 + 子图</h3>
 <p>Supervisor 是图的中心节点：它收到任务，先判断该派给谁；子 Agent 做完，把结果写回共享状态；Supervisor 再判断是继续派、打回重做，还是收口汇总。子 Agent 本身也可以是一张小图（比如 Knowledge 子 Agent 内部就是检索循环），这就是“图里套图”。主管不直接干活，只做三件事：分发、判断、汇总——主管一旦开始自己动手查资料、自己写答案，分工就乱了。</p>
 <h3>3. 子 Agent 怎么通信：三种方式，各有适用场景</h3>
@@ -123,6 +159,96 @@ def run_team(task):
 2. 这三路里哪两路可以并行、哪两路必须串行？为什么？<br>
 3. 假设检索那路挂了两次，写出 Supervisor 的处理：重试还是写失败？最终回答里该怎么写这段？</p>
 </div>
+<div class="widget" id="duo">
+<h4>动手玩：Day31 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：一个 Agent 又要规划、又要检索、又要校验，越干越慢，这是撞上了哪块天花板？', opts:['上下文天花板','能力天花板','并行天花板'], ans:0, why:'同时记住四样东西，上下文越长越容易顾此失彼。分工后每人只看自己那部分。'},
+    {type:'choice', q:'第 2 关：检索、执行、校验三种活，一个提示词都想做好，结果都不行，这是哪块天花板？', opts:['上下文天花板','能力天花板','并行天花板'], ans:1, why:'一把瑞士军刀开不了三把锁。分开写提示词、分开配工具，各自才能调优。'},
+    {type:'assign', q:'第 3 关：点一个任务，再点它该去的 Agent，把 4 个任务分完。', tasks:['把任务拆成步骤','去查退货政策原文','调用工具执行操作','核对答案里的数字对不对'], agents:['Planner 规划','Knowledge 检索','Tool 执行','Verifier 校验'], map:[0,1,2,3], why:'Planner 拆步骤、Knowledge 查资料、Tool 动手执行、Verifier 核对。分对了，主管才不用自己干活。'},
+    {type:'choice', q:'第 4 关：检索、执行、校验三步，怎么跑最快又不出错？', opts:['检索和执行并行，校验必须等两者都完','三步全并行，越快越好','三步全串行，最稳妥'], ans:0, why:'没有依赖的并行，有依赖的串行。校验要读执行结果，并行跑会读到没出来的东西。'},
+    {type:'choice', q:'第 5 关：检索那路挂了两次，Supervisor 该怎么办？', opts:['重跑整张图','只重试检索那一路，超上限就把失败写进结果、继续走','整个任务直接崩掉'], ans:1, why:'这就是失败隔离：局部失败不拖垮全局，重试也要有上限，通常 2–3 次。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day31-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day31-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day31 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。三大天花板现在对应三幅图：上下文是抱四摞文件的人、能力是瑞士军刀、并行是单车道变三车道。</p>';
+      showFb(true, '通关奖励：三大天花板 + 分工 + 并行 + 失败隔离，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day31-best-xp', String(best)); } clears++; localStorage.setItem('day31-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>任务（点一个）：</p><div id="duo-tasks"></div><p>Agent（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个任务，再点它该去的 Agent。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 分对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 个全分对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前分错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 分错了：这个任务不归 ' + g + '。再看看第 3 关的图，主管派单是有分工的。'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>
