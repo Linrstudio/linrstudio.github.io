@@ -5,26 +5,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>动态日报</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;max-width:720px;margin:0 auto;padding:24px 18px 48px;color:#1a1a1a;line-height:1.7}
-a{color:#2563eb}
-h1{font-size:22px}
-.meta{color:#666;font-size:14px}
-li{margin:12px 0}
-small{color:#666}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;max-width:960px;margin:0 auto;padding:24px 18px 48px;color:#1a1a1a;line-height:1.7;background:#f6f6f6}
+h1{font-size:22px;margin:0 0 4px}
+.meta{color:#666;font-size:14px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{display:block;background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px 20px;text-decoration:none;color:#1a1a1a;transition:box-shadow .15s ease,transform .15s ease}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px)}
+.card h2{font-size:17px;line-height:1.5;margin:0 0 10px}
+.card ul{margin:0 0 12px;padding-left:18px;color:#444;font-size:14px;line-height:1.8}
+.card .foot{border-top:1px solid #eee;padding-top:10px;font-size:13px;color:#888}
 </style>
 </head>
 <body>
 <h1>动态日报</h1>
 <p class="meta">每天把 Muse Feed 的内容整理到这里，一天一篇，配图见各篇正文。</p>
-<ul>
-<li><a href="2026-11-08.html">2026-11-08（周日）</a> <small>3 条 — 家长起诉谷歌 / Nitro 与 Base44 $65K 游戏赛 / Claude Code 反超 Copilot</small></li>
-<li><a href="2026-11-07.html">2026-11-07（周六）</a> <small>4 条 — #SaveMassEffect 广告车开到 EA 总部 / DeepMind 智能体找出 RSA 弱点 / 加拿大议会请愿破 3000 签 / Copilot 登陆 JetBrains Air</small></li>
-<li><a href="2026-11-06.html">2026-11-06（周五）</a> <small>6 条 — 英国 LangGraph 岗位涨十余倍 / LangChain 异步子智能体 / Meta、谷歌、TikTok 起诉加州</small></li>
-<li><a href="2026-11-05.html">2026-11-05（周四）</a> <small>12 条 — Peek-A-Bouquet 花束生日卡 / LangChain 混合检索加再排序 / Klyo 分 70% 广告收入</small></li>
-<li><a href="2026-11-04.html">2026-11-04（周三）</a> <small>12 条 — itch.io 删数 TB AI 内容 / 腾讯发布 Hy4 / Claude Code 不再复刻具体游戏</small></li>
-<li><a href="2026-11-03.html">2026-11-03（周二）</a> <small>13 条 — 欧盟 2 欧元处理费 / Haven 桌面版 / 英国 16 岁以下社交禁令咨询</small></li>
-<li><a href="2026-11-02.html">2026-11-02（周一）</a> <small>5 条 — Figma 向 AI 编程智能体开放画布 / 8 到 12 岁娃的第一单在 Roblox / DeepSeek 开源超级智能体架构</small></li>
-<li><a href="2026-11-01.html">2026-11-01（周日）</a> <small>4 条 — 纽约新法让聊天机器人先验身份 / OpenAI Agents API 背景压缩默认开启 / 智能体接入 Android Studio</small></li>
-</ul>
+<div class="grid">
+
+<a class="card" href="2026-11-08.html">
+<h2>家长起诉谷歌：学校 Chromebook 上的 AI 加剧女儿危机</h2>
+<ul><li>Nitro 与 Base44 办 $65K 网页游戏 AI 制作赛</li><li>Claude Code 反超 Copilot，成最常用编程工具</li></ul>
+<div class="foot">11月8日 周日 · 3 条</div>
+</a>
+
+<a class="card" href="2026-11-07.html">
+<h2>粉丝把 #SaveMassEffect 广告车开到 EA 总部</h2>
+<ul><li>DeepMind 智能体找出 1024 位 RSA 两处弱点</li><li>救 BioWare 的加拿大议会请愿突破 3000 签名</li><li>GitHub Copilot 现已登陆 JetBrains Air</li></ul>
+<div class="foot">11月7日 周六 · 4 条</div>
+</a>
+
+<a class="card" href="2026-11-06.html">
+<h2>英国 LangGraph 岗位同比涨了十余倍</h2>
+<ul><li>LangChain 让智能体后台干活了</li><li>Meta、谷歌、TikTok 起诉加州，阻拦未成年人社交法</li><li>编程智能体连做 20 个需求，只完成一半</li></ul>
+<div class="foot">11月6日 周五 · 6 条</div>
+</a>
+
+<a class="card" href="2026-11-05.html">
+<h2>Peek-A-Bouquet 花束生日卡出了视频教程</h2>
+<ul><li>LangChain 混合检索加再排序，修好只会猜意思的 RAG</li><li>强检索下“无金标”标签准确率从0.68跌至0.10</li><li>Klyo 发 HTML5 游戏分 70% 广告收入</li></ul>
+<div class="foot">11月5日 周四 · 12 条</div>
+</a>
+
+<a class="card" href="2026-11-04.html">
+<h2>itch.io 删数 TB AI 内容并扩大筛选</h2>
+<ul><li>腾讯发布 Hy4，新增视觉理解与电脑操作能力</li><li>Claude Code 不再帮你复刻某一款具体游戏</li><li>Chrome 157 上线，补了 213 个安全问题</li></ul>
+<div class="foot">11月4日 周三 · 12 条</div>
+</a>
+
+<a class="card" href="2026-11-03.html">
+<h2>欧盟11月1日起按产品类型加收2欧元处理费</h2>
+<ul><li>Haven 桌面版现已支持 Mac 与 Windows 下载</li><li>英国启动16岁以下社交禁令咨询</li><li>GitHub 重构 Copilot，接管模型选择</li></ul>
+<div class="foot">11月3日 周二 · 13 条</div>
+</a>
+
+<a class="card" href="2026-11-02.html">
+<h2>Figma 向 AI 编程智能体开放画布</h2>
+<ul><li>8到12岁娃的第一单，发生在Roblox和堡垒之夜</li><li>DeepSeek 开源超级智能体背后的架构</li><li>怀旧手作礼物正在引领年轻人假期采购</li></ul>
+<div class="foot">11月2日 周一 · 5 条</div>
+</a>
+
+<a class="card" href="2026-11-01.html">
+<h2>纽约新法让聊天机器人先验身份再开口</h2>
+<ul><li>OpenAI Agents API 背景压缩默认开启</li><li>纽约新法覆盖 ChatGPT 和 Claude，不止伴侣应用</li><li>你的常用智能体已接入 Android Studio</li></ul>
+<div class="foot">11月1日 周日 · 4 条</div>
+</a>
+
+</div>
 </body>
 </html>
