@@ -21,6 +21,28 @@ details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10p
 summary{cursor:pointer;font-weight:bold}
 .nav{display:flex;justify-content:space-between;margin-top:40px}
 table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+.ceiling{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:14px 0}
+.ceiling p{margin:8px 0 0}
+.widget{border:2px solid #0b62d6;border-radius:12px;padding:16px;margin:16px 0;background:#f7faff}
+.widget h4{margin:0 0 8px;font-size:16px}
+.duo-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:bold}
+.duo-bar{height:10px;background:#e5e5e5;border-radius:999px;overflow:hidden;margin:10px 0}
+.duo-bar i{display:block;height:100%;background:#22a35a;width:0%}
+.duo-q{font-size:16px;margin:12px 0}
+.duo-opt{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:15px}
+.duo-opt.correct{background:#dcfce7;border-color:#22a35a}
+.duo-opt.wrong{background:#fee2e2;border-color:#d33}
+.duo-opt:disabled{cursor:default}
+.duo-chip{display:inline-block;margin:4px 6px 4px 0;padding:8px 12px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.duo-chip.sel{background:#0b62d6;color:#fff}
+.duo-chip.done{background:#dcfce7;border-color:#22a35a;color:#222;cursor:default}
+.duo-box{border:2px dashed #0b62d6;border-radius:10px;padding:10px;margin:8px 0;min-height:44px;background:#fff}
+.duo-box.sel{border-style:solid;background:#eef4ff}
+.duo-fb{margin-top:10px;border-radius:10px;padding:10px 12px;background:#fff;border:1px solid #e5e5e5;font-size:14px}
+.duo-fb.ok{border-color:#22a35a;background:#f0fdf4}
+.duo-fb.err{border-color:#d33;background:#fef2f2}
+.wbtn{margin:6px 6px 0 0;padding:8px 14px;border-radius:999px;border:1px solid #0b62d6;background:#fff;color:#0b62d6;cursor:pointer;font-size:14px}
+.wbtn.primary{background:#0b62d6;color:#fff}
 </style>
 </head>
 <body>
@@ -37,6 +59,11 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><td>树</td><td>一父多子，只有一个根</td><td>DAG 的特例，一个步骤只有一个“父依赖”</td></tr>
 <tr><td>DAG</td><td>一个步骤可以有多个输入</td><td>最一般的形状；本课的“对照差异”同时依赖两个检索结果，就是 DAG 不是树</td></tr></table>
 <p><strong>注意别和 LangGraph 的图搞混：</strong>LangGraph 的图可以有环，循环边就是干这个的——ReAct 要一圈一圈跑，直到模型不再调工具。Planner 的任务 DAG 不能有环，因为任务计划是“做完就结束”的清单，有环就永远做不完。一个管循环执行、一个管一次性计划，环的允许与否是两者最大的区别。</p>
+<div class="ceiling">
+<p><strong>一张图看懂链、树、DAG、有圈：前三个能排顺序，最后一个是死锁</strong></p>
+<svg viewBox="0 0 720 200" width="100%" role="img" aria-label="链全串行、树一父多子、DAG一步多个输入、有圈互相等死锁" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar32a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker><marker id="ar32r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d33"/></marker></defs><circle cx="90" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><line x1="90" y1="66" x2="90" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="90" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="109" text-anchor="middle" font-size="13" fill="#222">B</text><line x1="90" y1="120" x2="90" y2="142" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="90" cy="158" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="163" text-anchor="middle" font-size="13" fill="#222">C</text><text x="90" y="190" text-anchor="middle" font-size="12" fill="#222">链：全串行</text><line x1="180" y1="20" x2="180" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="270" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="270" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><line x1="258" y1="64" x2="238" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><line x1="282" y1="64" x2="302" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="230" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="230" y="109" text-anchor="middle" font-size="13" fill="#222">B</text><circle cx="310" cy="104" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="310" y="109" text-anchor="middle" font-size="13" fill="#222">C</text><text x="270" y="150" text-anchor="middle" font-size="12" fill="#222">树：一父多子</text><text x="270" y="170" text-anchor="middle" font-size="12" fill="#666">每步只有一个父依赖</text><line x1="360" y1="20" x2="360" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="420" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="420" y="55" text-anchor="middle" font-size="13" fill="#222">A</text><circle cx="500" cy="50" r="16" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="500" y="55" text-anchor="middle" font-size="13" fill="#222">B</text><line x1="432" y1="64" x2="452" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><line x1="488" y1="64" x2="468" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32a)"/><circle cx="460" cy="104" r="16" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="460" y="109" text-anchor="middle" font-size="13" fill="#222">C</text><text x="460" y="150" text-anchor="middle" font-size="12" fill="#222">DAG：一步多个输入</text><text x="460" y="170" text-anchor="middle" font-size="12" fill="#666">对照差异同时依赖两版检索</text><line x1="540" y1="20" x2="540" y2="190" stroke="#ddd" stroke-width="2"/><circle cx="630" cy="60" r="16" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="630" y="65" text-anchor="middle" font-size="13" fill="#222">A</text><circle cx="630" cy="130" r="16" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="630" y="135" text-anchor="middle" font-size="13" fill="#222">B</text><path d="M646 76 Q668 95 646 114" fill="none" stroke="#d33" stroke-width="2" marker-end="url(#ar32r)"/><path d="M614 114 Q592 95 614 76" fill="none" stroke="#d33" stroke-width="2" marker-end="url(#ar32r)"/><text x="630" y="170" text-anchor="middle" font-size="12" fill="#d33">有圈：A 等 B、B 等 A</text><text x="630" y="190" text-anchor="middle" font-size="12" fill="#d33">✗ 死锁，谁都动不了</text></svg>
+<p>链和树都是 DAG 的特例：链每步只有一个前置，树每步只有一个父依赖；DAG 最一般，一个步骤可以同时依赖两个检索结果。有圈排不出顺序，Planner 必须先判圈。</p>
+</div>
 <h3>2. 为什么拆成 DAG：步骤之间只有两种关系</h3>
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planner 把任务拆成 DAG：分层并行，关键路径串行的流程图" style="max-width:100%;height:auto;display:block;margin:16px 0">
 <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker></defs>
@@ -70,10 +97,20 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p>DAG 的意思是：步骤之间有箭头（依赖），但箭头不能绕成圈。两个步骤之间只有两种关系：有依赖（A 的输出是 B 的输入，必须先 A 后 B），没依赖（可以并行）。把关系画成图，Supervisor 就不用凭感觉派活：看图就知道哪步能跑、哪步要等、哪步卡住了。依赖成圈（A 等 B、B 等 A）是死锁，Planner 输出的第一件事就是检查有没有圈。</p>
 <h3>3. 拆的粒度：一步只做一件事，验收标准写在前面</h3>
 <p>每个步骤只做一件事：检索、执行、校验、合成，各是一步；“查资料并写答案”这种一步包两件事的拆法，失败时说不清是哪半步错了。每个步骤还要在动手前写清三样：<strong>输入</strong>（需要什么）、<strong>输出</strong>（交出什么格式）、<strong>验收标准</strong>（怎么算做完，比如“检索命中至少 2 块相关资料”或“测试全部通过”）。验收标准写在前面，Verifier 才有标准可查；动手后再定标准，等于自己给自己打分。</p>
+<div class="ceiling">
+<p><strong>拆的粒度：一大步包两件事 vs 两小步各带验收标准</strong></p>
+<svg viewBox="0 0 720 190" width="100%" role="img" aria-label="一步包两件事失败说不清哪半步错了，两小步各带输入输出验收标准" style="max-width:720px;display:block;margin:8px 0"><rect x="40" y="36" width="260" height="92" rx="10" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="170" y="66" text-anchor="middle" font-size="14" fill="#222">查资料并写答案</text><text x="170" y="90" text-anchor="middle" font-size="12" fill="#666">检索 + 写作混在一个步骤里</text><text x="170" y="112" text-anchor="middle" font-size="12" fill="#666">没有验收标准</text><text x="170" y="152" text-anchor="middle" font-size="13" fill="#d33">✗ 失败了，说不清哪半步错了</text><line x1="360" y1="10" x2="360" y2="180" stroke="#ddd" stroke-width="2"/><rect x="390" y="30" width="140" height="86" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="460" y="54" text-anchor="middle" font-size="13" fill="#222">第 1 步：检索</text><text x="460" y="74" text-anchor="middle" font-size="11" fill="#222">输入：产品名</text><text x="460" y="90" text-anchor="middle" font-size="11" fill="#222">输出：资料块</text><text x="460" y="106" text-anchor="middle" font-size="11" fill="#222">验收：命中 ≥ 2 块</text><rect x="550" y="30" width="140" height="86" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="620" y="54" text-anchor="middle" font-size="13" fill="#222">第 2 步：写作</text><text x="620" y="74" text-anchor="middle" font-size="11" fill="#222">输入：资料块</text><text x="620" y="90" text-anchor="middle" font-size="11" fill="#222">输出：答案</text><text x="620" y="106" text-anchor="middle" font-size="11" fill="#222">验收：每条标出处</text><text x="540" y="152" text-anchor="middle" font-size="13" fill="#22a35a">✓ 一步一件事，验收写在前面</text><text x="540" y="172" text-anchor="middle" font-size="12" fill="#666">Verifier 按标准查，错了定位到步</text></svg>
+<p>粒度停在“可独立验收”这一层就够了：再拆就碎到“打开一个文件”这种原子操作，通信成本反而上去。</p>
+</div>
 <h3>4. 拆不干净怎么办：继续拆，直到每步只走一条路</h3>
 <p>判断拆没拆干净的标准，和第 3 周混合问答一样：一个步骤是不是只走一条路、只用一类工具、只产出一种结果？如果一个步骤里既要检索又要执行，就继续拆。拆到不能再拆、或者再拆就没有意义（步骤小到“打开一个文件”这种原子操作），就停下来。拆太碎也有代价：步骤越多，通信和汇总成本越高，所以粒度停在“可独立验收”这一层就够了。</p>
 <h3>5. 并行度从图里算出来，不是拍脑袋定的</h3>
 <p>图的“宽度”就是天然并行度：同一层没有依赖的步骤有几个，就能并行几个，但还要受 Day 31 的并行上限（3–5 个）和成本约束。图的“关键路径”是最长的一条依赖链，它决定了任务最少要花多久——优化要先优化关键路径上的步骤，并行再多，关键路径上的慢步骤不解决，总耗时也下不来。</p>
+<div class="ceiling">
+<p><strong>宽度是并行度，红线是关键路径：优化先动红线上的步骤</strong></p>
+<svg viewBox="0 0 720 230" width="100%" role="img" aria-label="同一层两个步骤可并行，红色关键路径是最长依赖链决定最少耗时" style="max-width:720px;display:block;margin:8px 0"><defs><marker id="ar32b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0b62d6"/></marker><marker id="ar32c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d33"/></marker></defs><rect x="80" y="24" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="145" y="47" text-anchor="middle" font-size="12" fill="#222">检索 2024 版</text><rect x="280" y="24" width="130" height="36" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="345" y="47" text-anchor="middle" font-size="12" fill="#222">检索 2025 版</text><text x="480" y="47" font-size="12" fill="#222">← 宽度 2：这层可并行 2 个</text><line x1="160" y1="60" x2="200" y2="88" stroke="#d33" stroke-width="3" marker-end="url(#ar32c)"/><line x1="330" y1="60" x2="290" y2="88" stroke="#0b62d6" stroke-width="2" marker-end="url(#ar32b)"/><rect x="180" y="96" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="245" y="119" text-anchor="middle" font-size="12" fill="#222">对照差异</text><line x1="245" y1="132" x2="245" y2="158" stroke="#d33" stroke-width="3" marker-end="url(#ar32c)"/><rect x="180" y="164" width="130" height="36" rx="8" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="245" y="187" text-anchor="middle" font-size="12" fill="#222">合成答案</text><text x="480" y="119" font-size="12" fill="#d33">红线 = 关键路径</text><text x="480" y="140" font-size="12" fill="#666">最长依赖链，决定最少耗时</text><text x="480" y="187" font-size="12" fill="#666">先优化红线上的慢步骤</text></svg>
+<p>并行度从图的宽度算，关键路径从图的最长链算：宽度告诉你能同时跑几个，关键路径告诉你最少要花多久。</p>
+</div>
 <div class="warn"><strong>容易踩的坑：</strong>计划只写步骤、不写验收标准。没有验收标准，Verifier 只能凭感觉说“好像做完了”，子 Agent 交上来的半成品也会被当成成品汇总，错误一路传到最终答案。</div>
 
 <h2>二、代码示例</h2>
@@ -127,6 +164,96 @@ print(has_cycle(bad))  # True：A 等 B、B 等 A，死锁</code></pre>
 2. 你的图里哪一层最宽（并行度最高）、哪条链最长（关键路径）？如果只能优化一步，你优化关键路径上的哪一步？<br>
 3. 把其中一步的验收标准改成“凭感觉算做完”，想想 Verifier 会怎么误判——这就是为什么验收标准必须写在前面。</p>
 </div>
+<div class="widget" id="duo">
+<h4>动手玩：Day32 闯关 —— 像 Duolingo 一样玩过去</h4>
+<p>5 关，答对 +10 XP，答错扣 1 颗 ❤️，❤️ 扣完要重来。进度存在浏览器里，刷新还在。</p>
+<div class="duo-top"><span id="duo-hearts">❤️❤️❤️</span><span id="duo-level">第 1 / 5 关</span><span id="duo-xp">0 XP</span></div>
+<div class="duo-bar"><i id="duo-bar"></i></div>
+<div id="duo-body"></div>
+<div class="duo-fb" id="duo-fb" style="display:none"></div>
+<button class="wbtn primary" id="duo-next" style="display:none">下一关 →</button>
+<button class="wbtn" id="duo-restart">重新开始</button>
+<p style="font-size:13px;color:#666" id="duo-best"></p>
+</div>
+<script>
+(function(){
+  var LEVELS = [
+    {type:'choice', q:'第 1 关：DAG 三个词拆开，D、A、G 各指什么？', opts:['有向、无环、图','有向、有环、图','无向、无环、图'], ans:0, why:'Directed 有向、Acyclic 无环、Graph 图：节点是步骤，边是有方向的依赖，箭头不能绕成圈。'},
+    {type:'choice', q:'第 2 关：计划里出现 A→B→A，会发生什么？', opts:['拓扑排序排不出来，死锁','跑得更快','像 LangGraph 那样循环跑就行'], ans:0, why:'A 等 B、B 等 A，谁都动不了。Planner 要先判圈、显式报错重拆。LangGraph 的图可以有环，任务 DAG 不能。'},
+    {type:'assign', q:'第 3 关：点一个步骤，再点它所在的层，把 4 步按依赖排好。', tasks:['对照差异','检索 2025 版','合成答案','检索 2024 版'], agents:['第 1 层：先跑','第 2 层','第 3 层','第 4 层：最后'], map:[2,1,3,0], why:'检索 2024 先跑，2025 依赖它的条款编号，对照依赖两版，合成最后。没依赖的同层可并行。'},
+    {type:'choice', q:'第 4 关：想缩短总耗时，先优化哪里？', opts:['并行最多的那层','关键路径上的步骤','最简单的步骤'], ans:1, why:'关键路径是最长依赖链，决定最少耗时；它不解决，并行再多也没用。'},
+    {type:'choice', q:'第 5 关：计划里没写验收标准，会导致什么？', opts:['没什么，凭感觉也行','半成品被当成成品汇总，错误一路传到最终答案','任务跑得更快'], ans:1, why:'没有标准，Verifier 只能凭感觉说“好像做完了”，错误一路传到最终答案。'}
+  ];
+  var body = document.getElementById('duo-body');
+  var fb = document.getElementById('duo-fb');
+  var nextBtn = document.getElementById('duo-next');
+  var heartsEl = document.getElementById('duo-hearts');
+  var levelEl = document.getElementById('duo-level');
+  var xpEl = document.getElementById('duo-xp');
+  var barEl = document.getElementById('duo-bar');
+  var bestEl = document.getElementById('duo-best');
+  var idx = 0, xp = 0, hearts = 3, levelClean = true, assigned = 0, selTask = -1;
+  var best = 0, clears = 0;
+  try { best = parseInt(localStorage.getItem('day32-best-xp') || '0', 10) || 0; clears = parseInt(localStorage.getItem('day32-clears') || '0', 10) || 0; } catch(e) {}
+  function showBest(){ bestEl.textContent = '历史最好：' + best + ' XP · 已通关 ' + clears + ' 次'; }
+  function top(){ heartsEl.textContent = '❤️'.repeat(Math.max(hearts,0)) + '🤍'.repeat(Math.max(3-hearts,0)); levelEl.textContent = idx >= LEVELS.length ? '已通关' : '第 ' + (idx+1) + ' / ' + LEVELS.length + ' 关'; xpEl.textContent = xp + ' XP'; barEl.style.width = Math.round(100*idx/LEVELS.length) + '%'; }
+  function showFb(ok, text){ fb.style.display = 'block'; fb.className = 'duo-fb ' + (ok ? 'ok' : 'err'); fb.textContent = text; }
+  function hideFb(){ fb.style.display = 'none'; }
+  function loseHeart(){ hearts--; top(); if (hearts <= 0) { body.innerHTML = '<p class="duo-q">💔 ❤️ 扣完了，这一轮没通关。</p><p>别急，错的那关就是你最该记的点。点“重新开始”，再玩一遍。</p>'; nextBtn.style.display = 'none'; showFb(false, '通关失败：❤️ 已扣完。'); } }
+  function passLevel(){ if (levelClean) xp += 10; top(); nextBtn.style.display = 'inline-block'; }
+  function render(){
+    hideFb(); nextBtn.style.display = 'none'; levelClean = true; assigned = 0; selTask = -1; top();
+    if (idx >= LEVELS.length) {
+      barEl.style.width = '100%';
+      body.innerHTML = '<p class="duo-q">🎉 通关！Day32 的 5 关全过了。</p><p>你这一轮拿了 ' + xp + ' XP。DAG 现在对应三幅图：链树 DAG 有圈四格对比、一步一件事带验收、宽度是并行度红线是关键路径。</p>';
+      showFb(true, '通关奖励：DAG、判圈、分层并行、关键路径、验收标准，全齐了。去做下面的 6 道小测验，看看还记得多少。');
+      try { if (xp > best) { best = xp; localStorage.setItem('day32-best-xp', String(best)); } clears++; localStorage.setItem('day32-clears', String(clears)); } catch(e) {}
+      showBest(); return;
+    }
+    var L = LEVELS[idx];
+    if (L.type === 'choice') {
+      var h = '<p class="duo-q">' + L.q + '</p>';
+      L.opts.forEach(function(o, i){ h += '<button class="duo-opt" data-i="' + i + '">' + o + '</button>'; });
+      body.innerHTML = h;
+      body.querySelectorAll('.duo-opt').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var i = parseInt(btn.dataset.i, 10);
+          if (i === L.ans) {
+            btn.classList.add('correct'); btn.disabled = true;
+            body.querySelectorAll('.duo-opt').forEach(function(b){ b.disabled = true; });
+            showFb(true, '✅ 答对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前答错过，这次不加 XP）'));
+            passLevel();
+          } else {
+            btn.classList.add('wrong'); btn.disabled = true; levelClean = false; showFb(false, '❌ 不对，再想想：' + L.why);
+            loseHeart();
+          }
+        });
+      });
+    } else {
+      var a = '<p class="duo-q">' + L.q + '</p><p>步骤（点一个）：</p><div id="duo-tasks"></div><p>层（再点一个）：</p><div id="duo-agents"></div>';
+      body.innerHTML = a;
+      var tBox = document.getElementById('duo-tasks'), gBox = document.getElementById('duo-agents');
+      L.tasks.forEach(function(t, i){ var c = document.createElement('button'); c.className = 'duo-chip'; c.textContent = t; c.dataset.i = i; c.addEventListener('click', function(){ if (c.classList.contains('done')) return; selTask = i; tBox.querySelectorAll('.duo-chip').forEach(function(x){ x.classList.remove('sel'); }); c.classList.add('sel'); }); tBox.appendChild(c); });
+      L.agents.forEach(function(g, i){ var b = document.createElement('div'); b.className = 'duo-box'; b.textContent = g + '：'; b.dataset.i = i; b.addEventListener('click', function(){
+        if (selTask < 0) { showFb(false, '先点一个步骤，再点它所在的层。'); return; }
+        if (L.map[selTask] === i) {
+          var chip = tBox.querySelectorAll('.duo-chip')[selTask];
+          chip.classList.add('done'); chip.classList.remove('sel');
+          b.textContent = g + '：' + L.tasks[selTask]; b.classList.add('sel');
+          assigned++; selTask = -1; showFb(true, '✅ 排对了！' + L.why);
+          if (assigned >= L.tasks.length) { showFb(true, '✅ 4 步全排对了！' + L.why + (levelClean ? ' +10 XP' : '（这一关之前排错过，这次不加 XP）')); passLevel(); }
+        } else {
+          levelClean = false; showFb(false, '❌ 排错了：这一步不在 ' + g + '。再看看依赖：谁的输出是谁的输入？'); loseHeart();
+        }
+      }); gBox.appendChild(b); });
+    }
+  }
+  nextBtn.addEventListener('click', function(){ idx++; render(); });
+  document.getElementById('duo-restart').addEventListener('click', function(){ idx = 0; xp = 0; hearts = 3; render(); showBest(); });
+  showBest(); render();
+})();
+</script>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
 <p id="score">得分：0 / 6</p>
