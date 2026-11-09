@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<link rel="icon" href="data:,"/>
+<title>React 与架构手感恢复 7 天</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8f3; --card:#ffffff; --card2:#f0f4e8; --ink:#1a2a1a; --muted:#6b7a6b; --line:#e2e8d5;
+  --green:#58a700; --green-bright:#58cc02; --green-dark:#3e7d00; --green-soft:#d7ffb8;
+  --blue:#1cb0f6; --blue-soft:#ddf4ff; --orange:#ff9600; --orange-soft:#fff0d6;
+  --yellow:#ffc800; --red:#ff4b4b; --purple:#8b5cf6;
+  --code-bg:#131f24; --code-ink:#e8f5e0;
+  --shadow:0 4px 0 var(--line); --radius:20px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#131f24; --card:#1f2f36; --card2:#263a30; --ink:#eaf4ea; --muted:#9db3a5; --line:#2e444e; --green-soft:#2a4a1a; --blue-soft:#173a4d; --orange-soft:#4a350f; --shadow:0 4px 0 #0c1518; }
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito","PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue)}
+.wrap{max-width:1020px;margin:0 auto;padding:0 16px 64px}
+
+/* HUD */
+.hud{position:sticky;top:0;z-index:20;background:var(--bg);padding:12px 0 10px;border-bottom:2px solid var(--line)}
+.hud-in{max-width:1020px;margin:0 auto;padding:0 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hud-chip{display:flex;align-items:center;gap:7px;background:var(--card);border:2px solid var(--line);border-radius:999px;padding:7px 13px;font-weight:900;font-size:15px}
+.hud-chip svg{width:20px;height:20px;flex:none}
+.hud-chip.xp{color:#b8860b}.hud-chip.streak{color:var(--orange)}.hud-chip.done{color:var(--green)}
+.hud-progress{flex:1;min-width:140px}
+.hud-progress .bar{height:16px;background:var(--line);border-radius:999px;overflow:hidden}
+.hud-progress .fill{height:100%;background:linear-gradient(90deg,var(--green-bright),#7ee83a);border-radius:999px;transition:width .5s cubic-bezier(.2,.9,.3,1.2);position:relative}
+.hud-progress .fill::after{content:"";position:absolute;left:6px;right:6px;top:3px;height:5px;background:rgba(255,255,255,.45);border-radius:99px}
+.hud-progress label{font-size:12px;font-weight:800;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.02em}
+
+/* Hero */
+.hero{padding:28px 0 8px;text-align:left}
+.hero h1{font-size:clamp(28px,5.5vw,44px);line-height:1.08;margin:0 0 10px;font-weight:900;letter-spacing:-.01em}
+.hero h1 em{font-style:normal;color:var(--green)}
+.hero p{font-size:17px;line-height:1.65;color:var(--muted);font-weight:700;margin:0;max-width:680px}
+.rules{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.rule{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:16px;padding:12px 14px;flex:1;min-width:200px}
+.rule b{font-size:15px;display:block}
+.rule span{font-size:13px;color:var(--muted);font-weight:700;line-height:1.5;display:block}
+.rule .ic{font-size:22px;line-height:1}
+
+/* Path */
+.path-sec{margin-top:26px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:24px;padding:20px 18px 14px}
+.path-sec h2{margin:0 0 4px;font-size:20px;font-weight:900}
+.path-sec p{margin:0 0 16px;color:var(--muted);font-weight:700;font-size:14px}
+.path{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0 10px}
+.node-row{display:flex;justify-content:center;width:100%}
+.node{width:72px;height:64px;border:none;cursor:pointer;border-radius:50%;font-family:inherit;font-weight:900;font-size:19px;color:#fff;background:#cbd5bd;box-shadow:0 6px 0 #a8b894;position:relative;transition:transform .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.node small{font-size:9px;font-weight:900;letter-spacing:.14em;opacity:.9;display:block}
+.node:active{transform:translateY(4px)}
+.node.avail{background:var(--green-bright);box-shadow:0 6px 0 var(--green-dark)}
+.node.avail::before{content:"";position:absolute;inset:-9px;border-radius:50%;border:3px dashed var(--green-bright);opacity:.5;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.node.avail::before{animation:none}}
+.node.done{background:var(--yellow);box-shadow:0 6px 0 #d9a400;color:#7a5b00}
+.node.sel{outline:4px solid var(--blue);outline-offset:3px}
+.node-row:nth-child(odd){transform:translateX(-52px)} .node-row:nth-child(even){transform:translateX(52px)}
+@media(max-width:520px){.node-row:nth-child(odd){transform:translateX(-30px)}.node-row:nth-child(even){transform:translateX(30px)}.node{width:62px;height:55px;font-size:16px}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:12.5px;font-weight:800;color:var(--muted);padding-top:8px;border-top:2px dashed var(--line);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+
+/* Day header */
+.day-head{margin-top:28px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.day-badge{background:var(--green);color:#fff;border-radius:18px;padding:14px 18px;box-shadow:0 4px 0 var(--green-dark);min-width:150px}
+.day-badge .d{font-size:12px;font-weight:900;letter-spacing:.12em;opacity:.85}
+.day-badge .t{font-size:21px;font-weight:900;line-height:1.2;margin-top:2px}
+.day-head .intro{flex:1;min-width:240px}
+.day-head .intro p{margin:0;font-size:15.5px;line-height:1.7;font-weight:700;color:var(--muted)}
+.mantra{margin-top:12px;background:var(--orange-soft);border:2px solid #ffd48a;border-radius:14px;padding:11px 14px;font-weight:800;font-size:14.5px;line-height:1.6}
+.mantra b{color:#b36b00}
+@media (prefers-color-scheme: dark){.mantra{border-color:#6b4d12}.mantra b{color:var(--orange)}}
+
+/* Mission cards */
+.mission{margin-top:20px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:24px;overflow:hidden}
+.mission-head{padding:18px 20px 0;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.tag{font-size:12px;font-weight:900;letter-spacing:.05em;padding:5px 11px;border-radius:999px;color:#fff;flex:none;margin-top:2px}
+.tag.react{background:var(--blue)} .tag.arch{background:var(--purple)}
+.mission-head h3{margin:0;font-size:20px;font-weight:900;line-height:1.3;flex:1;min-width:200px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 0}
+.meta span{font-size:12.5px;font-weight:800;color:var(--muted);background:var(--card2);padding:5px 10px;border-radius:999px}
+.mission-body{padding:14px 20px 20px}
+.mission-body p,.mission-body li{font-size:15px;line-height:1.7;font-weight:600}
+.mission-body p{margin:0 0 10px}
+.steps{margin:0 0 14px;padding-left:20px}.steps li{margin:5px 0}
+.steps li::marker{color:var(--green);font-weight:900}
+code.inl{font-family:"JetBrains Mono",monospace;font-size:.86em;background:var(--card2);padding:2px 6px;border-radius:6px}
+label.code-label{font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px}
+.timer-btn{font-family:inherit;font-size:12px;font-weight:900;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.timer-btn.on{background:var(--orange);border-color:var(--orange);color:#fff}
+textarea.code{width:100%;min-height:210px;resize:vertical;background:var(--code-bg);color:var(--code-ink);border:none;border-radius:14px;padding:15px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13.5px;line-height:1.65;outline:none;tab-size:2}
+textarea.code:focus{box-shadow:0 0 0 3px var(--blue)}
+textarea.arch{min-height:150px;background:var(--card);color:var(--ink);border:2px solid var(--line)}
+textarea.arch:focus{box-shadow:0 0 0 3px var(--blue)}
+
+/* Chat Q&A */
+.chat-qa{margin:14px 0 4px;background:var(--blue-soft);border:2px dashed var(--blue);border-radius:16px;padding:15px 16px}
+.chat-qa h4{margin:0 0 6px;font-size:15px;font-weight:900}
+.chat-qa .qa-intro{font-size:13px;color:var(--muted);font-weight:700;margin:0 0 6px;line-height:1.6}
+.chat-qa .qa-q{font-weight:900;font-size:14.5px;margin:13px 0 4px;line-height:1.5}
+.chat-qa .qa-q:first-of-type{margin-top:8px}
+.chat-qa .qa-a{font-size:14.5px;line-height:1.7;font-weight:600;margin:0}
+.chat-qa pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:13px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:12.8px;line-height:1.6;margin:10px 0 4px;white-space:pre-wrap}
+
+/* Self check */
+.checks{margin-top:16px;background:var(--card2);border-radius:16px;padding:14px}
+.checks h4{margin:0 0 4px;font-size:14px;font-weight:900}
+.checks p{font-size:12.5px;color:var(--muted);margin:0 0 10px;font-weight:700}
+.check-btn{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;font-family:inherit;font-size:14px;font-weight:700;line-height:1.55;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:10px 12px;margin:7px 0;cursor:pointer;color:var(--ink)}
+.check-btn .box{width:22px;height:22px;flex:none;border-radius:7px;border:2.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;margin-top:1px;transition:all .15s}
+.check-btn.on{border-color:var(--green-bright)}
+.check-btn.on .box{background:var(--green-bright);border-color:var(--green-bright)}
+.check-btn.on .txt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--green-bright);text-decoration-thickness:2px}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.btn{font-family:inherit;font-weight:900;font-size:15px;border:none;border-radius:14px;padding:12px 20px;cursor:pointer;transition:transform .1s, filter .15s}
+.btn:active{transform:translateY(3px)}
+.btn-primary{background:var(--green-bright);color:#fff;box-shadow:0 4px 0 var(--green-dark)}
+.btn-primary:disabled{background:#c4cfb2;box-shadow:0 4px 0 #a3af92;cursor:not-allowed}
+.btn-ghost{background:var(--card);color:var(--blue);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.btn-ghost.amber{color:#b36b00}
+.reveal{display:none;margin-top:14px;border-radius:14px;padding:15px 16px;font-size:14.5px;line-height:1.7;font-weight:600}
+.reveal.open{display:block}
+.reveal.hint{background:var(--blue-soft);border:2px dashed var(--blue)}
+.reveal.answer{background:#fffbe8;border:2px solid var(--yellow);color:#4a3d00}
+@media (prefers-color-scheme: dark){.reveal.answer{background:#3a3205;color:#ffeeb0}}
+.reveal pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:13px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:12.8px;line-height:1.6;margin:10px 0 4px;white-space:pre-wrap}
+.reveal h5{margin:0 0 6px;font-size:13px;letter-spacing:.05em}
+.done-banner{display:none;margin-top:14px;background:var(--green-soft);border:2px solid var(--green-bright);color:var(--green-dark);font-weight:900;border-radius:14px;padding:12px 16px;font-size:15px}
+@media (prefers-color-scheme: dark){.done-banner{color:#a5e07a}}
+.done-banner.show{display:block}
+
+/* Interview Quiz */
+.quiz-sec{margin-top:32px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:24px;padding:22px 20px}
+.quiz-sec h2{margin:0 0 6px;font-size:22px;font-weight:900}
+.quiz-sec .sub{color:var(--muted);font-weight:700;font-size:14.5px;line-height:1.65;margin:0 0 14px}
+.quiz-hud{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}
+.quiz-score{background:var(--blue-soft);border:2px solid var(--blue);border-radius:999px;padding:8px 14px;font-weight:900;font-size:14px}
+.quiz-bar{flex:1;min-width:160px;height:14px;background:var(--line);border-radius:999px;overflow:hidden}
+.quiz-bar i{display:block;height:100%;background:var(--blue);transition:width .4s}
+.quiz-filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+.qfilter{font-family:inherit;font-weight:900;font-size:13px;border:2px solid var(--line);background:var(--card);color:var(--ink);padding:8px 13px;border-radius:999px;cursor:pointer}
+.qfilter.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.quiz-card{border:2px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;background:var(--card)}
+.quiz-card.correct{border-color:var(--green-bright)}
+.quiz-card.wrong{border-color:var(--red)}
+.q-cat{font-size:11px;font-weight:900;letter-spacing:.08em;color:#fff;background:var(--blue);display:inline-block;padding:4px 9px;border-radius:999px}
+.q-cat.principle{background:var(--purple)} .q-cat.perf{background:var(--orange)} .q-cat.practice{background:var(--green)} .q-cat.data{background:#0f766e} .q-cat.eng{background:#9a3412}
+.q-title{font-weight:900;font-size:16.5px;line-height:1.55;margin:10px 0 12px}
+.q-title code{font-family:"JetBrains Mono",monospace;font-size:.86em;background:var(--card2);padding:2px 6px;border-radius:6px}
+.q-opts{display:grid;gap:8px}
+.q-opt{font-family:inherit;text-align:left;font-weight:700;font-size:14.5px;line-height:1.55;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;color:var(--ink);display:flex;gap:10px}
+.q-opt b{flex:none;width:26px;height:26px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:13px}
+.q-opt:disabled{cursor:default;opacity:.95}
+.q-opt.right{border-color:var(--green-bright);background:var(--green-soft)}
+.q-opt.right b{background:var(--green-bright);color:#fff}
+.q-opt.bad{border-color:var(--red);background:#ffe8e8}
+.q-opt.bad b{background:var(--red);color:#fff}
+@media(prefers-color-scheme:dark){.q-opt.bad{background:#4a1f1f}}
+.q-explain{display:none;margin-top:12px;background:#fffbe8;border:2px solid var(--yellow);color:#4a3d00;border-radius:12px;padding:13px 14px;font-size:14px;line-height:1.7;font-weight:600}
+@media(prefers-color-scheme:dark){.q-explain{background:#3a3205;color:#ffeeb0}}
+.q-explain.open{display:block}
+.q-explain b{color:inherit}
+.q-talk{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(0,0,0,.18);font-weight:800}
+.quiz-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
+.quiz-search{flex:1;min-width:220px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:10px 16px;outline:none}
+.quiz-search:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.quiz-visible-note{font-size:13px;font-weight:900;color:var(--muted)}
+.quiz-more-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.quiz-more-row span{font-size:13px;font-weight:800;color:var(--muted)}
+.quiz-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+/* Finish */
+.finish{margin-top:28px;background:var(--card);border:2px solid var(--line);border-bottom-width:4px;border-radius:24px;padding:22px}
+.finish h2{margin:0 0 8px;font-size:21px;font-weight:900}
+.finish p,.finish li{font-size:15px;line-height:1.7;font-weight:600;color:var(--muted)}
+.finish ul{padding-left:20px;margin:8px 0}
+.finish li::marker{color:var(--green)}
+.foot{margin-top:26px;text-align:center;color:var(--muted);font-size:13px;font-weight:700;line-height:1.7;padding:0 10px}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,90px);opacity:0;visibility:hidden;background:#1a2a1a;color:#d7ffb8;font-weight:900;font-size:16px;padding:14px 24px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.2,.9,.3,1.3),opacity .25s,visibility .25s;z-index:50;pointer-events:none}
+.toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
+</style>
+</head>
+<body>
+
+<div class="hud"><div class="hud-in">
+  <div class="hud-chip xp"><svg viewBox="0 0 24 24" fill="#ffc800"><path d="M12 2l2.4 6.2L21 9l-5 4.2 1.6 6.5L12 16.2 6.4 19.7 8 13.2 3 9l6.6-.8z"/></svg><span id="xpNum">0</span> XP</div>
+  <div class="hud-chip streak"><svg viewBox="0 0 24 24" fill="#ff9600"><path d="M12 2c1 4-4 5.5-4 10a4.5 4.5 0 009 0c0-1.8-1-3-2-4.2-.3 1.2-1 2-2 2.5C13.6 7.5 13.5 4.5 12 2z"/></svg><span id="streakNum">0</span> / 14 关</div>
+  <div class="hud-progress"><label id="progLabel">手感恢复进度 · 完成 0 / 14</label><div class="bar"><div class="fill" id="progFill" style="width:0%"></div></div></div>
+</div></div>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>7 天，把 <em>React 手感</em> 和<br><em>架构直觉</em> 捡回来</h1>
+    <p>你丢的不是能力，是练手的机会。每天 2 关：一关 React 手写代码，一关架构拆解。规则只有一条——<strong style="color:var(--ink)">关掉 AI，从空白处自己写</strong>。写不出来先看提示，看完合上、凭记忆重写，那才算你的。</p>
+    <div class="rules">
+      <div class="rule"><div class="ic">✋</div><div><b>全程手写不用 AI</b><span>编辑器里没有补全救你。卡住超过 10 分钟才许看提示。</span></div></div>
+      <div class="rule"><div class="ic">⏱️</div><div><b>每关限时</b><span>React 关 25 分钟、架构关 20 分钟。用计时器逼出第一直觉。</span></div></div>
+      <div class="rule"><div class="ic">🗣️</div><div><b>自查 = 出声讲一遍</b><span>每条自查标准都要能对着空气讲清楚，讲不出就是没过。</span></div></div>
+    </div>
+  </section>
+
+  <section class="path-sec">
+    <h2>🗺️ 闯关地图</h2>
+    <p>点任意一天开始。顺序解锁是建议、不是强制——但 React 线是一条心智模型链，跳关会在后面卡住。</p>
+    <div class="path" id="path"></div>
+    <div class="legend"><span><i style="background:var(--green-bright)"></i>当前推荐</span><span><i style="background:var(--yellow)"></i>已通关</span><span><i style="background:#cbd5bd"></i>未开始</span></div>
+  </section>
+
+  <div id="dayRoot"></div>
+
+  <section class="quiz-sec" id="quizSec">
+    <h2>🎯 React 面试题速测 · 200 道主流题</h2>
+    <p class="sub">整整 <b style="color:var(--ink)">200 道主流面试题</b>：前 100 道是基础高频，后 100 道全是<b style="color:var(--ink)">生产环境真会遇到的</b>——effect 死循环、闭包旧值、多环境配置、表单库选型、错误监控、微前端、国际化、组件库与线上排障。分类：Hooks 48 · 渲染原理 37 · 性能 35 · 实战与架构 50 · 请求与状态 15 · 工程与上线 15。每题点完立刻判，附「为什么」和一句可直接在面试里说的话。错的题，就是你线上会踩的坑。</p>
+    <div class="quiz-hud"><span class="quiz-score" id="quizScore">已答 0 / 200 · 答对 0</span><div class="quiz-bar"><i id="quizBar" style="width:0%"></i></div><button class="timer-btn" id="quizReset">↺ 重置速测</button></div>
+    <div class="quiz-search-row"><input id="quizSearch" class="quiz-search" type="search" placeholder="🔍 搜题干关键词，如 竞态 / 死循环 / Sentry / 微前端 / 时区…" aria-label="搜索面试题"><span class="quiz-visible-note" id="quizVisibleNote">显示 20 / 200 题</span></div>
+    <div class="quiz-filters" id="quizFilters">
+      <button class="qfilter active" data-f="all">全部 200</button>
+      <button class="qfilter" data-f="hooks">Hooks 心智 · 48</button>
+      <button class="qfilter" data-f="principle">渲染原理 · 37</button>
+      <button class="qfilter" data-f="perf">性能优化 · 35</button>
+      <button class="qfilter" data-f="practice">实战与架构 · 50</button>
+      <button class="qfilter" data-f="data">请求与状态 · 15</button>
+      <button class="qfilter" data-f="eng">工程与上线 · 15</button>
+      <button class="qfilter" data-f="wrong">只看错题</button>
+    </div>
+    <div id="quizRoot"></div>
+    <div class="quiz-more-row" id="quizMoreRow"><button class="btn btn-ghost" id="quizMore">显示更多题目 ↓</button><span id="quizMoreNote"></span></div>
+    <div class="quiz-actions"><p style="margin:0;font-size:13.5px;color:var(--muted);font-weight:700;line-height:1.6">刷法建议：第一遍按分类刷完 200 道，记下错题分类；新增的「请求与状态」「工程与上线」两类全是生产题，建议单独整类刷一遍；第二天用「只看错题」复刷；面试前一天把错题的「面试这样说」出声读一遍。200 道不用一次刷完——一次 20 道、分批加载，关掉页面进度清零，第二天从错得最多的分类接着刷。</p></div>
+  </section>
+
+  <section class="finish">
+    <h2>🏁 7 天之后，你应该能做到</h2>
+    <ul>
+      <li>白板上 10 分钟画出一个真实页面的组件树，并说清每个状态归谁、为什么。</li>
+      <li>不查文档手写 useState / useEffect / useReducer / 自定义 Hook，闭包和依赖数组不再翻车。</li>
+      <li>面试被追问「这个页面你会怎么拆」时，先讲数据流、再讲组件、最后讲取舍——资深岗考的就是这个顺序。</li>
+      <li>第 7 天的综合关就是一次完整模拟：45 分钟手写小应用 + 45 分钟口述系统设计。</li>
+    </ul>
+    <p>进度只记在本次打开的页面里，关掉就清零——这是故意的：手感靠每天重新开始练，不靠攒记录。第二天打开，从地图上接着走就行。</p>
+  </section>
+
+  <p class="foot">练习内容按「前端转 AI 工具时代手感恢复」设计：React 线 hooks 心智模型 → 架构线 组件树 → 状态归属 → 拆分 → 状态机 → 性能 → 系统设计。<br>写完的代码建议粘到本地项目里真跑一遍，能跑通才算数。</p>
+</div>
+
+<div class="toast" id="toast">🎉 +100 XP</div>
+
+<script>
+var DAYS = [
+{
+  n:1, theme:"心智模型重启", intro:"第一天不写花活，只修最底层那张图：React 渲染到底是什么、状态存在哪一帧里。架构线从你每天都打开的视频播放页开始拆——拆你熟悉的东西，才练得出直觉。",
+  mantra:"渲染 = 状态变了，组件函数从头再跑一遍。每次渲染都是一张快照，变量是那一帧的，不是活的。",
+  react:{
+    title:"手写计数器 + 亲手踩一次闭包陷阱", time:"25 分钟", diff:"★☆☆ 入门热身",
+    body:"<p>先写一个最普通的 <code class='inl'>Counter</code>：显示数字，三个按钮 +1、+5、重置。然后做陷阱题：加一个「3 秒后 +1」按钮，用 <code class='inl'>setTimeout</code> 延迟执行——故意用直接读 <code class='inl'>count</code> 的写法点几次，再改成函数式更新，对比结果。</p>",
+    steps:["不查文档，手写 Counter 组件（含 useState 导入）","写「延迟 +1」并复现：连点 3 次延迟按钮，3 秒后只 +1","用函数式更新 setCount(prev =&gt; prev + 1) 修复，再点 3 次验证 +3","在代码下方用注释写一句话：为什么旧写法丢了两次更新？"],
+    starter:"import { useState } from 'react';\n\nexport default function Counter() {\n  // TODO: 声明 count 状态\n\n  const addLater = () => {\n    setTimeout(() => {\n      // TODO: 先写「直接读 count」的版本，复现陷阱\n    }, 3000);\n  };\n\n  return (\n    <div>\n      {/* TODO: 显示 count + 四个按钮 */}\n    </div>\n  );\n}",
+    checks:["能不看答案默写出 useState 的完整用法","能出声解释：为什么连点 3 次只 +1——每次渲染的 count 是快照，三个定时器读的是同一帧","能说清函数式更新为什么不丢：prev 是 React 给的最新值，不是我闭包里抓的旧值","知道 hooks 为什么不能写在 if 里（调用顺序就是状态的身份证）"],
+    hint:"定时器回调里抓到的 count，是「按下按钮那一次渲染」的 count。3 次点击如果没有触发新的渲染完成，三个回调抓的是同一个数。",
+    answer:"<h5>参考解法</h5><pre>const [count, setCount] = useState(0);\n// 陷阱版：setCount(count + 1) —— 三个回调都算出同一个结果\n// 修复版：\nconst addLater = () => setTimeout(() => setCount(prev => prev + 1), 3000);</pre>一句话总结：直接更新读的是闭包里的快照；函数式更新把「怎么算」交给 React，它按队列用最新值算。批量更新、异步回调、事件连点，靠的都是这一条。"
+  },
+  arch:{
+    title:"拆一个真实页面：视频播放页的组件树", time:"20 分钟", diff:"★☆☆ 入门热身",
+    body:"<p>打开任意一个视频网站的播放页（B 站 / YouTube 都行），只看界面不动手写代码。你的任务是在右边画出它的组件树，并标出每个状态住在哪个组件里：播放进度、弹幕开关、点赞数、评论列表、推荐栏。</p>",
+    steps:["画组件树：至少 3 层，叶子节点是真正渲染 UI 的小组件","圈出「状态归属」：播放状态、用户信息分别归谁管？","找出一个「状态提升」的例子：哪两个兄弟组件需要共享状态、被迫把状态抬到共同父级？","标出哪些组件是纯展示（只收 props）、哪些管数据"],
+    starter:"VideoPage\n├─ Header\n│  ├─ Logo\n│  ├─ SearchBar        ← 状态：输入词归谁？\n│  └─ UserAvatar\n├─ （继续往下拆正文区）\n└─ …\n\n状态归属清单：\n- 播放进度 → \n- 弹幕开关 → \n- 点赞数 → ",
+    checks:["组件树至少 3 层，且拆分理由是「职责」而不是「画面上一块一块」","能指出播放器和进度条/弹幕层共享状态，所以状态必须抬到共同父组件","能区分：评论列表的数据获取归容器组件，单条评论的展示是纯组件","能回答：如果「点赞数」同时出现在视频下方和作者卡片上，状态放哪、为什么"],
+    hint:"拆不动时问自己两个问题：这块 UI 会不会被复用？这块的数据变了，哪些地方要跟着变？第二个问题的答案就是状态该住的地方。",
+    answer:"<h5>一种合理拆法（没有唯一答案，看理由）</h5><pre>VideoPage（持有 videoId、当前用户）\n├─ Header（纯展示 + SearchBar 自管输入）\n├─ PlayerSection\n│  ├─ VideoPlayer ← 播放状态住在这里（进度/暂停/音量）\n│  ├─ DanmakuLayer ← 订阅播放进度，只读\n│  └─ PlayerControls ← 改播放状态，与 Player 同父\n├─ InfoSection（点赞/收藏：状态住本区，乐观更新）\n├─ CommentSection（容器拉数据）→ CommentItem（纯展示）×N\n└─ RecommendList（独立数据、独立加载，不与播放状态耦合）</pre>关键判断：弹幕层和控制条都要碰播放进度 → 状态不能埋在某一个子组件里，必须提升到 PlayerSection。推荐栏跟谁都不共享 → 自己管自己，别往上抬。"
+  }
+},
+{
+  n:2, theme:"副作用与数据流", intro:"useEffect 是手感丢失重灾区：依赖数组漏写、竞态、忘了清理，全是面试高频追问。架构线练「状态三分法」——不是所有状态都配进全局店。",
+  mantra:"useEffect 不是生命周期钩子，是「让外部世界和某个状态保持同步」的声明。写不出同步什么，就不该写 effect。",
+  react:{
+    title:"手写搜索框请求：竞态、清理、依赖数组一次练全", time:"25 分钟", diff:"★★☆ 核心关",
+    body:"<p>写一个搜索框：输入 <code class='inl'>query</code> 变了就重新搜。先写出有竞态的版本——连打「a」「ab」，查「a」的请求发得早却回来得晚，把已经正确的「ab」结果盖掉；再用清理函数里的作废标记（或 <code class='inl'>AbortController</code>）忽略掉「a」，并处理 loading / error 三态。</p>",
+    qa:"<h4>💬 刚才那轮问答 · 竞态三连问</h4><p class='qa-intro'>这三问就是这一关的由来，先读懂再动手写。</p><p class='qa-q'>Q1 · 竞态是什么意思？</p><p class='qa-a'>就是两个异步操作，谁先回来不一定，最后显示出来的那个不一定是最新的，你看到的就是错的结果。拿搜索框举例：你连打「a」「ab」，查「a」的请求发得早、回来得晚，查「ab」的回来得早。页面先显示了「ab」的正确结果，又被晚回来的「a」盖掉了——你搜的是「ab」，看的却是「a」的结果。</p><p class='qa-q'>Q2 · 「ab」是最后一次请求吗？</p><p class='qa-a'>是。「ab」是最后发出的那一次请求，代表你最新的意图。但注意：最后发出，不等于最后回来。问题就出在这儿——先发的不一定先回来，「ab」先回来时页面是对的，然后「a」后回来又把页面盖回了旧的。所以要认的是「最后一次发出的」，不是「最后回来的」。</p><p class='qa-q'>Q3 · useEffect 里怎么忽略掉「a」的？</p><p class='qa-a'>靠 effect 的清理函数给上一次请求打一个作废标记。query 从「a」变「ab」时，React 会先跑上一次 effect 的清理函数，把它闭包里的 <code class='inl'>ignored</code> 置成 true。等「a」的结果晚回来时，一看 <code class='inl'>ignored</code> 是 true，就直接扔掉、不 setState。另一种写法是用 AbortController 在清理时 <code class='inl'>abort()</code>，把旧请求本身取消掉。区别是：标记法是请求照发、结果扔掉；Abort 是连请求一起取消。</p><pre>useEffect(() =&gt; {\n  let ignored = false;\n  fetch('/api/search?q=' + query)\n    .then(r =&gt; r.json())\n    .then(data =&gt; { if (!ignored) setResults(data); });\n  return () =&gt; { ignored = true; }; // 清理时作废上一次\n}, [query]);</pre>",
+    steps:["手写 useEffect 按 query 拉搜索结果，三态齐全（loading / error / results）","故意制造竞态：让查「a」的请求故意慢回来，复现「ab 已显示又被 a 盖掉」","用 let ignored = false + 清理函数修复：query 一变就作废上一次，a 回来时直接扔掉","回答：依赖数组漏写 query 会发生什么？多写一个每次都变的对象会发生什么？"],
+    starter:"import { useEffect, useState } from 'react';\n\nexport default function SearchBox() {\n  const [query, setQuery] = useState('');\n  const [results, setResults] = useState([]);\n  // TODO: status / error 状态\n\n  useEffect(() => {\n    // TODO: 按 query 发请求（先写竞态版：a 慢回、盖掉 ab）\n    // TODO: 清理函数里打作废标记，忽略掉上一次\n  }, [/* TODO: 依赖 */]);\n\n  // TODO: 输入框 + 三态渲染\n}",
+    checks:["能默写 effect + 清理函数的完整结构","能出声讲清竞态时序：先打 a 后打 ab，ab 先回来是对的，a 后回来把页面盖回旧结果","能讲清 ab 是最后发出的请求、代表最新意图，但不是最后回来的那个，所以不能谁晚回来听谁的","能讲清怎么忽略 a：query 变时 React 先跑上次清理函数把 ignored 置 true，a 回来时检查到标记就扔掉不 setState（或用 AbortController 取消）","知道清理函数在「下一次 effect 执行前」和「卸载时」各跑一次","能说出依赖数组的本质：不是触发器清单，是「这段同步用到哪些响应式值」的完整声明，漏写就是在撒谎"],
+    hint:"修复竞态只要一条原则：让过期的那次请求「闭嘴」。搜索框里就是忽略掉「a」——在清理函数里把本次请求的 ignored 置成 true，它回来时就没有发言权了。",
+    answer:"<h5>参考解法</h5><pre>useEffect(() => {\n  let ignored = false;\n  setStatus('loading');\n  fetch('/api/search?q=' + query)\n    .then(r => r.json())\n    .then(data => { if (!ignored) { setResults(data); setStatus('done'); } })\n    .catch(e => { if (!ignored) setError(e); });\n  return () => { ignored = true; };\n}, [query]);\n\n// 另一种：const c = new AbortController();\n// fetch(url, { signal: c.signal }); return () => c.abort();</pre>一句话收尾：只认最后一次发出的请求（例子里的「ab」），旧的（「a」）回来直接扔掉。追问预备：生产代码里更推荐把请求交给 React Query 这类库（缓存、竞态、重试都处理好了），但手写这一遍是为了面试时能讲清库替你做了什么。"
+  },
+  arch:{
+    title:"状态三分法：这堆状态到底该放哪", time:"20 分钟", diff:"★★☆ 核心关",
+    body:"<p>场景：电商购物车页面。给你 8 个状态，逐个判断它属于哪一类、放哪一层，并写出理由：① 购物车商品列表 ② 侧边栏展开/收起 ③ 收货地址表单输入 ④ 当前登录用户 ⑤ 商品搜索关键词（要能分享链接） ⑥ 结算按钮的 loading ⑦ 全站主题色 ⑧ 优惠券弹窗是否打开。</p>",
+    steps:["先写出你的分类框架（提示：服务端状态 / 全局客户端状态 / 局部状态 / URL 状态）","8 个状态逐个归位，每个写一句理由","挑出一个「最容易被误放进全局」的状态，说清误放的代价","回答：购物车数据为什么不适合只放 Context？（刷新、同步、服务端才是真相源）"],
+    starter:"我的分类框架：\n1. 服务端状态（真相在后端）：\n2. 全局客户端状态：\n3. 局部状态：\n4. URL 状态：\n\n逐个归位：\n① 购物车商品列表 → 类 / 层，理由：\n② 侧边栏展开 → \n③ 地址表单输入 → \n④ 当前用户 → \n⑤ 搜索关键词 → \n⑥ 结算 loading → \n⑦ 主题色 → \n⑧ 优惠券弹窗 → ",
+    checks:["框架里明确区分了「服务端状态」和「客户端状态」——这是资深和中级分水岭","搜索关键词放 URL：能说出理由（可分享、可回退、刷新不丢）","表单输入和弹窗开关坚决留在局部，没有滥用全局","能讲清购物车放 Context 的问题：它本质是服务端数据的缓存，需要失效和同步机制"],
+    hint:"判断口诀：这份数据的真相在哪？真相在后端 → 服务端状态，用缓存库管；真相在用户操作 → 客户端状态，再看共享范围决定局部还是全局。",
+    answer:"<h5>参考归位</h5><pre>① 购物车 → 服务端状态（React Query 缓存 + 变更后失效）\n② 侧边栏 → 局部/布局层状态\n③ 地址表单 → 局部（表单库或组件内）\n④ 当前用户 → 全局（会话级，Context 够用）\n⑤ 搜索关键词 → URL query（可分享/回退）\n⑥ 结算 loading → 局部（跟按钮走）\n⑦ 主题色 → 全局（Context + CSS 变量）\n⑧ 优惠券弹窗 → 局部（结算区内部）</pre>记住比例感：一个真实应用里 80% 的状态是局部或服务端的，真正进全局店的很少。什么都往全局塞，是手感生锈的典型症状。"
+  }
+},
+{
+  n:3, theme:"抽象与复用", intro:"今天练「抽」：逻辑重复第三次，就抽 Hook；组件胖到看不清，就拆容器与展示。抽的时机和边界，就是架构品味本身。",
+  mantra:"先写两遍，第三遍再抽。过早抽象比重复更贵——抽错边界，改一次要动五个地方。",
+  react:{
+    title:"抽一个 useDebounce + 搜索框，体会自定义 Hook", time:"25 分钟", diff:"★★☆ 核心关",
+    body:"<p>写一个搜索框：输入时 300ms 防抖后才发请求。要求把防抖逻辑抽成独立的 <code class='inl'>useDebounce(value, delay)</code> Hook，搜索组件只管用。再顺手抽一个 <code class='inl'>usePrevious</code> 显示「上一次搜索词」。</p>",
+    steps:["先在组件内内联写防抖（setTimeout + 清理），跑通手感","把防抖抽成 useDebounce：入参 value/delay，返回防抖后的值","抽 usePrevious：用 ref 存上一次渲染的值","回答：为什么 Hook 里能用 useEffect/useRef？自定义 Hook 是函数还是组件？它共享的是逻辑还是状态？"],
+    starter:"import { useEffect, useRef, useState } from 'react';\n\nfunction useDebounce(value, delay) {\n  // TODO: 内部状态 + effect 定时更新\n}\n\nfunction usePrevious(value) {\n  // TODO: ref 保存上一次的值\n}\n\nexport default function SearchBox() {\n  const [keyword, setKeyword] = useState('');\n  // TODO: 用 useDebounce 接住 keyword 并渲染\n}",
+    checks:["useDebounce 内部正确用了清理函数，连续输入不会堆定时器","能说清：自定义 Hook 共享的是逻辑，每次调用的状态互相独立","能说清 usePrevious 为什么用 ref 不用 state（改 ref 不触发渲染）","知道 Hook 命名以 use 开头不是仪式，是 lint 和 React 识别它的依据"],
+    hint:"useDebounce 的骨架就是昨天的 effect + 清理：value 变了就设定时器，清理时把上一个定时器掐掉，最后活下来的那个才更新。",
+    answer:"<h5>参考解法</h5><pre>function useDebounce(value, delay = 300) {\n  const [v, setV] = useState(value);\n  useEffect(() => {\n    const t = setTimeout(() => setV(value), delay);\n    return () => clearTimeout(t);\n  }, [value, delay]);\n  return v;\n}\nfunction usePrevious(value) {\n  const ref = useRef();\n  useEffect(() => { ref.current = value; });\n  return ref.current;\n}</pre>注意 usePrevious 的小机关：渲染时读到的是上一次 effect 写入的值，天然慢一拍——这正是「上一次」的实现。"
+  },
+  arch:{
+    title:"拆一个臃肿组件：容器与展示分离", time:"20 分钟", diff:"★★☆ 核心关",
+    body:"<p>想象一个 400 行的 <code class='inl'>OrderListPage</code>：里面混着请求、筛选逻辑、日期格式化、表格渲染、弹窗开关、权限判断。你的任务是给出拆分方案：拆成哪几个文件、每个的职责一句话、数据怎么在它们之间流。</p>",
+    steps:["按职责切：数据层（请求+缓存）、状态层（筛选/分页）、展示层（表格/行/弹窗）","每个新文件写清：名字、职责、对外接口（收什么 props / 暴露什么）","指出哪些逻辑该沉到工具函数或 Hook（如 useOrders）而不是组件","说清拆分后测试怎么写：哪部分测逻辑、哪部分只做快照/交互测试"],
+    starter:"原组件：OrderListPage（400 行，全混在一起）\n\n拆分方案：\n1. useOrders.js —— 职责： / 接口：\n2. OrderFilters —— 职责： / props：\n3. OrderTable —— 职责： / props：\n4. OrderRow —— \n5. …\n\n数据流：筛选状态住在 ___，通过 ___ 传给 ___",
+    checks:["拆分维度是职责（数据/状态/展示），不是按画面区域硬切","展示组件不直接发请求、不读全局状态，只收 props——能说出这样拆的可测性好处","筛选状态的归属说得清：页面级容器持有，Filters 和 Table 都是受控的","没有过度拆分：不会把每个按钮都拆成一个文件，能讲清拆的粒度标准"],
+    hint:"粒度标准一句话：一个单元只因为一个原因而改变。请求变了要改的、样式变了要改的、筛选规则变了要改的，不该是同一个文件。",
+    answer:"<h5>参考拆法</h5><pre>pages/OrderListPage.jsx   容器：持有筛选/分页状态，组装\n├─ hooks/useOrders.js     数据：请求、缓存、loading/error\n├─ components/OrderFilters.jsx  受控：值+回调全来自 props\n├─ components/OrderTable.jsx    纯展示：rows → 表格\n│    └─ OrderRow.jsx            纯展示 + 行内操作回调\n└─ components/RefundDialog.jsx  弹窗：开关由页面控制\nutils/format.js           日期/金额格式化（纯函数，单测覆盖）</pre>面试话术：先讲数据流（状态住容器、单向往下传），再讲每个文件的单一职责，最后讲代价（文件变多、props 变长）——主动讲代价，是资深信号。"
+  }
+},
+{
+  n:4, theme:"复杂状态", intro:"状态一复杂，useState 就开始打架：多个字段要一起变、操作有明确种类、要能回溯。今天换 useReducer，架构线对应练状态机思维——多步表单就是最常见的状态机。",
+  mantra:"操作种类超过 3 种、字段要联动一起变，就别再散养 useState 了：把「能发生什么事」收进 reducer，把「现在是什么状态」收成一份。",
+  react:{
+    title:"用 useReducer 手写一个 Todo 状态核心", time:"25 分钟", diff:"★★☆ 核心关",
+    body:"<p>只写状态层，不写 UI：设计 Todo 的 state 形状和 reducer，支持 add / toggle / remove / edit / clearCompleted 五种 action，并处理一个细节——新增时 id 怎么生成才不把副作用塞进 reducer。</p>",
+    steps:["先写 state 形状和 action 清单（类型 + 载荷），再写 reducer","reducer 保持纯函数：每个分支返回新对象，不直接改原 state","处理 id：想清楚为什么不能在 reducer 里 Date.now()（纯函数/严格模式双调用），改在 dispatch 前生成","给 filter（all/active/done）留位置：它该存进 state 还是派生计算？"],
+    starter:"import { useReducer } from 'react';\n\nconst initialState = { /* TODO: todos + ? */ };\n\nfunction reducer(state, action) {\n  switch (action.type) {\n    case 'add': // TODO\n    case 'toggle': // TODO\n    case 'remove': // TODO\n    case 'edit': // TODO\n    case 'clearCompleted': // TODO\n    default: return state;\n  }\n}\n// TODO: 组件里 useReducer + 包一层 dispatch 辅助函数",
+    checks:["reducer 是纯函数：不改原 state、不调 API、不生成随机 id","每个 action 分支都返回新引用，toggle 只新建被改的那一项（其余项引用不变）","能说清 filter 为什么优先派生计算而不是存 state（存两份真相必然不一致）","能对比说出 useState 和 useReducer 的选用标准，并联想到 Redux 就是这套的放大版"],
+    hint:"id 的正解：在事件处理函数里生成好，作为 action 的载荷传进来。reducer 只根据 (state, action) 算新 state，输入相同输出必须相同。",
+    answer:"<h5>参考要点</h5><pre>case 'add':\n  return { ...state, todos: [...state.todos, action.todo] };\ncase 'toggle':\n  return { ...state, todos: state.todos.map(t =>\n    t.id === action.id ? { ...t, done: !t.done } : t) };\n// 调用侧：dispatch({ type:'add', todo:{ id: crypto.randomUUID(), text, done:false } })\n// filter 不进 state：const visible = todos.filter(...) 每次渲染派生</pre>这一关和 LangGraph 的 State + Reducer 是同一件事：节点产出 action、reducer 合并状态。你前端的旧地图，在 AI 那边直接复用。"
+  },
+  arch:{
+    title:"设计一个多步表单：状态机思维", time:"20 分钟", diff:"★★★ 进阶",
+    body:"<p>场景：商家入驻表单，4 步（基本信息 → 资质上传 → 结算账户 → 确认提交），要求：每步校验通过才能下一步、可回退不丢数据、中途退出下次能恢复、最后一步汇总确认。用状态机的方式给出设计。</p>",
+    steps:["画状态图：有哪些状态（step）、哪些事件能迁移（next/back/submit）、哪些迁移被禁止","定义数据结构：全部字段一份总状态还是每步一份？校验规则挂在哪","设计「恢复草稿」：存什么、存哪、何时存（防抖/每步存）、版本变了怎么办","列出 3 个边界情况：如重复提交、上传中点下一步、草稿和服务器数据冲突"],
+    starter:"状态图：\n[Step1 基本信息] --next(校验✓)--> [Step2 资质]\n[Step2] --back--> [Step1]   数据保留？\n…\n\n状态形状：\n{ currentStep, values: {...}, errors: {}, status: editing|submitting|done }\n\n草稿策略：存 ___，时机 ___，失效条件 ___",
+    checks:["状态图里明确写了「禁止的迁移」（如 submitting 时禁 back、校验不过禁 next）","校验归属清楚：字段级即时校验 + 步骤级提交校验，不是全堆在最后","草稿策略包含失效/版本处理，不是一句「存 localStorage」带过","能主动提出幂等提交（防重复点击/重试造两份单）这类资深才会想的点"],
+    hint:"把「步骤」想成状态机的状态而不是一个数字计数器：数字只记录位置，状态机还记录什么动作被允许。status 字段（editing/submitting/done）和 step 是两条正交的轴，别混成一个变量。",
+    answer:"<h5>参考骨架</h5><pre>状态轴1 step: 1|2|3|4   状态轴2 status: editing|submitting|success|error\n迁移规则：next 仅当本步校验✓且 status=editing；submit 仅在 step4 且防重复（提交锁+幂等键）\n数据：一份总 values 按步分区；校验规则表 rules[step] 独立可测\n草稿：每步 next 时存一份（带 schemaVersion+时间戳）；恢复时版本不符则丢弃并提示\n上传：文件状态独立（uploading/done/failed），有未完成上传时 next 被禁</pre>面试加分句：「我把流程建模成状态机而不是步骤计数器，因为要表达禁止迁移和正交状态——这也是我用 XState/自研 reducer 前会先想清楚的。」"
+  }
+},
+{
+  n:5, theme:"共享与性能", intro:"Context 用错比不用更糟：一个大 Context 管一切，改个字段全场重渲染。今天练「按变化频率拆 Context」和「先测量再优化」，架构线练 Dashboard 这种拼装型页面。",
+  mantra:"memo 不是保险箱，是合同：只有 props 引用稳定时才有效。先想数据为什么变，再谈要不要挡渲染。",
+  react:{
+    title:"拆 Context + 说清一次无谓重渲染", time:"25 分钟", diff:"★★★ 进阶",
+    body:"<p>写一个最小例子：App 里有用户信息（几乎不变）和购物车数量（频繁变）。先写成一个 Context 的版本，观察改数量时用户信息组件也重渲染；再拆成两个 Context 修复。最后给列表行组件加上 <code class='inl'>memo</code>，并写清它生效的前提。</p>",
+    steps:["写单 Context 版本：UserBadge 和 CartBadge 都订阅它","给两个组件加 console.log 渲染计数，复现「改数量、UserBadge 跟着渲染」","拆成 UserContext / CartContext，验证互不干扰","回答：为什么把 value 写成内联对象字面量会让 memo 和 Context 优化全失效？怎么修？"],
+    starter:"// TODO: 1) 单 Context 版本（复现问题）\n// const AppContext = createContext();\n//\n// TODO: 2) 拆分版本\n// const UserContext = ...\n// const CartContext = ...\n//\n// 观察点：value={{ user, cart }} 这种写法的问题在哪？",
+    checks:["能解释无谓渲染的根因：Context value 引用变了，所有消费者都重渲染，跟它用不用那个字段无关","拆分标准说得清：按变化频率和职责拆，不是按页面区域拆","能说清 memo 生效三件套：组件纯、props 引用稳定、渲染真的贵——缺一就是白写","知道 useMemo/useCallback 是为了稳定引用，不是「性能开关」，滥用反而更慢"],
+    hint:"根因链：父组件重渲染 → 内联对象生成新引用 → Context value 变了 → 全部消费者重渲染。拆 Context 是治本，useMemo 包 value 是治标，两个一起说才是完整答案。",
+    answer:"<h5>参考结论</h5><pre>拆分：UserContext（低频：登录/资料变更）\n      CartContext（高频：加购/数量变化）\nProvider 的 value 用 useMemo 稳定引用：\nconst userValue = useMemo(() => ({ user }), [user]);\n列表行：memo(Row) + 回调 useCallback + 数据引用稳定（来自第4天的 reducer 写法）</pre>面试原话可背：「性能优化顺序是：先定位是不是真慢（Profiler）、再看状态放错层没有、最后才轮到 memo 三件套。反过来做是新手顺序。」"
+  },
+  arch:{
+    title:"设计一个可拼装的 Dashboard", time:"20 分钟", diff:"★★★ 进阶",
+    body:"<p>场景：数据看板首页，有 8–10 个图表卡片（Widget），不同角色看到的组合不同，后续还会不断加新 Widget。设计：Widget 怎么注册、布局怎么配、每个 Widget 的数据加载互不拖累、一个 Widget 挂了不能白屏整页。</p>",
+    steps:["设计 Widget 注册表：一个 Widget 的定义包含什么（id、组件、数据接口、默认尺寸、权限）","布局方案：配置驱动（后端下发布局 JSON）还是前端写死？各说一个适用场景","数据加载策略：统一拉还是各自拉？错误和骨架屏怎么处理到 Widget 级","给出扩展路径：产品要加第 11 个 Widget，需要改哪几处、动不动核心代码"],
+    starter:"Widget 定义：\n{ id, component, fetch, defaultSize, permission, … }\n\n注册表 → 布局引擎 → 渲染：\n（画出这条流水线，并标注配置从哪来）\n\n失败隔离方案：\n数据策略：各自拉 / 统一拉，选 ___，理由 ___",
+    checks:["Widget 定义是「配置+组件」的注册制，加新卡片不动布局引擎（开闭原则落地）","每个 Widget 有独立的 loading / error / 空状态，挂一个不影响整页（Error Boundary 到卡片级）","能权衡配置驱动 vs 写死：配置灵活但要有校验和降级，写死简单但每次改都要发版","提到了权限过滤在布局生成阶段做，而不是渲染出来再藏"],
+    hint:"这类题的骨架是「注册表 + 渲染器」：业务往表里登记，引擎只认表。聊天软件的插件、编辑器的工具栏、低代码物料，全是这一个模式。",
+    answer:"<h5>参考骨架</h5><pre>registry = { salesChart: { comp, fetch, size, perm }, ... }\nlayoutConfig（后端下发，按角色）：[{id:'salesChart', x,y,w,h}, ...]\nDashboard 渲染器：校验配置 → 按权限过滤 → 逐个渲染\n每个 Widget 自带：数据请求 + Skeleton + ErrorBoundary + 空状态\n加新 Widget = 注册表 +1 条 + 布局配置 +1 条，引擎零改动</pre>加分点：提一句配置的版本与灰度（新布局先给小流量）、以及 Widget 间联动（如点图表过滤全场）走一个轻量事件/状态层，别让 Widget 互相 import。"
+  }
+},
+{
+  n:6, theme:"表单与交互细节", intro:"表单是前端的半边天：受控非受控、校验时机、焦点管理，全是细节手感。架构线练 Feed/评论这种高频交互系统，乐观更新是面试必问。",
+  mantra:"受控还是非受控，看的是「谁需要实时知道这个值」。校验时机决定体验：输入时宽容、失焦时提醒、提交时严格。",
+  react:{
+    title:"手写一个带校验的登录表单（含 ref 用法）", time:"25 分钟", diff:"★★☆ 核心关",
+    body:"<p>手写登录表单：邮箱 + 密码，受控实现；邮箱失焦时校验格式、提交时全量校验并把焦点自动移到第一个错误字段（用 <code class='inl'>useRef</code>）；提交中按钮禁用防重复。写完后回答：哪个字段其实可以非受控、为什么？</p>",
+    steps:["受控写邮箱/密码 + errors 状态，提交时全量校验","失焦（onBlur）校验单个字段，输入时清掉该字段旧错误","错误时用 ref 把焦点移到第一个出错的输入框","提交中禁用按钮；回答密码框能不能非受控、什么场景下搜索框适合非受控"],
+    starter:"import { useRef, useState } from 'react';\n\nexport default function LoginForm() {\n  const [values, setValues] = useState({ email: '', password: '' });\n  const [errors, setErrors] = useState({});\n  const emailRef = useRef(null);\n  // TODO: validateField / validateAll / onSubmit / onBlur\n  // TODO: 出错时 emailRef.current.focus()\n}",
+    checks:["校验时机分层说得清：blur 校验单字段、submit 全量、输入时只清错不新增","ref 用在刀刃上：焦点管理这种「命令式操作 DOM」正是 ref 的本职，不是拿它存一堆状态","能说清受控/非受控的取舍：要实时联动（字数统计、联动禁用）才受控，纯收集值可非受控","提交防重复 + 错误可达性（焦点移动、错误文案关联字段）都考虑到了"],
+    hint:"焦点移动的顺序小坑：先 setErrors，再在提交处理里根据校验结果决定 focus 谁——注意状态更新是异步的，校验函数要直接返回 errors 对象来用，别回头读 state。",
+    answer:"<h5>参考要点</h5><pre>const errs = validateAll(values); // 函数返回结果，不依赖 state 时序\nsetErrors(errs);\nif (errs.email) emailRef.current?.focus();\nelse if (errs.password) pwdRef.current?.focus();</pre>非受控候选：密码框在本场景可以非受控（不需要实时联动），但为了统一校验体验通常仍受控——能讲出这个权衡过程比结论本身重要。"
+  },
+  arch:{
+    title:"设计评论/Feed 系统：乐观更新与分页", time:"20 分钟", diff:"★★★ 进阶",
+    body:"<p>场景：短视频下的评论区。要求：发评论立刻上屏（乐观更新）、失败要回滚并提示、列表无限滚动、点赞数实时感、热门评论置顶。给出前端架构设计：数据结构、更新流程、分页策略。</p>",
+    steps:["画发评论的完整时序：本地先插 → 请求 → 成功替换/失败回滚，各步 UI 长什么样","乐观条目怎么标记（临时 id、状态位），成功后如何与服务器数据对齐","分页选型：页码分页 vs 游标分页，为什么 Feed 类必须用游标？","点赞怎么做：乐观计数、连点防抖、和服务端最终一致怎么保证"],
+    starter:"发评论时序：\n用户提交 → 本地插入（id=temp_?, status=sending）→ POST\n  ├─ 成功 → 用真实数据替换，status=synced\n  └─ 失败 → ___（回滚还是标记重试？选一个并说理由）\n\n分页：选 ___ 分页，理由：\n数据结构：comments 以 ___ 存（数组/按id索引），排序规则：",
+    checks:["乐观更新有完整的失败路径，不是只画成功线——失败保留内容+重试入口通常比直接删掉体验好","游标分页的理由说得对：Feed 头部不断新增，页码会漂移导致重复/漏条","临时 id 与真实 id 的替换对齐讲得清，列表 key 不会闪烁重挂","点赞考虑了防重复和最终一致（以服务端返回为准纠偏），不是本地自嗨 +1 到底"],
+    hint:"乐观更新三件套：临时身份（temp id）、状态位（sending/failed/synced）、对齐动作（替换或回滚）。面试官追问的一定是失败分支，主动画出来。",
+    answer:"<h5>参考要点</h5><pre>发评论：插入 temp 条目(status=sending) → 成功替换为服务端对象\n        失败：保留条目标 failed + 重试按钮（不删，用户输入不丢）\n分页：游标（cursor=最后一条id/时间戳），下拉加载历史；\n      新评论从顶部事件补，防重复靠 id 去重合并\n点赞：本地先 +1 → 请求 → 以服务端 count 为准回填；按钮短暂锁定防连点\n排序：热门区（服务端下发）与时间流分区，别在前端混排全量</pre>一句话收尾：「这类设计的核心是把每条数据当成有状态的实体来管，而不是一把梭的列表渲染。」"
+  }
+},
+{
+  n:7, theme:"毕业综合关", intro:"最后一天不再学新东西，把前六天串成一次完整模拟：上午手写一个小应用，下午口述一次系统设计。做完这一关，你面对的就不是「忘了」，而是「热身完毕」。",
+  mantra:"面试不是考你记得多少 API，是考你面对没见过的题，能不能先拆结构、再定数据流、最后写代码。今天全程按这个顺序来。",
+  react:{
+    title:"从空白文件手写：可搜索的用户列表应用", time:"45 分钟", diff:"★★★ 毕业关",
+    body:"<p>计时 45 分钟，从空文件开始写一个完整小应用：拉取用户列表（可用假数据函数模拟请求）、搜索过滤（带防抖）、点击行展开详情、三态齐全。必须用到：useState + useEffect + 自定义 Hook + useReducer 或 Context 任选其一（说清为什么选它）。写完自己 code review 一遍，列出 3 个你不满意的点。</p>",
+    steps:["前 5 分钟只画结构：组件树 + 状态清单，写在注释里再动手","按 Day1–6 的肌肉记忆写：请求三态、防抖搜索、详情展开","状态方案二选一并写明理由：reducer 管筛选+选中，还是 Context 跨层传","最后 5 分钟自查清单过一遍：key、竞态、清理、无谓渲染，各查一处"],
+    starter:"// 第一步（5 分钟）：先写结构，别写代码\n// 组件树：\n// 状态清单：\n// 数据流：\n//\n// 第二步：从这里开始写你的应用\n// 模拟请求可用：const fakeFetch = () => new Promise(r => setTimeout(() => r(USERS), 600))",
+    checks:["动手前真的先写了组件树和状态清单（顺序对了，手感就回来了大半）","搜索防抖用的是自己抽的 Hook，不是内联凑合","请求有竞态/清理处理、三态齐全，不是只有成功路径","自查能列出 3 个真实的不满意点——能挑出自己代码的毛病，比写得完美更接近资深"],
+    hint:"卡住时别翻答案，翻你前六天的笔记顺序：先状态归属、再数据流、最后细节 API。面试现场也一样，先讲结构争取思考时间。",
+    answer:"<h5>自评标尺（不是标准答案）</h5><pre>及格：功能跑通、三态齐全、防抖生效\n良好：+ 竞态处理、Hook 抽取干净、状态归属讲得清\n优秀：+ 自查列出真实问题（如展开详情的请求可缓存、\n      搜索应同步到 URL、列表可虚拟滚动）并给出改法</pre>达到「良好」就说明手感基本恢复；「优秀」里的每个点，都是面试时可以主动抛出的钩子。"
+  },
+  arch:{
+    title:"口述系统设计：设计一个 Duo 风格闯关大厅", time:"45 分钟", diff:"★★★ 毕业关",
+    body:"<p>就是你正在用的这种页面，换你来设计：闯关地图（多日多关）、每关有题目和进度、XP 与连续打卡、断点续学。对着录音讲 20 分钟，结构按：需求澄清 → 组件树 → 状态设计 → 数据与接口 → 边界与取舍。讲完回听，挑出自己讲得最虚的一段重讲。</p>",
+    steps:["需求澄清先行：主动问/自设 3 个问题（如进度要不要跨设备、题目是静态还是下发）","画组件树：地图、关卡页、题目组件、结算，各自职责","状态设计：哪些是服务端状态（进度/XP）、哪些是本地状态（答题中草稿），断点续学靠什么","讲 2 个取舍：如题目下发要版本管理、离线要不要支持，各给结论和理由"],
+    starter:"口述提纲：\n1. 需求澄清（我先确认三件事）：…\n2. 组件树：App → …\n3. 状态：服务端 ___ / 本地 ___ / URL ___\n4. 接口：GET /progress、POST /answer …\n5. 取舍①：  取舍②：\n6. 扩展：加新题型要动哪里？",
+    checks:["开口先澄清需求而不是直接画图——这是资深口述的标志动作","状态三分法用上了：进度是服务端真相、答题草稿是本地、关卡定位可进 URL","题目系统讲到了「配置与渲染器分离」：新题型=新渲染组件+新校验器，引擎不动","两个取舍都有明确结论和代价，不是罗列选项不下判断"],
+    hint:"讲虚的地方通常在数据层：把接口逐个报出来（路径、入参、返回、失败怎么办），虚感立刻消失。回听时专门盯这一段。",
+    answer:"<h5>参考提纲要点</h5><pre>澄清：进度跨设备（要账号）/ 题目运营下发（要版本）/ 先不支持离线\n组件：App→PathMap（关卡节点）→LevelPage→QuestionRenderer（按题型分发）→ResultPanel\n状态：进度+XP=服务端状态（缓存+提交后失效）；作答中=本地；当前关=URL\n接口：GET /v1/path、GET /v1/level/:id、POST /v1/level/:id/submit（幂等键防重复领XP）\n取舍：题目下发 vs 内置——选下发（可运营）代价是版本兼容矩阵；\n      判题放前端 vs 后端——练习题前端判（即时反馈）、计分以后端复核为准</pre>能顺着这条线讲满 20 分钟不冷场，系统设计题的基本盘就稳了。接下来缺的只是不同题型的轮换练习。"
+  }
+}
+];
+
+var state = { day:1, xp:0, done:{}, checks:{} };
+var timers = {};
+
+function missionKey(d, kind){ return d + '-' + kind; }
+
+function renderPath(){
+  var el = document.getElementById('path'); el.innerHTML='';
+  DAYS.forEach(function(day){
+    var row = document.createElement('div'); row.className='node-row';
+    var b = document.createElement('button'); b.className='node';
+    var doneCount = (state.done[missionKey(day.n,'react')] ? 1:0) + (state.done[missionKey(day.n,'arch')] ? 1:0);
+    if(doneCount===2) b.classList.add('done');
+    else if(day.n===state.day || (doneCount===0 && day.n===nextUndone())) b.classList.add('avail');
+    if(day.n===state.day) b.classList.add('sel');
+    b.innerHTML = '<small>DAY</small>' + day.n + (doneCount===2 ? '' : '');
+    b.setAttribute('aria-label','第'+day.n+'天 '+day.theme);
+    b.onclick = function(){ state.day = day.n; renderPath(); renderDay(); window.scrollTo({top: document.getElementById('dayRoot').offsetTop - 90, behavior:'smooth'}); };
+    row.appendChild(b); el.appendChild(row);
+  });
+}
+function nextUndone(){
+  for(var i=0;i<DAYS.length;i++){ var d=DAYS[i].n; if(!state.done[missionKey(d,'react')] || !state.done[missionKey(d,'arch')]) return d; }
+  return 7;
+}
+
+function checksHtml(dayN, kind, checks){
+  var key = missionKey(dayN, kind);
+  var html = '<div class="checks"><h4>✅ 自查标准（点一条 = 我能出声讲清这一条）</h4><p>全部点亮才能打卡。点不动的那条，就是今天真正要补的洞。</p>';
+  checks.forEach(function(c, i){
+    var on = state.checks[key] && state.checks[key][i];
+    html += '<button class="check-btn' + (on?' on':'') + '" data-day="'+dayN+'" data-kind="'+kind+'" data-idx="'+i+'"><span class="box">' + (on?'✓':'') + '</span><span class="txt">' + c + '</span></button>';
+  });
+  return html + '</div>';
+}
+
+function missionHtml(day, kind){
+  var m = day[kind]; var key = missionKey(day.n, kind); var isDone = !!state.done[key];
+  var isReact = kind==='react';
+  var steps = m.steps.map(function(s){ return '<li>'+s+'</li>'; }).join('');
+  return '<section class="mission">'
+    + '<div class="mission-head"><span class="tag '+(isReact?'react':'arch')+'">'+(isReact?'⌨️ REACT 手写':'🏛️ 架构拆解')+'</span><h3>'+m.title+'</h3></div>'
+    + '<div class="meta"><span>⏱️ '+m.time+'</span><span>'+m.diff+'</span><span>🚫 不许用 AI / 不许查文档（自查时可对答案）</span></div>'
+    + '<div class="mission-body">' + m.body
+    + (m.qa ? '<div class="chat-qa">' + m.qa + '</div>' : '')
+    + '<ol class="steps">'+steps+'</ol>'
+    + '<label class="code-label"><span>'+(isReact?'✍️ 在这里手写（写完粘到本地跑一遍验证）':'✍️ 在这里画 / 写你的拆解')+'</span><button class="timer-btn" data-timer="'+key+'">⏱️ 开始计时</button></label>'
+    + '<textarea class="code'+(isReact?'':' arch')+'" id="ta-'+key+'" spellcheck="false">'+escapeHtml(m.starter)+'</textarea>'
+    + checksHtml(day.n, kind, m.checks)
+    + '<div class="actions"><button class="btn btn-ghost" data-reveal="hint-'+key+'">💡 看提示</button><button class="btn btn-ghost amber" data-reveal="ans-'+key+'">👀 对参考答案</button><button class="btn btn-primary" id="done-'+key+'" '+(canComplete(day.n,kind)&&!isDone?'':'disabled')+'>'+(isDone?'✅ 已通关 +100 XP':'🏆 自查全过，打卡通关')+'</button></div>'
+    + '<div class="reveal hint" id="hint-'+key+'"><h5>💡 提示（看完合上，凭记忆重写）</h5>'+m.hint+'</div>'
+    + '<div class="reveal answer" id="ans-'+key+'">'+m.answer+'</div>'
+    + '<div class="done-banner'+(isDone?' show':'')+'" id="banner-'+key+'">🎉 这一关过了。别急着走：把参考答案和你的写法 diff 一遍，差在哪、为什么——那才是今天的收获。</div>'
+    + '</div></section>';
+}
+
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function canComplete(dayN, kind){
+  var day = DAYS[dayN-1]; var key = missionKey(dayN, kind);
+  var arr = state.checks[key] || [];
+  return arr.length === day[kind].checks.length && arr.every(Boolean);
+}
+
+function renderDay(){
+  var day = DAYS[state.day-1];
+  var root = document.getElementById('dayRoot');
+  root.innerHTML = '<div class="day-head"><div class="day-badge"><div class="d">DAY '+day.n+' / 7</div><div class="t">'+day.theme+'</div></div>'
+    + '<div class="intro"><p>'+day.intro+'</p><div class="mantra">🧠 <b>今日心智模型：</b>'+day.mantra+'</div></div></div>'
+    + missionHtml(day,'react') + missionHtml(day,'arch');
+  bindDayEvents();
+  updateHud();
+}
+
+function bindDayEvents(){
+  document.querySelectorAll('.check-btn').forEach(function(btn){
+    btn.onclick = function(){
+      var d = +btn.dataset.day, k = btn.dataset.kind, i = +btn.dataset.idx, key = missionKey(d,k);
+      if(!state.checks[key]) state.checks[key] = [];
+      state.checks[key][i] = !state.checks[key][i];
+      var doneBtn = document.getElementById('done-'+key);
+      // re-render just this mission's checks state visually
+      btn.classList.toggle('on', !!state.checks[key][i]);
+      btn.querySelector('.box').textContent = state.checks[key][i] ? '✓' : '';
+      if(doneBtn && !state.done[key]) doneBtn.disabled = !canComplete(d,k);
+    };
+  });
+  document.querySelectorAll('[data-reveal]').forEach(function(btn){
+    btn.onclick = function(){ document.getElementById(btn.dataset.reveal).classList.toggle('open'); };
+  });
+  document.querySelectorAll('[data-timer]').forEach(function(btn){
+    btn.onclick = function(){ toggleTimer(btn); };
+  });
+  ['react','arch'].forEach(function(kind){
+    var key = missionKey(state.day, kind);
+    var btn = document.getElementById('done-'+key);
+    if(btn) btn.onclick = function(){
+      if(state.done[key] || !canComplete(state.day, kind)) return;
+      state.done[key] = true; state.xp += 100;
+      btn.disabled = true; btn.textContent = '✅ 已通关 +100 XP';
+      document.getElementById('banner-'+key).classList.add('show');
+      showToast(); renderPath(); updateHud();
+    };
+  });
+}
+
+function toggleTimer(btn){
+  var key = btn.dataset.timer;
+  if(timers[key]){
+    clearInterval(timers[key].iv); delete timers[key];
+    btn.classList.remove('on'); btn.textContent = '⏱️ 开始计时'; return;
+  }
+  var total = key.indexOf('react') > -1 ? 25*60 : 20*60;
+  if(key.indexOf('-react') > -1 && DAYS[state.day-1].react.time.indexOf('45') > -1) total = 45*60;
+  var end = Date.now() + total*1000;
+  btn.classList.add('on');
+  var iv = setInterval(function(){
+    var left = Math.max(0, Math.round((end - Date.now())/1000));
+    var mm = String(Math.floor(left/60)).padStart(2,'0'), ss = String(left%60).padStart(2,'0');
+    btn.textContent = '⏱️ ' + mm + ':' + ss + ' · 点此停';
+    if(left<=0){ clearInterval(iv); delete timers[key]; btn.classList.remove('on'); btn.textContent='⏰ 时间到'; }
+  }, 500);
+  timers[key] = { iv: iv };
+}
+
+function updateHud(){
+  var doneCount = Object.keys(state.done).length;
+  document.getElementById('xpNum').textContent = state.xp;
+  document.getElementById('streakNum').textContent = doneCount;
+  document.getElementById('progLabel').textContent = '手感恢复进度 · 完成 ' + doneCount + ' / 14';
+  document.getElementById('progFill').style.width = (doneCount/14*100) + '%';
+}
+
+function showToast(){
+  var t = document.getElementById('toast');
+  var doneCount = Object.keys(state.done).length;
+  t.textContent = doneCount >= 14 ? '🏆 14 关全通关！手感恢复完成' : '🎉 +100 XP · 已完成 ' + doneCount + ' / 14 关';
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2400);
+}
+
+/* ---------- React Interview Quiz (100) ---------- */
+var QUIZ = [
+ {cat:'hooks',catLabel:'HOOKS',q:'为什么 Hooks 不能写在 <code>if</code> / 循环里，只能在顶层调用？',opts:['因为语法解析器不支持','因为 React 靠调用顺序给每个 Hook 对上状态，条件调用会让顺序错位','因为 if 里执行会变慢','只是 ESLint 的风格建议，不遵守也没事'],a:1,ex:'React 内部用一条链表按调用顺序存 Hook 状态。第 1 次渲染调了 3 个 Hook，第 2 次少调 1 个，后面全部错位，状态就串了。',talk:'面试这样说：「Hooks 的状态是按调用顺序索引的，所以必须保证每次渲染调用顺序完全一致。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'连点 3 次按钮，每次都执行 <code>setCount(count + 1)</code>，最后 count 最可能 + 几？（同一次批处理内）',opts:['+3','+1','+0','报错'],a:1,ex:'三次读到的都是同一帧渲染的 count 快照，算出的都是 count+1，互相覆盖。改成 setCount(prev =&gt; prev + 1) 才会排队累加到 +3。',talk:'面试这样说：「直接更新读闭包快照，函数式更新读 React 队列里的最新值。」对应 Day 1。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>setTimeout</code> 里读 state 读到旧值，根本原因是什么？',opts:['setTimeout 有 bug','那次渲染的变量是快照，回调闭包抓住了旧那一帧的值','useState 是异步的所以读不到','浏览器节流了更新'],a:1,ex:'每次渲染都是一套新变量。定时器是在旧渲染里注册的，闭包里抓的自然是旧 count，和 setTimeout 本身无关，换成 Promise 回调也一样。',talk:'面试这样说：「这不是异步的锅，是闭包 + 渲染快照：回调属于注册它的那一帧。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'关于 <code>useEffect</code> 的依赖数组，正确的是哪句？',opts:['它是触发器，想让 effect 跑就往里加变量','它声明了 effect 用到的所有响应式值，漏写就是在向 React 撒谎，容易拿到旧值','空数组表示每次渲染都跑','依赖越多性能越差，应尽量少写'],a:1,ex:'依赖数组的本质是同步声明：effect 里用到哪些 props/state，就必须列全。漏写常见后果就是闭包旧值、请求不刷新。',talk:'面试这样说：「依赖数组不是开关，是完整性声明。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'搜索框竞态（先搜 a、后搜 ab，a 晚回来盖掉 ab）最标准的修法是？',opts:['给请求加更长的防抖就行','在 effect 清理函数里作废上一次（ignored 标记或 AbortController.abort），只认最后一次','把结果按长度排序','用同步请求'],a:1,ex:'防抖只能减少次数，不能保证顺序。清理函数在 query 变化时先执行，给旧请求打作废标记 / 直接取消，旧结果回来直接扔。',talk:'面试这样说：「只认最后一次发出的，不认最后回来的。」对应 Day 2 竞态关。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useRef</code> 和 <code>useState</code> 最核心的区别是？',opts:['ref 只能存 DOM','改 ref.current 不触发渲染，改 state 会触发渲染','state 不能存对象','ref 在服务器端不能用'],a:1,ex:'ref 是渲染之外的可变盒子：存定时器 id、上一次值、DOM 节点都不想引发渲染时用它；要让 UI 跟着变就用 state。',talk:'面试这样说：「需要渲染用 state，只需要记住用 ref。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'自定义 Hook 每次被两个组件调用时，它们共享的是什么？',opts:['同一份 state，改一个另一个同步','共享逻辑，不共享状态——每次调用都有独立的 state / ref','共享 DOM','什么都不共享，Hook 只是语法糖'],a:1,ex:'自定义 Hook 本质是函数复用：useDebounce 写一次多处用，但每个调用方内部的 useState/useEffect 都是独立一份。',talk:'面试这样说：「Hook 抽的是逻辑复用，不是状态共享；要共享状态得靠提升 + Context/外部 store。」对应 Day 3。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'什么时候该上 <code>useReducer</code> 而不是一堆 <code>useState</code>？',opts:['任何时候 reducer 都更高级','多个字段要联动、操作种类多（add/toggle/edit…）、下一步依赖上一步时','只要字段超过 2 个','为了用 Redux 必须先用 reducer'],a:1,ex:'判断标准：状态转移有明确的 action 种类、字段要一起变、逻辑想脱离组件单测时。简单独立的开关、输入框用 useState 更轻。',talk:'面试这样说：「useState 管值，useReducer 管状态转移规则。」对应 Day 4。'},
+ {cat:'principle',catLabel:'渲染原理',q:'列表渲染为什么需要稳定的 <code>key</code>，用数组 index 当 key 的风险是？',opts:['没有风险，index 最方便','key 是 React 认节点的身份证；插入/删除/排序时 index 会错位，导致状态串到别的行、输入框内容错乱','key 只是为了消除控制台警告','key 决定渲染顺序'],a:1,ex:'Diff 时 React 靠 key 对位。列表头部插入一项，后面每一项的 index 都变了，React 会以为内容变了、把上一行的内部状态留给下一行。',talk:'面试这样说：「key 要用数据的稳定 id，不要用会随位置变的 index，尤其列表会增删排序时。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'一句话说清虚拟 DOM / Diff 在干什么？',opts:['把 HTML 存成字符串更快','用 JS 对象描述 UI，状态变后生成新树、与旧树 Diff，只把最小差异更新到真实 DOM','完全替代浏览器渲染','为了跨端所以必须用'],a:1,ex:'价值不在“比直接操作 DOM 快”，而在声明式：你只描述 UI 应该长啥样，React 算出最小变更。启发式 Diff 把复杂度从 O(n³) 降到 O(n)，代价是需要 key 辅助。',talk:'面试这样说：「虚拟 DOM 的核心收益是可编程的声明式 + 可控的更新成本，不是单纯的速度神话。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'React 18 自动批处理（Automatic Batching）指的是？',opts:['多个 setState 只在 onClick 里合并','连 setTimeout / Promise / 原生事件里的多次 setState 也会合并成一次渲染','自动帮你做代码分割','自动缓存接口请求'],a:1,ex:'React 17 只在 React 事件里批处理；18 起默认在所有场景批处理，减少无谓渲染。函数式更新在批处理里依然按队列依次生效。',talk:'面试这样说：「18 之后批处理是默认行为，范围扩大到了异步回调里。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'开发环境 StrictMode 下 effect 跑两遍、组件渲染两遍，是 bug 吗？',opts:['是，关掉 StrictMode 就好','不是，故意双调用来暴露不纯的渲染 / 没写清理的 effect，生产环境不会这样','是 React 18 的已知缺陷','因为网速慢重发了'],a:1,ex:'双调用只在开发环境：帮你发现渲染里藏副作用、effect 没清理干净（订阅没退、请求没作废）等问题。能在双调用下还正确的代码，通常更健壮。',talk:'面试这样说：「StrictMode 双调用是纯度检查，暴露问题不是制造问题。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'<code>useEffect</code> 和 <code>useLayoutEffect</code> 的时机区别是？',opts:['完全一样','useLayoutEffect 在浏览器绘制前同步执行（适合读布局/防闪烁），useEffect 在绘制后异步执行（适合大多数请求/订阅）','useEffect 先执行','useLayoutEffect 已废弃'],a:1,ex:'默认优先 useEffect。只有需要量 DOM 尺寸、同步改样式避免闪一下时才用 Layout 版本，用多了会阻塞绘制、拖慢首屏。',talk:'面试这样说：「先 Effect，量布局防闪烁才 Layout。」'},
+ {cat:'perf',catLabel:'性能',q:'给子组件加了 <code>memo</code> 却还是每次重渲染，最常见的原因是？',opts:['memo 需要 React 19','父组件每次传的 props 引用都在变：内联对象/数组/箭头函数每次都是新引用','memo 只能包类组件','需要同时加 key'],a:1,ex:'memo 做的是浅比较。onClick={() =&gt; …}、style={{…}}、data={[…]} 每次渲染都是新引用，浅比较永远不相等。修法：useCallback / useMemo 稳定引用，或把对象提升出去。',talk:'面试这样说：「memo 是合同，前提是 props 引用稳定。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'一个大 <code>Context</code> 里放 user + 购物车数量，改数量时 UserBadge 也重渲染，根因是？',opts:['UserBadge 写错了','Context 的 value 引用变了，所有消费者都会重渲染，不管它用没用那个字段','React 的 bug','因为没加 memo 就一定会这样'],a:1,ex:'Context 传播不做字段级订阅。拆法：按变化频率拆成 UserContext（低频）和 CartContext（高频）；或用 useMemo 稳定 value；大型应用可用带 selector 的状态库。',talk:'面试这样说：「Context 按 value 整体通知，拆分要按变化频率拆。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'正确的性能优化顺序应该是？',opts:['先给所有组件加 memo 三件套','先用 Profiler 定位是不是真慢 / 谁在渲染 → 查状态是不是放错层 → 最后才用 memo/useMemo/useCallback','先上虚拟列表','先把所有状态放全局'],a:1,ex:'无谓渲染很多是状态归属问题（状态放太高、Context 太大），不是缺 memo。盲目加 memo 反而增加比较成本和代码复杂度。',talk:'面试这样说：「先测量、再归因、后下药；memo 是最后一步不是第一步。」'},
+ {cat:'practice',catLabel:'实战',q:'受控组件和非受控组件的区别，面试标准答法是？',opts:['受控就是用了框架，非受控是原生','受控：值由 React state 驱动、onChange 同步；非受控：值存在 DOM 里、用 ref 读取。需要实时联动/校验用受控，纯收集可用非受控','受控性能一定更好','非受控已不推荐使用'],a:1,ex:'选型看谁需要实时知道这个值：字数统计、联动禁用、即时校验需要受控；文件 input 天生非受控；登录表单为了统一校验也常受控。',talk:'面试这样说：「看真相源在哪：React 里就是受控，DOM 里就是非受控。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'两个兄弟组件都要用同一份状态，最直接的做法是？',opts:['各存一份然后同步','把状态提升到它们的共同父组件，父往下传值和回调（状态提升）','用全局变量','用 localStorage 同步'],a:1,ex:'状态应放在“需要它的所有组件的最近共同祖先”。这也是播放进度要提升到 PlayerSection、而不是埋在进度条里的原因。',talk:'面试这样说：「共享范围决定状态高度：就近共同父级。」对应 Day 1 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'Error Boundary 能捕获哪类错误？',opts:['按钮 onClick 里抛的错','子组件渲染 / 生命周期 / 构造函数里抛的错；事件处理、异步代码、它自身的错捕不到','所有 JS 错误','接口 404'],a:1,ex:'Error Boundary 是类组件（getDerivedStateFromError / componentDidCatch），用来给一块 UI 兜底降级，比如 Dashboard 里一个 Widget 挂了不白屏整页。事件里的错要自己 try/catch。',talk:'面试这样说：「Error Boundary 兜渲染错，不兜事件和异步错；粒度应到卡片级。」'},
+ {cat:'practice',catLabel:'实战',q:'发评论要做乐观更新，失败分支怎样处理更合理？',opts:['直接删掉，假装没发过','保留这条内容、标记 failed 并给重试入口；成功后再用服务端真实 id/数据替换临时条目','刷新整个页面','本地一直 +1 不管服务端'],a:1,ex:'乐观更新三件套：临时 id、状态位（sending/failed/synced）、对齐动作。直接删会把用户输入弄丢，体验最差；保留+重试才是完整设计。',talk:'面试这样说：「乐观更新一定要画失败路径，不只画成功线。」对应 Day 6 架构关。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useState(() =&gt; expensiveInit())</code> 把函数传进去做惰性初始化，好处是？',opts:['让更新变异步','初始计算只在首次渲染跑一次，后续渲染不会重复执行昂贵初始化','可以不用写默认值','让 state 变成只读'],a:1,ex:'直接写 useState(expensiveInit()) 时，这个表达式每次渲染都会求值，只是结果被忽略。传函数形式 React 只在第一次调用它。',talk:'面试这样说：「惰性初始化是传函数，不是传调用结果。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'在 <code>useEffect</code> 里订阅事件 / 定时器，为什么必须写清理函数？',opts:['不写会语法报错','组件卸载或依赖变化时会泄漏：重复订阅、定时器叠加、回调操作已卸载组件','清理函数只是用来打日志的','React 会自动帮你清理所有订阅'],a:1,ex:'effect 每跑一次就新增一份订阅，清理是它的对称操作。没有清理，依赖变一次叠一份，卸载后还在跑。',talk:'面试这样说：「effect 负责建立同步，cleanup 负责拆除上一次同步。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useMemo</code> 和 <code>useCallback</code> 的区别，一句话是？',opts:['完全一样，可以互换','useMemo 缓存计算结果的值，useCallback 缓存函数本身（等价于 useMemo 返回函数）','useCallback 只能用在事件上','useMemo 是异步的'],a:1,ex:'useCallback(fn, deps) 就是 useMemo(() =&gt; fn, deps)。一个记值，一个记函数，常一起出现：算好的数据用 Memo，传给子组件的回调用 Callback。',talk:'面试这样说：「Memo 记结果，Callback 记函数。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'依赖数组里放了一个每次渲染都新建的对象 <code>{ id }</code>，effect 会怎样？',opts:['永远不跑','每次渲染都重跑，因为对象引用每次都不同，Object.is 比较不相等','只跑一次','会报错要求用字符串'],a:1,ex:'依赖比较是引用比较。新对象长得一样也是新引用。解法是把依赖拆成原始值 [obj.id]，或用 useMemo 稳定对象。',talk:'面试这样说：「依赖比的是引用，不是长相。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'为什么不能把 <code>async</code> 函数直接写成 effect 回调：<code>useEffect(async () =&gt; {}, [])</code>？',opts:['async 函数太慢','effect 回调需要返回清理函数或 undefined，async 函数返回的是 Promise，语义冲突','React 不支持 Promise','只是风格问题'],a:1,ex:'标准写法是在 effect 内部定义 async 函数再调用，或用 .then 链。直接 async 会让清理机制失效，也容易漏竞态处理。',talk:'面试这样说：「effect 的返回值是清理通道，不能被 Promise 占用。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useTransition</code> 解决的是什么问题？',opts:['接口请求超时','把一次状态更新标记为低优先级，让输入、点击等紧急更新先响应，界面不卡顿','自动做路由转场动画','替代防抖的语法糖'],a:1,ex:'典型场景：输入框打字时下方大列表同步过滤，打字是紧急更新，列表刷新可以被打断、延后。isPending 用来给过渡期一个提示。',talk:'面试这样说：「Transition 是给渲染排优先级，不是给请求用的。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useDeferredValue</code> 和防抖（debounce）最关键的区别是？',opts:['没有区别','DeferredValue 不设固定延迟，它让旧值先顶着、新值在后台渲染，渲染可被打断；防抖是固定时间后才触发','防抖更省电','DeferredValue 会取消请求'],a:1,ex:'防抖是时间策略，DeferredValue 是并发渲染策略：紧急更新先出，滞后值的那次渲染可以被新输入打断重来。',talk:'面试这样说：「防抖管时间，Deferred 管渲染优先级。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useId</code> 最适合用在哪？',opts:['给列表当 key','生成跨服务端 / 客户端一致的唯一 id，绑 label 的 htmlFor 和 aria 属性，避免水合不一致','代替随机数生成订单号','给 DOM 做样式钩子'],a:1,ex:'手写 Math.random 做 id 在 SSR 时服务端和客户端会对不上。useId 专门保证一致性，但它带冒号、不适合当列表 key 或 CSS 选择器乱用。',talk:'面试这样说：「useId 是为可访问性配对和水合一致而生的。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'父组件想命令式调用子组件的方法（如让输入框 focus），现代 React 更推荐？',opts:['直接 document.querySelector','用 ref + useImperativeHandle 只暴露必要方法，或干脆用 props 把命令变成声明式状态','把子组件改成类组件','用全局事件总线'],a:1,ex:'useImperativeHandle 是收窄暴露面：父拿到 ref 也只能调你允许的那几个方法。能用 props 声明式解决的，不要走命令式。',talk:'面试这样说：「先声明式，实在不行才命令式，且暴露面越小越好。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'间隔定时器里要读到最新 state，常见正确写法是？',opts:['把 state 写进依赖让定时器每次重建也可以，但要注意开销','两种都对：把 state 放进 effect 依赖重建定时器，或用 ref 保存最新值让定时器读 ref','把 state 存到 window 上','定时器里不能读 state'],a:1,ex:'闭包旧值是根因。要么依赖变化就重建 effect，要么用一个 ref 在每次渲染同步最新值。选哪种看你是想重置计时还是连续计时。',talk:'面试这样说：「定时器读旧值是闭包问题，解法是重建或用 ref 桥接最新值。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'下面哪种情况 <b>不应该</b> 用 <code>useEffect</code>？',opts:['订阅窗口 resize','根据 props 计算一个派生值展示','发请求拉数据','同步文档标题'],a:1,ex:'派生值在渲染时直接算：const full = first + last。写进 effect + setState 会多一次渲染，还容易漏依赖、出现中间态。',talk:'面试这样说：「能在渲染里算的，就别绕 effect 一圈。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'用户点击按钮后的逻辑（如提交表单）为什么不该放进 <code>useEffect</code> 监听一个 <code>submitted</code> 标记？',opts:['按钮事件里不能 setState','事件逻辑就该写在事件处理函数里；绕 effect 会多一层间接、容易重复触发、难追踪','effect 里不能发请求','因为标记只能是 boolean'],a:1,ex:'官方原则：effect 是用来和外部系统同步的，不是用来响应用户事件的。事件有明确的触发点，直接在 handler 里做最清晰。',talk:'面试这样说：「事件归 handler，同步归 effect。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'两个组件用了同一个自定义 Hook，其中一个改了内部 state，另一个会跟着变吗？',opts:['会，Hook 是全局的','不会，每次调用 Hook 都有一份独立的状态，就像调用普通函数各自有局部变量','只有 useState 会，useRef 不会','取决于有没有用 Context'],a:1,ex:'这题和前面 Hook 复用题是同一考点：共享逻辑不共享状态。要共享必须把状态提升并通过 Context 或 props 分发。',talk:'面试这样说：「Hook 调用一次，状态独立一份。」对应 Day 3。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useRef</code> 存的变量在严格模式 / 并发渲染下要注意什么心智？',opts:['ref 是渲染快照的一部分','ref 是逃出渲染周期的可变盒子，在渲染期间读写它容易造成不确定性，最好在事件或 effect 里读写','ref 只能存数字','ref 会自动触发更新'],a:1,ex:'渲染应该保持纯：渲染时读 ref 可能读到被打断渲染写过的值。官方建议把 ref 的读写放在事件处理和 effect 里。',talk:'面试这样说：「渲染要纯，ref 的副作用要关进事件和 effect 里。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>forwardRef</code> 是为了解决什么？',opts:['转发路由','让父组件的 ref 能穿透函数组件，落到内部真实 DOM 或子组件上','让 props 可以不写','提高渲染速度'],a:1,ex:'函数组件本身没有实例，ref 默认落不进去。forwardRef 把 ref 当参数接进来再转交。React 19 起函数组件可直接把 ref 当 prop，面试提到这一点是加分。',talk:'面试这样说：「forwardRef 解决的是 ref 穿透函数组件的问题。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'自定义 Hook 里能不能调用另一个自定义 Hook？',opts:['不能，会嵌套报错','能，Hook 可以组合，这正是它强大的地方，如 useSearch 内部用 useDebounce + useFetch','只能调用内置 Hook','能，但必须在类组件里'],a:1,ex:'组合是 Hook 的核心用法。前提不变：只在顶层、只在 React 函数里调用，保证顺序稳定。',talk:'面试这样说：「Hook 的复用方式就是组合。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useSyncExternalStore</code> 是给什么场景准备的？',opts:['同步本地存储的语法糖','订阅 React 之外的外部数据源（如浏览器 API、第三方 store），保证并发渲染下读到一致快照','同步两个 useState','服务端渲染专用'],a:1,ex:'普通 effect 订阅在并发下可能出现 tearing（同一屏读到两个版本）。这个 Hook 是官方给外部 store 的标准接法，Redux 等库新版都基于它。',talk:'面试这样说：「外部状态进 React，要走 useSyncExternalStore 才并发安全。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'在 effect 里发请求，除了竞态，还必须考虑哪两件事？',opts:['字体和颜色','清理（组件卸载后忽略结果）和错误 / 加载三态，不能只有成功路径','必须用 axios','必须放进 useCallback'],a:1,ex:'卸载后 setState、重复请求、没有 error 态都是常见追问。生产里常用 React Query 管理缓存、重试和竞态，但原理题要能手写。',talk:'面试这样说：「请求三问：竞态、清理、三态。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'为什么 <code>setState</code> 后立刻读 state 读到的还是旧值？',opts:['setState 有 bug，要 setTimeout 后读','state 是本次渲染的快照，setState 只是排队请求下一次渲染用新值，当前函数里变量不会变','因为 state 是异步存储在服务器','需要加 await'],a:1,ex:'理解这一点就理解了大半 Hooks 心智：变量属于这一帧。想基于新值做后续逻辑，要么用函数式更新，要么把逻辑放进下一次渲染 / effect。',talk:'面试这样说：「setState 改的是下一帧，不改当前闭包。」对应 Day 1。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'一个组件里十几个 <code>useState</code> 互相联动、改一个总要连带改三个，信号是？',opts:['继续加 useState','状态设计该收拢了：合并为一个对象或上 useReducer，把联动规则写进 reducer，避免不一致中间态','把它们全放 Context','用 ref 代替'],a:1,ex:'联动越多，分散 set 越容易漏改、出现非法组合。reducer 把所有转移集中起来，还能单测。',talk:'面试这样说：「联动状态要收拢，转移规则要有唯一出处。」对应 Day 4。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useEffectEvent</code> / 把非响应式逻辑拆出 effect，想解决的核心矛盾是（了解即可）？',opts:['effect 太长不好看','effect 里有些逻辑用到最新 props/state 却不该成为依赖触发重跑，需要把事件逻辑和同步逻辑分开','让 effect 可以 async','替代清理函数'],a:1,ex:'这是依赖完整性与不想重跑之间的经典拉扯。现阶段面试答到知道矛盾、常用解法是 ref 保存最新回调或拆分 effect，就足够。',talk:'面试这样说：「依赖要诚实，但不是所有读到的值都该触发重跑。」'},
+ {cat:'hooks',catLabel:'HOOKS',q:'Hook 只能在哪些地方调用？',opts:['任何普通函数里','React 函数组件和自定义 Hook 的顶层','事件处理函数里','类组件的 render 里'],a:1,ex:'Rules of Hooks 两条：只在顶层、只在 React 函数里。事件函数里调 Hook 会破坏顺序模型，直接报错。',talk:'面试这样说：「顶层 + React 函数，缺一不可。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'JSX 本质上会被编译成什么？',opts:['HTML 字符串','创建 React 元素的函数调用（如 jsx / createElement），得到描述 UI 的普通对象','直接变成 DOM 节点','浏览器原生模板'],a:1,ex:'JSX 是语法糖。元素对象包含 type、props、children，它还不是 DOM，只是给 React 的说明书。',talk:'面试这样说：「JSX 编译成元素对象，元素是描述，不是实体 DOM。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'React 元素、组件、DOM 节点三者关系，正确的是？',opts:['三者是同一个东西','组件是函数 / 类，元素是组件的描述对象，React 根据元素树最终更新真实 DOM 节点','元素就是 DOM 节点','组件只能返回一个 DOM 节点'],a:1,ex:'分清这三层，很多题就通了：改的是元素描述，比的是元素树，落的才是 DOM。',talk:'面试这样说：「组件产出元素，元素 Diff 后落到 DOM。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'父组件重渲染时，子组件一定会重渲染吗？',opts:['一定不会','默认会跟着渲染（除非 memo / 元素引用没变等优化命中），但渲染不等于 DOM 更新，Diff 后没变化就不会改 DOM','只有 state 变才会','子组件永远独立'],a:1,ex:'要区分 render 和 commit：函数执行了叫重渲染，DOM 变了叫更新。memo 挡的是前者，Diff 决定后者。',talk:'面试这样说：「重渲染不等于重绘 DOM，先分清 render 与 commit。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'为什么 props 被认为是只读的、不能在子组件里改？',opts:['改了会语法报错','单向数据流要求数据从父往下流，子要改只能通知父改 state；直接改 props 会让数据来源不唯一、难以追踪','props 是冻结字符串','只是团队约定，没有原因'],a:1,ex:'这是 React 的地基：谁拥有状态谁负责改，其他人只读 + 回调通知。和状态提升、受控组件是同一套思想。',talk:'面试这样说：「props 只读是为了保住单向数据流。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'在组件函数内部又定义一个子组件 <code>function Row(){}</code> 再使用，最大的坑是？',opts:['没有坑','每次渲染 Row 都是一个新组件类型，React 会卸载旧的、重挂新的，内部 state 全部丢失、输入框失焦','会让文件变大','只是 lint 警告'],a:1,ex:'组件身份就是函数引用。定义在内部等于每次都是新身份，协调时按类型不同处理，直接 remount。组件定义必须提到外面。',talk:'面试这样说：「组件定义放组件外面，身份稳定才不会重挂。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'Fiber 架构引入主要解决了什么？',opts:['让 JSX 更快编译','把渲染工作拆成可中断、可恢复、可排优先级的小单元，长时间渲染不再一直堵住主线程','让 DOM 操作变成同步','替代虚拟 DOM'],a:1,ex:'老 Stack 协调器一渲到底。Fiber 是链表结构的工作单元，配合并发特性可以让高优先级更新插队，这也是 Transition 的底层。',talk:'面试这样说：「Fiber 的关键词是可中断和优先级。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'水合（Hydration）指的是什么？',opts:['给组件补水保湿','服务端先发 HTML，客户端 JS 加载后把事件和状态接上去，让静态页面活过来的过程','把数据存进浏览器','一种 CSS 方案'],a:1,ex:'SSR 的第二步就是水合。水合不一致（服务端和客户端首渲结果不同）会报错或闪烁，随机数、时间、浏览器专属 API 是常见来源。',talk:'面试这样说：「SSR 负责出 HTML，水合负责给 HTML 接上交互。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'<code>Suspense</code> 的作用是？',opts:['暂停组件代码执行','在异步依赖（懒加载组件 / 支持 Suspense 的数据源）就绪前，先展示 fallback，就绪后整体切换','处理所有 Promise 的工具','给动画加延迟'],a:1,ex:'它把等待声明在组件树上：边界内没好就 fallback。最常见用法是 React.lazy 代码分割，数据层 Suspense 要配合支持的库。',talk:'面试这样说：「Suspense 是声明式的等待边界。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'React Server Components 和传统 SSR 最大区别是？',opts:['没有区别，换了个名字','Server Components 在服务端运行、不打包进客户端 JS，可直接访问后端资源；SSR 是把客户端组件在服务端先渲成 HTML','Server Components 不需要服务端','它替代了所有客户端组件'],a:1,ex:'面试答清边界即可：服务端组件不能用 state/effect 和浏览器 API，交互部分仍要客户端组件，两者可组合。',talk:'面试这样说：「RSC 改的是组件运行在哪，SSR 改的是首屏在哪渲染。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'同一位置前后两次渲染，元素类型从 <code>&lt;div&gt;</code> 变成 <code>&lt;span&gt;</code>，或组件类型变了，React 会？',opts:['只改标签名保留内部状态','卸载旧树、挂载新树，该子树的状态全部重置','报错','自动迁移状态'],a:1,ex:'协调规则：类型相同才复用并 Diff props，类型不同直接重建。这解释了条件渲染换组件会丢状态、以及 key 和类型共同决定身份。',talk:'面试这样说：「位置 + 类型 + key 一起决定要不要复用。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'<code>key</code> 的作用范围是？',opts:['全应用唯一','只需要在同一父级下的兄弟列表内唯一 / 稳定，跨父级不比较','必须是数字递增','只能用 id 字段'],a:1,ex:'key 是给同一组兄弟做身份对位用的，不需要全局唯一。稳定比唯一更重要：每次渲染都生成新 key 等于每次都重挂。',talk:'面试这样说：「key 管的是一组兄弟内部的身份。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'Fragment <code>&lt;&gt;…&lt;/&gt;</code> 解决什么问题？',opts:['让组件可以少写 return','组件必须返回单个元素时，不想为包裹多加一层无意义 DOM 节点','提高 Diff 速度','代替 div 做布局'],a:1,ex:'多一层 div 可能破坏 CSS 网格 / 表格结构。Fragment 分组不落 DOM，需要 key 时要用完整写法 Fragment 并加 key。',talk:'面试这样说：「Fragment 是逻辑分组，不是 DOM 包裹。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'Portal（传送门）典型用在哪？',opts:['路由跳转','弹窗 / Tooltip：DOM 挂到 body 等外层避免 overflow / z-index 裁剪，但事件冒泡仍沿 React 树','跨应用通信','服务端渲染'],a:1,ex:'Portal 的反直觉点是面试爱问的：DOM 在别处，事件却还是按组件树冒泡，因为它跟的是 React 树。',talk:'面试这样说：「Portal 改 DOM 位置，不改 React 树关系。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'为什么更新 state 时要返回新对象 / 新数组，不能直接改原对象属性？',opts:['直接改会语法报错','React 用 Object.is 比较新旧值判断是否需要渲染，直接改引用不变会被认为没变，还会破坏快照和可预测性','因为 JS 对象不可变','改原对象会变慢'],a:1,ex:'不可变更新是整个状态模型的约定：新引用才有新渲染，旧快照才不会被偷偷改掉，memo 和并发都建立在这上面。',talk:'面试这样说：「改值要换引用，这是 React 状态的第一约定。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'渲染（Render）阶段和提交（Commit）阶段分别做什么？',opts:['Render 写 DOM，Commit 算 Diff','Render 在内存里算新树和差异、可被打断重来；Commit 把差异一次性落到 DOM 并执行 layout effect，不可打断','两者没有区别','Commit 只在首次挂载发生'],a:1,ex:'能分清这两阶段，Fiber、并发、useLayoutEffect 时机这些题就串成一条线了。',talk:'面试这样说：「Render 可中断地算账，Commit 不可中断地落账。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'什么是受控的渲染纯度：组件函数在渲染期间不应该做什么？',opts:['不能用 useState','不能改变量 / props / 已有对象，不能发请求等副作用，相同输入必须产出相同输出','不能写 JSX','不能调用子组件'],a:1,ex:'渲染要能被重复、打断、重跑而不出错，靠的就是纯。副作用要放进事件和 effect，这也是 StrictMode 双渲染能帮你抓到的问题类型。',talk:'面试这样说：「渲染只算 UI，副作用出门左转去事件和 effect。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'条件渲染里用 <code>{count &amp;&amp; &lt;p&gt;…&lt;/p&gt;}</code>，count 为 0 时页面会？',opts:['什么都不显示','会把 0 渲染出来，因为 0 是可渲染的假值结果','报错','显示 false'],a:1,ex:'经典坑：&amp;&amp; 返回的是第一个假值本身。数字 0 和空字符串会被渲染。更稳的是三元或 Boolean(count) 先转布尔。',talk:'面试这样说：「&amp;&amp; 条件渲染要防 0 和空字符串漏出来。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'props 透传（prop drilling）层级很深时，正确的处理顺序是？',opts:['立刻上全局状态库','先看能不能用组合（children / 插槽）把组件套回去，再考虑 Context，最后才是外部状态库','把 props 存到 window','每一层都复制一份 state'],a:1,ex:'很多 drilling 是组件拆法问题：把使用数据的组件直接作为 children 传进中间层，中间层根本不需要认识这些 props。',talk:'面试这样说：「先组合、再 Context、后状态库，别一上来就全局化。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'React 18 的 <code>createRoot</code> 相比旧 <code>ReactDOM.render</code> 关键变化是？',opts:['写法更长了','开启并发渲染模式：更新可中断、可排优先级，自动批处理等新行为都建立在这个根上','不再需要 DOM 容器','自动开启 SSR'],a:1,ex:'面试常把它和并发特性一起问。答到根 API 是并发能力的开关就到位。',talk:'面试这样说：「createRoot 是进入并发模式的门。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'列表中给元素换了 <code>key</code>，即使类型和位置都没变，React 会？',opts:['忽略 key 继续复用','认为这是新元素，卸载旧的、挂载新的，状态重置——有时可故意利用它来强制重置组件','只更新 props','报错'],a:1,ex:'加分点是反向用法：给表单组件换 key 来一键重置全部内部状态，是官方认可的技巧，比写一堆重置逻辑干净。',talk:'面试这样说：「换 key 就是换身份，可用来主动重置组件。」'},
+ {cat:'perf',catLabel:'性能',q:'<code>React.lazy</code> + <code>Suspense</code> 做代码分割，主要优化的是？',opts:['运行时计算速度','首屏包体积：不常用的组件 / 路由按需加载，首屏只下必需代码','接口速度','DOM 数量'],a:1,ex:'适合路由页、重型编辑器、图表库这种不在首屏或不常用部分。代价是加载态要设计好，Suspense fallback 就是为此。',talk:'面试这样说：「代码分割砍的是首屏要下的 JS。」'},
+ {cat:'perf',catLabel:'性能',q:'长列表上千条数据一次全渲染卡顿，标准解法是？',opts:['给每行加 memo 就够了','虚拟列表 / 窗口化：只渲染可视区域内的行，其余用占位撑起滚动高度','把列表放进 iframe','减少每行字数'],a:1,ex:'DOM 节点数量是瓶颈时，memo 救不了。虚拟化把节点数从上千降到几十，代价是动态高度、滚动定位要额外处理。',talk:'面试这样说：「节点太多就虚拟化，先减数量再谈单行优化。」'},
+ {cat:'perf',catLabel:'性能',q:'把状态尽量下沉（move state down）为什么能优化性能？',opts:['状态越低文件越小','状态变化只会让拥有它的子树重渲染；状态放太高，一变就带着一大片不相干的 UI 一起渲染','低层状态更新更快','这是迷信'],a:1,ex:'这是比 memo 更优先的优化：先缩小重渲染范围。典型如搜索框输入状态只归搜索框，别放页面顶层。',talk:'面试这样说：「先让状态住得低，再考虑挡渲染。」对应 Day 2 状态三分法。'},
+ {cat:'perf',catLabel:'性能',q:'用 <code>children</code> 组合为什么能避免一部分无谓重渲染？',opts:['children 有特殊缓存','父组件渲染时，作为 children 传入的元素是在更上层创建的、引用没变，React 可跳过这棵子树的重渲染','children 不参与 Diff','因为少写了 props'],a:1,ex:'经典模式：慢组件作为 children 传给频繁更新的包裹组件，包裹自己变，children 元素引用不变就不会跟着重渲。这是组合优于 memo 的场景。',talk:'面试这样说：「children 引用稳定是天然的渲染跳过。」'},
+ {cat:'perf',catLabel:'性能',q:'React DevTools Profiler 你主要看什么？',opts:['看代码行数','哪些组件渲染了、渲染了几次、每次多久、以及为什么渲染（钩子变化 / props 变化）','看网络请求','看打包体积'],a:1,ex:'优化第一步是测量。Profiler 的 why did this render 和火焰图决定你是该拆状态、稳定引用，还是虚拟化，而不是靠猜加 memo。',talk:'面试这样说：「先 Profiler 归因，再动手，别凭感觉优化。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'<code>useMemo</code> 滥用为什么反而可能更慢？',opts:['useMemo 本身有 bug','每次渲染都要执行依赖比较并占用缓存内存，缓存一个便宜计算比直接算还贵；依赖一变缓存就作废','useMemo 会阻塞主线程','没有坏处，多多益善'],a:1,ex:'useMemo 只适合：计算真的贵，或需要稳定引用传给 memo 子组件。给普通加减法套 Memo 是负优化，还拉低可读性。',talk:'面试这样说：「Memo 是有成本的缓存，只给贵计算和引用稳定性用。」'},
+ {cat:'perf',catLabel:'性能',q:'给 <code>memo</code> 组件传自定义比较函数（areEqual）要注意什么？',opts:['比较函数写得越复杂越好','比较函数本身每次都要跑，写得重就抵消收益；且比较错字段会造成该更新不更新的隐蔽 bug，默认浅比较够用时别自定义','自定义比较会禁用 memo','必须返回 Promise'],a:1,ex:'这是进阶追问：能主动说风险比会写 API 更显资深。大多数情况先把引用稳定做好，而不是靠深比较兜底。',talk:'面试这样说：「自定义比较是兜底手段，先治引用不稳的源头。」'},
+ {cat:'perf',catLabel:'性能',q:'搜索输入每次按键都触发重型过滤导致掉帧，组合解法通常是？',opts:['只能换更快的电脑','输入状态保持即时更新保证手感，过滤用 useDeferredValue / useTransition 降优先级，或防抖 + 大数据上虚拟列表','把输入改成非受控然后不管','禁用输入框'],a:1,ex:'核心是把紧急（打字回显）和不紧急（结果刷新）分开。这题把并发特性和实战体验连起来，是高频综合题。',talk:'面试这样说：「保输入的即时性，把贵的那部分渲染降级延后。」'},
+ {cat:'perf',catLabel:'性能',q:'生产构建和开发构建在性能上最大的实际差别提醒是？',opts:['没有差别','开发版有额外检查、警告和 StrictMode 双调用，测性能必须用生产构建，否则数字全是虚高的','生产版会自动帮你加 memo','开发版不走缓存'],a:1,ex:'拿开发版测出卡就去优化是常见误判。先确认构建模式，再谈 Profiler 数据。',talk:'面试这样说：「性能结论只认生产构建的数据。」'},
+ {cat:'perf',catLabel:'性能',q:'图片和列表很多的首屏，除了代码分割还能做哪些前端侧优化（选最完整的一组）？',opts:['什么都不用做','图片懒加载与合适尺寸、列表虚拟化、关键资源预加载、非关键组件延后渲染，多管齐下看瓶颈在哪','把所有东西都放首屏一起加载最快','只压缩 JS 就够'],a:1,ex:'面试要的是先定位瓶颈再组合出招，而不是背一个银弹。能按加载 / 渲染 / 交互三个阶段组织答案更清晰。',talk:'面试这样说：「按阶段拆瓶颈：加载、渲染、交互各有各的药。」'},
+ {cat:'perf',catLabel:'性能',q:'为什么把一个大组件拆小本身不一定带来性能收益？',opts:['拆小一定更快','渲染成本看的是执行了多少组件和 DOM 变化，拆小若不改变重渲染范围和节点数，只是文件变多；收益来自拆分带来的状态隔离和 memo 边界','拆小会让 React 变慢','因为要多写 import'],a:1,ex:'防止为了拆而拆。拆分是组织手段，性能收益要落到渲染范围、引用稳定、节点数量这三个实处。',talk:'面试这样说：「拆分不等于优化，隔离状态和挡住重渲染才是。」对应 Day 3 架构关。'},
+ {cat:'perf',catLabel:'性能',q:'频繁更新的动画 / 拖拽位置，用 state 驱动每一帧有什么风险、替代是？',opts:['没有风险','每帧 setState 就是每帧重渲染，高频下容易掉帧；可用 ref 直接改 DOM 样式或 transform，或用专门的动画方案把高频部分移出 React 渲染','必须要用类组件','把帧率调低就行'],a:1,ex:'判断标准是这个值需不需要让 React 知道。纯视觉高频值常可绕过渲染管线，松手等关键节点再同步回 state。',talk:'面试这样说：「高频视觉值别走 state 的全量渲染通道。」'},
+ {cat:'perf',catLabel:'性能',q:'Context 频繁变化导致大面积重渲染，除了拆 Context，还有什么进阶解法？',opts:['把 Context 删掉全用 props','用带 selector 订阅的状态库（如 Zustand / Redux 的选择器），组件只订阅自己用的那一片，变化只通知相关订阅者','给每个消费者加 setTimeout','把 value 写成字符串'],a:1,ex:'Context 的通知是全量广播，没有字段级订阅。数据量和更新频率上来后，selector 模型就是下一站。',talk:'面试这样说：「Context 是广播，状态库的 selector 是点播。」'},
+ {cat:'perf',catLabel:'性能',q:'首屏白屏时间长，面试官想听的排查顺序是？',opts:['先怪后端','先分清是资源没到（包大 / 请求多 / 阻塞）还是到了没渲染（长任务 / 大列表），用性能面板看关键指标再对症下药','先加 loading 图标就解决了','换框架'],a:1,ex:'loading 只是遮羞，不是优化。能把白屏拆成网络、解析执行、首渲三个环节分别给数据，才是资深答法。',talk:'面试这样说：「先分段定位，再逐段优化，别拿骨架屏当结论。」'},
+ {cat:'perf',catLabel:'性能',q:'<code>key</code> 用得好对性能也有帮助，具体是？',opts:['key 越长越快','稳定 key 让 React 准确复用已有 DOM 和状态，减少重建；排序 / 过滤时复用对了，更新成本远低于推倒重挂','key 会开启缓存','没有影响'],a:1,ex:'key 题常从正确性（状态串位）问到性能（复用）。两面都能答才完整。',talk:'面试这样说：「key 既保正确复用身份，也省重建成本。」'},
+ {cat:'perf',catLabel:'性能',q:'什么时候应该考虑把计算移到服务端 / Web Worker？',opts:['任何计算都移走','主线程长任务阻塞交互（如大批量数据处理、复杂图表计算）且前端优化已到顶时，Worker 保 UI 线程，服务端适合数据量大或要复用缓存的计算','为了显得架构复杂','JS 算不动就全移走'],a:1,ex:'这是取舍题：移走有通信和序列化成本。答出触发条件和代价，而不是一提性能就分布式。',talk:'面试这样说：「先在主线程优化到顶，阻塞交互了再考虑移出。」'},
+ {cat:'perf',catLabel:'性能',q:'打包体积过大，常见的三板斧是？',opts:['删注释就行','分析打包构成找大依赖、按需引入 / 换轻量替代、路由级代码分割并懒加载重型库','把代码都写一个文件','关闭压缩'],a:1,ex:'图表、日期、工具库是常见大头。先用分析工具看构成再动手，是和 Profiler 一样的测量优先思路。',talk:'面试这样说：「先看包构成，再按需引入和分割。」'},
+ {cat:'practice',catLabel:'实战',q:'React 里的合成事件（SyntheticEvent）是什么？',opts:['假的事件不能用','React 在根部统一监听原生事件，再分发给组件的事件处理函数，抹平浏览器差异，这也是批量更新的落点','服务端生成的事件','只能用于点击'],a:1,ex:'React 17 起监听挂在根容器而不是 document。事件对象是包装过的，属性用法和原生基本一致，需要原生对象时用 nativeEvent。',talk:'面试这样说：「合成事件是根部代理 + 统一分发。」'},
+ {cat:'practice',catLabel:'实战',q:'<code>dangerouslySetInnerHTML</code> 为什么危险、什么时候才用？',opts:['它会让样式失效','它绕过 React 的默认转义直接插入 HTML，未净化的内容会造成 XSS；只在内容可信或已用可靠方案净化时用','它已废弃不能用','用了就一定中毒'],a:1,ex:'React 默认转义是 XSS 防线。富文本渲染是它少数正当场景，前提是来源可控 + 净化。面试答到防线意识就是目的。',talk:'面试这样说：「默认转义是防线，dangerous 是主动开的口子，必须配净化。」'},
+ {cat:'practice',catLabel:'实战',q:'文件 <code>&lt;input type=file&gt;</code> 为什么只能是非受控的？',opts:['因为它长得特殊','出于安全，浏览器不允许脚本设置它的值，只能读取用户选的文件，所以 React 里它天生非受控、用 ref 或事件取 files','React 不支持文件上传','受控会报错所以大家习惯非受控'],a:1,ex:'这是受控 / 非受控题的经典例外追问，答出安全原因才算真懂。',talk:'面试这样说：「文件值只能由用户给，脚本无权设。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'表单里按钮没写 <code>type</code>，点它却提交了表单、页面刷新，为什么？',opts:['React 的 bug','form 内 button 默认 type 是 submit；只想当普通按钮要写 type=button','因为没写 onClick','浏览器自动刷新'],a:1,ex:'这是高频实战坑，常和回车提交一起考。答案落到 HTML 默认行为，与框架无关。',talk:'面试这样说：「form 里的按钮默认是提交键，非提交必须显式 type=button。」'},
+ {cat:'practice',catLabel:'实战',q:'用 React Query / SWR 这类库管请求，相比手写 <code>useEffect</code> 拉数据多解决了什么？',opts:['语法更短','缓存、重复请求合并、后台刷新、重试、竞态与失效管理这些服务端状态问题，手写 effect 只解决最基础的一次请求','它们会写 UI','没有区别'],a:1,ex:'核心概念是服务端状态和客户端状态不同：前者是共享的、会过期的缓存。这题常通向状态三分法。',talk:'面试这样说：「请求库管的是服务端状态的缓存生命周期。」对应 Day 2 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'Context 和 Redux / Zustand 怎么选型？一句话标准是？',opts:['Context 已能替代一切状态库','低频、简单的跨层共享用 Context；状态复杂、更新频繁、需要中间件 / 调试 / selector 订阅时上状态库','大项目必须 Redux','看团队心情'],a:1,ex:'Context 是传递机制不是状态管理方案，本身没有订阅优化和调试工具。选型按频率、复杂度、协作需求三维判断。',talk:'面试这样说：「Context 管传递，状态库管复杂状态的组织与订阅。」'},
+ {cat:'practice',catLabel:'实战',q:'客户端路由（SPA 路由）的基本原理是？',opts:['每次跳转都向服务器要新 HTML','监听 URL 变化（History API / hash），不刷新页面，按路由表渲染对应组件，历史记录交给浏览器栈管理','把所有页面塞进一个 HTML 文件','用 iframe 切页'],a:1,ex:'答到 pushState + 监听 popstate + 组件切换就够。可顺带提首屏和 SEO 的代价，引出 SSR / 预渲染。',talk:'面试这样说：「路由的本质是 URL 与组件树的映射，不刷新地切换。」'},
+ {cat:'practice',catLabel:'实战',q:'CSR、SSR、SSG 三种渲染模式怎么选？',opts:['SSR 永远最好','看页面对首屏速度、SEO 和实时性的权重：内容型重 SEO 选 SSR / SSG，静态内容 SSG 最省，后台型强交互应用 CSR 够用','看框架支持哪个','随机选'],a:1,ex:'这是架构选型题，没有银弹。能按内容变化频率、SEO 需求、服务器成本三个维给结论就是好答案。',talk:'面试这样说：「按 SEO、实时性和成本三维选渲染模式。」'},
+ {cat:'practice',catLabel:'实战',q:'React Testing Library 的核心测试理念是？',opts:['测组件内部 state 越细越好','像用户一样用：按角色 / 文案找元素、触发真实交互、断言用户能看到的结果，不测实现细节','快照越多越好','必须测每个 Hook 的内部变量'],a:1,ex:'实现细节一改测试就碎，用户行为不变测试就该不变。这与黑盒、契约式测试是同一思想。',talk:'面试这样说：「测行为不测实现，按用户视角找元素。」'},
+ {cat:'practice',catLabel:'实战',q:'做 React 可访问性（a11y），面试最爱听的三个落点是？',opts:['多用 div 也没关系','语义化标签（button 就用 button）、键盘可操作与焦点管理、label 与 aria 正确关联——弹窗和表单是重灾区要重点处理','只加 aria-label 就够','可访问性和 SEO 无关不用管'],a:1,ex:'本页 Day 6 的焦点管理、useId 绑 label 都是同一话题。能落到具体场景比背概念强。',talk:'面试这样说：「语义、键盘、焦点，落到弹窗和表单上讲。」'},
+ {cat:'practice',catLabel:'实战',q:'组件库 / 页面里大量条件 class 和行内样式，工程上更稳的做法是？',opts:['全写行内 style 对象','样式与逻辑分离：class 命名规范或 CSS Modules / 方案选一，条件类用工具函数拼，动态值才走行内变量（如 CSS 变量）','每个组件写全局 CSS','用 important 覆盖'],a:1,ex:'行内对象每次新建还会影响 memo 浅比较。答出样式方案的一致性和动态 / 静态分界是关键，不拘具体库。',talk:'面试这样说：「静态样式归样式表，动态值才进 JS。」'},
+ {cat:'practice',catLabel:'实战',q:'父子组件通信之外，兄弟 / 远亲组件通信的正规路径有哪些？',opts:['直接互相 import 对方 state','状态提升到共同祖先、Context、外部状态库、或 URL / 服务端作为共享真相——按共享范围和频率选','用 DOM 自定义事件乱发','用全局变量最快'],a:1,ex:'本质还是状态归属问题：通信难往往是状态放错地方。先定位真相源再选通道。',talk:'面试这样说：「通信问题先当状态归属问题解。」对应 Day 1 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'拆组件时，展示组件（纯组件）应该遵守什么约定？',opts:['自己发请求更独立','只通过 props 收数据和回调，不直接依赖全局状态和请求，相同 props 出相同 UI，便于复用和测试','必须用 memo 包裹','不能有自己的任何 state'],a:1,ex:'展示组件可以有纯 UI 的局部 state（如展开收起），红线是数据来源。有容器负责脏活，展示负责长相，就是 Day 3 的容器 / 展示拆分。',talk:'面试这样说：「展示组件只认 props，数据脏活归容器。」对应 Day 3。'},
+ {cat:'practice',catLabel:'实战',q:'无限滚动列表的正确实现要点，哪个最完整？',opts:['scroll 事件里无节制地一直加载','用 IntersectionObserver 盯哨兵元素、游标分页、加载锁防重复、已加载数据注意内存与虚拟化、到底有终止态','页码分页一直加页就行','把全部数据一次拉完再滚'],a:1,ex:'这题串起分页选型、防重复、性能三块。Feed 场景页码会漂移，必须游标，和 Day 6 评论设计同一考点。',talk:'面试这样说：「哨兵触发 + 游标分页 + 加载锁 + 终止态。」对应 Day 6 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'多环境配置（开发 / 生产接口地址等）在前端工程里不该怎么做？',opts:['用构建时环境变量注入，不同环境打不同配置','把生产密钥和 token 直接写死在前端代码里','接口地址写成相对路径走代理','配置和代码分离'],a:1,ex:'前端代码是公开的，写进去的密钥等于公布。真正的秘密必须留在服务端，前端只拿公开配置。',talk:'面试这样说：「前端无秘密，密钥永远不上前端。」'},
+ {cat:'practice',catLabel:'实战',q:'一个页面请求瀑布：A 好了才发 B、B 好了才发 C，但其实三者互不依赖，问题与解法是？',opts:['没问题，顺序更稳','串行等待白白叠加耗时；无依赖的请求应并行发起（Promise.all 或各组件独立请求），有依赖再串行，并配合骨架屏','把三个合成一个大 setTimeout','只能等后端合并接口'],a:1,ex:'请求时序是前端性能大头。面试常给时序图让你找串行浪费，能区分真依赖和假依赖是关键。',talk:'面试这样说：「先画依赖图，假依赖要并行，真依赖才串行。」'},
+ {cat:'practice',catLabel:'实战',q:'`<code>select</code>` 在 React 里控制选中值，正确写法是？',opts:['在 option 上写 selected','在 select 上写 value + onChange，和 input 一样受控管理','用 ref 每次手动改','React 不管理 select'],a:1,ex:'这是 JSX 与 HTML 差异的小题群之一：value 统一挂在 select 上。textarea 同理用 value 而不是子文本。',talk:'面试这样说：「React 里表单值统一走 value，受控方式都一样。」'},
+ {cat:'practice',catLabel:'实战',q:'为什么列表项里的输入框，删掉第一行后，后面行输入内容会串位？',opts:['浏览器缓存问题','多半是 key 用了 index：删一行后 index 整体前移，React 按 key 复用时把上一行的内部状态留给了下一行','输入框不支持删除','要给输入框加防抖'],a:1,ex:'这是 key 题的实战版，和原理题互为印证。修复是用数据稳定 id 当 key，受控输入 + 正确 key 双保险。',talk:'面试这样说：「串位先查 key，是不是拿 index 顶包了。」'},
+ {cat:'practice',catLabel:'实战',q:'高阶组件（HOC）和自定义 Hook 都能复用逻辑，现在面试更推荐哪种、为什么？',opts:['HOC 永远更好','多数逻辑复用优先 Hook：没有组件嵌套地狱、数据来源清晰、类型更友好；HOC 在需要包裹渲染结构时仍有位置','两者都已过时','render props 是唯一答案'],a:1,ex:'答出演进脉络：HOC / render props 解决过逻辑复用，Hook 把逻辑复用和渲染结构解耦，所以成主流。别把老方案说得一无是处。',talk:'面试这样说：「逻辑复用首选 Hook，包裹结构才想 HOC。」'},
+ {cat:'practice',catLabel:'实战',q:'项目里状态特别多还经常互相冲突，架构层面的第一诊断是？',opts:['换一个状态库就好','先查真相源是否唯一：同一份数据存了几处、谁负责改、派生值有没有被存成状态——多数冲突是多份真相不一致','把所有状态都放全局统一管','加更多标志位去协调'],a:1,ex:'这是资深诊断题。派生值存 state、多处复制同一数据，是状态 bug 的两大源头，比换库重要得多。',talk:'面试这样说：「先统一真相源，再谈工具选型。」对应 Day 4。'},
+ {cat:'practice',catLabel:'实战',q:'面试官让你现场设计一个组件 API（如通用 Modal），他最看重什么？',opts:['功能越多越好','受控 / 非受控是否想清、必需与可选 props 的边界、回调命名与时机、能不能组合扩展、默认值是否合理——API 是给人用的界面，和 UI 设计一样考取舍','必须支持所有框架','内部实现用了多高级的算法'],a:1,ex:'组件 API 设计是资深岗分水岭。先讲使用方怎么用，再讲内部实现，顺序别反。',talk:'面试这样说：「先定对外契约，再谈内部实现。」'},
+{cat:'hooks',catLabel:'HOOKS',q:'线上出现死循环：<code>useEffect</code> 里 <code>setList(...)</code>，依赖数组又写了 <code>list</code>，页面疯狂请求、直接卡死。根因和修法是？',opts:['React 的渲染引擎有 bug，只能降级版本','effect 每次执行都生成新数组引用 → 触发渲染 → effect 再跑，无限循环；应只依赖真正触发请求的原始条件（如 query / page），更新列表用函数式更新，别把自己要改的 state 放进依赖','把 setTimeout 拉长就能修好','把 list 改成全局变量就不会循环'],a:1,ex:'生产第一大 effect 事故：依赖里放了 effect 自己生产的引用类型新值，每轮都是新引用，永远停不下来。修依赖之前先问：这个 effect 到底被什么触发？只写那个。',talk:'面试这样说：「effect 的依赖只能是它的输入，不能是它的输出。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'控制台报 <code>Too many re-renders</code>，最常见的写法错误是？',opts:['在渲染函数体里无条件直接调用 setState，每次渲染又触发下一次渲染','useEffect 写太多了','组件嵌套层级太深','key 重复了'],a:0,ex:'渲染期间 setState 本身是被允许的（同组件内、有条件地调整），但无条件调用就成了死循环。事件里该写的逻辑误写进函数体，是新手和赶工时最常见的翻车点。',talk:'面试这样说：「渲染里 setState 必须有终止条件，否则就是自激循环。」对应 Day 1。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'子组件用一个 state 镜像父组件传来的 prop（prop 变了再用 effect 同步进 state），生产里最容易出什么问题？',opts:['没有任何问题，这是标准写法','多一帧旧值闪烁、同步逻辑容易漏边界，状态出现两个真相源；能派生就直接用 prop，必须重置时优先换 key 让组件重挂，而不是 effect 同步','prop 不能传对象','state 不能存 prop 的值'],a:1,ex:'「props 转 state」是官方明确点名的反模式：渲染时直接用 prop，或用 key 强制重置，都比维护一份镜像状态干净。',talk:'面试这样说：「别镜像 prop：能算就用，要重置就换 key。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'需求是「某个 prop 变化时，只调整一小块内部 state，其余保留」，官方推荐的写法是？',opts:['写一个 effect 监听 prop 去 setState','在渲染期间有条件地 setState（渲染时调整）：渲染中发现记录的旧 prop 和新 prop 不同就更新并重新渲染，不经过 effect、没有多余一帧','用 setTimeout 延后同步','把 state 提升到父组件'],a:1,ex:'这是 React 文档里的正牌模式，和上一题配套考：effect 同步会多渲染一次并闪一下旧值，渲染时调整是为这类「派生式微调」准备的。',talk:'面试这样说：「渲染时调整 state 是给 prop 变化微调场景的，不是死循环。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'WebSocket / 聊天订阅的回调里读一个 state，总是拿到订阅那一刻的旧值，标准的解法组合是？',opts:['把 WebSocket 对象放进 state','用 ref 保存最新回调或最新值，订阅只建一次、回调里读 ref；或把该值加进依赖重订阅（成本高时不用）','每次来消息都刷新页面','在回调里直接改 DOM'],a:1,ex:'长生命周期订阅 + 闭包旧值，是线上聊天、行情、协同编辑的高频 bug。用「最新值 ref」桥接，是不重建连接的前提下最稳的解法。',talk:'面试这样说：「订阅建一次，最新值走 ref 桥。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'effect 里 <code>addEventListener</code> 写了、清理也写了，线上却发现监听越叠越多，最可能的坑是？',opts:['浏览器不支持 removeEventListener','添加和移除传的不是同一个函数引用：添加时写内联箭头函数，移除时又是一个新函数，移除根本没生效','监听只能加在 window 上','需要给监听加 key'],a:1,ex:'removeEventListener 按引用匹配。内联匿名函数每次渲染都是新引用，清理形同虚设。把 handler 命名出来（或 useCallback 稳住）再成对添加移除。',talk:'面试这样说：「监听要成对，且必须是同一个引用。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'手写轮询 / 倒计时，定时器回调总是读到旧的 props 和 state，Dan Abramov 那篇经典 <code>useInterval</code> 的核心手法是？',opts:['把所有值都加进定时器依赖，每次变化重建定时器','用一个 ref 在每次渲染时同步最新回调，定时器只建一次、到点调用 ref 里的回调，计时节奏和回调内容解耦','用全局变量存回调','干脆不用定时器，改用 while 循环'],a:1,ex:'重建定时器会让倒计时节奏被每次渲染打乱；回调进 ref 则节奏稳定、内容永远最新。轮询、自动保存、心跳线上都在用这一招。',talk:'面试这样说：「定时器管节奏，ref 管最新回调。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'自己写 <code>useLocalStorage</code> 这类 Hook，生产环境最容易漏掉哪一组处理？',opts:['颜色和字号','SSR 时 window 不存在要惰性判断、初始值要用惰性初始化只读一次、JSON 解析失败要兜底、多个标签页之间可用 storage 事件同步','localStorage 容量无限不用管','存之前要先发请求问服务器'],a:1,ex:'这类 Hook 面试爱追问边界：服务端渲染直接读 window 会崩；每次渲染都读盘是浪费；存坏数据解析异常没兜底会白屏。',talk:'面试这样说：「本地存储 Hook 的分都在边界处理上。」对应 Day 3。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'effect 里拿一个配置对象去初始化第三方 SDK，依赖写了这个对象，结果 SDK 被反复初始化，原因是？',opts:['SDK 不支持重复调用','父组件每次渲染都新建这个对象字面量，引用永远在变，effect 就永远重跑；应把依赖拆成对象里的原始值，或用 useMemo 稳住对象引用','effect 不能调 SDK','要用类组件才稳定'],a:1,ex:'和「依赖放新对象」同源，但场景是生产里的地图、图表、播放器 SDK：反复初始化 = 闪烁、重复连接、计费浪费。先拆原始值依赖。',talk:'面试这样说：「依赖要拆到原始值，别让字面量对象当开关。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'<code>useLayoutEffect</code> 在 SSR 项目里控制台报警告、甚至影响服务端渲染，正确处理是？',opts:['忽略警告就行','它在服务端没有绘制阶段可用、官方也不建议 SSR 用；服务端渲染的组件优先改用 useEffect，或只在纯客户端组件里用 Layout 版本','把警告关掉','SSR 时改用 setTimeout'],a:1,ex:'量尺寸防闪烁是客户端才有的需求。面试问这题是看你有没有真做过 SSR，而不是只写过 CSR 玩具项目。',talk:'面试这样说：「Layout Effect 是客户端专属，SSR 先想 Effect。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'开发环境开了 StrictMode 后，埋点上报了两遍、订阅建了两条，上线（生产构建）却正常。你的结论和动作是？',opts:['生产没事就不用管','开发环境故意挂载→卸载→再挂载模拟，就是为了暴露清理不干净的代码；生产虽不双跑，但真实场景（路由来回切、条件卸载）一样会触发，动作是把 effect 做成可重复建立可彻底清理的幂等写法，而不是关 StrictMode','把埋点改成后端上报','在 effect 里加一个全局只跑一次标记然后永不清理'],a:1,ex:'把 StrictMode 当免费的健壮性测试：能通过双跑的 effect，在真实的卸载重挂场景里也不会重复订阅、重复上报。',talk:'面试这样说：「StrictMode 双跑是替真实重挂场景提前排雷。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'异步回调里连续两次用展开写法更新对象 state：<code>setForm({ ...form, a: 1 })</code>，第二次把第一次改的字段冲掉了。根因和修法？',opts:['对象展开有 bug','两次读的都是同一帧的旧 form，第二次的展开基底里没有第一次的修改；改用函数式更新 setForm(prev =&gt; ({ ...prev, a: 1 }))，基于队列里的最新值合并','把两次更新拆到两个组件','加个延时错开执行'],a:1,ex:'这是闭包旧值在表单、批量编辑里的生产变体：字段越多丢得越隐蔽。凡是「基于旧值算新值」的更新，一律函数式。',talk:'面试这样说：「基于旧值算新值，就必须走函数式更新。」对应 Day 4。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'React 的 <code>useOptimistic</code> 相比自己手写乐观更新，省掉的是哪部分？',opts:['省掉发请求','省掉手动回滚：它在异步操作进行中展示乐观值，操作结束（成功以真实数据为准、失败自动退回原值）不用自己维护临时副本和失败还原逻辑','省掉 loading 状态的所有代码','它会自动重试失败的请求'],a:1,ex:'点赞、收藏、改名这类高频小操作是它的主场。手写版要维护临时值 + 失败还原 + 对齐三件事，它把还原做成了默认行为。',talk:'面试这样说：「useOptimistic 把乐观值和自动回退做成了一等公民。」对应 Day 6 架构关。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'用 React 19 的表单 Actions / <code>useActionState</code> 做提交，提交按钮的 pending 态用 <code>useFormStatus</code> 读取时，有个硬性要求是？',opts:['按钮必须写在 form 外面','读取 pending 的组件必须是这个 form 的子组件，它读的是最近父级 form 的提交状态；在 form 本身所在的组件里直接调读不到','pending 只能读一次','必须配合 Redux'],a:1,ex:'这是新 API 最常见的实操坑：把按钮和表单写在同一个组件里调 useFormStatus，pending 永远是 false。拆一个子组件包按钮就好。',talk:'面试这样说：「useFormStatus 读的是父级 form，所以按钮要拆成子组件。」对应 Day 6。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'组件开头写了 <code>if (!data) return &lt;Loading/&gt;</code>，把几个 Hook 写在了这个 return 后面，数据从无到有时直接报错。违反了什么？',opts:['return 不能写在组件里','Hook 必须在任何条件 return 之前无条件调用完：loading 时少调、加载好多调，调用顺序对不上 React 就报错','Loading 组件不能这么写','data 要先转成 state'],a:1,ex:'「Hooks 顺序」的生活化版本：不是写在 if 里，而是写在提前 return 之后，效果一样。所有 Hook 提到组件最上方，再写条件渲染。',talk:'面试这样说：「先把 Hook 调完，再谈条件 return。」对应 Day 1。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'用 <code>useReducer + useContext</code> 自建全局 store 时，把 state 和 dispatch 放同一个 Context，任何状态变化都让所有消费者重渲染，进阶拆法是？',opts:['把 Context 换成 props','拆成 StateContext 和 DispatchContext 两个：dispatch 本身引用稳定，只写不读 state 的组件订阅 DispatchContext 后就不会被状态变化带着重渲染','给所有消费者加 memo 就能完全解决','把 reducer 改回 useState'],a:1,ex:'这是自研 store 的经典优化，Redux 也是类似思路（connect / selector 按需订阅）。面试答到这一层说明你真维护过大应用状态。',talk:'面试这样说：「读写分离，dispatch 稳定就单独给它一个 Context。」对应 Day 5。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'在 effect 里集成 ECharts / 地图这类命令式库，生产级的组织方式是？',opts:['每次数据变都销毁重建整个实例最省事','创建和销毁一个 effect 管（挂载建实例、卸载 destroy），数据更新走另一个 effect 调实例的 setOption / 更新方法，避免重建实例带来的闪烁和状态丢失','把图表配置写进 JSX','用 state 存图表实例的每个内部字段'],a:1,ex:'命令式库进 React 的通用套路：生命周期归 effect、实例归 ref、数据更新走实例方法。重建式写法在大数据量下必闪必卡。',talk:'面试这样说：「实例创建销毁和数据更新，要分两个 effect 管。」对应 Day 2。'},
+ {cat:'hooks',catLabel:'HOOKS',q:'列表每一行都要量 DOM 高度（做虚拟滚动 / 展开动画），用回调 ref（callback ref）要注意什么？',opts:['回调 ref 永远只在挂载时调一次','React 会在节点变化时先用 null 调用旧回调、再用新节点调用新回调；回调里写内联箭头函数会让它每次渲染都被调用，存节点的 Map 要在回调里做好增删清理','回调 ref 不能读 DOM','量高度只能用 useEffect 遍历'],a:1,ex:'回调 ref 是动态列表量尺寸的标准工具，坑在内联写法导致频繁 null / node 抖动、以及 Map 里残留已删节点。把回调稳住、清理写全。',talk:'面试这样说：「回调 ref 要处理好 null 调用和节点注销。」对应 Day 6。'},
+ {cat:'principle',catLabel:'渲染原理',q:'SSR 上线后控制台频繁报水合不匹配（Hydration mismatch），线上最常见的三个来源是？',opts:['网速慢、图片大、接口慢','渲染里用了 Date.now / 随机数导致服务端和客户端首渲结果不同、读了 window 等浏览器专属值、浏览器插件改了 DOM','JSX 写得太多','没给组件加 memo'],a:1,ex:'排查顺序：先找不确定输出（时间、随机、UA 判断），再看有没有在服务端不存在的对象，最后排除插件干扰。把这类值挪到挂载后的 effect 里定下来。',talk:'面试这样说：「水合不一致先查不确定渲染：时间、随机、浏览器专属值。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'写了 <code>&lt;p&gt;</code> 里面嵌 <code>&lt;div&gt;</code>、表格里少了 <code>&lt;tbody&gt;</code>，在 SSR 下会发生什么？',opts:['什么都不会，浏览器很宽容','浏览器会按 HTML 规范自动纠正 DOM 结构，结果和 React 描述的树对不上，水合时报错或界面错位；CSR 下也可能出现诡异的嵌套问题','React 会自动帮你补标签','只是样式不好看'],a:1,ex:'HTML 有合法嵌套规则，浏览器解析时会自作主张搬节点。React 以为的树和浏览器摆出来的树不一致，问题全出在这。写合法结构是根治。',talk:'面试这样说：「无效的 DOM 嵌套会被浏览器纠正，纠正完就和 React 的账对不上了。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'「开发环境没报 key 警告，上线就没问题」——这句话错在哪？',opts:['没错，生产环境不需要 key','key 不是开发专属的检查工具：生产构建只是不再打警告，协调时照样靠 key 对位，key 不稳照样状态串位、复用错误','生产环境会自动生成 key','上线后列表就不排序了'],a:1,ex:'警告是提示，机制是本质。把 key 当 lint 问题处理的人，上线后会用更贵的方式（用户投诉）学到同一课。',talk:'面试这样说：「生产不警告，不等于生产不用 key 对位。」对应 Day 7。'},
+ {cat:'principle',catLabel:'渲染原理',q:'页面只有一个大 <code>Suspense</code> 包住全部内容，某个慢接口就让整页只剩 loading。生产里该怎么摆边界？',opts:['Suspense 不能嵌套，只能用一个','按区域拆多个边界：导航、主体、侧栏各包各的，快的先出来、慢的局部 fallback，还能配合流式渲染先送骨架后补内容','去掉 Suspense 改全屏 spinner','把所有接口都改成同步'],a:1,ex:'边界粒度决定等待粒度，这和 Dashboard 里错误隔离到卡片级是同一种设计：局部等待、局部失败，不连坐全页。',talk:'面试这样说：「Suspense 边界的粒度，就是用户等待的粒度。」对应 Day 5 架构关。'},
+ {cat:'principle',catLabel:'渲染原理',q:'一个区域既要 <code>Suspense</code> 等数据、又要 <code>ErrorBoundary</code> 兜失败，组合时的分工是？',opts:['两个随便套一层就行，都一样','Suspense 管「还没好」展示 fallback，ErrorBoundary 管「出错了」展示降级 UI 并提供重试；数据组件抛 Promise 给前者、抛错误给后者，各管一段状态','ErrorBoundary 能处理加载中状态','Suspense 能捕获渲染错误并重试'],a:1,ex:'等待和失败是两个状态、两个组件，别混。重试通常是重置 ErrorBoundary + 重新发起获取，成对设计。',talk:'面试这样说：「未就绪归 Suspense，出错归 ErrorBoundary。」对应 Day 5 架构关。'},
+ {cat:'principle',catLabel:'渲染原理',q:'渲染函数里直接读一个模块外的可变对象（渲染期间它被别处改了），并发模式下可能出现什么问题？',opts:['没有任何问题','同一屏里不同组件可能读到两个版本的值（tearing 撕裂），界面自相矛盾；外部数据源要通过 useSyncExternalStore 提供一致快照','会让打包体积变大','React 会自动锁住外部对象'],a:1,ex:'并发渲染可中断可重来，前提是渲染读到的数据在这一次渲染内自洽。外部可变源不给快照，撕裂就是这么来的。',talk:'面试这样说：「渲染要读快照，不要读随时会变的活数据。」对应 Day 5。'},
+ {cat:'principle',catLabel:'渲染原理',q:'<code>flushSync</code> 的正当用途和代价，哪个说法对？',opts:['日常更新都该包上 flushSync 更快','少数场景需要「状态更新后立刻读到最新 DOM」（如更新后马上滚动定位、量尺寸）时才用；代价是它强制同步渲染、放弃批处理和并发调度，用多了直接拖慢交互','flushSync 是用来发请求的','它已经在 React 19 废弃'],a:1,ex:'这是「知道有这把刀、也知道为什么平时不用」的题。答得出使用场景（提交后滚到底部再量高度）就是实战派。',talk:'面试这样说：「flushSync 是给必须立刻落 DOM 的场景的逃生舱，不是日常工具。」'},
+ {cat:'principle',catLabel:'渲染原理',q:'给 <code>&lt;input value={text}&gt;</code> 但忘了写 <code>onChange</code>，用户打字没反应且控制台警告，为什么？',opts:['输入框坏了','value 把它锁成了受控组件，值只由 React 状态决定，没有 onChange 更新状态，输入就被每帧渲染「纠正」回原值；要么补 onChange，要么改用 defaultValue 做非受控','浏览器禁用了输入','需要给 input 加 key'],a:1,ex:'表单第一高频事故。面试常伪装成 bug 报告让你定位：现象（打不了字）+ 警告（read-only field）立刻指向受控没闭环。',talk:'面试这样说：「有 value 没 onChange，等于把输入框上了锁。」对应 Day 6。'},
+ {cat:'principle',catLabel:'渲染原理',q:'映射列表时需要给 <code>Fragment</code> 加 key，简写 <code>&lt;&gt;</code> 为什么不行？',opts:['Fragment 不能有 key 是规范禁止','简写语法不支持任何属性，key 也是属性；要用完整写法 &lt;Fragment key={id}&gt;，否则 React 没法给这一组元素对位','因为简写不支持 children','加不加 key 对 Fragment 没影响'],a:1,ex:'列表项是一组多元素时最常用，写简写丢 key 的后果和普通列表一样：重排时状态串位。细节题，答对显基本功。',talk:'面试这样说：「要 key 的 Fragment 必须写全名。」对应 Day 7。'},
+ {cat:'principle',catLabel:'渲染原理',q:'控制台报 <code>Cannot update a component while rendering a different component</code>，典型成因是？',opts:['两个组件用了同一个 key','在子组件渲染期间直接调用父组件（或兄弟组件）的 setState，渲染还没算完就改状态；应把这次更新挪到事件或 effect 里触发','组件名字起重复了','父组件没有用 memo'],a:1,ex:'渲染阶段只允许调整「自己」的 state（渲染时调整模式），跨组件更新必须等到提交之后。把时机挪对，警告即消。',talk:'面试这样说：「渲染期间只能动自己的状态，跨组件更新要等出渲染再说。」对应 Day 1。'},
+ {cat:'principle',catLabel:'渲染原理',q:'把 updater 函数写得不纯（里面发请求 / 改外部变量），在开发环境 StrictMode 下会发生什么怪事？',opts:['没有任何影响','updater 和 reducer 会被故意双调用来暴露不纯：副作用执行两遍、请求发两次；生产虽不双调，但并发重渲染时 updater 也可能被丢弃或重算，副作用本来就不该住在更新函数里','updater 不能用箭头函数','双调用会让 state 变成两倍'],a:1,ex:'纯度要求不只针对渲染，更新函数同样在列。副作用放事件里先做完，再把结果作为普通值 dispatch 进来。',talk:'面试这样说：「updater 只算新值，副作用在外面做完再进来。」对应 Day 4。'},
+ {cat:'principle',catLabel:'渲染原理',q:'受控输入框出现「打字光标跳到末尾 / 中间删改时光标乱跑」，常见的 React 层成因是？',opts:['键盘驱动问题','每次输入都对 value 做格式化或截断后回填，光标位置却没恢复；或用变化的 key 让输入框被重挂。要保住选区位置，或让格式化只在失焦 / 提交时做','输入框不能受控','font-size 太大'],a:1,ex:'手机号、金额格式化输入框的经典坑。能说到选区（selectionStart）恢复和重挂检查，这题就是资深答案。',talk:'面试这样说：「回填 value 会动光标，格式化输入要管选区、查 key。」对应 Day 6。'},
+ {cat:'perf',catLabel:'性能',q:'生产环境监控里的 LCP、CLS、INP 分别在量什么（Web Vitals）？',opts:['都是接口耗时','LCP 最大内容元素出现的时间（加载体感）、CLS 布局偏移量（稳不稳）、INP 交互到下一帧的延迟（跟手不跟手），三者分别对应加载、视觉稳定、交互响应','服务器的三个指标','打包工具的三个阶段'],a:1,ex:'面试聊性能优化，落到线上就是这三个数：光说 Profiler 是实验室数据，能讲清真实用户指标和优化动作的对应关系才是生产视角。',talk:'面试这样说：「LCP 管加载、CLS 管稳定、INP 管交互，先认指标再谈优化。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'页面 CLS（布局偏移）爆表，React 页面最常见的两个元凶是？',opts:['JS 太多和接口太慢','图片 / 视频没预留宽高比、内容异步插入把已有内容往下挤（如顶部后加载的横幅）；修法是给媒体定尺寸或 aspect-ratio、给异步区域留固定占位','没加 memo 和没拆 Context','字体太少'],a:1,ex:'CLS 是「页面在你眼前乱跳」的量化。骨架屏如果高度和真实内容不一致，照样制造偏移——占位要占得像。',talk:'面试这样说：「CLS 先查媒体尺寸和异步插入，占位必须等高。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'INP 很差：点一下按钮要几百毫秒才有反应，排查发现点击处理里同步跑了大量计算。组合解法是？',opts:['换更快的服务器','先给即时反馈（按钮态、骨架），重活拆片让出主线程或用 useTransition 降优先级，实在重的计算挪 Web Worker；并用性能面板确认长任务来源，別盲目加 loading','把按钮改大一点','禁用这个按钮'],a:1,ex:'INP 考的是主线程调度意识：用户动作的反馈必须先行，重活排队。答出长任务拆分和优先级，比背 API 更重要。',talk:'面试这样说：「交互优化先保反馈，长任务要拆、要让路。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'打包分析发现一个日期库和一个工具库占了包体大头（全量引入、无 tree-shaking），标准处理是？',opts:['把它们改成 CDN 外链就不算体积了','先看打包构成定位大头：按需引入单个函数、换轻量替代（如日期处理换小库或原生 Intl）、确保引入的是可摇树的 ESM 构建，并把预算写进 CI 防回弹','把所有代码压缩两遍','删掉日期功能'],a:1,ex:'全量引 lodash / 大日期库是经典体积事故。和上一轮的「三板斧」是同一考点在具体依赖上的落地：定位、按需、替代、防回弹。',talk:'面试这样说：「体积治理是定位大头、按需引入、再立预算防回弹。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'路由懒加载后，点菜单跳页总要白一下等 chunk，体验优化的常用手法是？',opts:['取消懒加载全打进主包','在用户大概率下一步访问时提前加载：鼠标悬停 / 触摸菜单、空闲时预取下个路由的 chunk 和数据，点击时资源已在路上','把 loading 图标换个颜色','让用户多点一次确认'],a:1,ex:'分割省了首屏、欠了跳转，预取就是来还账的：用意图信号（hover、可见性、空闲）把成本提前摊掉。',talk:'面试这样说：「懒加载负责瘦首屏，预取负责补跳转延迟。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'子组件已经用 <code>memo</code> 包了，但父组件每次传一段 JSX 作为 <code>children</code> / 插槽内容，它还是跟着重渲染，为什么？',opts:['memo 对 children 失效是 bug','JSX 每次渲染都会生成新的元素对象，children 也是一个 prop，引用变了浅比较就不相等；要么把这段内容再往上层提（在父的父那里创建传入），要么接受它渲染、只保证它内部别做重活','children 不能传 JSX','给 children 加 key 就好'],a:1,ex:'这是 Day 5「children 组合跳过渲染」的反面：跳过的前提同样是元素引用稳定，JSX 写在频繁渲染的组件里就稳不住。两面一起答才完整。',talk:'面试这样说：「children 也是 prop，元素引用不稳 memo 照样穿。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'一个 60 个字段的大表单，打一个字全表单卡顿，最对症的改法是？',opts:['给整个表单加一个大 memo','把重渲染范围收小：字段级组件各自订阅自己那份值（如 React Hook Form 的订阅模式）、重字段单独 memo、大块区域拆开，让一次输入只渲染相关字段','把表单改成一页一个字段','减少字段数量'],a:1,ex:'全受控大表单的通病是状态住太高、颗粒太粗。生产表单库的价值一半就在订阅粒度上，这题和选型题互相印证。',talk:'面试这样说：「大表单卡，先查状态颗粒度，再换订阅模式。」对应 Day 6。'},
+ {cat:'perf',catLabel:'性能',q:'数据表格要展示十万行，分页、虚拟列表、memo 行组件三个手段怎么排优先级？',opts:['先把每行都 memo 上再说','先问产品形态：能分页就优先服务端分页（数据量和 DOM 都降下来）；必须连续滚动才上虚拟化；memo 行是最后配合稳定 props 的细化手段，不能替代前两个','三个一起上肯定最快不用选','把十万行一次渲染然后用 CSS 藏起来'],a:1,ex:'手段有层级：减数据 > 减节点 > 减单行成本。顺序反了就是拿 memo 硬扛十万节点，属于典型的新手解法。',talk:'面试这样说：「先减数据，再减节点，最后才抠单行。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'图片拖慢首屏，生产级的图片策略哪个最完整？',opts:['全部转成 base64 内嵌','按展示尺寸给多档图（srcSet / sizes）、现代格式优先、首屏大图 eager + 高优先级、屏外图懒加载、宽高预留防偏移，并走 CDN 压缩','只把图片压到最小就行','把图片都换成图标字体'],a:1,ex:'图片优化是组合题：体积、格式、加载时机、布局稳定各占一份。只答压缩，等于只做对了四分之一。',talk:'面试这样说：「图片按尺寸、格式、时机、占位四件套一起做。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'自定义字体导致文字先闪一下默认字体再切换、还伴随布局抖动，处理要点是？',opts:['不用自定义字体最稳','font-display 控制加载策略、关键字体预加载、按需子集化减小体积，并给字体留出接近的度量（或用 fallback 字体调校）减小切换时的偏移','把字体文件 base64 进 CSS','文字先隐藏等字体到了再显示且不设超时'],a:1,ex:'字体是 CLS 和体感的隐形来源。长时间藏字（FOIT）比闪一下（FOUT）更伤，所以策略和超时都要说到。',talk:'面试这样说：「字体要定策略、要预加载、要给切换留缓冲。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'用户反馈「页面越用越卡，刷一下就好」，你怀疑内存泄漏，排查路径是？',opts:['直接加大服务器内存','先复现并定位增长源：反复进出可疑页面，看任务管理器 / 性能监视器的 JS 堆是否只涨不落，再用堆快照对比找滞留对象，常见元凶是没清理的定时器、监听、订阅和被全局缓存引用的组件数据','把所有组件都改成类组件','让用户勤刷新'],a:1,ex:'SPA 长驻不刷新，泄漏是拿时间换的事故。能讲清「复现—确认增长—快照对比—对回清理清单」这条链，就是生产排障的答法。',talk:'面试这样说：「泄漏排查先证增长，再用快照找谁没被放手。」对应 Day 2。'},
+ {cat:'perf',catLabel:'性能',q:'想在线上真实数据里看组件渲染耗时，能怎么做（光靠开发版 Profiler 不行）？',opts:['线上装个浏览器插件看就行','React 提供 production profiling 构建，配合 &lt;Profiler&gt; API 把渲染耗时回传埋点，按页面和版本聚合看长尾；结论要结合 Web Vitals 的真实用户数据看','把开发构建发到线上测','让用户录屏计时'],a:1,ex:'开发构建的数据不能代表线上（这点前面考过），生产剖析要专门构建 + 采样上报。答到采样和长尾，就是真上过线的口径。',talk:'面试这样说：「线上性能靠生产剖析构建加采样埋点，不靠开发版数据。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'滚动列表的 <code>onScroll</code> 里做定位计算、窗口 <code>resize</code> 里重排布局，掉帧明显。防抖、节流、rAF 怎么选？',opts:['三个随便选一个都一样','连续高频事件先想能不能用 IntersectionObserver / CSS 替代监听；必须监听时，停下来才算的用防抖、按固定节奏采样的用节流、跟绘制对齐的视觉更新用 requestAnimationFrame，并记得解绑','全部改成 setInterval','把事件监听删掉就不会卡了'],a:1,ex:'选型看事件语义而不是手感：防抖等停、节流控频、rAF 对帧。能先想到用观察器替代监听，是更资深的一步。',talk:'面试这样说：「先想能不能不监听，再在防抖、节流、rAF 里按语义选。」对应 Day 5。'},
+ {cat:'perf',catLabel:'性能',q:'骨架屏上了之后用户还是觉得「晃」，CLS 也没降，问题多半出在哪？',opts:['骨架屏颜色不对','骨架的尺寸和真实内容不一致：数据回来一撑一缩，偏移照样发生；骨架要按真实布局等高占位，图片和标题行都要对得上','骨架屏显示太久','应该改用全屏转圈'],a:1,ex:'骨架屏是占位不是遮羞布，占得不像就是新的偏移源。列表、卡片这类重复结构最容易在这里翻车。',talk:'面试这样说：「骨架要等高占位，否则它本身就是偏移源。」对应 Day 5。'},
+ {cat:'practice',catLabel:'实战',q:'生产表单为什么很多团队选 React Hook Form 而不是全受控手写？',opts:['因为它代码量最少','它默认走非受控 + 按字段订阅，输入时只通知相关字段、重渲染范围小，大表单手感明显更好；再配 zod / yup 做 schema 校验，校验规则能和后端共用一份定义','它能自动生成表单 UI','全受控已经被 React 废弃'],a:1,ex:'选型理由要落到渲染模型上，而不是「大家都在用」。小表单手写受控完全没问题，字段一多、校验一复杂，订阅粒度就是分水岭。',talk:'面试这样说：「表单库买的是渲染粒度和校验体系，不是省几行代码。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'注册表单要异步校验「用户名是否已被占用」，生产实现要注意什么？',opts:['每次按键都立刻请求，回来什么显示什么','输入防抖后再请求，且要处理竞态（旧请求晚回不能覆盖新结果）、请求中给待校验态、失败时不能误判为可用；本质和搜索竞态是同一道题','提交时再校验就够了，异步校验没必要','把所有用户名一次拉到前端本地比对'],a:1,ex:'异步校验 = 防抖 + 竞态 + 三态的组合题，面试官就是在看你能不能把 Day 2 的竞态迁移到表单场景。',talk:'面试这样说：「异步校验先过竞态这一关，再谈校验规则。」对应 Day 2。'},
+ {cat:'practice',catLabel:'实战',q:'多步入驻表单要支持「中途退出、下次接着填」，草稿方案里哪个考虑最完整？',opts:['把所有字段塞进 localStorage 就行','轻量草稿可本地存（带 schema 版本和过期时间，版本不符丢弃并提示）；含文件、敏感字段的要存服务端草稿接口，本地恢复后还要和服务端版本对齐，避免拿旧草稿覆盖新数据','草稿只存当前步数就行','退出时自动提交半成品'],a:1,ex:'这是 Day 4 状态机题的生产落地追问：文件传一半、证件号这类敏感信息不能躺在本地明文里，版本和冲突必须先想。',talk:'面试这样说：「草稿要谈版本、敏感字段和与服务端的对齐，不只是存本地。」对应 Day 4 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'上传大文件（几百 MB 视频）到生产环境，前端方案的要点是？',opts:['读成 base64 塞进 JSON 一次发完','分片上传 + 断点续传 + 每片进度汇总、支持暂停取消（AbortController）、优先直传对象存储（后端签发凭证），前端不经手大流量、失败只重传丢的片','把文件压成一张图再传','只能等用户换更快的网'],a:1,ex:'大文件题考的是完整链路意识：一次传完在弱网下必死。分片、直传、续传、取消四个词说全，这题就满了。',talk:'面试这样说：「大文件四件套：分片、直传、续传、可取消。」对应 Day 6 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'富文本内容从后端返回要渲染，编辑器和展示两端各有什么生产坑？',opts:['直接 innerHTML 渲染最方便，两端都一样','展示端必须先净化（防 XSS）再渲染，编辑端要处理粘贴带入的脏 HTML 和格式、图片上传失败的占位、以及协同 / 自动保存时的内容对齐；存储的是结构化或净化后的 HTML，不是原始输入','富文本不存在安全问题','把内容转成图片就没坑了'],a:1,ex:'富文本是 XSS 的主入口之一，dangerouslySetInnerHTML 那题的生产续集。编辑端的粘贴清洗也是常被漏掉的一半。',talk:'面试这样说：「富文本入库前清洗、展示前净化，粘贴是第三道关。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'中文输入法下，搜索框打拼音还没选字就触发了搜索 / 回车就误提交，根因和修法是？',opts:['输入法软件的 bug，前端管不了','拼音组合期间（composition）input 事件也会触发，要监听 compositionstart / end，组合中不触发搜索和回车提交，选完字再处理；很多表单库和输入组件都内置了这个处理，手写时必须自己加','把输入框改成英文键盘','搜索改成点按钮才触发就彻底解决且体验不变'],a:1,ex:'国内团队的生产必修课，海外教程很少提。面试聊到 IME 组合事件，立刻能证明你做过真实的中文用户产品。',talk:'面试这样说：「中文输入先过 composition 这一关，组合中不触发业务。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'生产级 Modal 弹窗，除了能打开关闭，还必须处理哪一组细节？',opts:['只要有遮罩和关闭按钮就够了','焦点陷阱（Tab 不跑出弹窗）、Esc 关闭、打开时锁背景滚动、关闭后焦点还给触发元素、无障碍的 role / aria 标注，并用 Portal 挂到顶层避免被裁剪','弹窗必须全屏','弹窗里不能放表单'],a:1,ex:'弹窗是 a11y 和交互细节的集中考场，Day 6 的焦点管理在这里变成完整清单。做过组件库的人这题应该脱口而出。',talk:'面试这样说：「弹窗拼的是焦点、滚动锁和关闭后归还焦点的细节。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'全局 Toast / 消息提示系统怎么设计才不会在生产里失控（连点弹出十条、重复提示刷屏）？',opts:['每次调用都新建一个 DOM 弹出来最简单','用一个全局容器 + 队列管理：限制同时展示数量、相同内容去重合并计数、每条有自动消失和清理、提供编程式 API 给业务在请求层统一调用','把提示都改成 alert','提示不消失让用户手动关'],a:1,ex:'请求层统一报错时最容易刷屏：一个页面挂三个接口能弹三条一样的错。去重和队列是这类系统的及格线。',talk:'面试这样说：「全局提示要有队列、限量和去重，不然错误会刷屏。」对应 Day 6 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'后台管理表格的排序、筛选、分页，前端全量处理在什么情况下是错的？',opts:['永远都是错的，必须后端处理','数据是分页从后端拉的时，前端手里只有当前页：在这一页上排序筛选得出的结果是假的，用户会以为全库就这些；这种场景排序筛选分页参数必须发给后端，前端只负责拼参数和展示','只要数据超过 10 条就错','表格不能排序'],a:1,ex:'「假排序」是管理后台最高频的隐形 bug，用户不报错、数据悄悄错。判断标准就一条：你手里是不是全量数据。',talk:'面试这样说：「非全量数据，排序筛选必须回后端做。」对应 Day 3 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'权限控制：某个按钮普通用户看不见，生产里正确的权限分层是？',opts:['前端把按钮藏了就等于安全了','前端只管体验层：路由守卫拦页面、按钮按权限码显隐；真正的校验必须在后端接口做，前端隐藏只是不给入口，绕过前端直接调接口必须被后端拒绝','权限全部放前端判断最安全','把权限写死在代码里按角色 if 判断就行'],a:1,ex:'前端无秘密在权限上的翻版。面试答权限只谈显隐是减分，谈到接口层校验和权限码下发才是完整分层。',talk:'面试这样说：「前端权限管体验，后端权限管安全，两层都要有。」对应 Day 1 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'Access Token 存哪是生产主流方案，哪种存法风险最高？',opts:['存 localStorage 最方便也最安全','风险最高的是长期有效的 token 存 localStorage / sessionStorage：页面一旦有 XSS 就能被读走；主流是短时效 access token 放内存、refresh token 放 httpOnly Cookie，前端读不到也偷不走','存 URL 参数里最安全','把 token 写在代码常量里'],a:1,ex:'这题把 XSS 防线和登录态管理接上了：存储位置决定被偷的难易。答的时候要连带说清刷新机制，才是完整方案。',talk:'面试这样说：「access 短效放内存，refresh 进 httpOnly Cookie。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'页面一打开同时发了 5 个请求，token 刚好过期，5 个 401 一起回来。刷新逻辑处理不好会怎样、该怎么设计？',opts:['每个请求各自刷新一次也没问题','会并发刷新 5 次、互相覆盖新 token，甚至把自己顶下线；正确设计是单飞（single-flight）：第一个 401 触发刷新，其余请求排队等待，刷新成功后带新 token 重放队列，刷新失败统一跳登录','401 就直接整页刷新','把 token 有效期设成一年就不会过期了'],a:1,ex:'令牌刷新风暴是登录态的经典生产事故，队列 + 单飞是标准解，面试官常拿它区分「用过 axios 拦截器」和「维护过登录体系」。',talk:'面试这样说：「401 刷新要单飞加队列，别让请求各自为战。」对应 Day 2。'},
+ {cat:'practice',catLabel:'实战',q:'封装请求层（拦截器）时，生产里要统一收口的有哪些事？',opts:['只需要统一拼 baseURL','统一鉴权头、超时、错误码到用户提示的映射、请求取消、请求 id（方便和后端日志对串）、以及登录失效的统一处理；业务代码只处理成功数据和业务错误，不重复写防御逻辑','每个接口自己写一套错误处理更灵活','拦截器里写 UI 组件最好'],a:1,ex:'请求层是团队工程化的门面：收口得好，全站错误体验一致、出问题能按请求 id 查全链路。这題答的是工程经验。',talk:'面试这样说：「请求层统一鉴权、错误、超时和链路 id，业务只管业务。」对应 Day 2 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'请求失败自动重试的边界在哪，哪类请求绝不能盲重试？',opts:['所有请求失败重试 3 次最稳','只对幂等请求（GET、带幂等键的操作）做有限次指数退避重试，且网络错误和 5xx 才重试、4xx 业务错误不重试；下单、支付、发帖这类非幂等 POST 盲重试会打出重复订单，要重试必须带幂等键由后端去重','重试次数越多越可靠','POST 比 GET 更适合重试'],a:1,ex:'重试是双刃剑：救弱网，也造重复提交。和多步表单的幂等提交是同一条线，面试最爱连环问到这里。',talk:'面试这样说：「重试只给幂等请求，还要退避并设上限。」对应 Day 4 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'聊天 / 行情类页面用 WebSocket，生产环境除了能连上，还要处理什么？',opts:['连上就结束了，后面是后端的活','断线重连（指数退避、别重连风暴）、心跳保活与假死检测、重连后拉增量补数据、消息去重与顺序对齐、组件卸载时关连接并清监听','把重连间隔设成 0 最及时','断线时一直弹 Toast 提醒用户'],a:1,ex:'长连接的难点全在异常路径。能主动说「重连后数据怎么补齐」，比只说重连本身高一个层级。',talk:'面试这样说：「长连接拼的是重连、补数据和去重的异常路径。」对应 Day 2。'},
+ {cat:'practice',catLabel:'实战',q:'「复制成功」按钮在生产里偶发失败，排查和兜底怎么做？',opts:['navigator.clipboard 是标准 API，不会失败','它只在安全上下文（HTTPS / localhost）可用，用户手势外调用、权限被拒、老浏览器都会失败；要 await 并捕获异常，失败时回退到 textarea + execCommand 的老方案或提示手动复制，并给真实的成功 / 失败反馈','失败就多弹几次成功提示','复制功能不重要，去掉就行'],a:1,ex:'小功能大坑的代表：演示时永远成功，上线后在内嵌 WebView、非 HTTPS、权限策略下全是失败。兜底和诚实反馈是关键。',talk:'面试这样说：「剪贴板要判安全上下文、捕异常、备回退方案。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'管理后台要「打印 / 导出这张报表」，前端生产方案的要点是？',opts:['把页面截图下来打印就行','专门写打印样式（@media print）：隐藏导航按钮、表格分页不截断行、页眉页脚和分页控制，数据量大时导出走后端生成文件，前端只触发下载，别让浏览器硬扛几万行 DOM 打印','打印和导出是一回事，都走浏览器','隐藏滚动条就能打印全了'],a:1,ex:'ToB 产品的高频真实需求，教程里几乎不讲。能提到打印样式和后端导出分工，就是做过企业级应用的信号。',talk:'面试这样说：「打印有专门样式，大数据导出归后端。」对应 Day 3 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'拖拽排序（看板列、列表 reorder）生产实现要考虑哪些点？',opts:['能用鼠标拖动就完成了','优先用 Pointer Events 做统一的鼠标 / 触摸处理（HTML5 拖拽在移动端基本不可用）、拖动中只改 transform 不触发重排、松手后乐观更新顺序并在失败时回滚、还要给键盘用户留可达的操作方式','HTML5 拖拽 API 在所有端都好用','排序结果不用发后端，本地排好就行'],a:1,ex:'拖拽题考的是端差异 + 性能 + 数据对齐三件事，只答「用个拖拽库」的属于没踩过移动端的坑。',talk:'面试这样说：「拖拽先过移动端和失败回滚两关，再谈手感。」对应 Day 6 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'搜索结果页要做到「刷新不丢、后退能恢复、链接能分享」，状态管理的标准答案是？',opts:['搜索条件存组件 state 里最直接','搜索条件以 URL 参数为唯一真相源：输入时防抖后同步进 URL，列表请求只认 URL 参数，刷新、后退、分享打开都从 URL 还原同一份状态','把条件存 localStorage','用全局 store 存条件，后退时手动恢复'],a:1,ex:'这是 Day 2 状态三分法里 URL 状态的生产主场。电商、招聘、内容站的搜索页全是这个模式，面试命中率极高。',talk:'面试这样说：「搜索页的条件进 URL，URL 就是状态。」对应 Day 2 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'前端处理日期时间，生产事故最高发的是哪类，怎么防？',opts:['日期库选错了','时区与格式混用：后端给 UTC、前端按本地时区直接截字符串展示，跨时区用户看到错一天；防法是存储和传输统一 UTC / 时间戳，只在展示层按用户时区格式化，日期运算用带时区的库或原生 Intl，绝不手拼字符串比大小','日期只能后端处理','把所有时间都按北京时间写死'],a:1,ex:'「生日差一天」「活动结束时间不对」全是这类。全球化产品必考，答到「存 UTC、展示转本地」就是标准线。',talk:'面试这样说：「时间存 UTC，展示才转用户时区。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'金额显示和计算在前端要注意什么，哪种做法会埋雷？',opts:['用浮点数存元、直接 toFixed 显示就行','金额以最小单位的整数（分）存储和计算，避免浮点误差；展示层用 Intl.NumberFormat 做千分位、货币符号和 locale 格式化，舍入规则和后端对齐（谁负责最终舍入要说清）','金额格式化手写正则最靠谱','小数点后两位用字符串截断就行'],a:1,ex:'0.1 + 0.2 的老梗在账单里就是真金白银的对账事故。电商、金融、SaaS 计费全考这题。',talk:'面试这样说：「金额按分存整数，格式化交给 Intl，舍入和后端对齐。」对应 Day 6。'},
+ {cat:'practice',catLabel:'实战',q:'用 React Query 的 <code>useInfiniteQuery</code> 做无限列表，翻页逻辑的关键点是？',opts:['页码自己维护一个 state 加一就行','用 getNextPageParam 从上一页返回里算出下一页游标 / 页码，没有下一页时返回 undefined 让 hasNextPage 变 false；触发加载要防重复（isFetchingNextPage 时别再触发），翻页参数必须全部进 queryKey','把所有页数据在本地再存一份 state 管理','游标和页码不能混用所以不能用它'],a:1,ex:'这是无限滚动的数据层版本：哨兵触发是 UI 层，这题考的是游标怎么算、何时停、参数怎么进缓存键。',talk:'面试这样说：「无限查询的灵魂在 getNextPageParam 和 hasNextPage。」对应 Day 6 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'编辑保存成功后跳回列表，列表还是旧数据。缓存失效的标准处理是？',opts:['强制整页刷新一次最保险','在 mutation 成功回调里按 queryKey 失效相关列表缓存让它重拉，或直接用返回的新数据更新缓存；key 的层级设计要能一把命中同一类列表（带筛选参数的变体也要覆盖）','让用户自己刷新','把列表缓存时间设为 0 永远不缓存'],a:1,ex:'「改完看不到」是用户感知最强的 bug。答到按 key 族失效和筛选变体覆盖，说明你设计过缓存键体系而不只是调过 API。',talk:'面试这样说：「保存成功要按 key 族失效列表缓存，别靠刷新。」对应 Day 2 架构关。'},
+ {cat:'practice',catLabel:'实战',q:'列表换了筛选条件却显示上一个条件的数据，第一嫌疑是？',opts:['后端返回错了','queryKey 没把全部请求参数（筛选、排序、分页）包含进去，新参数命中了旧缓存；queryKey 必须是请求参数的完整、稳定序列化，参数变 key 必须变','React 没重新渲染','筛选组件坏了'],a:1,ex:'缓存键漏参数是请求库第一大事故：现象像后端 bug，根因在前端的键设计。用 key 工厂统一构造能系统性防住。',talk:'面试这样说：「缓存串数据先查 queryKey 是不是漏了参数。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'React Query 里 <code>staleTime</code> 和 <code>gcTime</code>（旧名 cacheTime）有什么区别？',opts:['一个是请求超时，一个是重试次数','staleTime 管数据多久内算新鲜（期内不重新请求），gcTime 管无人订阅后缓存留多久才被回收；前者影响请求频率，后者影响回页时能不能先用旧缓存顶着','两个是一回事，先到先生效','staleTime 是服务端设置的'],a:1,ex:'生产调优全在这两个数：列表页 staleTime 给太短会请求风暴，给太长会看到旧数据；详情和列表通常要分开配。',talk:'面试这样说：「staleTime 管新鲜期，gcTime 管缓存保留期。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'queryKey 的层级设计（如 <code>[todos, { status, page }]</code>）有什么工程价值？',opts:['只是好看，没有实际作用','层级 key 能按族失效：失效 [todos] 一把清掉它下面所有筛选 / 分页变体，精确到单条也能定位；配合 key 工厂函数统一生成，避免各处手拼字符串拼错','key 越长请求越快','能减少后端压力因为 key 参与后端缓存'],a:1,ex:'key 设计就是缓存的目录结构。项目一大，没有工厂和层级的 key 必然演变成失效漏一片、串数据一片。',talk:'面试这样说：「queryKey 是缓存的目录，要按层级设计、用工厂生成。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'mutation 成功后，用 invalidateQueries 重拉 vs 用 setQueryData 直接改缓存，怎么选？',opts:['永远重拉最正确','数据量小、返回里带完整新数据时直接改缓存最快且不闪；列表结构复杂、牵连多个视图时失效重拉更可靠但多一次请求和加载态；折中常见做法是先改缓存顶住、再失效对齐','直接改缓存一定会和后端不一致不能用','setQueryData 是废弃 API'],a:1,ex:'这是缓存一致性的取舍题，没有银弹：答得出两种做法的成本（请求与闪烁 vs 复杂度和漏改风险）就是合格答案。',talk:'面试这样说：「小改动改缓存，大联动失效重拉，常常两者配合。」对应 Day 6 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'鼠标悬停菜单就提前把下个页面数据拉好（预取）用的是什么机制、有什么注意点？',opts:['把请求写进 onMouseEnter 里裸调接口就行','用请求库的 prefetchQuery 按正式 queryKey 预热缓存，点进去时数据已在缓存里直接展示；注意别对所有链接无差别预取（浪费流量和后端），按意图信号和数据新鲜期控制','预取会让浏览器自动缓存所有页面','预取只能用在 SSR'],a:1,ex:'预取和路由 chunk 预加载是一对：一个提前下代码、一个提前下数据。滥用预取会把省下的成本加倍还给后端。',talk:'面试这样说：「预取按意图触发、按正式 key 预热，别全量乱取。」对应 Day 5。'},
+ {cat:'data',catLabel:'请求与状态',q:'什么时候该考虑 Redux Toolkit / RTK Query，什么时候 React Query 就够了？',opts:['大项目必须全家桶，小项目都不要用','状态以服务端数据为主、客户端状态简单时 React Query + 轻量 store 就够；客户端状态复杂（多模块共享、复杂联动、需要时间旅行调试）或团队已有 Redux 体系时上 RTK，RTK Query 与 React Query 二选一管服务端状态，别叠两层','RTK Query 能替代所有本地状态','看哪个版本新用哪个'],a:1,ex:'选型题的红线是「服务端状态和客户端状态别用一个工具硬管」。两个请求库叠用必然双份缓存、双份真相。',talk:'面试这样说：「先分清两类状态，再定工具，别叠请求库。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'Zustand / Redux 里 selector 写成 <code>state =&gt; ({ a: state.a, b: state.b })</code>，组件疯狂重渲染甚至死循环，为什么？',opts:['selector 不能返回两个字段','selector 每次执行都返回新对象，订阅比较认为值变了；要么拆成多个单字段 selector，要么用 shallow 比较，要么让 selector 返回已存在的引用','store 太大了','这是 React 19 才有的问题'],a:1,ex:'和 memo、Context 是同一个引用比较的世界观：订阅系统全靠引用判变化。 selector 返回新对象是状态库第一高频性能坑。',talk:'面试这样说：「selector 返回新对象等于每次都变，要拆或浅比较。」对应 Day 5。'},
+ {cat:'data',catLabel:'请求与状态',q:'同一份订单数据既放 Redux 又放 React Query，页面上两处显示不一致，根源是？',opts:['两个库有兼容性 bug','同一数据两个真相源，各自有自己的更新和失效时机，必然漂移；一份数据只能有一个归属：服务端数据归请求库缓存，客户端状态归 store，跨界只读不复制','把两个库都升级到最新版就好','加个定时同步就能解决'],a:1,ex:'Day 4 讲过的「两份真相必然不一致」在工具层面的重演。架构评审时看到双写数据，先砍归属再谈同步。',talk:'面试这样说：「一份数据一个真相源，双写必漂移。」对应 Day 4。'},
+ {cat:'data',catLabel:'请求与状态',q:'评论、订单这类嵌套深、要按 id 频繁更新一项的数据，为什么推荐范式化（byId + allIds）存储？',opts:['看起来更专业','扁平存储后更新一项只动一条记录、引用不变的其他项不连累渲染，按 id 取值是 O(1)，列表顺序由 allIds 单独维护；嵌套存储改深层一项要层层新建对象，还容易和别处引用的旧副本不一致','范式化能自动排序','后端要求前端必须这么存'],a:1,ex:'这是数据结构决定更新成本的典型题。Todo reducer 里「只新建被改的那一项」放大到整个应用，就是范式化。',talk:'面试这样说：「范式化让更新粒度落到单条记录上。」对应 Day 4。'},
+ {cat:'data',catLabel:'请求与状态',q:'分页切换时表格先白一下再出数据，体验优化的标准做法是？',opts:['把分页改成一次全量加载','保留上一页数据占位（placeholderData / keepPreviousData）：新页数据回来前先展示旧页并给刷新中状态，避免高度塌陷和闪烁；同时新页请求该取消的取消','给表格加个大 loading 遮罩盖住','分页按钮点一次禁用五秒'],a:1,ex:'闪烁来自「先清后拉」。保留旧数据顶着是请求库的标准能力，但要注意明确标识正在刷新，别让用户把旧页当新页操作。',talk:'面试这样说：「翻页先用旧数据占位，回来再无感替换。」对应 Day 6 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'详情请求要等列表先返回拿到 id 才能发，怎么写才规范？',opts:['在列表的回调里手动发详情请求','用 enabled 控制：id 不存在时查询不启用，id 就绪自动发；这属于真依赖该串行，但每一层都要有自己的加载态，别把整页卡在链条最后','两个请求一起发，详情先用猜的 id','详情请求写进渲染函数里'],a:1,ex:'和「假依赖要并行」成对：真依赖用 enabled 声明，而不是手写回调链。面试官就看你分不分得清真假依赖。',talk:'面试这样说：「真依赖用 enabled 声明，不用回调套回调。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'消息中心要每 10 秒轮询未读数，生产配置要注意什么？',opts:['setInterval 裸写就行，越勤越实时','用请求库的 refetchInterval 统一管理：标签页切到后台 / 网络断开时自动暂停（默认行为别关）、间隔按业务容忍度定别全站一个值、多个组件订阅同一查询会自动合并成一个轮询，别各写各的','轮询间隔设 1 秒最保险','页面隐藏时更要加速轮询防漏消息'],a:1,ex:'轮询风暴多半来自每个组件各拉各的 + 后台不停。合并订阅和可见性暂停是省后端也省用户电量的基本功。',talk:'面试这样说：「轮询要合并订阅、后台暂停、间隔分级。」对应 Day 2。'},
+ {cat:'data',catLabel:'请求与状态',q:'用请求库做乐观更新（如点赞），完整的标准流程是哪一套？',opts:['先改 UI，请求失败了刷新页面','发请求前先取消相关在途查询防覆盖，拍下缓存快照，写入乐观值；失败时用快照回滚并提示，结束（无论成败）再失效相关查询和服务端对齐','乐观值永远不用和服务端对齐','失败时把乐观值保留并重试到成功为止'],a:1,ex:'这是 Day 6 乐观更新的工业版流程：取消、快照、回滚、对齐四步缺一不可。只答「先改 UI」是玩具版答案。',talk:'面试这样说：「乐观更新四步：取消在途、拍快照、写乐观值、失败回滚最后对齐。」对应 Day 6 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'React Query 的 <code>select</code> 选项适合做什么、有什么注意点？',opts:['在服务端筛选数据','在缓存之上做派生转换（如从列表里抽某一项、格式化结构），多个组件可各选各的而不复制缓存；注意 select 每次返回新结构会失去引用稳定，转换要保持结果引用尽量稳定或接受其渲染成本','select 会把数据写回后端','用了 select 就不需要 queryKey 了'],a:1,ex:'派生不落第二份缓存，和「filter 不进 state」同理：真相只有缓存一份，各视图自己 select 自己要的形状。',talk:'面试这样说：「派生数据用 select 现算，不复制第二份缓存。」对应 Day 4。'},
+ {cat:'data',catLabel:'请求与状态',q:'SSR 场景下用请求库，怎么避免服务端拉一遍、客户端挂载又拉一遍？',opts:['客户端首屏禁用请求库','服务端预取后把缓存 dehydrate 序列化进页面，客户端 hydrate 回请求库，首屏直接用这份缓存、按 staleTime 决定要不要后台刷新','把接口数据写死在 HTML 里','SSR 就不要用缓存'],a:1,ex:'双拉一遍既浪费又会闪（服务端内容被客户端旧逻辑替换）。脱水 / 注水是 SSR + 请求库的标准接法，和水合是配套概念。',talk:'面试这样说：「服务端预取要脱水给客户端注水，免得双拉还闪。」对应 Day 2 架构关。'},
+ {cat:'data',catLabel:'请求与状态',q:'用户快速连点「提交订单」，前端防重复提交要做到哪一层才算完整？',opts:['按钮点完立刻禁用就够了','按钮禁用只是第一层：请求层要有进行中拦截，关键操作还要生成幂等键随请求带给后端，后端按幂等键去重；因为断网重试、多标签页、双击穿透都不是一个禁用能挡完的','把按钮做小一点让用户点不准','提交后立刻跳页就不会重复了'],a:1,ex:'和重试、刷新队列是同一条幂等线。资深答案一定会把防线推到后端幂等，而不是只谈按钮状态。',talk:'面试这样说：「防重复是按钮、请求、后端幂等三层，不是一层。」对应 Day 4 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'Vite / CRA 里用环境变量配了测试环境接口地址，上线后想不重新打包就切到生产地址，可能吗？',opts:['改服务器上的 .env 文件就行','构建时环境变量会被写死进产物，改配置必须重新构建；要做到一份产物多环境部署，得走运行时配置：由服务端在 index.html 注入配置对象或提供 config 接口，前端启动时先读它','把所有环境地址都打包进去让用户选','环境变量是运行时读取的，随改随生效'],a:1,ex:'这是部署模型题：很多团队第一次做多环境发布就卡在这。构建时配置和运行时配置的边界必须先划清。',talk:'面试这样说：「构建时变量写死在产物里，多环境要运行时注入。」对应 Day 5 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'接 Sentry 这类前端监控，除了装 SDK，还必须做哪几件事才算接完？',opts:['装完能收到报错就行','上传 source map 才能把压缩代码还原到源码行号、按 release 版本打标区分新旧问题、ErrorBoundary 层面上报、并把用户 id / token 等敏感信息做脱敏过滤再上报','把所有 console.log 都转发到监控','监控要拦下所有错误不让用户看到'],a:1,ex:'没 source map 的报错等于天书，没版本标记分不清是新 bug 还是老问题复发。脱敏是合规红线，漏了是事故。',talk:'面试这样说：「监控三件套：source map、版本标记、敏感信息脱敏。」对应 Day 5 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'线上出了问题要和后端对日志，前端这边能提供什么关键线索？',opts:['用户的一句「打不开了」','一次完整的请求链：请求 id（前端生成或透传后端的 trace id）、发生时间、页面版本 / release、用户操作路径和报错堆栈；请求层统一注入 trace id 后，前后端能按同一个 id 把日志串起来','把用户电脑型号报过去','前端日志和后端无关，对不上'],a:1,ex:'可观测性题：单点报错谁都会看，能把一次故障串成跨端链路的是工程能力。请求层收口 trace id 是前面请求层那题的回报。',talk:'面试这样说：「排障靠 trace id 串链路，版本和路径定范围。」对应 Day 3 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'微前端里两个子应用各打包了一份 React，页面报 <code>Invalid hook call</code>，根因是？',opts:['Hook 写在了条件里','页面上出现了两个 React 副本，Hook 调用的 React 和渲染的 React 不是同一个；微前端必须把 React / ReactDOM 配成共享单例（shared singleton），子应用不各自打包','子应用名字冲突','微前端不能用 Hooks'],a:1,ex:'微前端第一事故。面试问微前端不问这个等于没问：共享依赖、样式隔离、子应用通信和独立部署才是它的成本清单。',talk:'面试这样说：「微前端先保 React 单例，两个副本必炸 Hook。」对应 Day 1。'},
+ {cat:'eng',catLabel:'工程与上线',q:'自研组件库要做到能被业务方长期用，工程上最关键的几件事是？',opts:['组件数量越多越好','设计 token（颜色 / 间距走 CSS 变量）保证可换肤、API 按受控模式设计并保持稳定、语义化版本和变更日志管破坏性更新、产物支持 tree-shaking（ESM + sideEffects 标记），再配文档站和示例','组件库必须把业务逻辑也封进去','版本永远只发大版本不兼容也没关系'],a:1,ex:'组件库题考的是「给别人用的代码」的契约意识，和设计 Modal API 同源：稳定性、可摇树、可换肤、版本治理缺一不可。',talk:'面试这样说：「组件库卖的是稳定契约：token、受控 API、版本治理、可摇树。」对应 Day 7。'},
+ {cat:'eng',catLabel:'工程与上线',q:'Storybook 在组件库 / 设计系统里解决什么问题，和单元测试什么关系？',opts:['它就是个截图工具','它给每个组件提供隔离的开发与展示环境：各状态可直接翻看、做视觉回归和无障碍检查、充当活文档；单测验逻辑行为，它验长相和状态覆盖，两者互补不替代','有了 Storybook 就不需要测试','业务页面也要全搬进 Storybook 开发'],a:1,ex:'组件状态太多（加载、空、错误、禁用）靠业务页面根本翻不全，隔离环境就是为此而生。答得出视觉回归是加分项。',talk:'面试这样说：「Storybook 管状态覆盖和视觉，单测管行为逻辑。」对应 Day 7。'},
+ {cat:'eng',catLabel:'工程与上线',q:'产品要出多语言版本，前端 i18n 架构的要点是？',opts:['把中文文案用翻译软件替换一遍就行','文案抽成语言包按语言懒加载、数字日期货币一律走 Intl 按 locale 格式化、复数和语序交给 i18n 库的规则处理（别自己拼字符串）、还要考虑 RTL 语言的布局方向和文案变长撑爆布局','语言包全部打进主包最稳','翻译只管文案，数字格式不用管'],a:1,ex:'i18n 的坑一半在文案之外：德语长单词撑爆按钮、阿拉伯语整个界面镜像、复数规则各国不同。主流大厂面试必问出海场景。',talk:'面试这样说：「i18n 是语言包加 Intl 格式化加布局适配，不只是翻译。」对应 Day 6。'},
+ {cat:'eng',catLabel:'工程与上线',q:'TypeScript 写 React，列表组件想做到「传什么数据就推导什么渲染」，该用什么能力？外加接口返回值为什么不能只靠类型断言？',opts:['都用 any 最省事，断言 as 一下就行','列表用泛型组件（&lt;List&lt;T&gt;&gt;）把 item 类型传给 renderItem 回调，类型跟着数据走；接口返回在运行时类型会被擦除，后端字段漂移 TS 拦不住，要用 zod 这类运行时校验兜住，断言只是自欺欺人','interface 写得多就安全了','后端返回什么前端就信什么'],a:1,ex:'泛型组件和运行时校验是 TS 生产题的两大考点：编译期类型不是数据契约的全部，线上数据必须验。',talk:'面试这样说：「组件靠泛型保类型，接口靠运行时校验保契约。」对应 Day 3 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'按钮组件要支持「同色系多种形态」且不让业务传出非法组合（如链接型按钮又传 loading），类型上怎么设计？',opts:['所有 props 都设成可选，运行时再判断','用可辨识联合类型按 variant 分支定义 props：每种形态一组合法字段，非法组合在类型层面直接写不出来；比一堆可选布尔量加运行时警告更早暴露问题','给每个组合单独写一个组件','在文档里写明不要这样传就行'],a:1,ex:'这是组件 API 设计的类型进阶版：把规则编码进类型，错误在写代码时就报，而不是上线后靠文档自觉。',talk:'面试这样说：「用联合类型把非法组合挡在编译期。」对应 Day 7。'},
+ {cat:'eng',catLabel:'工程与上线',q:'前端 CI 流水线最少要卡住哪几道关，少了哪道最容易出事？',opts:['只要能 build 成功就能发','类型检查、lint、单元测试、构建四件套是底线，再加产物包体积预算和关键流程 E2E 冒烟；最常被省又最容易出事的是类型检查——本地能跑靠的是增量缓存，新代码在 CI 全量检查才现形','CI 里跑格式化就够了','测试放本地手动跑就行'],a:1,ex:'注意这题问的是门禁不是工具：能说清每道关拦的是哪类问题（类型拦契约、测试拦回归、预算拦体积回弹）就是体系化答案。',talk:'面试这样说：「CI 门禁按拦什么问题来配：类型、规范、回归、体积。」对应 Day 7。'},
+ {cat:'eng',catLabel:'工程与上线',q:'用 Playwright 做 E2E，测试总是时好时坏（flaky），最常见的根源和解法是？',opts:['框架不稳定，换个框架就好','写了固定 sleep 等元素、或依赖动画和真实网络时序；解法是用框架的自动等待和面向用户状态的断言（等元素可见 / 等接口响应），把动画、时间、随机数在测试环境里可控化，并隔离测试数据','把重试次数调到 10 次','E2E 不稳定是正常的，删掉就行'],a:1,ex:'flaky 测试比没有测试更伤团队信任。这题和 RTL 的「测行为」一脉：等状态不等时间，是 UI 自动化稳定的核心。',talk:'面试这样说：「E2E 等状态不等时间，固定 sleep 是 flaky 之源。」对应 Day 7。'},
+ {cat:'eng',catLabel:'工程与上线',q:'发布后用户报「页面白屏，一刷新有时好有时坏」，结合静态资源缓存，最可能是什么？',opts:['用户网络不好','新旧版本资源混用：index.html 被缓存住还是旧版，它引用的旧 chunk 已被新部署清掉（或反过来），加载失败白屏；解法是带 hash 的静态资源长缓存、index.html 短缓存或不缓存，并对 chunk 加载失败做自动刷新重试兜底','React 版本太新','把缓存全部关掉就好了'],a:1,ex:'这是前端发布的第一经典事故，几乎每个上过线的人都见过。答出「HTML 和 hash 资源的缓存策略要分开」就抓住了根。',talk:'面试这样说：「白屏先查版本混用：HTML 短缓存、hash 资源长缓存。」对应 Day 5。'},
+ {cat:'eng',catLabel:'工程与上线',q:'灰度发布新版本前端时，除了分流量，还要注意什么兼容问题？',opts:['分了流量就没别的事了','新旧前端会同时在线一段时间：新前端调的接口要兼容旧后端数据结构、老用户手里的旧页面调新接口也不能炸，发版顺序和接口的向后兼容要先约定；同时盯灰度组的错误率和核心指标，异常能一键回滚到上一份静态产物','灰度就是先发一半服务器','回滚就是把代码改回去重新发'],a:1,ex:'静态前端回滚快是优势，前提是产物按版本留存。版本并存期的接口兼容，是只在真实发布里才会学到的东西。',talk:'面试这样说：「灰度期新旧并存，先保接口兼容，再备一键回滚。」对应 Day 5 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'功能开关（Feature Flag）在生产里的正确用法和常见滥用是？',opts:['就是加个 if 判断，没什么用法讲究','正确用法是按用户 / 比例灰度放量、出问题能远程一键关停、实验结束及时下线开关；滥用是开关只开不清，攒出几十个无人敢动的僵尸开关，代码里全是死分支，测试组合爆炸','开关越多越灵活越好','开关状态存前端代码里改起来最快'],a:1,ex:'开关是发布和代码解耦的工具，也是技术债的放大器。答到「开关要有下线计划」就是用过的人。',talk:'面试这样说：「开关管放量和止损，但必须有下线期限。」对应 Day 5 架构关。'},
+ {cat:'eng',catLabel:'工程与上线',q:'项目依赖治理：lock 文件、依赖漏洞、React 大版本升级，生产团队的标准动作是？',opts:['依赖有新版就全升最新最安全','提交并锁定 lock 文件保证所有人装同一份依赖、定期审计漏洞并优先修高危、框架大版本升级走 codemod + 小范围灰度 + 回归测试，而不是一把梭全升；直接依赖保持少而精，幽灵依赖要清','从来不升级最稳定','把 node_modules 提交进仓库最保险'],a:1,ex:'依赖就是供应链：不锁版本是构建漂移，不升级是安全债。能把节奏（定期、小步、灰度）说清的是维护过长期项目的人。',talk:'面试这样说：「依赖要锁定、常审计、小步升级，不极端。」对应 Day 7。'},
+ {cat:'perf',catLabel:'性能',q:'动画 / 滚动卡顿，性能面板里看到大量强制同步布局（Layout Thrashing），典型代码成因是？',opts:['图片太多了','循环里交替读写布局：刚改完样式就立刻读 offsetHeight / getBoundingClientRect，逼浏览器当场重排，一轮循环重排几十次；应先批量读、再批量写，把读写分开','没用虚拟列表','CSS 写得太长'],a:1,ex:'浏览器本来会攒着样式变更一起算，读布局值会逼它提前结算。读写分离是 DOM 性能的基本功，图表和拖拽代码里最常见。',talk:'面试这样说：「布局抖动来自读写交替，先批量读再批量写。」对应 Day 5。'},
+ {cat:'practice',catLabel:'实战',q:'编辑页填了一半，用户点返回 / 关标签页，怎么防「未保存内容直接丢失」？',opts:['离开就自动保存到服务器最保险，不用问用户','维护一个 dirty 标记：内容改过未保存时，SPA 内跳转用路由拦截弹确认、关页 / 刷新用 beforeunload 提醒；保存成功或无改动时不拦，并注意浏览器对 beforeunload 自定义文案的限制','把返回按钮禁用掉','在页面上写一行小字提醒用户记得保存就够了'],a:1,ex:'未保存防护是编辑器、表单类产品的标配体验。两种离开方式（应用内路由 vs 关页）机制不同，要成对处理，只做一半照样丢数据。',talk:'面试这样说：「未保存防护分两路：路由拦截管应用内，beforeunload 管关页。」对应 Day 4 架构关。'}
+];
+var quizState = { answered:{}, filter:'all', search:'', visible:20 };
+function quizFiltered(){
+  var kw = (quizState.search||'').trim().toLowerCase();
+  return QUIZ.map(function(q,i){return {q:q,i:i}}).filter(function(x){
+    if(quizState.filter==='wrong'){ var an=quizState.answered[x.i]; if(!(an && !an.correct)) return false; }
+    else if(quizState.filter!=='all' && x.q.cat!==quizState.filter) return false;
+    if(kw){ var hay=(x.q.q+' '+x.q.opts.join(' ')+' '+x.q.ex).toLowerCase().replace(/<[^>]+>/g,' '); if(hay.indexOf(kw)===-1) return false; }
+    return true;
+  });
+}
+function renderQuiz(){
+  var root = document.getElementById('quizRoot'); if(!root) return;
+  var full = quizFiltered();
+  var list = full.slice(0, quizState.visible);
+  var letters = ['A','B','C','D'];
+  var note=document.getElementById('quizVisibleNote'); if(note) note.textContent='显示 '+list.length+' / '+full.length+' 题 · 全库 ' + QUIZ.length + ' 题';
+  var moreRow=document.getElementById('quizMoreRow'); var moreNote=document.getElementById('quizMoreNote');
+  if(moreRow){ moreRow.style.display = full.length>list.length ? 'flex' : 'none'; if(moreNote) moreNote.textContent='还剩 '+(full.length-list.length)+' 题没显示'; }
+  root.innerHTML = list.map(function(x){
+    var q=x.q, idx=x.i, ans=quizState.answered[idx];
+    var cls = ans==null ? '' : (ans.correct ? ' correct' : ' wrong');
+    var opts = q.opts.map(function(o,j){
+      var oc=''; var dis = ans!=null ? ' disabled' : '';
+      if(ans!=null){ if(j===q.a) oc=' right'; else if(j===ans.pick) oc=' bad'; }
+      return '<button class="q-opt'+oc+'" data-q="'+idx+'" data-o="'+j+'"'+dis+'><b>'+letters[j]+'</b><span>'+o+'</span></button>';
+    }).join('');
+    var explain = ans!=null ? '<div class="q-explain open"><b>'+(ans.correct?'✅ 答对了。':'❌ 答错了，正确答案是 '+letters[q.a]+'。')+'</b> '+q.ex+'<div class="q-talk">🗣️ '+q.talk+'</div></div>' : '';
+    return '<article class="quiz-card'+cls+'"><span class="q-cat '+q.cat+'">'+q.catLabel+' · 第 '+(idx+1)+' 题</span><div class="q-title">'+q.q+'</div><div class="q-opts">'+opts+'</div>'+explain+'</article>';
+  }).join('') || '<p style="font-weight:700;color:var(--muted)">'+(quizState.filter==='wrong'?'还没有错题——先去上面分类里做几道，做错的会自动收进这里。':'没有匹配的题目，换个关键词或分类试试。')+'</p>';
+  root.querySelectorAll('.q-opt').forEach(function(btn){
+    btn.onclick=function(){
+      var qi=+btn.dataset.q, oi=+btn.dataset.o;
+      if(quizState.answered[qi]!=null) return;
+      quizState.answered[qi]={pick:oi, correct: oi===QUIZ[qi].a};
+      renderQuiz(); updateQuizHud();
+    };
+  });
+  updateQuizHud();
+}
+function updateQuizHud(){
+  var total=QUIZ.length; var done=Object.keys(quizState.answered).length;
+  var right=Object.values(quizState.answered).filter(function(x){return x.correct}).length;
+  var el=document.getElementById('quizScore'); if(el) el.textContent='已答 '+done+' / '+total+' · 答对 '+right+(done===total ? (right>=170?' · 🏆 200 道基本盘稳了': right>=140?' · 还差一口气，用「只看错题」复刷':' · 先回对应关卡重练 Hooks 与原理，再刷生产题分类') : (done>0 && done<total ? ' · 错 '+(done-right)+' 题可点「只看错题」复刷' : ''));
+  var bar=document.getElementById('quizBar'); if(bar) bar.style.width=(done/total*100)+'%';
+}
+document.querySelectorAll('#quizFilters .qfilter').forEach(function(btn){
+  btn.onclick=function(){ document.querySelectorAll('#quizFilters .qfilter').forEach(function(b){b.classList.remove('active')}); btn.classList.add('active'); quizState.filter=btn.dataset.f; quizState.visible=20; renderQuiz(); };
+});
+var qs=document.getElementById('quizSearch'); if(qs) qs.addEventListener('input',function(){ quizState.search=qs.value; quizState.visible=20; renderQuiz(); });
+var qm=document.getElementById('quizMore'); if(qm) qm.onclick=function(){ quizState.visible+=20; renderQuiz(); };
+var qr=document.getElementById('quizReset'); if(qr) qr.onclick=function(){ quizState.answered={}; quizState.visible=20; renderQuiz(); document.getElementById('quizSec').scrollIntoView({behavior:'smooth'}); };
+renderQuiz();
+
+renderPath();
+renderDay();
+</script>
+</body>
+</html>
