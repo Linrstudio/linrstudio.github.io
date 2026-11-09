@@ -41,7 +41,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <text x="360" y="108" text-anchor="middle" font-size="12" fill="#666">离线：前两步建索引 · 在线：后三步检索生成</text>
 </svg>
 <pre><code>离线（索引时做一次）：
-文档 → 切块 → Embedding 向量化 → 存进向量库
+文档 → 解析 → 切块 → Embedding 向量化 → 存进向量库
 
 在线（每次提问都走）：
 用户问题 → 向量化 → 在向量库里召回 Top 50 → 重排留 Top 5 → 把 Top 5 拼进提示词 → 模型生成回答
@@ -66,6 +66,16 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p>选型口诀：<strong>纯中文 → Qwen3-Embedding（0.6B 起步）；中英文混排或要混合检索 → BGE-M3；数据不能出境 → 两个都开源可本地部署，别用纯 API 模型；最后一定在自己的数据上做 A/B</strong>——榜单分是参考，自己的问题、自己的文档上跑一遍命中率，才算数。Day 16 会再讲一次 Embedding 选型，Day 18 会把重排的代码和评测讲透。</p>
 <h3>6. 和第 2 周的关系：检索是同一套思路，对象换了</h3>
 <p>Day 9 讲代码检索，查的是函数、调用关系；这里查的是文档段落，查的是语义。思路一样，都是“先查、再答”，但代码检索更看重精确名字，向量只是补充；文档检索更看重语义，关键词只是补充。主次是反的，别把 Day 9 的结论原样搬过来。</p>
+<h3>7. 第 0 步：解析——格式不一样，解析方法也不一样</h3>
+<p>五步图从“切块”开始，但真实文档不是纯文本：docx、csv、html、pdf 都要先解析成带结构的纯文本，再切块。解析是第 0 步，不算在五步里，但跳过它，后面全是错的。</p>
+<table>
+<tr><th>格式</th><th>怎么解析</th><th>注意点</th></tr>
+<tr><td>docx</td><td>python-docx 读段落 + 表格（LangChain 有 Docx2txtLoader）</td><td>表格要转成行文本；标题层级要留着，切分按标题切要用</td></tr>
+<tr><td>csv</td><td>按行读，每行是一条记录（CSVLoader）</td><td>表头当字段名；长文本列单独成块；别把整张表当一块</td></tr>
+<tr><td>html</td><td>去标签留正文（BeautifulSoup / BSHTMLLoader）</td><td>导航栏、页脚、广告是噪音要去掉；h1–h3 标题层级保留</td></tr>
+<tr><td>pdf</td><td>pypdf / PyPDFLoader 按页抽文本</td><td>扫描版是图片要 OCR；双栏排版会串行</td></tr>
+</table>
+<p>原则就一句：<strong>解析时保留结构和元数据</strong>。结构是标题、表格；元数据是文件名、页码、行号。Day 17 的引用和过滤全靠解析时留下的元数据——解析丢了结构，后面切分和引用都补不回来。</p>
 <div class="warn"><strong>容易踩的坑：</strong>RAG 不是“把文档全塞给模型”。全塞进去，Token 爆了不说，模型还会在无关段落里找答案，越找越偏。正确姿势永远是：检索给短名单，模型只看名单里的块。</div>
 
 <h2>二、代码示例</h2>
@@ -90,11 +100,31 @@ def answer(question):
 # 1. 只用资料里的内容回答，资料里没有就说“资料里没有”
 # 2. 每句关键结论后面标 [资料N]
 # 3. 不要把资料里没有的数字、日期、名字编出来</code></pre>
+<h3>示例 3：解析的形状——每种格式都变成（纯文本，元数据）（概念代码，先看形状）</h3>
+<pre><code># 解析只做两件事：抽正文、留元数据（来源、页码、行号）
+def parse_docx(path):
+    from docx import Document   # 需安装 python-docx
+    doc = Document(path)
+    text = "\n".join(p.text for p in doc.paragraphs)
+    return text, {"source": path, "format": "docx"}
+
+def parse_csv(path):
+    import csv   # 标准库，不用装
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):   # 表头当字段名
+            rows.append(" | ".join(f"{k}:{v}" for k, v in row.items()))
+    return "\n".join(rows), {"source": path, "format": "csv"}
+
+# html：BeautifulSoup 去标签留正文；pdf：pypdf 按页抽文本
+# LangChain 里各格式都有现成 loader（Docx2txtLoader、CSVLoader、
+# BSHTMLLoader、PyPDFLoader），先会手写形状，再用 loader 省事。</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 拿一篇你熟悉的文档（比如第 1 周的计划文档），手工走一遍四步：切成几块？每块讲一件事吗？换你来提问，哪几块应该被检索到？<br>
 2. 写一个“资料里没有”的测试问题：问一个文档里根本没有的东西，看提示词里的三条指令能不能拦住模型现编。<br>
-3. 对照上表，写出一个该用 RAG、一个该用微调的场景，再写出选错的代价。</p>
+3. 对照上表，写出一个该用 RAG、一个该用微调的场景，再写出选错的代价。<br>
+4. 找一个 docx 和一个 csv，各写出解析后要保留的元数据（文件名、章节或行号），再想想：如果解析时把表格丢了，后面检索会出什么问题？</p>
 </div>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>

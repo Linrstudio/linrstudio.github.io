@@ -53,6 +53,18 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <p>和 Day 9 代码检索的结论一样，文档检索也要混合，只是主次反过来：<strong>向量检索是主力</strong>，因为文档问题多是语义问题；<strong>关键词检索是补充</strong>，专门抓精确名字、编号、错误码这些向量容易漏的。混合的做法是：两边各取一批，合并去重，再按分数排，Day 18 的重排就是干这件事的。</p>
 <h3>5. 索引更新：文档改了，向量库不能还留着旧的</h3>
 <p>文档一改，对应的块要重新切、重新向量化、重新入库，旧块要删掉或标记过期。更新不及时，检索回来的是旧答案，模型还一本正经地引用它，比没有答案更糟。更新机制和 Day 9 的索引过期是同一个坑，只是换到了文档这边。</p>
+<h3>6. 向量库怎么选：先看规模和持久化，再看产品</h3>
+<p>选型先问四件事：数据量多大、要不要持久化、要不要元数据过滤、要不要自己运维。问完再挑产品，别反过来。</p>
+<table>
+<tr><th>产品</th><th>定位</th><th>适合</th><th>注意</th></tr>
+<tr><td>FAISS（Meta）</td><td>内存向量库，快、免费</td><td>几百万条以内、本地实验</td><td>重启就丢，自己管持久化（存索引文件）</td></tr>
+<tr><td>Chroma</td><td>轻量、本地文件持久化，LangChain 集成最顺</td><td>个人项目、小团队起步</td><td>大规模性能一般</td></tr>
+<tr><td>pgvector（Postgres 插件）</td><td>向量存在 Postgres 里，和业务数据放一起</td><td>已有 Postgres、要元数据过滤和事务</td><td>超大规模不如专用库</td></tr>
+<tr><td>Pinecone / Qdrant / Milvus</td><td>托管或专用服务</td><td>生产、大规模</td><td>成本和数据出境要先算</td></tr>
+</table>
+<p>口诀：<strong>起步用 Chroma（本地、零运维），数据量上来了或要和业务库放一起，再换 pgvector 或 Qdrant</strong>。换库只换存取层，切分和 Embedding 不用动——但换 Embedding 模型要全库重建索引（Day 15 已讲），换库和换模型是两回事，别混在一起。</p>
+<h3>7. pgvector 多说两句：建表、查、建索引</h3>
+<p>pgvector 值得多说两句，因为它是最容易上手的生产选择：不用多装一个服务，Postgres 里加个插件就行。表结构就是一块一行：正文、向量、元数据各一列。查的时候先 WHERE 过滤元数据、再按向量距离排序取 TopK——过滤和排序一条 SQL 全办了。向量维度要和 Embedding 模型一致（1024 维对应 Qwen3-Embedding 0.6B 和 BGE-M3），换模型要重建表和索引，这和换库是两回事。数据量小可以不建索引，全表扫也够快；量大了再建 HNSW 索引。LangChain 里用 PGVector，调用形状和 Chroma 一样，换库只换这一层。</p>
 <div class="warn"><strong>容易踩的坑：</strong>TopK 取回来就直接拼进提示词，不做过滤。相似度分数很低的块，拼进去也是噪音。正确做法是：相似度设一个下限，低于下限的块不要，哪怕 TopK 没取满——宁缺毋滥，缺了模型还能说“资料里没有”，滥了模型就开始现编。</div>
 
 <h2>二、代码示例</h2>
@@ -83,11 +95,48 @@ print(ranked[:2])  # [(1.0, 'd1'), (0.707..., 'd3')]：d1 方向完全一致，d
         if hit["id"] not in seen and hit["score"] >= 0.5 and len(merged) < top_k:
             seen.add(hit["id"]); merged.append(hit)
     return merged</code></pre>
+<h3>示例 3：Chroma 的形状——建库、存入、检索（概念代码，先看形状）</h3>
+<pre><code># from langchain_chroma import Chroma   # 需安装 langchain-chroma
+# from langchain_openai import OpenAIEmbeddings  # 换成你自己的 Embedding 模型
+#
+# store = Chroma.from_documents(
+#     documents=chunks,                 # 切好的块（带元数据）
+#     embedding=embeddings,             # 和问题同一个 Embedding 模型
+#     persist_directory="./chroma_db",  # 本地持久化，重启还在
+# )
+# hits = store.similarity_search("深圳今天天气如何", k=5)
+# 换库只换这一层：FAISS、pgvector、Qdrant 的调用形状都一样，
+# 切分和 Embedding 不用动。</code></pre>
+<h3>示例 4：pgvector 的 SQL 形状——建表、查、建索引（概念代码，先看形状）</h3>
+<pre><code>-- 1. 开插件（装一次就行）
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 2. 建表：一块一行，正文、向量、元数据各一列
+CREATE TABLE chunks (
+  id SERIAL PRIMARY KEY,
+  content TEXT,
+  embedding VECTOR(1024),  -- 维度要和 Embedding 模型一致
+  source TEXT,             -- 元数据：出处，过滤和引用靠它
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. 查：先 WHERE 过滤元数据，再按余弦距离排序取 Top 5
+-- &lt;=&gt; 是余弦距离（越小越相似）；向量要先归一化（第 2 节）
+SELECT content, embedding &lt;=&gt; $1 AS distance
+FROM chunks
+WHERE source = '产品手册'
+ORDER BY distance
+LIMIT 5;
+
+-- 4. 索引：量大了再建，HNSW 是默认推荐
+CREATE INDEX ON chunks USING hnsw (embedding vector_cosine_ops);</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 用示例 1 的小向量，换一个问题向量 [0, 1]，算出 Top2 是谁，再换 [1, 1]，看排名怎么变。<br>
 2. 给你的 RAG 定三个数：TopK、相似度下限、起步值，再写出如果命中率低，你先调哪一个。<br>
-3. 想一个关键词检索能救场的例子：问题里有个精确编号，向量检索漏了，关键词怎么补上？</p>
+3. 想一个关键词检索能救场的例子：问题里有个精确编号，向量检索漏了，关键词怎么补上？<br>
+4. 对照选型四问，给你的 RAG 项目选一个向量库，写一句话理由：为什么不是别的三个？<br>
+5. 写出你的 chunks 表结构（content、embedding、source 三列以上），再写一条带 source 过滤的 Top 5 查询。</p>
 </div>
 
 <h2>三、小测验（点选项判分，答完点解析）</h2>
