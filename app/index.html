@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f2ec">
+  <meta name="description" content="把项目经历整理成清晰、可展示的个人作品集页面。内容仅在当前浏览器中处理。">
+  <title>项目成页｜把经历变成作品集</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f2ec;
+      --paper-2: #ebe8df;
+      --ink: #20211d;
+      --muted: #72736b;
+      --line: #dedbd1;
+      --white: #fffefa;
+      --orange: #f16c4a;
+      --orange-dark: #d95639;
+      --lime: #d7e99b;
+      --blue: #91b8d2;
+      --shadow: 0 24px 70px rgba(35, 36, 29, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1440px; margin: 0 auto; padding: 0 48px 56px; }
+    .topbar { height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 780; letter-spacing: -.04em; }
+    .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 10px; background: var(--ink); color: var(--lime); }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .brand-sub { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: .16em; }
+    .privacy { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; color: #50524b; font-size: 11px; font-weight: 650; }
+    .privacy-dot { width: 7px; height: 7px; border-radius: 99px; background: #688c53; box-shadow: 0 0 0 3px rgba(104, 140, 83, .12); }
+    .intro { padding: 42px 0 29px; display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+    .eyebrow { margin: 0 0 12px; color: var(--orange-dark); font-size: 10px; font-weight: 800; letter-spacing: .19em; text-transform: uppercase; }
+    h1 { max-width: 780px; margin: 0; font-size: clamp(30px, 4.1vw, 54px); line-height: 1.08; letter-spacing: -.065em; font-weight: 790; }
+    .intro-copy { max-width: 356px; margin: 13px 0 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
+    .step-note { flex: 0 0 auto; padding: 13px 16px; border-radius: 14px; background: var(--lime); font-size: 11px; line-height: 1.5; }
+    .step-note strong { display: block; margin-bottom: 2px; font-size: 12px; }
+    .workspace { display: grid; grid-template-columns: minmax(310px, 390px) minmax(0, 1fr); align-items: start; gap: 24px; }
+    .editor { overflow: hidden; border: 1px solid var(--line); border-radius: 19px; background: var(--white); box-shadow: 0 8px 25px rgba(35, 36, 29, .035); }
+    .editor-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .editor-head h2 { margin: 0; font-size: 14px; letter-spacing: -.02em; }
+    .completion { color: var(--muted); font-size: 10px; }
+    .completion strong { color: var(--ink); font-size: 11px; }
+    .form { padding: 4px 20px 20px; }
+    .section { padding: 17px 0 15px; border-bottom: 1px solid #efede6; }
+    .section:last-of-type { border-bottom: 0; }
+    .section-title { display: flex; align-items: center; gap: 9px; margin: 0 0 13px; font-size: 11px; font-weight: 760; }
+    .section-num { width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 7px; background: var(--paper); color: #71736a; font-size: 10px; }
+    .field { margin-top: 10px; }
+    .field:first-of-type { margin-top: 0; }
+    label { display: block; margin-bottom: 6px; color: #62635b; font-size: 10px; font-weight: 650; }
+    input, textarea { display: block; width: 100%; border: 1px solid #e3e0d7; border-radius: 9px; background: #fff; color: var(--ink); outline: none; transition: border-color .18s, box-shadow .18s; }
+    input { height: 37px; padding: 0 11px; font-size: 11px; }
+    textarea { min-height: 67px; padding: 9px 11px; resize: vertical; font-size: 11px; line-height: 1.55; }
+    input:focus, textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(241, 108, 74, .12); }
+    input::placeholder, textarea::placeholder { color: #b4b2aa; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-tip { margin: 8px 0 0; color: #92928a; font-size: 9px; line-height: 1.55; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding-top: 15px; border-top: 1px solid #efede6; }
+    #downloadBtn { grid-column: 1 / -1; }
+    .btn { min-height: 39px; padding: 0 13px; border: 1px solid transparent; border-radius: 10px; font-size: 10px; font-weight: 750; transition: transform .15s, background .15s; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--ink); color: white; }
+    .btn-primary:hover { background: #3b3c35; }
+    .btn-secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+    .btn-secondary:hover { background: var(--paper); }
+    .btn-quiet { border: 0; background: transparent; color: var(--muted); font-size: 9px; }
+    .editor-foot { padding: 0 20px 17px; color: #898a82; font-size: 9px; line-height: 1.6; }
+    .preview-wrap { min-width: 0; }
+    .preview-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 11px; }
+    .preview-head h2 { margin: 0; font-size: 12px; font-weight: 760; }
+    .preview-hint { color: var(--muted); font-size: 10px; }
+    .preview-shell { overflow: hidden; border: 1px solid #d8d6cf; border-radius: 19px; background: #e4e1d8; box-shadow: var(--shadow); }
+    .browserbar { height: 38px; display: flex; align-items: center; gap: 6px; padding: 0 14px; border-bottom: 1px solid #d6d3ca; background: #f0eee8; }
+    .browser-dot { width: 7px; height: 7px; border-radius: 50%; background: #c9c7bf; }
+    .browser-address { width: 39%; margin: 0 auto; padding: 4px 9px; border-radius: 99px; background: #e5e2d9; color: #95958c; font-size: 8px; text-align: center; }
+    .folio { min-height: 725px; padding: clamp(24px, 4.5vw, 60px); background: #fcfbf7; }
+    .folio-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .folio-brand { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 760; }
+    .folio-avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--lime); font-size: 12px; }
+    .folio-role { color: var(--muted); font-size: 9px; font-weight: 500; }
+    .folio-link { padding: 8px 11px; border: 1px solid #dedbd2; border-radius: 99px; color: #42433d; font-size: 9px; font-weight: 650; }
+    .folio-hero { padding: 52px 0 38px; }
+    .folio-label { display: inline-flex; align-items: center; gap: 7px; color: var(--orange-dark); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+    .folio-label i { width: 6px; height: 6px; display: inline-block; border-radius: 2px; background: var(--orange); transform: rotate(45deg); }
+    .folio-hero h3 { max-width: 650px; margin: 14px 0 12px; font-size: clamp(28px, 4.5vw, 56px); line-height: 1.08; letter-spacing: -.065em; font-weight: 760; }
+    .folio-intro { max-width: 540px; margin: 0; color: #72736b; font-size: 12px; line-height: 1.8; }
+    .folio-divider { height: 1px; background: #e7e4dc; }
+    .project-card { padding-top: 25px; }
+    .project-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #8d8d84; font-size: 8px; letter-spacing: .12em; }
+    .project-title { max-width: 710px; margin: 13px 0 10px; font-size: clamp(20px, 3vw, 32px); line-height: 1.22; letter-spacing: -.045em; }
+    .project-deck { max-width: 710px; margin: 0; color: #75766f; font-size: 11px; line-height: 1.8; }
+    .project-art { position: relative; overflow: hidden; height: 154px; margin: 24px 0; border-radius: 12px; background: #e8eddb; }
+    .art-orbit { position: absolute; width: 235px; height: 235px; left: 50%; top: 50%; border: 1px solid rgba(49, 57, 44, .2); border-radius: 50%; transform: translate(-50%, -50%); }
+    .art-orbit::before, .art-orbit::after { position: absolute; inset: 21px; border: 1px solid rgba(49, 57, 44, .16); border-radius: 50%; content: ""; }
+    .art-orbit::after { inset: 48px; }
+    .art-core { position: absolute; left: 50%; top: 50%; width: 71px; height: 71px; display: grid; place-items: center; border-radius: 22px; background: var(--orange); color: #fff8e9; font-size: 19px; font-weight: 800; box-shadow: 0 15px 34px rgba(163, 80, 52, .2); transform: translate(-50%, -50%) rotate(-8deg); }
+    .art-node { position: absolute; width: 12px; height: 12px; border: 3px solid #e8eddb; border-radius: 50%; background: #455847; }
+    .art-node.n1 { left: 22%; top: 32%; } .art-node.n2 { right: 23%; top: 26%; background: #627d9a; }
+    .art-node.n3 { right: 28%; bottom: 22%; background: var(--orange); } .art-node.n4 { left: 30%; bottom: 20%; background: #455847; }
+    .art-copy { position: absolute; left: 18px; bottom: 14px; color: #626a56; font-size: 8px; font-weight: 750; letter-spacing: .13em; }
+    .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 19px 27px; }
+    .story-block { padding-top: 13px; border-top: 1px solid #e7e4dc; }
+    .story-block h4 { margin: 0 0 7px; font-size: 10px; letter-spacing: -.01em; }
+    .story-block p { margin: 0; color: #73746c; font-size: 9px; line-height: 1.75; white-space: pre-line; }
+    .stack-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 19px; }
+    .stack-chip { padding: 6px 9px; border: 1px solid #e1ded5; border-radius: 99px; color: #686a62; font-size: 8px; }
+    .folio-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 34px; padding-top: 14px; border-top: 1px solid #e7e4dc; color: #93938b; font-size: 8px; }
+    .folio-footer a { color: var(--ink); text-decoration: none; }
+    .toast { position: fixed; z-index: 5; right: 22px; bottom: 22px; padding: 11px 15px; border-radius: 11px; background: var(--ink); color: white; font-size: 11px; box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .page-foot { display: flex; justify-content: space-between; gap: 20px; margin-top: 20px; color: #92928a; font-size: 9px; line-height: 1.6; }
+    .page-foot strong { color: #62635b; }
+    @media (max-width: 980px) {
+      .shell { padding: 0 24px 40px; }
+      .workspace { grid-template-columns: minmax(285px, 350px) minmax(0, 1fr); gap: 16px; }
+      .folio { padding: 30px; }
+      .folio-hero { padding: 40px 0 30px; }
+      .intro { align-items: center; }
+      .step-note { display: none; }
+    }
+    @media (max-width: 760px) {
+      .shell { padding: 0 16px 30px; }
+      .topbar { height: 68px; }
+      .privacy { padding: 8px 10px; font-size: 9px; }
+      .intro { display: block; padding: 32px 0 21px; }
+      h1 { font-size: 36px; }
+      .intro-copy { max-width: 520px; font-size: 12px; }
+      .workspace { grid-template-columns: 1fr; }
+      .editor { order: 1; }
+      .preview-wrap { order: 2; }
+      .folio { min-height: 0; padding: 25px 20px; }
+      .folio-hero { padding: 35px 0 27px; }
+      .folio-hero h3 { font-size: 36px; }
+      .project-art { height: 130px; }
+      .page-foot { display: block; }
+      .page-foot span { display: block; margin-top: 4px; }
+    }
+    @media (max-width: 420px) {
+      .brand { font-size: 12px; }
+      .brand-sub { font-size: 8px; }
+      .privacy { font-size: 8px; }
+      h1 { font-size: 31px; }
+      .story-grid { gap: 15px; }
+      .project-meta { font-size: 7px; }
+    }
+    @page { size: A4; margin: 14mm; }
+    @media print {
+      body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body > :not(.shell), .shell > :not(.workspace), .workspace > :not(.preview-wrap), .preview-wrap > :not(.preview-shell), .preview-shell > :not(#preview) { display: none !important; }
+      .shell, .workspace, .preview-wrap, .preview-shell { display: block !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+      .preview-shell { overflow: visible !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; }
+      #preview { position: static !important; width: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: #fff !important; box-shadow: none !important; }
+      .folio-hero { padding: 14mm 0 9mm; }
+      .folio-hero h3 { font-size: 30pt; }
+      .project-title { font-size: 22pt; }
+      .project-art { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .folio-top, .folio-hero, .project-art, .story-block, .stack-row, .folio-footer { break-inside: avoid; page-break-inside: avoid; }
+      .folio-hero h3, .project-title, .story-block h4 { break-after: avoid; page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5z" stroke="currentColor" stroke-width="1.7"/><path d="M14 14h5v5h-5z" fill="currentColor"/></svg></span>
+        <span>项目成页<span class="brand-sub">PROJECT TO PORTFOLIO</span></span>
+      </div>
+      <div class="privacy"><span class="privacy-dot"></span>只在当前浏览器处理</div>
+    </header>
+
+    <section class="intro">
+      <div>
+        <p class="eyebrow">A clearer story starts here</p>
+        <h1>把项目经历，<br>变成你的作品集。</h1>
+        <p class="intro-copy">填入项目背景、你的动作和真实结果，实时排成一页清晰的案例介绍。结构帮你整理，事实由你把关。</p>
+      </div>
+      <div class="step-note"><strong>一个好案例的顺序</strong>背景 → 判断与行动 → 可验证的结果</div>
+    </section>
+
+    <section class="workspace" aria-label="作品集页面编辑器">
+      <aside class="editor">
+        <div class="editor-head"><h2>填写你的故事</h2><span class="completion"><strong id="completeCount">0/7</strong> 项已填写</span></div>
+        <form class="form" id="portfolioForm" autocomplete="off">
+          <section class="section">
+            <h3 class="section-title"><span class="section-num">01</span>个人信息</h3>
+            <div class="field"><label for="name">怎么称呼你</label><input id="name" data-required="true" maxlength="48" placeholder="例如：林澄"></div>
+            <div class="field"><label for="role">目标方向 / 职称</label><input id="role" data-required="true" maxlength="72" placeholder="例如：资深前端工程师 · 设计系统"></div>
+            <div class="field"><label for="introText">一句话介绍</label><textarea id="introText" data-required="true" maxlength="260" placeholder="你擅长解决什么问题？"></textarea></div>
+          </section>
+          <section class="section">
+            <h3 class="section-title"><span class="section-num">02</span>项目概览</h3>
+            <div class="field"><label for="projectTitle">项目名称</label><input id="projectTitle" data-required="true" maxlength="88" placeholder="给项目一个清楚的名字"></div>
+            <div class="field"><label for="projectDeck">一句话说明</label><textarea id="projectDeck" data-required="true" maxlength="220" placeholder="项目解决了什么问题，为什么重要？"></textarea></div>
+            <div class="two-col">
+              <div class="field"><label for="projectRole">我的角色</label><input id="projectRole" maxlength="64" placeholder="例如：技术负责人"></div>
+              <div class="field"><label for="projectPeriod">项目时间</label><input id="projectPeriod" maxlength="48" placeholder="例如：2023 — 2025"></div>
+            </div>
+          </section>
+          <section class="section">
+            <h3 class="section-title"><span class="section-num">03</span>案例脉络</h3>
+            <div class="field"><label for="challenge">背景与挑战</label><textarea id="challenge" data-required="true" maxlength="420" placeholder="当时遇到的核心问题是什么？"></textarea></div>
+            <div class="field"><label for="actionsText">我的关键行动</label><textarea id="actionsText" data-required="true" maxlength="520" placeholder="你如何判断、取舍、推动并交付？"></textarea></div>
+            <div class="field"><label for="impact">结果与影响</label><textarea id="impact" data-required="true" maxlength="420" placeholder="尽量写可验证的结果；没有数字时，说明证据或观察方式。"></textarea></div>
+            <p class="form-tip">只写能公开分享的内容。别把客户机密或未经核实的数据放进作品集。</p>
+          </section>
+          <section class="section">
+            <h3 class="section-title"><span class="section-num">04</span>补充信息</h3>
+            <div class="field"><label for="stack">技术 / 方法标签</label><input id="stack" maxlength="180" placeholder="TypeScript · React · Design Systems"></div>
+            <div class="field"><label for="contact">公开联系邮箱（可留空）</label><input id="contact" type="email" maxlength="120" placeholder="name@example.com"></div>
+          </section>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" id="downloadBtn">下载作品集 HTML</button>
+            <button class="btn btn-secondary" type="button" id="pdfBtn">打印 / 保存为 PDF</button>
+            <button class="btn btn-secondary" type="button" id="copyBtn">复制源码</button>
+          </div>
+          <p class="form-tip">PDF：按钮会打开浏览器打印对话框；在“目的地 / 打印机”中选择“保存为 PDF”即可。不会自动下载或上传内容；如要去掉浏览器加的页眉/页脚，可取消对应选项。</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px">
+            <span class="form-tip" style="margin:0">HTML 下载后可直接用浏览器打开或自行部署。</span>
+            <button class="btn-quiet" type="button" id="clearBtn">清空表单</button>
+          </div>
+        </form>
+        <div class="editor-foot">内容只保存在这台设备的浏览器中；此页面没有表单上传接口，也不会将你的经历发送到服务器。</div>
+      </aside>
+
+      <section class="preview-wrap">
+        <div class="preview-head"><h2>实时预览</h2><span class="preview-hint">单页案例 · 桌面与手机自适应</span></div>
+        <div class="preview-shell">
+          <div class="browserbar" aria-hidden="true"><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-address">your-portfolio.page</span></div>
+          <article class="folio" id="preview">
+            <div class="folio-top">
+              <div class="folio-brand"><span class="folio-avatar" id="avatar">林</span><span><span id="previewName">林澄</span><br><span class="folio-role" id="previewRole">资深前端工程师</span></span></div>
+              <span class="folio-link" id="previewContact">联系我 ↗</span>
+            </div>
+            <div class="folio-hero">
+              <span class="folio-label"><i></i>SELECTED CASE / 01</span>
+              <h3 id="previewIntro">专注把复杂问题，整理成可复用的体验系统。</h3>
+              <p class="folio-intro" id="previewDeck">从真实业务约束出发，找到可持续演进的前端方案，让团队协作更清楚，产品体验更一致。</p>
+            </div>
+            <div class="folio-divider"></div>
+            <section class="project-card">
+              <div class="project-meta"><span id="previewMeta">PROJECT CASE · PLATFORM</span><span id="previewPeriod">2023 — 2025</span></div>
+              <h2 class="project-title" id="previewTitle">让重复交付，变成可复用的体验系统</h2>
+              <p class="project-deck" id="previewProjectDeck">把零散的页面经验沉淀为统一的组件、规范与协作方式。</p>
+              <div class="project-art" aria-label="自动生成的项目概念插图">
+                <div class="art-orbit"></div><span class="art-node n1"></span><span class="art-node n2"></span><span class="art-node n3"></span><span class="art-node n4"></span><span class="art-core">↗</span><span class="art-copy">SYSTEMS / PEOPLE / IMPACT</span>
+              </div>
+              <div class="story-grid">
+                <div class="story-block"><h4>背景与挑战</h4><p id="previewChallenge">多个业务团队维护相似界面，交互逐渐分叉，重复实现也让体验难以保持一致。</p></div>
+                <div class="story-block"><h4>我的关键行动</h4><p id="previewActions">梳理高频场景与底层约束，建立组件契约和设计 token；通过渐进迁移，让复用能力进入日常交付。</p></div>
+                <div class="story-block"><h4>结果与影响</h4><p id="previewImpact">把重复建设转为可组合的共享能力。正式发布前，再补充可核实的指标、观察周期或团队反馈。</p></div>
+                <div class="story-block"><h4>我的角色</h4><p id="previewProjectRole">前端架构 · 体验协同</p></div>
+              </div>
+              <div class="stack-row" id="previewStack"><span class="stack-chip">TypeScript</span><span class="stack-chip">React</span><span class="stack-chip">Design Systems</span></div>
+            </section>
+            <footer class="folio-footer"><span>一个案例，讲清楚一件重要的事。</span><a href="#" id="footerContact">hello@example.com ↗</a></footer>
+          </article>
+        </div>
+      </section>
+    </section>
+    <footer class="page-foot"><strong>不是简历模板，而是一段可读的项目叙事。</strong><span>自动排版不替你编造事实；发布前请核实成果、数字与公开权限。</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const fields = ['name','role','introText','projectTitle','projectDeck','projectRole','projectPeriod','challenge','actionsText','impact','stack','contact'];
+      const demo = {
+        name: '林澄',
+        role: '资深前端工程师',
+        introText: '专注把复杂问题，整理成可复用的体验系统。',
+        projectTitle: '让重复交付，变成可复用的体验系统',
+        projectDeck: '把零散的页面经验沉淀为统一的组件、规范与协作方式。',
+        projectRole: '前端架构 · 体验协同',
+        projectPeriod: '2023 — 2025',
+        challenge: '多个业务团队维护相似界面，交互逐渐分叉，重复实现也让体验难以保持一致。',
+        actionsText: '梳理高频场景与底层约束，建立组件契约和设计 token；通过渐进迁移，让复用能力进入日常交付。',
+        impact: '把重复建设转为可组合的共享能力。正式发布前，再补充可核实的指标、观察周期或团队反馈。',
+        stack: 'TypeScript · React · Design Systems',
+        contact: ''
+      };
+      const $ = id => document.getElementById(id);
+      const storageKey = 'project-to-portfolio-v1';
+      const bindings = {
+        name: 'previewName', role: 'previewRole', introText: 'previewIntro', projectDeck: 'previewDeck',
+        projectTitle: 'previewTitle', projectRole: 'previewProjectRole', projectPeriod: 'previewPeriod',
+        challenge: 'previewChallenge', actionsText: 'previewActions', impact: 'previewImpact'
+      };
+      const fallback = {
+        name: '你的名字', role: '你的目标方向', introText: '用一句话说明你擅长解决的问题。',
+        projectDeck: '写下项目解决了什么问题，以及它为什么重要。', projectTitle: '你的项目名称',
+        projectRole: '你的角色与贡献', projectPeriod: '项目周期', challenge: '补充背景、约束与挑战。',
+        actionsText: '说明你的判断、行动与取舍。', impact: '填写可验证的结果；没有数字时，写清楚观察方式。'
+      };
+      const toast = message => {
+        $('toast').textContent = message;
+        $('toast').classList.add('show');
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => $('toast').classList.remove('show'), 2200);
+      };
+      const readValues = () => Object.fromEntries(fields.map(id => [id, $(id).value.trim()]));
+      const save = () => {
+        try { localStorage.setItem(storageKey, JSON.stringify(readValues())); } catch (_) {}
+      };
+      const setValues = values => {
+        fields.forEach(id => { $(id).value = values[id] || ''; });
+        render();
+      };
+      const setText = (id, text) => { $(id).textContent = text; };
+      const render = () => {
+        const d = readValues();
+        Object.entries(bindings).forEach(([source, target]) => setText(target, d[source] || fallback[source]));
+        const initial = (d.name || fallback.name).trim().charAt(0) || '你';
+        setText('avatar', initial);
+        setText('previewContact', d.contact ? '联系我 ↗' : '联系我 ↗');
+        const emailSafe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact);
+        const contact = emailSafe ? d.contact : '';
+        const footer = $('footerContact');
+        footer.textContent = contact ? `${contact} ↗` : '添加公开邮箱 ↗';
+        footer.href = contact ? `mailto:${contact.replace(/["<>]/g, '')}` : '#';
+        const tech = d.stack.split(/[·,，、\n]+/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+        $('previewStack').replaceChildren(...(tech.length ? tech : ['补充技术标签']).map(label => {
+          const chip = document.createElement('span'); chip.className = 'stack-chip'; chip.textContent = label; return chip;
+        }));
+        const required = [...document.querySelectorAll('[data-required="true"]')];
+        const done = required.filter(el => el.value.trim().length > 0).length;
+        setText('completeCount', `${done}/${required.length}`);
+        save();
+      };
+      const escapeHTML = value => String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      const multiline = value => escapeHTML(value).replace(/\r?\n/g, '<br>');
+      const generatedHTML = () => {
+        const d = readValues();
+        const get = (key, defaultText) => multiline(d[key] || defaultText);
+        const title = d.projectTitle || '我的项目作品集';
+        const safeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact) ? d.contact : '';
+        const tags = d.stack.split(/[·,，、\n]+/).map(x => x.trim()).filter(Boolean).slice(0, 8);
+        const tagHTML = tags.map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join('');
+        return `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeHTML(d.introText || '项目作品集')}"><title>${escapeHTML(title)} · ${escapeHTML(d.name || '作品集')}</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f3ed;color:#24251f;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}.page{max-width:900px;margin:auto;padding:54px 28px 38px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.person{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:750}.avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#24251f;color:#d7e99b}.role{display:block;margin-top:4px;color:#77786f;font-size:11px;font-weight:450}.contact{padding:9px 13px;border:1px solid #dedbd2;border-radius:99px;color:#30312b;font-size:11px;text-decoration:none}.hero{padding:75px 0 48px}.label{color:#d95639;font-size:10px;font-weight:800;letter-spacing:.16em}.hero h1{max-width:740px;margin:15px 0;font-size:clamp(36px,8vw,68px);line-height:1.04;letter-spacing:-.065em}.hero p,.deck{max-width:650px;color:#73746c;line-height:1.85}.hero p{font-size:14px}.rule{height:1px;background:#e4e1d9}.project{padding:28px 0}.meta{display:flex;justify-content:space-between;gap:15px;color:#8a8b83;font-size:10px;letter-spacing:.12em}.project h2{max-width:760px;margin:16px 0 10px;font-size:clamp(26px,5vw,42px);line-height:1.15;letter-spacing:-.045em}.deck{font-size:13px}.art{height:190px;position:relative;overflow:hidden;margin:28px 0;border-radius:14px;background:#e8eddb;display:grid;place-items:center}.orbit{width:210px;height:210px;position:absolute;border:1px solid #bfc8b4;border-radius:50%}.orbit:before,.orbit:after{content:"";position:absolute;inset:23px;border:1px solid #cbd2c2;border-radius:50%}.orbit:after{inset:52px}.core{z-index:1;width:68px;height:68px;display:grid;place-items:center;border-radius:20px;background:#f16c4a;color:white;font-size:22px;transform:rotate(-8deg)}.sections{display:grid;grid-template-columns:1fr 1fr;gap:20px 30px}.block{padding-top:14px;border-top:1px solid #e4e1d9}.block h3{margin:0 0 8px;font-size:12px}.block p{margin:0;color:#73746c;font-size:12px;line-height:1.8}.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:22px}.tag{padding:7px 10px;border:1px solid #dedbd2;border-radius:99px;color:#66675f;font-size:10px}.foot{display:flex;justify-content:space-between;gap:12px;margin-top:45px;padding-top:15px;border-top:1px solid #e4e1d9;color:#85867e;font-size:10px}.foot a{color:inherit;text-decoration:none}@media(max-width:580px){.page{padding:28px 19px}.hero{padding:53px 0 34px}.sections{gap:16px}.art{height:150px}.foot{display:block}.foot span{display:block;margin-top:6px}}
+</style></head><body><main class="page"><header class="top"><div class="person"><span class="avatar">${escapeHTML((d.name || '你').charAt(0))}</span><span>${get('name','你的名字')}<span class="role">${get('role','你的目标方向')}</span></span></div>${safeEmail ? `<a class="contact" href="mailto:${escapeHTML(safeEmail)}">联系我 ↗</a>` : ''}</header><section class="hero"><span class="label">SELECTED CASE / 01</span><h1>${get('introText','用一句话说明你擅长解决的问题。')}</h1><p>${get('projectDeck','写下项目解决了什么问题，以及它为什么重要。')}</p></section><div class="rule"></div><article class="project"><div class="meta"><span>PROJECT CASE</span><span>${get('projectPeriod','项目周期')}</span></div><h2>${get('projectTitle','你的项目名称')}</h2><p class="deck">${get('projectDeck','补充项目简介。')}</p><div class="art" aria-hidden="true"><div class="orbit"></div><span class="core">↗</span></div><div class="sections"><section class="block"><h3>背景与挑战</h3><p>${get('challenge','补充背景、约束与挑战。')}</p></section><section class="block"><h3>我的关键行动 · ${get('projectRole','你的角色与贡献')}</h3><p>${get('actionsText','说明你的判断、行动与取舍。')}</p></section><section class="block"><h3>结果与影响</h3><p>${get('impact','填写可验证的结果；没有数字时，写清楚观察方式。')}</p></section></div><div class="tags">${tagHTML}</div></article><footer class="foot"><span>一个案例，讲清楚一件重要的事。</span>${safeEmail ? `<a href="mailto:${escapeHTML(safeEmail)}">${escapeHTML(safeEmail)} ↗</a>` : '<span>案例内容由本人整理</span>'}</footer></main></body></html>`;
+      };
+      fields.forEach(id => $(id).addEventListener('input', render));
+      $('downloadBtn').addEventListener('click', () => {
+        const blob = new Blob([generatedHTML()], {type: 'text/html;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `${(readValues().name || 'portfolio').replace(/[^\p{L}\p{N}_-]+/gu, '-')}-portfolio.html`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        toast('已生成独立 HTML 文件');
+      });
+      $('pdfBtn').addEventListener('click', () => window.print());
+      $('copyBtn').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(generatedHTML()); toast('作品集源码已复制'); }
+        catch (_) { toast('复制被浏览器拦截，请使用下载按钮'); }
+      });
+      $('clearBtn').addEventListener('click', () => { setValues({}); toast('已清空，可以开始填写'); });
+      let loaded = null;
+      try { loaded = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch (_) {}
+      setValues(loaded && typeof loaded === 'object' ? loaded : demo);
+    })();
+  </script>
+</body>
+</html>
