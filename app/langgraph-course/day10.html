@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 10：分析层：并行分析、画像子图与条件边 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 10 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 10：分析层：并行分析、画像子图与条件边</h1>
+<p>数据洗干净了，才轮到分析。这一课把分析拆成四路：定量、定性、交叉、画像，四路并行跑，再由汇总节点收口——慢的那一路不堵快的那一路。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 210" width="100%" role="img" aria-label="分析层：已打标数据经 Send 扇出到定量、定性、交叉、画像四路并行节点，再汇总成分析结果">
+<rect x="264" y="8" width="200" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="36" text-anchor="middle" font-size="13" fill="#222">已清洗打标的数据</text>
+<line x1="304" y1="52" x2="130" y2="92" stroke="#0b62d6" stroke-width="2"/><polygon points="130,92 142,88 138,100" fill="#0b62d6"/>
+<line x1="344" y1="52" x2="303" y2="92" stroke="#0b62d6" stroke-width="2"/><polygon points="303,92 315,88 311,100" fill="#0b62d6"/>
+<line x1="384" y1="52" x2="425" y2="92" stroke="#0b62d6" stroke-width="2"/><polygon points="425,92 413,88 417,100" fill="#0b62d6"/>
+<line x1="424" y1="52" x2="598" y2="92" stroke="#0b62d6" stroke-width="2"/><polygon points="598,92 586,88 590,100" fill="#0b62d6"/>
+<rect x="30" y="92" width="200" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="130" y="120" text-anchor="middle" font-size="13" fill="#222">定量分析</text>
+<rect x="203" y="92" width="200" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="303" y="120" text-anchor="middle" font-size="13" fill="#222">定性分析</text>
+<rect x="376" y="92" width="200" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="476" y="120" text-anchor="middle" font-size="13" fill="#222">交叉分析</text>
+<rect x="520" y="92" width="180" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="610" y="120" text-anchor="middle" font-size="13" fill="#222">画像子图</text>
+<line x1="130" y1="136" x2="304" y2="168" stroke="#0b62d6" stroke-width="2"/><polygon points="304,168 292,164 296,176" fill="#0b62d6"/>
+<line x1="303" y1="136" x2="344" y2="168" stroke="#0b62d6" stroke-width="2"/><polygon points="344,168 332,164 336,176" fill="#0b62d6"/>
+<line x1="476" y1="136" x2="404" y2="168" stroke="#0b62d6" stroke-width="2"/><polygon points="404,168 392,164 396,176" fill="#0b62d6"/>
+<line x1="610" y1="136" x2="440" y2="168" stroke="#0b62d6" stroke-width="2"/><polygon points="440,168 428,164 432,176" fill="#0b62d6"/>
+<rect x="264" y="168" width="200" height="36" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="364" y="191" text-anchor="middle" font-size="13" fill="#222">汇总节点</text>
+</svg>
+<h3>1. 四路分析，各看什么</h3>
+<p>定量看分布和变化：哪类反馈最多、哪类在变多，还能结合 4 年调研数据做纵向对比。定性看原话：用户到底在抱怨什么、想要什么，每条结论都要能回到原文。</p>
+<p>交叉看组合：把两个维度叠在一起看，例如不同使用场景下的同一类反馈，表现是不是不一样。画像看人：把反馈聚成几类典型用户，讲清楚“谁、在什么场景、卡在哪里”。</p>
+<h3>2. 并行分析：Send 扇出，汇总节点收口</h3>
+<p>四路互不依赖，就别串行等。先用 <code>Send</code> 把同一份已打标数据扇出到四个节点，四路同时跑；每路跑完把结果写回状态；最后由一个汇总节点收口，把四路结果拼成一份分析。</p>
+<p>关键在收口方式：汇总节点只在四路都到齐后才跑。某一路段住了，汇总就等着——这是有意的等，不是 bug。等齐了再拼，分析才完整。</p>
+<h3>3. 画像做成子图：里面也有自己的小图</h3>
+<p>画像不是一个节点能装下的：先聚类，再给每类提炼特征，再写成画像描述，最后校验画像有没有原文支撑。把它做成一张子图，内部是“聚类 → 提炼 → 校验”三个节点。</p>
+<p>大图只把画像子图当成一个节点：进去是已打标的数据，出来是画像结果。子图内部怎么分、怎么校验，大图不用管；以后画像算法换了，只改子图内部。</p>
+<h3>4. 交叉分析的条件边：问题决定走哪条路</h3>
+<p>交叉分析不是每次都全量跑。先看问题长什么样，再决定分流：只问一类用户，就走单维分析；问两类用户的差异，就走交叉对比；问“为什么”，就走定性深挖。</p>
+<p>这就是条件边：一个路由函数读状态里的问题类型，返回下一站的名字。问题变了，路线就变了，图不用重画。</p>
+<table>
+<tr><th>分析路</th><th>回答的问题</th><th>输出写进状态的什么字段</th></tr>
+<tr><td>定量</td><td>哪类反馈最多？在变多还是变少？</td><td>quant_result</td></tr>
+<tr><td>定性</td><td>用户原话在说什么？</td><td>qual_result（带原文引用）</td></tr>
+<tr><td>交叉</td><td>两个维度叠加后，差异在哪？</td><td>cross_result</td></tr>
+<tr><td>画像（子图）</td><td>这是哪类用户？卡在哪里？</td><td>persona_result</td></tr>
+</table>
+<div class="warn"><strong>容易踩的坑：</strong>汇总节点过早收口。四路里有一路还没写回状态，汇总就拼出了一份缺角的分析。正确做法是：汇总边只从四路都到齐的状态触发；缺一路，就等一路，别用“先拼一半”凑数。</div>
+<div class="card">
+<p><strong>▶ 互动：四路并行分析模拟</strong></p>
+<p>点“开始分析”，四路同时起跑，各自跑出进度，最后汇总节点收口。再点一个交叉问题，看条件边把它分流到哪条路。</p>
+<p><button id="runAnalysis">开始分析</button> <button id="resetAnalysis">重置</button></p>
+<p id="laneQuant">定量：等待开始</p>
+<p id="laneQual">定性：等待开始</p>
+<p id="laneCross">交叉：等待开始</p>
+<p id="lanePersona">画像子图：等待开始</p>
+<p id="summaryOut">汇总节点：等待四路到齐</p>
+<p>交叉问题分流：<button data-route="single">只看一类用户</button> <button data-route="compare">对比两类用户</button> <button data-route="why">问“为什么”</button></p>
+<p id="routeOut">点一个交叉问题，看条件边分流到哪条路。</p>
+</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Send 扇出四路，汇总节点收口（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Send
+from typing import Annotated
+from typing_extensions import TypedDict
+
+class AnalysisState(TypedDict):
+    tagged_data: list  # Day 9 打标完的数据：清洗、脱敏、打标已完成
+    quant_result: dict
+    qual_result: dict
+    cross_result: dict
+    persona_result: dict
+    summary: str
+
+# 四个分析节点：各自只读 tagged_data，只写自己的结果字段
+def quant_node(state): ...
+def qual_node(state): ...
+def cross_node(state): ...
+# 画像是一张子图：内部是“聚类 → 提炼 → 校验”三个节点
+persona_subgraph = persona_graph.compile()
+
+def fan_out(state):
+    # Send 扇出：同一份数据同时发给四路
+    return [
+        Send("quant", state),
+        Send("qual", state),
+        Send("cross", state),
+        Send("persona", state),
+    ]
+
+def summarize_node(state):
+    # 汇总节点：四路结果都到齐后才拼成一份分析
+    return {"summary": "定量 + 定性 + 交叉 + 画像已汇总"}
+
+graph = StateGraph(AnalysisState)
+graph.add_node("quant", quant_node)
+graph.add_node("qual", qual_node)
+graph.add_node("cross", cross_node)
+graph.add_node("persona", persona_subgraph)  # 子图就是一个节点
+graph.add_node("summarize", summarize_node)
+graph.add_edge(START, "fan_out")
+graph.add_conditional_edges("fan_out", fan_out,
+    {"quant": "quant", "qual": "qual", "cross": "cross", "persona": "persona"})
+# 四路都指向汇总节点：到齐后收口
+graph.add_edge("quant", "summarize")
+graph.add_edge("qual", "summarize")
+graph.add_edge("cross", "summarize")
+graph.add_edge("persona", "summarize")
+graph.add_edge("summarize", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>示例 2：交叉分析的条件边（问题决定路线）</h3>
+<pre><code># 路由函数：读状态里的问题类型，返回下一站的名字
+def route_cross_question(state):
+    qtype = state["question_type"]  # single / compare / why
+    if qtype == "compare":
+        return "cross_compare"  # 对比两类用户，走交叉对比
+    if qtype == "why":
+        return "qual_deep_dive"  # 问“为什么”，走定性深挖
+    return "single_dim"  # 只问一类用户，走单维分析
+
+graph.add_conditional_edges("ask", route_cross_question, {
+    "cross_compare": "cross_compare",
+    "qual_deep_dive": "qual_deep_dive",
+    "single_dim": "single_dim",
+})
+# 注意：条件边的返回名必须和映射表里的键一一对上，
+# 对不上，图会在运行时报错，别靠猜。</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 的四路改成两路（定量 + 画像子图），跑通一次：确认汇总节点只在两路都到齐后才出结果。<br>
+2. 给示例 2 再加一条分流：如果问题同时提到两类用户和“为什么”，先走交叉对比，再走定性深挖——画出这条路线经过哪几个节点。<br>
+3. 写一句画像子图的出入状态：进去时状态里有什么、出来时状态里多了什么；对不上这句，就别把子图拼进大图。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 定量、定性、交叉、画像四路，各自回答什么？</strong></p><button data-i="0">定量看分布变化、定性看原话、交叉看维度叠加后的差异、画像看是哪类用户卡在哪里</button><button data-i="1">四路都在数反馈有多少条</button><button data-i="2">四路都在给用户画像</button><div class="ans">解析：选 A。四路看的东西不一样，所以才能拼成一份完整的分析。</div></div>
+<div class="q" data-answer="1"><p><strong>2. Send 在分析层是干嘛的？</strong></p><button data-i="0">把四路结果拼成一份分析</button><button data-i="1">把同一份已打标数据同时扇出到四个并行节点</button><button data-i="2">把数据写进 TAPD</button><div class="ans">解析：选 B。扇出是 Send 的活，收口是汇总节点的活，别弄反。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 汇总节点什么时候跑？</strong></p><button data-i="0">第一路跑完就跑</button><button data-i="1">跑得最快的那路一到就跑</button><button data-i="2">四路结果都到齐后才跑</button><div class="ans">解析：选 C。缺一路就拼出缺角的分析，所以汇总要等齐。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 为什么把画像做成子图，而不是一个节点？</strong></p><button data-i="0">画像内部有“聚类 → 提炼 → 校验”多个步骤，装进一张子图后，大图只把它当一个节点用，内部换了也不影响大图</button><button data-i="1">因为子图跑得更快</button><button data-i="2">因为画像不需要原文支撑</button><div class="ans">解析：选 A。子图的意义是封装：内部多复杂，大图只看进出状态。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 交叉分析的条件边，靠什么决定走哪条路？</strong></p><button data-i="0">靠哪条路跑得快</button><button data-i="1">靠路由函数读状态里的问题类型，返回下一站的名字</button><button data-i="2">靠随机选择</button><div class="ans">解析：选 B。问题变了，路线就变了；返回名必须和映射表里的键对上。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 分析进汇总之前，必须先完成哪一步？</strong></p><button data-i="0">先把需求写进 TAPD</button><button data-i="1">先让产品同学对话追问</button><button data-i="2">先清洗、脱敏、打标</button><div class="ans">解析：选 C。数据先清洗、脱敏、打标再进分析，这是 Day 9 定下的顺序。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：分析层为什么要并行？Send 是怎么用的？</summary><p>定量、定性、交叉、画像四路互不依赖，串行等就是浪费时间。用 Send 把同一份已打标数据同时扇出到四个节点，四路同时跑，各自把结果写回状态，最后汇总节点收口。</p></details>
+<details><summary>Q2：汇总节点怎么保证四路都到齐了才跑？</summary><p>四路的边都指向汇总节点，汇总只在四路结果都写回状态后才触发。缺一路就等一路，不拼缺角的分析——过早收口是这一课最容易踩的坑。</p></details>
+<details><summary>Q3：画像为什么做成子图？子图内部长什么样？</summary><p>画像内部有“聚类 → 提炼 → 校验”三个步骤，一个节点装不下。做成子图后，大图只把它当一个节点：进去是已打标的数据，出来是画像结果；子图内部换了，大图不用改。校验那一步要确认画像有原文支撑。</p></details>
+<details><summary>Q4：交叉分析的条件边是怎么分流的？</summary><p>路由函数读状态里的问题类型再返回下一站：只问一类用户走单维分析，问两类用户的差异走交叉对比，问“为什么”走定性深挖。返回名必须和映射表里的键一一对上，对不上运行时会报错。</p></details>
+<details><summary>Q5：定量分析里，4 年数据是干嘛的？</summary><p>做纵向对比：同一类反馈今年和往年比，是变多还是变少。只看一年，只能看到“现在有多少”；叠上 4 年调研数据，才能看到趋势往哪走。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>分析层上线前先问三句：四路的结果字段会不会互相覆盖（各写各的字段）？汇总节点是不是等齐了才跑？画像子图的进出状态和大图对齐了吗？有一句答不上来，并行分析就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过并行分析”，写“分析层 Send 扇出定量、定性、交叉、画像四路并行，汇总节点收口；画像做成子图（聚类 → 提炼 → 校验），交叉问题走条件边分流”。前者是名词，后者是可追问的项目。</p>
+<p><strong>明日预告：</strong>Day 11 讲对话追问：产品同学直接问 Agent，ReAct + 检索怎么答、答案怎么绑定原文引用、知识库里没有时怎么说“没有”。</p>
+</div>
+<div class="nav"><span><a href="day09.html">← Day 9</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day11.html">Day 11 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+var lanes = {quant: document.getElementById('laneQuant'), qual: document.getElementById('laneQual'), cross: document.getElementById('laneCross'), persona: document.getElementById('lanePersona')};
+var summaryOut = document.getElementById('summaryOut');
+var timers = [];
+function setLane(key, text){ lanes[key].textContent = text; }
+document.getElementById('runAnalysis').addEventListener('click', function(){
+  timers.forEach(clearTimeout); timers = [];
+  setLane('quant', '定量：跑步中…'); setLane('qual', '定性：跑步中…');
+  setLane('cross', '交叉：跑步中…'); setLane('persona', '画像子图：聚类中…');
+  summaryOut.textContent = '汇总节点：等待四路到齐…';
+  var plan = [['qual', '定性：完成（原话已归纳，带引用）', 600], ['quant', '定量：完成（分布与 4 年纵向对比已出）', 1100], ['persona', '画像子图：完成（聚类 → 提炼 → 校验通过）', 1600], ['cross', '交叉：完成（维度叠加后的差异已出）', 2100]];
+  plan.forEach(function(p){
+    timers.push(setTimeout(function(){ setLane(p[0], p[1]); }, p[2]));
+  });
+  timers.push(setTimeout(function(){ summaryOut.textContent = '汇总节点：四路到齐，已拼成一份分析。'; }, 2400));
+});
+document.getElementById('resetAnalysis').addEventListener('click', function(){
+  timers.forEach(clearTimeout); timers = [];
+  setLane('quant', '定量：等待开始'); setLane('qual', '定性：等待开始');
+  setLane('cross', '交叉：等待开始'); setLane('persona', '画像子图：等待开始');
+  summaryOut.textContent = '汇总节点：等待四路到齐';
+});
+var routes = {single: '条件边：问题类型 single → 走“单维分析”。', compare: '条件边：问题类型 compare → 走“交叉对比”。', why: '条件边：问题类型 why → 走“定性深挖”。'};
+document.querySelectorAll('[data-route]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.getElementById('routeOut').textContent = routes[btn.dataset.route];
+  });
+});
+</script>
+
+</body>
+</html>

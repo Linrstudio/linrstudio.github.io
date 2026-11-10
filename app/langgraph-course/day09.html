@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 9：数据层：清洗、脱敏、打标三个节点 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 9 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 9：数据层：清洗、脱敏、打标三个节点</h1>
+<p>分析做得再好，也救不回脏数据。今天只做一件事：把调研数据变成分析能用的干净数据——清洗、脱敏、打标，三个节点，一个都不能省。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="数据层流水线：原始反馈经过清洗、脱敏、打标三个节点，再进入分析">
+<rect x="24" y="30" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="99" y="59" text-anchor="middle" font-size="13" fill="#222">原始反馈</text>
+<line x1="174" y1="54" x2="208" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="208,54 196,48 196,60" fill="#0b62d6"/>
+<rect x="208" y="30" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="283" y="59" text-anchor="middle" font-size="13" fill="#222">清洗节点</text>
+<line x1="358" y1="54" x2="392" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="392,54 380,48 380,60" fill="#0b62d6"/>
+<rect x="392" y="30" width="150" height="48" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="467" y="59" text-anchor="middle" font-size="13" fill="#222">脱敏节点（入库前）</text>
+<line x1="542" y1="54" x2="576" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="576,54 564,48 564,60" fill="#0b62d6"/>
+<rect x="576" y="30" width="128" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="640" y="59" text-anchor="middle" font-size="13" fill="#222">打标节点</text>
+<text x="24" y="110" font-size="13" fill="#222">顺序不能换：脱敏必须在入库前完成</text>
+<text x="24" y="136" font-size="13" fill="#222">打标之后要人工复核，复核完的数据才进分析</text>
+</svg>
+<h3>1. 清洗节点：先把不能用的去掉</h3>
+<p>调研数据里有空反馈、重复提交、乱码和明显无效的内容。清洗节点只干一件事：去掉这些，留下能分析的。客服会话数据每天增量更新：每天只处理新增的会话，入库时做增量索引，新数据进库不用全量重建索引。</p>
+<p>清洗不改原意。删的是一条记录，不是改写一句话。删了什么、为什么删，记在状态里，方便回头查。</p>
+<h3>2. 脱敏节点：入库前做，晚了就没用了</h3>
+<p>反馈里常带姓名、电话、邮箱、公司名。这些信息分析用不上，但一旦入库，Agent 就能看到。脱敏必须在入库前完成。</p>
+<p>顺序不能换。先入库、后脱敏，等于先把隐私交出去，再假装没交过。下面可以点一点，看同一条反馈脱敏前后 Agent 各能看到什么。</p>
+<div class="card">
+<p><strong>互动：一条样本反馈，脱敏前后对比</strong></p>
+<p>样本反馈（示意，非真实用户数据）：</p>
+<p id="sampleText">“我是小李，电话 138-1234-5678，邮箱 lili@example.com，在 XX 公司做投放。创建广告时，操作步骤太多，经常找不到定向设置，希望能简单一点。”</p>
+<p>
+<button id="btnRaw" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">脱敏前：原始文本</button>
+<button id="btnMasked" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">脱敏后：入库版本</button>
+</p>
+<p id="agentView"><strong>Agent 能看到：</strong>姓名、电话、邮箱、公司名、反馈内容——全部可见。</p>
+<p id="agentHidden" style="color:#666"><strong>Agent 看不到：</strong>（脱敏前）什么都没藏。</p>
+</div>
+<h3>3. 打标节点：模型先打，人再复核</h3>
+<p>打标是给每条反馈贴上标签：它在说什么、属于哪个环节、情绪是正面还是负面。标签越准，后面的定量、定性、交叉分析才越准。</p>
+<p>模型打标快，但会打错。人工复核不是全量重做，是抽查加纠错：发现打错的标签就改过来，改完才算数。下面点一下，看一次人工复核改了什么。</p>
+<div class="card">
+<p><strong>互动：打标演示（模型打标 + 人工改一处）</strong></p>
+<p>模型打标：<span class="tag">操作复杂</span> <span class="tag">定向设置</span> <span class="tag">负面</span></p>
+<p id="reviewResult">人工复核：尚未复核。点下面的按钮，看人工改了哪一处。</p>
+<p>
+<button id="btnReview" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">人工复核：改一处</button>
+<button id="btnResetTag" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">重置</button>
+</p>
+</div>
+<h3>4. State 的 reducer：三个节点怎么往状态里写数据</h3>
+<p>三个节点跑完，状态里要多出三样东西：清洗后的反馈、脱敏后的反馈、打好的标签。每个节点只写自己那一份，不动别人的。</p>
+<p>这就是 reducer 的作用：<code>messages</code> 用 <code>add_messages</code> 追加，列表字段用“追加”而不是“覆盖”。两个节点同时写状态，也不会互相丢数据。</p>
+<table>
+<tr><th>节点</th><th>读什么</th><th>往 State 里写什么</th></tr>
+<tr><td>清洗</td><td>原始反馈</td><td>cleaned_feedback（清洗后的列表）</td></tr>
+<tr><td>脱敏</td><td>清洗后的反馈</td><td>masked_feedback（脱敏后的列表，入库用这份）</td></tr>
+<tr><td>打标</td><td>脱敏后的反馈</td><td>tags（标签列表，复核后才定稿）</td></tr>
+</table>
+<div class="warn"><strong>容易踩的坑：</strong>脱敏放在入库之后做。数据一进库，Agent 就能检索到；事后删库里的原始文本，也删不掉已经生成的引用和快照。脱敏节点必须排在入库之前，顺序写进图里，别靠人记。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：清洗 → 脱敏 → 打标，三个节点串起来（先看形状）</h3>
+<pre><code>from typing import TypedDict, Annotated
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+import operator
+
+# State：每个节点只写自己那一份，用 reducer 追加，不覆盖
+class DataState(TypedDict):
+    messages: Annotated[list, add_messages]  # 对话记录，追加
+    raw_feedback: list  # 原始反馈
+    cleaned_feedback: Annotated[list, operator.add]  # 清洗后，追加
+    masked_feedback: Annotated[list, operator.add]  # 脱敏后，追加
+    tags: Annotated[list, operator.add]  # 标签，追加
+
+def clean_node(state: DataState):
+    # 去掉空反馈、重复提交、乱码；删了什么记下来
+    cleaned = [f for f in state["raw_feedback"] if f.strip()]
+    return {"cleaned_feedback": cleaned}
+
+def mask_node(state: DataState):
+    # 脱敏：姓名、电话、邮箱、公司名全部替换掉
+    # 注意：这一步在入库前做，入库用的就是 masked_feedback
+    masked = [mask_pii(f) for f in state["cleaned_feedback"]]
+    return {"masked_feedback": masked}
+
+def tag_node(state: DataState):
+    # 打标：模型先打标签，标签列表写进 State
+    tags = [tag_one(f) for f in state["masked_feedback"]]
+    return {"tags": tags}
+
+graph = StateGraph(DataState)
+graph.add_node("clean", clean_node)
+graph.add_node("mask", mask_node)
+graph.add_node("tag", tag_node)
+graph.add_edge(START, "clean")
+graph.add_edge("clean", "mask")  # 顺序写死：清洗 → 脱敏
+graph.add_edge("mask", "tag")  # 脱敏 → 打标，脱敏在入库前
+graph.add_edge("tag", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>示例 2：打标后人工复核，interrupt 停住等人工改（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import interrupt
+from langgraph.prebuilt import ToolNode
+
+# 人工复核节点：把模型打的标签给人看，人改完再继续
+def review_node(state: DataState):
+    # interrupt 停住：等人工复核，改完的标签由人工传回来
+    reviewed_tags = interrupt({"tags": state["tags"], "note": "请复核标签，打错的改掉"})
+    return {"tags": reviewed_tags}
+
+# 入库节点：只写脱敏后的反馈 + 复核后的标签，不写原始文本
+def store_node(state: DataState):
+    # 按生产配置接知识库写入工具；这里只看形状
+    return {"messages": ["已入库：脱敏后的反馈 + 复核后的标签"]}
+
+graph = StateGraph(DataState)
+graph.add_node("tag", tag_node)
+graph.add_node("review", review_node)  # 人工复核
+graph.add_node("store", store_node)  # 入库
+graph.add_edge(START, "tag")
+graph.add_edge("tag", "review")
+graph.add_edge("review", "store")
+graph.add_edge("store", END)
+# ToolNode 挂在 store 之后也行：入库本身就是一次工具调用
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 写一个 mask_pii 函数：把一段文本里的电话和邮箱替换成占位符，跑通一次，再检查脱敏后的文本里还剩不剩原始信息。<br>
+2. 给 DataState 加一个字段 reviewed_tags：模型打的标签放 tags，人工改完的放 reviewed_tags，入库只用 reviewed_tags。<br>
+3. 把三个节点的顺序画成一张小图，标出“脱敏在入库前”这个点，再想一想：如果清洗和打标调换顺序，会出什么问题？</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 数据层三个节点的正确顺序是？</strong></p><button data-i="0">清洗 → 脱敏 → 打标</button><button data-i="1">打标 → 脱敏 → 清洗</button><button data-i="2">脱敏 → 打标 → 清洗</button><div class="ans">解析：选 A。先去掉不能用的，再脱敏，最后打标。顺序不能换。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 脱敏为什么必须在入库前做？</strong></p><button data-i="0">因为入库之后脱敏更快</button><button data-i="1">因为数据一进库，Agent 就能检索到；事后删原始文本，也删不掉已经生成的引用和快照</button><button data-i="2">因为脱敏之后数据会变少</button><div class="ans">解析：选 B。先入库、后脱敏，等于先把隐私交出去，再假装没交过。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 打标之后为什么要人工复核？</strong></p><button data-i="0">因为模型打标太慢</button><button data-i="1">因为人工复核能多打几个标签</button><button data-i="2">因为模型会打错标签，复核是抽查加纠错，改完才算数</button><div class="ans">解析：选 C。模型打标快但会打错，人工复核不是全量重做，是发现打错就改过来。</div></div>
+<div class="q" data-answer="0"><p><strong>4. State 里 cleaned_feedback 用 reducer 追加而不是覆盖，是为了什么？</strong></p><button data-i="0">两个节点同时写状态时不互相丢数据</button><button data-i="1">让代码看起来更长</button><button data-i="2">让状态占用更少内存</button><div class="ans">解析：选 A。messages 配 add_messages 追加，列表字段用追加而不是覆盖，并行写状态才安全。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 清洗节点删掉一条反馈时，应该怎么做？</strong></p><button data-i="0">悄悄删掉，不用留记录</button><button data-i="1">删了什么、为什么删，记在状态里，方便回头查</button><button data-i="2">先改写这句话再删</button><div class="ans">解析：选 B。清洗不改原意，删的是一条记录，删的理由要留痕。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 入库时应该用哪份数据？</strong></p><button data-i="0">原始反馈</button><button data-i="1">清洗后、脱敏前的反馈</button><button data-i="2">脱敏后的反馈 + 人工复核后的标签</button><div class="ans">解析：选 C。入库只写脱敏后的反馈和复核后的标签，原始文本不入库。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：数据层为什么要拆成清洗、脱敏、打标三个节点？</summary><p>三个节点各管一件事：清洗去掉不能用的，脱敏去掉隐私，打标贴上标签。拆开之后顺序写进图里，出了问题能定位到具体哪一步，也能单独换掉某一步的做法。</p></details>
+<details><summary>Q2：脱敏为什么必须在入库前？放后面会怎样？</summary><p>数据一进库，Agent 就能检索到；事后删库里的原始文本，也删不掉已经生成的引用和快照。所以脱敏节点必须排在入库之前，顺序写进图里，别靠人记。</p></details>
+<details><summary>Q3：打标是模型打还是人工打？</summary><p>模型先打，人工再复核。模型打标快但会打错，人工复核是抽查加纠错，发现打错的标签就改过来，改完才算数，入库只用复核后的标签。</p></details>
+<details><summary>Q4：State 的 reducer 在数据层起什么作用？</summary><p>每个节点只写自己那一份：messages 用 add_messages 追加，列表字段用追加而不是覆盖。两个节点同时写状态，也不会互相丢数据，清洗、脱敏、打标三份结果都留在状态里。</p></details>
+<details><summary>Q5：这个项目的数据层，你从 0 到 1 主导搭建时最难的是什么？</summary><p>最难的不是三个节点本身，是顺序和权限：脱敏必须在入库前，检索层还要按产品隔离权限。这个项目最难的 Bug 就是权限隔离只做了 UI 层、检索层没过滤，Agent 回答带出了别家产品反馈——数据层做对了，权限还要在检索层再做一层，Day 12 再讲。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>数据层上线前问三个问题：脱敏在入库前吗？打标有人复核吗？清洗删了什么能查到吗？三问有一个答不上来，数据就别进分析。</p>
+<p><strong>简历讲法：</strong>别写“做过数据清洗”，写“从 0 到 1 主导搭建数据层：清洗、脱敏、打标三个节点，脱敏在入库前完成，打标加人工复核，State 用 reducer 追加写回，入库只用脱敏后的反馈和复核后的标签”。前者是名词，后者是可追问的项目。</p>
+<p><strong>明日预告：</strong>Day 10 进入分析层：定量、定性、交叉分析与用户画像，四路并行跑起来，再用条件边分流交叉问题。</p>
+</div>
+<div class="nav"><span><a href="day08.html">← Day 8</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day10.html">Day 10 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+// 互动 1：脱敏前后切换
+var rawText = '“我是小李，电话 138-1234-5678，邮箱 lili@example.com，在 XX 公司做投放。创建广告时，操作步骤太多，经常找不到定向设置，希望能简单一点。”';
+var maskedText = '“我是[姓名已脱敏]，电话 [电话已脱敏]，邮箱 [邮箱已脱敏]，在 [公司名已脱敏] 做投放。创建广告时，操作步骤太多，经常找不到定向设置，希望能简单一点。”';
+document.getElementById('btnRaw').addEventListener('click', function(){
+  document.getElementById('sampleText').textContent = rawText;
+  document.getElementById('agentView').innerHTML = '<strong>Agent 能看到：</strong>姓名、电话、邮箱、公司名、反馈内容——全部可见。';
+  document.getElementById('agentHidden').textContent = 'Agent 看不到：（脱敏前）什么都没藏。';
+});
+document.getElementById('btnMasked').addEventListener('click', function(){
+  document.getElementById('sampleText').textContent = maskedText;
+  document.getElementById('agentView').innerHTML = '<strong>Agent 能看到：</strong>反馈内容——“创建广告时，操作步骤太多，经常找不到定向设置，希望能简单一点。”';
+  document.getElementById('agentHidden').textContent = 'Agent 看不到：姓名、电话、邮箱、公司名——已脱敏，入库版本里没有这些。';
+});
+// 互动 2：打标人工复核
+document.getElementById('btnReview').addEventListener('click', function(){
+  document.getElementById('reviewResult').innerHTML = '人工复核：已改一处——“操作复杂”改为“入门门槛高”，因为用户说的是“经常找不到定向设置”，问题在新手找不到入口，不只是步骤多。定稿标签：<span class="tag">入门门槛高</span> <span class="tag">定向设置</span> <span class="tag">负面</span>';
+});
+document.getElementById('btnResetTag').addEventListener('click', function(){
+  document.getElementById('reviewResult').textContent = '人工复核：尚未复核。点下面的按钮，看人工改了哪一处。';
+});
+</script>
+
+</body>
+</html>

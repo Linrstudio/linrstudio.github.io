@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 14：知识库更新与复盘：版本戳、竞品对比与面试讲法 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 14 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 14：知识库更新与复盘：版本戳、竞品对比与面试讲法</h1>
+<p>最后一课，收束第 2 周：知识库不是建完就完事的，它要一直更新；更新要有版本戳，不然你不知道答案是哪天的。最后把整个项目复盘成一段 5 分钟能讲完的话。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="知识库更新流水线：触发器触发更新节点，写新版本戳，对比节点再跑能力对比">
+<rect x="20" y="60" width="130" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="85" y="89" text-anchor="middle" font-size="13" fill="#222">更新触发器</text>
+<line x1="150" y1="84" x2="200" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="200,84 188,78 188,90" fill="#0b62d6"/>
+<rect x="200" y="60" width="130" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="265" y="89" text-anchor="middle" font-size="13" fill="#222">更新节点</text>
+<line x1="330" y1="84" x2="380" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="380,84 368,78 368,90" fill="#0b62d6"/>
+<rect x="380" y="60" width="130" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="445" y="89" text-anchor="middle" font-size="13" fill="#222">版本戳 v1.2</text>
+<line x1="510" y1="84" x2="560" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="560,84 548,78 548,90" fill="#0b62d6"/>
+<rect x="560" y="60" width="148" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="634" y="89" text-anchor="middle" font-size="13" fill="#222">竞品对比节点</text>
+<text x="20" y="140" font-size="13" fill="#222">每次更新都留版本戳：答案来自哪个版本，一查就知道</text>
+</svg>
+<h3>1. 知识库为什么要持续更新：不更新，答案就过期</h3>
+<p>产品知识库和竞品知识库都要持续更新。产品发了新能力，库里没有，Agent 就答不出来；竞品上了新能力，库里没有，对比结果就是错的。</p>
+<p>所以更新不是“有空再做”，它是图里的一个节点：触发器一到，更新节点就跑，跑完写一个新版本戳。知识库支持 Markdown、JSON、HTML 文档导入，导入后解析、切片再入库，检索时用混合检索，答案带引用生成，更新效果靠 Eval 评估。</p>
+<h3>2. 更新触发器：什么情况下触发一次更新</h3>
+<p>触发器分两种。一种是事件触发：产品发布了新能力、竞品有了新动作、新的调研数据到了，就触发一次更新。一种是定时触发：到了固定周期，把两个库都扫一遍。竞品知识库获取困难、定期上新或更新，做法是编写 Skill 设定时任务，定时爬取更新日志及帮助中心文档，拿到新内容后按版本重建索引。</p>
+<p>触发器要写在图里，不要只记在人脑子里。写在图里，触发条件、更新内容、版本号都留在状态里，能追溯。</p>
+<h3>3. 版本戳：每个答案都要能说出自己来自哪个版本</h3>
+<p>每次更新完，给知识库打一个版本戳，比如 v1.1、v1.2。检索到的每个知识片段，都带上它所属的版本戳。</p>
+<p>这样做的好处很直接：用户追问“你这个结论是哪天的”，Agent 能答上来；出了问题，也能定位到是哪个版本的库出了错。</p>
+<p>下面点一点版本时间线，看同一个能力对比在不同版本下结果怎么变（演示数据，只为看清“版本变了，结论跟着变”这个道理）。</p>
+<div class="card">
+<p><strong>知识库版本时间线（点一点）</strong></p>
+<p><button id="v1Btn">v1.0 初始版</button> <button id="v2Btn">v1.1 产品库更新</button> <button id="v3Btn">v1.2 竞品库更新</button></p>
+<p id="verOut">点一个版本，看能力对比结果。</p>
+</div>
+<h3>4. 生产复盘：最难的 Bug，和重做会改什么</h3>
+<p><strong>最难的 Bug：</strong>权限隔离只做了 UI 层，检索层没过滤。Agent 回答带出了别家产品的反馈。修复是：记录和知识片段带 product_id，检索层硬性过滤，再加最小样本数——少于 5 条只给趋势。防再犯是权限验收回归：拿没权限的账号去问。</p>
+<p><strong>重做点：</strong>一开始就给知识库加版本号和更新触发器，需求归纳强制绑定原文引用。这三件事如果一开始就做，后面很多返工都不用做。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只给知识库加版本戳，不给答案加。答案里不写版本戳，出了问题还是定位不到是哪个版本的库。版本戳要跟着知识片段一起进答案，跟着引用一起出现。</div>
+<h3>5. 面试讲法：5 分钟讲稿，五段齐不齐</h3>
+<p>讲稿结构固定五段：背景 → 架构 → 最难的 Bug → 评测 → 重做会改什么。讲的时候按这个顺序，一段讲一句核心，别展开。</p>
+<p>下面是自查小工具：勾上你讲稿里已经写好的段，看看五段齐不齐。</p>
+<div class="card">
+<p><strong>5 分钟讲稿自查（勾一勾）</strong></p>
+<p><label><input type="checkbox" class="talk"> 背景：从 0 到 1 主导搭建，4 年调研数据做纵向对比</label><br>
+<label><input type="checkbox" class="talk"> 架构：数据层 → 分析层 → 对话追问 → 需求进 TAPD，一张图</label><br>
+<label><input type="checkbox" class="talk"> 最难的 Bug：权限隔离只做 UI 层，检索层没过滤</label><br>
+<label><input type="checkbox" class="talk"> 评测：需求闭环可追踪 + 人工抽查 + 权限验收回归</label><br>
+<label><input type="checkbox" class="talk"> 重做会改什么：版本号、更新触发器、需求强制绑定原文引用</label></p>
+<p id="talkOut">已勾 0 / 5 段。</p>
+</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：更新触发器 + 版本戳（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated, TypedDict
+
+class KBState(TypedDict):
+    messages: Annotated[list, add_messages]
+    kb_version: str          # 当前知识库版本戳，如 v1.2
+    updated_chunks: list     # 这次更新入库的知识片段
+
+def check_trigger(state: KBState):
+    # 触发器：新调研数据到了，或产品/竞品有新动作，就更新
+    # 没触发就直接结束，触发了才进更新节点
+    return "update_kb" if state.get("has_new_data") else END
+
+def update_kb(state: KBState):
+    # 更新节点：清洗、脱敏、打标后入库，片段带上新版本戳
+    # 版本号按生产配置递增，这里只演示形状
+    new_version = bump_version(state["kb_version"])  # 如 v1.1 -> v1.2
+    chunks = ingest_new_data(state)  # 按生产配置：清洗、脱敏、打标
+    for c in chunks:
+        c["kb_version"] = new_version  # 每个片段都带版本戳
+        c["product_id"] = state.get("product_id")  # 权限过滤用
+    return {"kb_version": new_version, "updated_chunks": chunks}
+
+def compare_competitor(state: KBState):
+    # 竞品对比节点：拿最新版本戳的两个库做能力比较
+    return {"messages": [compare(state["kb_version"])]}
+
+graph = StateGraph(KBState)
+graph.add_node("update_kb", update_kb)
+graph.add_node("compare", compare_competitor)
+graph.add_conditional_edges(START, check_trigger, {"update_kb": "update_kb", END: END})
+graph.add_edge("update_kb", "compare")
+graph.add_edge("compare", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>示例 2：竞品对比节点 + 引用绑定（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode
+
+def compare_node(state):
+    # 对比节点只做一件事：拿最新版本的两个库，对同一个能力做比较
+    # 结论必须绑定原文引用：每条结论后面跟一条知识片段出处
+    result = compare_capability(
+        product_kb=state["product_kb"],      # 产品知识库，最新版本戳
+        competitor_kb=state["competitor_kb"],  # 竞品知识库，最新版本戳
+        capability=state["capability"],
+    )
+    # 引用绑定：结论没有出处，就不输出结论，只说“知识库里没有”
+    return {"messages": [bind_citations(result)]}
+
+def route_after_compare(state):
+    # 对比结果变了（比如竞品追上来了），才需要人工看一眼
+    return "human_review" if state.get("comparison_changed") else END
+
+graph = StateGraph(KBState)
+graph.add_node("compare", compare_node)
+graph.add_node("tools", ToolNode([tapd_tool]))  # 对比结论进 TAPD 跟踪
+graph.add_edge(START, "compare")
+graph.add_conditional_edges("compare", route_after_compare,
+                            {"human_review": "tools", END: END})
+graph.add_edge("tools", END)
+app = graph.compile(checkpointer=MemorySaver(), interrupt_before=["tools"])</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给你的知识库状态加一个 kb_version 字段：更新节点每次跑完，版本号递增，入库的每个片段都带上新版本戳。<br>
+2. 写一个更新触发器函数：新调研数据到了返回“更新”，没到返回结束；用条件边把它接进图里，跑通一次。<br>
+3. 对着上面的自查小工具，把你的 5 分钟讲稿五段各写一句话，读一遍计时：超过 5 分钟就砍，砍到 5 分钟以内。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 知识库为什么要持续更新？</strong></p><button data-i="0">不更新，答案就过期：产品发了新能力库里没有，竞品上了新能力对比结果就是错的</button><button data-i="1">为了让版本号好看</button><button data-i="2">为了多跑几次图</button><div class="ans">解析：选 A。更新是图里的一个节点，不是“有空再做”的事。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 更新触发器有哪两种？</strong></p><button data-i="0">手动触发和自动触发</button><button data-i="1">事件触发（新数据、新动作到了）和定时触发（固定周期扫一遍）</button><button data-i="2">白天触发和晚上触发</button><div class="ans">解析：选 B。触发器要写在图里，触发条件、更新内容、版本号都留在状态里。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 版本戳是干嘛的？</strong></p><button data-i="0">给文件起个好听的名字</button><button data-i="1">记录更新了多少次</button><button data-i="2">让每个答案都能说出自己来自哪个版本的库，出了问题能定位</button><div class="ans">解析：选 C。版本戳要跟着知识片段一起进答案，跟着引用一起出现。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 竞品对比节点对比的是什么？</strong></p><button data-i="0">最新版本戳的产品知识库和竞品知识库，对同一个能力做比较</button><button data-i="1">两个竞品之间谁的名字更好听</button><button data-i="2">上个月和这个月的用户数</button><div class="ans">解析：选 A。结论必须绑定原文引用，没有出处就不输出结论。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 这个项目最难的 Bug 是什么？</strong></p><button data-i="0">模型回答太慢</button><button data-i="1">权限隔离只做了 UI 层、检索层没过滤，Agent 回答带出了别家产品反馈</button><button data-i="2">TAPD 接口连不上</button><div class="ans">解析：选 B。修复是片段带 product_id、检索层硬性过滤 + 少于 5 条只给趋势；防再犯是权限验收回归。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 5 分钟讲稿的五段顺序是？</strong></p><button data-i="0">架构 → 背景 → 评测 → Bug → 重做</button><button data-i="1">Bug → 背景 → 架构 → 重做 → 评测</button><button data-i="2">背景 → 架构 → 最难的 Bug → 评测 → 重做会改什么</button><div class="ans">解析：选 C。按这个顺序讲，一段讲一句核心，别展开，5 分钟能讲完。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：知识库更新是怎么做的？触发器是什么？</summary><p>更新是图里的一个节点。触发器分两种：事件触发（新调研数据到了、产品或竞品有新动作）和定时触发（固定周期扫一遍）。触发了才进更新节点，更新完打新版本戳，入库的每个片段都带上版本戳。</p></details>
+<details><summary>Q2：版本戳有什么用？</summary><p>每个答案都能说出自己来自哪个版本的库。用户追问结论是哪天的，Agent 能答上来；出了问题，也能定位到是哪个版本的库出了错。版本戳要跟着知识片段一起进答案，跟着引用一起出现。</p></details>
+<details><summary>Q3：竞品对比是怎么做出来的？</summary><p>一个对比节点，拿最新版本戳的产品知识库和竞品知识库，对同一个能力做比较。结论必须绑定原文引用：每条结论后面跟一条知识片段出处，没有出处就不输出结论，只说“知识库里没有”。</p></details>
+<details><summary>Q4：这个项目最难的 Bug 是什么？怎么修的？怎么防再犯？</summary><p>权限隔离只做了 UI 层、检索层没过滤，Agent 回答带出了别家产品的反馈。修复是记录和知识片段带 product_id、检索层硬性过滤，再加最小样本数（少于 5 条只给趋势）。防再犯是权限验收回归：拿没权限的账号去问。</p></details>
+<details><summary>Q5：如果重做这个项目，你会改什么？</summary><p>三件事：一开始就给知识库加版本号和更新触发器，需求归纳强制绑定原文引用。这三件事如果一开始就做，后面很多返工都不用做。评测上保持需求闭环可追踪、人工抽查和权限验收回归。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>知识库上线后，先问三个问题：更新触发器写进图里了吗？每个片段都带版本戳吗？答案里的结论都绑定了原文引用吗？三问有一个答不上来，库越用越不可信。</p>
+<p><strong>简历讲法：</strong>别写“做过知识库更新”，写“从 0 到 1 主导搭建广告投放用户之声：4 年调研数据纵向对比，清洗、脱敏、打标后进分析，产品与竞品知识库带版本戳持续更新，需求进 TAPD 跟踪落地；最难的坑是检索层权限过滤，修复后加权限验收回归”。前者是名词，后者是可追问的项目。</p>
+<p><strong>下一步 / 课程收尾：</strong>14 天完结。第 1 周学会了图怎么搭（StateGraph、条件边、ReAct、Checkpoint、interrupt、子图），第 2 周把图接上了真实项目（调研数据 → 清洗脱敏打标 → 分析 → 对话追问 → 权限 → TAPD 闭环 → 知识库更新）。下一步是把这张图接上你自己的业务数据，跑一次完整闭环，再拿 5 分钟讲稿讲给别人听一遍——讲得顺，这门课才算真正学完。</p>
+</div>
+<div class="nav"><span><a href="day13.html">← Day 13</a> &nbsp; <a href="index.html">课程首页</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+var versions = {
+  v1: 'v1.0 初始版：产品库刚建，竞品库还没更新。对同一个能力做对比，结果是“竞品情况未知”——不是竞品没有，是库里没有，不能下结论。',
+  v2: 'v1.1 产品库更新：产品发了新能力，触发器触发更新，版本戳升到 v1.1。再做对比，自家能力是“有”，竞品还是“未知”——结论只变了一半。',
+  v3: 'v1.2 竞品库更新：竞品库更新后，版本戳升到 v1.2。同样的问题再对比，竞品能力变成“已有”，差距显现了。结论变了，不是因为产品变了，是因为库的版本变了。'
+};
+document.getElementById('v1Btn').addEventListener('click', function(){ document.getElementById('verOut').textContent = versions.v1; });
+document.getElementById('v2Btn').addEventListener('click', function(){ document.getElementById('verOut').textContent = versions.v2; });
+document.getElementById('v3Btn').addEventListener('click', function(){ document.getElementById('verOut').textContent = versions.v3; });
+document.querySelectorAll('.talk').forEach(function(box){
+  box.addEventListener('change', function(){
+    var n = document.querySelectorAll('.talk:checked').length;
+    document.getElementById('talkOut').textContent = n === 5 ? '已勾 5 / 5 段。五段齐了，可以讲了——计时 5 分钟，讲一遍。' : '已勾 ' + n + ' / 5 段。还差 ' + (5 - n) + ' 段。';
+  });
+});
+</script>
+
+</body>
+</html>

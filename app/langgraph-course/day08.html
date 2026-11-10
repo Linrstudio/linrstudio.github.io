@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 8：项目全景：从调研数据到 TAPD 的一张图 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 8 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 8：项目全景：从调研数据到 TAPD 的一张图</h1>
+<p>第 2 周开讲一个真实项目：广告投放平台的用户调研数据，怎么变成 TAPD 里能跟踪落地的需求。这课先把全景画出来：一张图，六个节点，一个共享 State。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="项目全景流水线：调研数据、清洗脱敏打标、分析、对话、需求、TAPD">
+<rect x="6" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="58" y="59" text-anchor="middle" font-size="13" fill="#222">调研数据</text>
+<line x1="110" y1="54" x2="124" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="124,54 114,48 114,60" fill="#0b62d6"/>
+<rect x="128" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="180" y="52" text-anchor="middle" font-size="12" fill="#222">清洗 / 脱敏</text><text x="180" y="68" text-anchor="middle" font-size="12" fill="#222">/ 打标</text>
+<line x1="232" y1="54" x2="246" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="246,54 236,48 236,60" fill="#0b62d6"/>
+<rect x="250" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="302" y="59" text-anchor="middle" font-size="13" fill="#222">分析</text>
+<line x1="354" y1="54" x2="368" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="368,54 358,48 358,60" fill="#0b62d6"/>
+<rect x="372" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="424" y="59" text-anchor="middle" font-size="13" fill="#222">对话追问</text>
+<line x1="476" y1="54" x2="490" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="490,54 480,48 480,60" fill="#0b62d6"/>
+<rect x="494" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="546" y="59" text-anchor="middle" font-size="13" fill="#222">需求归纳</text>
+<line x1="598" y1="54" x2="612" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="612,54 602,48 602,60" fill="#0b62d6"/>
+<rect x="616" y="30" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="668" y="59" text-anchor="middle" font-size="13" fill="#222">TAPD</text>
+<text x="20" y="110" font-size="13" fill="#222">六个节点跑同一份 State；每一步只往 State 里加字段，不改前面的原始数据</text>
+<text x="20" y="132" font-size="13" fill="#222">点下面的演示，一步一步走完这条流水线</text>
+</svg>
+<div class="card">
+<p><strong>🎮 点一点，走完流水线：</strong>从调研数据开始，每点一次“下一步”，跑一个节点，State 里就多几个字段。</p>
+<p id="pipeStep" style="font-weight:bold">第 0 步：还没开始。State 是空的。</p>
+<p id="pipeState" style="font-family:monospace;font-size:13px;background:#f7f7f7;border-radius:8px;padding:10px">State = {}</p>
+<p><button id="pipeNext" style="padding:8px 16px;border-radius:999px;border:1px solid #0b62d6;background:#0b62d6;color:#fff;cursor:pointer">下一步 →</button> <button id="pipeReset" style="padding:8px 16px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">重新开始</button></p>
+</div>
+<h3>1. 项目全景：从调研数据到 TAPD 的一条流水线</h3>
+<p>项目叫“广告投放用户之声，AI 驱动的用户反馈分析项目”，拿过微创新奖。起点是腾讯广告投放平台的用户调研数据，结合 4 年调研数据做纵向对比。</p>
+<p>流水线是六步：调研数据 → 清洗、脱敏、打标 → 分析 → 对话追问 → 需求归纳 → TAPD。数据先清洗、脱敏、打标，再进分析；产品同学可以直接对话追问；从反馈中洞察出的需求，直接对接 TAPD 跟踪落地。规模上，客服会话数据每天增量更新，负反馈日均 10 万条。技术栈是 Node + Python + LangChain + PostgreSQL + Redis + Playwright；完整链路是意图识别 → 任务拆解 → RAG 检索 → MCP 工具调用 → 安全校验 → 结果合成，工程侧走统一 API 网关 + Docker 部署。</p>
+<p>这个项目从 0 到 1，主导搭建，带人一起做。负责核心架构与主要模块实现，主导知识爬取、RAG 检索链路、多 Agent workflow、MCP 工具接入、安全确认流、Eval 与部署观测体系，基于 trace、eval 与用户反馈持续优化。后面 6 天，每一天讲流水线里的一段。</p>
+<h3>2. State 设计：字段就是流水线的记忆</h3>
+<p>State 是整张图的共享记忆。每个节点读它要的字段，写它产出的字段。字段设计得好，图就好讲、好改、好查错。</p>
+<table>
+<tr><th>字段</th><th>谁写的</th><th>干嘛用</th></tr>
+<tr><td><code>raw_feedback</code></td><td>调研数据节点</td><td>原始调研数据，只读不改</td></tr>
+<tr><td><code>cleaned_feedback</code></td><td>清洗 / 脱敏 / 打标节点</td><td>脱敏后、可进分析的数据</td></tr>
+<tr><td><code>analysis</code></td><td>分析节点</td><td>定量、定性、交叉分析与用户画像的结果</td></tr>
+<tr><td><code>messages</code></td><td>对话追问节点（add_messages 追加）</td><td>产品同学的追问与 Agent 的回答，带原文引用</td></tr>
+<tr><td><code>requirements</code></td><td>需求归纳节点</td><td>洞察出的需求，每条强制绑定原文引用</td></tr>
+<tr><td><code>tapd_status</code></td><td>TAPD 节点</td><td>需求进 TAPD 后的跟踪状态</td></tr>
+</table>
+<p>注意两条规矩：原始数据只读不改，脏数据永远能追溯；需求归纳强制绑定原文引用，没有出处的需求不进 TAPD。</p>
+<h3>3. 为什么用图不用链：因为这条流水线会分叉、会循环、会停住</h3>
+<p>链只能一条路走到底。这条流水线不行：分析要四路并行（定量、定性、交叉、画像），跑完再汇总；交叉分析要按问题类型分流；对话追问要循环问下去；写 TAPD 之前要停住等人工审核；跑一半断了，要从 Checkpoint 续跑。</p>
+<p>图能表达这些：并行用 Send fan-out，循环用回边，分流用条件边，停住用 interrupt，续跑用 Checkpoint。链表达不了，图可以。</p>
+<div class="warn"><strong>容易踩的坑：</strong>权限隔离只做在 UI 层，检索层没过滤。Agent 回答带出了别家产品的反馈——负责创意的产品同学，看到了其他产品的反馈。这是最难的 Bug，Day 12 专门讲修复：记录和知识片段带 product_id，检索层硬性过滤。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：项目全景图（先看形状）</h3>
+<pre><code>from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+
+# State：流水线的共享记忆，字段按“谁写、干嘛用”设计
+class FeedbackState(TypedDict):
+    raw_feedback: list        # 原始调研数据，只读不改
+    cleaned_feedback: list    # 清洗、脱敏、打标后的数据
+    analysis: dict            # 定量、定性、交叉分析与用户画像
+    messages: Annotated[list, add_messages]  # 对话追问，追加式
+    requirements: list        # 洞察出的需求，强制绑定原文引用
+    tapd_status: dict         # 需求进 TAPD 后的跟踪状态
+
+graph = StateGraph(FeedbackState)
+graph.add_node("clean_tag", clean_tag_node)      # 清洗、脱敏、打标
+graph.add_node("analyze", analyze_node)          # 分析（内部并行，Day 10 讲）
+graph.add_node("chat", chat_node)                # 对话追问（ReAct + 检索，Day 11 讲）
+graph.add_node("requirements", requirements_node)  # 需求归纳
+graph.add_node("tapd", tapd_node)                # 写 TAPD（工具节点，Day 13 讲）
+graph.add_edge(START, "clean_tag")
+graph.add_edge("clean_tag", "analyze")
+graph.add_edge("analyze", "chat")
+graph.add_edge("chat", "requirements")
+graph.add_edge("requirements", "tapd")
+graph.add_edge("tapd", END)
+# interrupt_before="tapd"：写 TAPD 前停住，等人工审核（Day 12、Day 13 讲）
+app = graph.compile(
+    checkpointer=MemorySaver(),
+    interrupt_before=["tapd"],
+)</code></pre>
+<h3>示例 2：跑一次全景图（概念代码，按生产配置）</h3>
+<pre><code># 调研数据先放进 State，thread_id 做会话隔离
+config = {"configurable": {"thread_id": "feedback-2026"}}
+result = app.invoke(
+    {"raw_feedback": load_feedback()},  # 数据源按生产配置
+    config=config,
+)
+# 中断在写 TAPD 前：人工审核通过后再续跑
+# app.invoke(None, config=config)  # 同一 thread_id，从 Checkpoint 续跑
+print(result["requirements"])  # 每条需求都带原文引用
+print(result["tapd_status"])   # 需求进 TAPD 后的跟踪状态</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 照示例 1 抄一张全景图：六个节点先写空函数（只打印节点名、返回空字典），跑通一次，确认边没接错。<br>
+2. 在 State 表里加一行你自己的字段：比如 <code>kb_version</code>（知识库版本号），想清楚谁写、谁读、干嘛用。<br>
+3. 把这张图讲给自己听一遍：起点是什么数据，终点是什么，中间哪一步会停住等人工审核。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 这条流水线的起点和终点是什么？</strong></p><button data-i="0">起点是腾讯广告投放平台的用户调研数据，终点是 TAPD 里能跟踪落地的需求</button><button data-i="1">起点是 TAPD，终点是调研数据</button><button data-i="2">起点是竞品库，终点是聊天记录</button><div class="ans">解析：选 A。调研数据 → 清洗、脱敏、打标 → 分析 → 对话 → 需求 → TAPD。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 数据进分析之前，必须先过哪一步？</strong></p><button data-i="0">直接进分析，越快越好</button><button data-i="1">先写 TAPD，再回头分析</button><button data-i="2">先清洗、脱敏、打标，再进分析</button><div class="ans">解析：选 C。脱敏在入库前，原始数据只读不改，脏数据永远能追溯。</div></div>
+<div class="q" data-answer="1"><p><strong>3. State 里 messages 字段为什么配 add_messages？</strong></p><button data-i="0">为了让消息跑得更快</button><button data-i="1">对话是追加式的：追问和回答一轮一轮往上加，不能覆盖前面的</button><button data-i="2">为了少写代码</button><div class="ans">解析：选 B。add_messages 是追加型 reducer，并行分支写消息也不会丢。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 为什么用图不用链？</strong></p><button data-i="0">因为流水线会分叉、会循环、会停住：并行分析、条件分流、对话循环、人工审核、断点续跑</button><button data-i="1">因为图写起来更短</button><button data-i="2">因为链已经被弃用了</button><div class="ans">解析：选 A。链只能一条路走到底，表达不了并行、循环、分流和中断。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 需求归纳有一条硬规矩，是什么？</strong></p><button data-i="0">需求越短越好</button><button data-i="1">需求必须先写进 TAPD 再补引用</button><button data-i="2">每条需求强制绑定原文引用，没有出处的需求不进 TAPD</button><div class="ans">解析：选 C。这是重做点之一：需求归纳强制绑定原文引用。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 这个项目最难的 Bug 是什么？</strong></p><button data-i="0">模型回答太慢</button><button data-i="1">权限隔离只做了 UI 层，检索层没过滤，Agent 回答带出了别家产品的反馈</button><button data-i="2">TAPD 写不进去</button><div class="ans">解析：选 B。修复是记录和知识片段带 product_id，检索层硬性过滤。Day 12 专门讲。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：讲讲这个项目是干嘛的？</summary><p>广告投放平台的用户调研数据，结合 4 年调研数据做纵向对比，先清洗、脱敏、打标再进分析，支持定量、定性、交叉分析与用户画像，产品同学可以直接对话追问，从反馈中洞察出的需求直接对接 TAPD 跟踪落地。从 0 到 1，主导搭建，带人一起做。</p></details>
+<details><summary>Q2：这张图长什么样？State 里有哪些字段？</summary><p>六个节点：清洗 / 脱敏 / 打标 → 分析 → 对话追问 → 需求归纳 → TAPD。State 字段按“谁写、干嘛用”设计：raw_feedback 只读不改，cleaned_feedback 是脱敏后的数据，analysis 是分析结果，messages 用 add_messages 追加对话，requirements 是带原文引用的需求，tapd_status 是进 TAPD 后的跟踪状态。</p></details>
+<details><summary>Q3：为什么用图不用链？</summary><p>因为流水线会分叉、会循环、会停住：分析要四路并行再汇总，交叉分析要按问题类型分流，对话追问要循环，写 TAPD 前要停住等人工审核，跑一半断了要从 Checkpoint 续跑。链只能一条路走到底，图能表达并行、循环、分流和中断。</p></details>
+<details><summary>Q4：这个项目最难的 Bug 是什么？怎么修的？</summary><p>权限隔离只做了 UI 层，检索层没过滤，Agent 回答带出了别家产品的反馈，负责创意的产品同学看到了其他产品的反馈。修复是记录和知识片段带 product_id，检索层硬性过滤，再加最小样本数（少于 5 条只给趋势），防再犯是权限验收回归——拿没权限的账号去问。</p></details>
+<details><summary>Q5：如果重做这个项目，你会先改什么？</summary><p>两件事：一开始就给知识库加版本号和更新触发器；需求归纳强制绑定原文引用。评测抓手是需求闭环可追踪，加上人工抽查（10%–20%）和权限验收回归。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>一张全景图上线前，先问三个问题：原始数据是不是只读不改？需求有没有强制绑定原文引用？写 TAPD 之前有没有停住等人工审核？三问有一个答不上来，这张图就别上。</p>
+<p><strong>简历讲法：</strong>别写“用 LangGraph 做了用户反馈分析”，写“从 0 到 1 主导搭建：广告投放平台用户调研数据，结合 4 年数据做纵向对比，清洗、脱敏、打标后进分析，产品同学可对话追问，洞察出的需求对接 TAPD 跟踪落地；数据按产品隔离权限”。前者是名词，后者是可追问的项目。</p>
+<p><strong>明日预告：</strong>Day 9 讲数据层：清洗、脱敏、打标三个节点。脱敏为什么必须在入库前？打标错了人工怎么改？State 的 reducer 在这层起什么作用？</p>
+</div>
+<div class="nav"><span><a href="day07.html">← Day 7</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day09.html">Day 9 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+var pipeSteps = [
+  { label: '第 1 步：调研数据。', state: 'State = {\n  raw_feedback: [...]  // 原始调研数据，只读不改\n}' },
+  { label: '第 2 步：清洗 / 脱敏 / 打标。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...]  // 脱敏后、可进分析的数据\n}' },
+  { label: '第 3 步：分析。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: { 定量, 定性, 交叉, 画像 }  // 结合 4 年数据纵向对比\n}' },
+  { label: '第 4 步：对话追问。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...]  // 产品同学的追问 + 带引用的回答\n}' },
+  { label: '第 5 步：需求归纳。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...],\n  requirements: [...]  // 每条强制绑定原文引用\n}' },
+  { label: '第 6 步：TAPD。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...],\n  requirements: [...],\n  tapd_status: {...}  // 需求进 TAPD 后的跟踪状态\n}\n走完了：需求对接 TAPD 跟踪落地。' }
+];
+var pipeIndex = 0;
+document.getElementById('pipeNext').addEventListener('click', function(){
+  if (pipeIndex < pipeSteps.length) {
+    document.getElementById('pipeStep').textContent = pipeSteps[pipeIndex].label;
+    document.getElementById('pipeState').textContent = pipeSteps[pipeIndex].state;
+    pipeIndex++;
+    if (pipeIndex === pipeSteps.length) { document.getElementById('pipeNext').textContent = '已走完 ✓'; }
+  }
+});
+document.getElementById('pipeReset').addEventListener('click', function(){
+  pipeIndex = 0;
+  document.getElementById('pipeStep').textContent = '第 0 步：还没开始。State 是空的。';
+  document.getElementById('pipeState').textContent = 'State = {}';
+  document.getElementById('pipeNext').textContent = '下一步 →';
+});
+</script>
+
+</body>
+</html>

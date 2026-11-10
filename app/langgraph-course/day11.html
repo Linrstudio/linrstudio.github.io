@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 11：对话追问：ReAct、检索与引用绑定 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 11 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 11：对话追问：ReAct、检索与引用绑定</h1>
+<p>产品同学能直接对话追问，靠的是 ReAct 循环加检索：Agent 先想“要查什么”，再去知识库里找原文，最后把答案和出处绑在一起说出来。今天把这条追问链讲清。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 200" width="100%" role="img" aria-label="对话追问循环：提问、思考、检索、引用绑定、回答，同一 thread_id 续聊">
+<rect x="20" y="20" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="49" text-anchor="middle" font-size="13" fill="#222">用户提问</text>
+<rect x="180" y="20" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="240" y="49" text-anchor="middle" font-size="13" fill="#222">思考：查什么</text>
+<rect x="340" y="20" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="400" y="49" text-anchor="middle" font-size="13" fill="#222">检索知识库</text>
+<rect x="500" y="20" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="560" y="49" text-anchor="middle" font-size="13" fill="#222">引用绑定</text>
+<line x1="140" y1="44" x2="180" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="180,44 168,38 168,50" fill="#0b62d6"/>
+<line x1="300" y1="44" x2="340" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="340,44 328,38 328,50" fill="#0b62d6"/>
+<line x1="460" y1="44" x2="500" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="500,44 488,38 488,50" fill="#0b62d6"/>
+<rect x="284" y="100" width="160" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="129" text-anchor="middle" font-size="13" fill="#222">带出处回答</text>
+<line x1="560" y1="68" x2="560" y2="100" stroke="#0b62d6" stroke-width="2"/><polygon points="560,100 554,88 566,88" fill="#0b62d6"/>
+<line x1="364" y1="148" x2="80" y2="148" stroke="#0b62d6" stroke-width="2"/><polygon points="80,148 92,142 92,154" fill="#0b62d6"/>
+<line x1="80" y1="148" x2="80" y2="68" stroke="#0b62d6" stroke-width="2"/>
+<text x="20" y="190" font-size="13" fill="#222">同一 thread_id 续聊：追问时带上历史，Agent 接着上一轮往下查</text>
+</svg>
+<h3>1. ReAct 循环：先想，再查，再答</h3>
+<p>ReAct 就是“思考—行动—观察”循环。Agent 收到追问，先想“我要查什么”，再调用检索工具去知识库里找，拿到结果后观察够不够，不够就再查一轮，够了才回答。</p>
+<p>检索工具是 <code>ToolNode</code> 里的一员，和别的工具一样走 <code>tools_condition</code> 分流。模型决定要不要查、查什么词，图只负责把工具结果写回状态。</p>
+<h3>2. 引用绑定：答案的每一句都要有出处</h3>
+<p>检索到的原文片段要和答案绑在一起。回答时，每一句结论后面挂一个引用，指向具体的知识片段。产品同学点引用，能看到原文。</p>
+<p>这个绑定是在重做时定下的规矩：需求归纳强制绑定原文引用。追问回答也一样，没有出处的结论不许直接说。跨文档对比与多跳问题容易召回偏斜、引用不可信，对策是三件套：先把问题做查询拆解，再做证据覆盖检查，最后做引用一致性评估——证据没覆盖、引用对不上的回答不输出。</p>
+<h3>3. 检索为空：老实说“没有”</h3>
+<p>知识库里没有，就直接说“知识库里没有”。不编，不猜，不拿模型自己的话补上。说“没有”本身就是正确答案的一部分。</p>
+<p>这条规矩保护的是信任：产品同学一旦发现一次编造，以后每句回答都要自己再核对一遍，追问功能就没人用了。</p>
+<h3>4. thread_id 续聊：追问接着上一轮</h3>
+<p>同一轮对话用同一个 <code>thread_id</code>，Checkpoint 把每轮的消息都存下来。追问“那创意侧呢”，Agent 能看到上一轮问的是什么，接着往下查，不用用户把问题重说一遍。</p>
+<p>换一个 <code>thread_id</code>，就是新的一轮对话。会话隔离靠它，断点续跑也靠它。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只在 UI 层做权限隔离是不够的。Day 12 会讲本项目最难的 Bug：检索层没过滤，Agent 回答带出了别家产品反馈。引用绑定要绑在检索层过滤后的片段上，绑错了层，出处本身就是错的。</div>
+<div class="card">
+<p><strong>🎮 模拟问答：点一个问题，看 Agent 怎么查、怎么答</strong></p>
+<p>下面三个问题，前两个知识库里有原文，第三个没有。点一点，看检索到的片段和带引用的答案。</p>
+<p>
+<button id="qa1" style="margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">用户最常抱怨什么？</button>
+<button id="qa2" style="margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">竞品和我们比怎么样？</button>
+<button id="qa3" style="margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">明年投放预算多少？</button>
+</p>
+<div id="qaResult" style="margin-top:12px"></div>
+</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：追问图：ReAct + 检索 + 引用绑定（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated, TypedDict
+
+# State：消息走 add_messages 追加；citations 存本轮回答的引用
+class ChatState(TypedDict):
+    messages: Annotated[list, add_messages]
+    citations: list  # 每条是 {"quote": 原文片段, "source": 出处}
+
+# 检索工具：按生产配置接知识库；返回原文片段 + 出处
+def retrieve(query: str):
+    """从产品知识库检索原文片段，返回带出处的片段列表。"""
+    return search_kb(query)  # 按生产配置实现
+
+tools = [retrieve]
+agent = build_agent_with_tools(tools)  # 模型绑定工具，按生产配置
+
+def answer_node(state: ChatState):
+    # 模型根据检索到的片段作答；每句结论挂引用，写进 citations
+    reply = agent.invoke(state["messages"])
+    return {"messages": [reply], "citations": extract_citations(reply)}
+
+graph = StateGraph(ChatState)
+graph.add_node("agent", agent_node)        # 思考：要不要查、查什么
+graph.add_node("tools", ToolNode(tools))   # 行动：执行检索
+graph.add_node("answer", answer_node)      # 引用绑定后作答
+graph.add_edge(START, "agent")
+graph.add_conditional_edges("agent", tools_condition,
+                            {"tools": "tools", END: "answer"})
+graph.add_edge("tools", "agent")           # 观察结果，不够就再查一轮
+graph.add_edge("answer", END)
+
+# thread_id 续聊：同一 thread_id 再 invoke，接着上一轮跑
+app = graph.compile(checkpointer=MemorySaver())
+app.invoke(
+    {"messages": [("user", "用户最常抱怨什么？")]},
+    config={"configurable": {"thread_id": "creative-001"}},
+)</code></pre>
+<h3>示例 2：检索为空时说“没有”（先看形状）</h3>
+<pre><code>def answer_node(state: ChatState):
+    hits = state.get("retrieved", [])  # 检索工具写回的片段
+    if not hits:
+        # 知识库里没有：老实说没有，不编、不猜
+        return {"messages": [("assistant",
+            "知识库里没有相关反馈，我没法回答这个问题。")]}
+    # 有片段才作答，每句结论挂引用
+    reply = agent.invoke(state["messages"])
+    return {"messages": [reply], "citations": extract_citations(reply)}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 的图跑起来：同一 thread_id 连问两句，第二句只说“那创意侧呢”，看 Agent 是不是接着上一轮查。<br>
+2. 问一个知识库里没有的问题，确认回答是“知识库里没有”，而不是一段编出来的话。<br>
+3. 检查一次回答的引用：点引用能不能回到原文片段？有一句结论没挂引用，就把它当成 Bug 记下来。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. ReAct 循环的顺序是？</strong></p><button data-i="0">思考要查什么 → 调用检索工具 → 观察结果，够了才回答</button><button data-i="1">直接回答，答完再去检索核对</button><button data-i="2">先检索所有内容，再决定问什么</button><div class="ans">解析：选 A。先想，再查，再答；结果不够就再查一轮。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 引用绑定是什么意思？</strong></p><button data-i="0">回答里多引几句名言</button><button data-i="1">答案的每句结论后面挂引用，指向具体的知识片段，点引用能看到原文</button><button data-i="2">把出处藏在日志里不给人看</button><div class="ans">解析：选 B。没有出处的结论不许直接说，这是重做时定下的规矩。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 检索为空时，Agent 应该怎么办？</strong></p><button data-i="0">拿模型自己的知识补一段答案</button><button data-i="1">换个词多查几轮，直到查出点什么</button><button data-i="2">直接说“知识库里没有”，不编、不猜</button><div class="ans">解析：选 C。说“没有”本身就是正确答案的一部分，编造会毁掉信任。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 追问“那创意侧呢”为什么能接着上一轮？</strong></p><button data-i="0">同一 thread_id 下，Checkpoint 存了每轮消息，Agent 看得到上一轮问的是什么</button><button data-i="1">模型记性好，不用存</button><button data-i="2">每次追问都把历史问题重发一遍</button><div class="ans">解析：选 A。thread_id 既做会话隔离，也做断点续跑。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 检索工具在图里是什么角色？</strong></p><button data-i="0">一个普通节点，只能跑一次</button><button data-i="1">ToolNode 里的一员，走 tools_condition 分流，模型决定要不要查、查什么词</button><button data-i="2">图的入口，跑完就结束</button><div class="ans">解析：选 B。检索和别的工具一样，是 ReAct 循环里的“行动”那一步。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 引用要绑在哪一层的片段上？</strong></p><button data-i="0">UI 层展示的任何内容</button><button data-i="1">模型自己生成的总结</button><button data-i="2">检索层过滤后的原文片段</button><div class="ans">解析：选 C。只在 UI 层隔离是不够的，引用绑错了层，出处本身就是错的。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：对话追问这张图长什么样？</summary><p>ReAct 循环：agent 节点思考要不要查、查什么，tools 节点（ToolNode）执行检索，查完回 agent 观察够不够，不够再查，够了进 answer 节点做引用绑定再回答。State 里 messages 用 add_messages 追加，citations 存本轮回答的引用。</p></details>
+<details><summary>Q2：引用绑定是怎么做的？为什么重要？</summary><p>回答的每句结论后面挂引用，指向检索到的原文片段，点引用能看到原文。这是重做时定下的规矩：需求归纳强制绑定原文引用。没有出处的结论不许直接说，这样产品同学才敢直接拿回答去推进。</p></details>
+<details><summary>Q3：检索为空时你们怎么处理？</summary><p>直接说“知识库里没有”，不编、不猜、不拿模型自己的话补。说“没有”本身就是正确答案的一部分；编造一次，产品同学以后每句回答都要自己再核对，追问功能就没人用了。</p></details>
+<details><summary>Q4：thread_id 在追问里起什么作用？</summary><p>同一轮对话用同一个 thread_id，Checkpoint 把每轮消息存下来，追问时 Agent 能看到上一轮问的是什么，接着往下查。换一个 thread_id 就是新的一轮对话，会话隔离和断点续跑都靠它。</p></details>
+<details><summary>Q5：检索工具和普通工具节点有什么不同？</summary><p>没有本质不同：检索工具也是 ToolNode 里的一员，走 tools_condition 分流，模型决定要不要查、查什么词。不同的是结果的处理——检索到的原文片段要进引用绑定，答案的每一句结论都要挂上出处。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>追问功能上线前，先问三个问题：回答的每一句结论都有引用吗？检索为空时说的是“没有”还是编了一段？同一个 thread_id 追问两句，第二句还接得上上一轮吗？三问有一个答不上来，追问就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过对话追问”，写“ReAct + 检索的追问图：模型决定查什么，ToolNode 执行检索，答案每句结论绑定原文引用，检索为空直接说没有；同一 thread_id 续聊，Checkpoint 存每轮消息”。前者是名词，后者是可追问的项目。</p>
+<p><strong>明日预告：</strong>Day 12 讲权限与安全：检索层按 product_id 硬性过滤、少于 5 条只给趋势，还有本项目最难的 Bug 是怎么修的。</p>
+</div>
+<div class="nav"><span><a href="day10.html">← Day 10</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day12.html">Day 12 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+
+// 模拟问答互动：选问题，看检索片段 + 带引用的答案（或“知识库里没有”）
+var qaData = {
+  qa1: {
+    hits: '检索到 2 条原文片段：<br>① “投放后台操作步骤太多，找一个功能要点好几下。”——用户反馈原文<br>② “希望常用功能一步到位，别藏那么深。”——用户反馈原文',
+    answer: '用户最常抱怨的是操作步骤太多，常用功能藏得深。[1][2]'
+  },
+  qa2: {
+    hits: '检索到 2 条原文片段：<br>① “竞品后台的操作路径更短，上手更快。”——竞品知识库<br>② “我们的定向能力更细，是竞品没有的。”——竞品知识库',
+    answer: '竞品上手更快，操作路径更短[1]；但我们的定向能力更细，这是竞品没有的。[2]'
+  },
+  qa3: {
+    hits: '',
+    answer: '知识库里没有相关反馈，我没法回答这个问题。'
+  }
+};
+Object.keys(qaData).forEach(function(id){
+  document.getElementById(id).addEventListener('click', function(){
+    var d = qaData[id];
+    var html = d.hits
+      ? '<p><strong>检索到的原文片段：</strong><br>' + d.hits + '</p><p><strong>带引用的答案：</strong><br>' + d.answer + '</p>'
+      : '<p><strong>检索结果：</strong>没有命中任何原文片段。</p><p><strong>回答：</strong><br>' + d.answer + '</p>';
+    document.getElementById('qaResult').innerHTML = html;
+  });
+});
+</script>
+
+</body>
+</html>

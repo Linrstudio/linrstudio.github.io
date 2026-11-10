@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 12：权限与安全：检索层过滤与人工介入 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 12 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 12：权限与安全：检索层过滤与人工介入</h1>
+<p>权限不是界面上藏几个按钮。数据按产品隔离：负责创意的产品同学看不到其他产品的反馈。这一课讲隔离应该落在哪一层，以及敏感操作为什么要停下来等人。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 190" width="100%" role="img" aria-label="检索层过滤示意图：用户提问先过 product_id 过滤，再进检索，少于 5 条只给趋势">
+<rect x="20" y="20" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="95" y="49" text-anchor="middle" font-size="13" fill="#222">用户提问</text>
+<rect x="220" y="20" width="180" height="48" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="310" y="49" text-anchor="middle" font-size="13" fill="#222">product_id 硬性过滤</text>
+<rect x="450" y="20" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="525" y="49" text-anchor="middle" font-size="13" fill="#222">检索知识库</text>
+<rect x="220" y="110" width="180" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="310" y="129" text-anchor="middle" font-size="13" fill="#222">少于 5 条 → 只给趋势</text>
+<rect x="450" y="110" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="525" y="139" text-anchor="middle" font-size="13" fill="#222">带引用回答</text>
+<line x1="170" y1="44" x2="220" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="220,44 208,38 208,50" fill="#0b62d6"/>
+<line x1="400" y1="44" x2="450" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="450,44 438,38 438,50" fill="#0b62d6"/>
+<line x1="525" y1="68" x2="525" y2="110" stroke="#0b62d6" stroke-width="2"/><polygon points="525,110 519,98 531,98" fill="#0b62d6"/>
+<line x1="400" y1="134" x2="450" y2="134" stroke="#0b62d6" stroke-width="2"/><polygon points="450,134 438,128 438,140" fill="#0b62d6"/>
+<text x="20" y="180" font-size="13" fill="#222">过滤发生在检索之前，不是回答之后；敏感操作再加 interrupt 停住等人</text>
+</svg>
+<h3>1. 隔离落在哪一层：检索层，不是 UI 层</h3>
+<p>只在界面上藏住别人的反馈，不叫隔离。Agent 检索时如果不过滤，回答里照样会带出别家产品的反馈。</p>
+<p>正确做法：每条记录、每个知识片段都带 <code>product_id</code>。检索时先按 <code>product_id</code> 硬性过滤，再排序、再取片段。过滤是检索的条件，不是回答后的修饰。</p>
+<h3>2. 最小样本数：少于 5 条，只给趋势</h3>
+<p>样本太少时，逐条引用容易暴露个别反馈的细节。规则是：命中少于 5 条，只给趋势，不展开逐条原文。</p>
+<p>这条规则也要写进检索节点里，和过滤一样是硬规则，不是提示词里的建议。</p>
+<h3>3. 审计：谁问了什么、看到了什么，要留痕</h3>
+<p>每次检索记下三件事：谁问的、按哪个 <code>product_id</code> 过滤的、返回了哪些片段。出了问题能查，权限验收也有据可查。</p>
+<h3>4. 敏感操作：interrupt 停住，等人拍板</h3>
+<p>写 TAPD、改知识库这类敏感操作，不要让 Agent 自己做完。跑到这一步先 <code>interrupt</code> 停住，等人确认后再继续。Day 13 会讲这条路怎么走。TAPD 工单这类有副作用的工具调用要防越权、误执行、重复提交，四件套是：权限上下文、人工确认、幂等键、审计记录——先确认调用者有没有权限，关键一步等人确认，同一请求带幂等键防重复提交，每次调用都留审计记录。</p>
+<div class="warn"><strong>本项目最难的 Bug：</strong>权限隔离只做了 UI 层，检索层没过滤，Agent 回答带出了别家产品反馈。修复是记录和知识片段带 <code>product_id</code>、检索层硬性过滤 + 最小样本数；防再犯是权限验收回归——拿没权限的账号去问，看能不能问出别人的东西。</div>
+<div class="card">
+<p><strong>🎮 动手试一试：角色切换，看各自能看到什么</strong></p>
+<p>同一个问题：“最近用户对投放效果怎么说？”先选角色，再点提问。下面的演示还会让你看到：命中少于 5 条时，回答只给趋势。</p>
+<p>
+<button id="roleA" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">创意产品同学</button>
+<button id="roleB" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">其他产品同学</button>
+<button id="askBtn" style="padding:7px 12px;border-radius:999px;border:1px solid #0b62d6;background:#0b62d6;color:#fff;cursor:pointer">提问：最近用户对投放效果怎么说？</button>
+</p>
+<p id="demoRole">当前角色：未选择（先选一个角色）</p>
+<p id="demoOut">点“提问”后，这里会显示检索层过滤后的结果。</p>
+<p><button id="fewBtn" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">再试一次：只命中 3 条的冷门问题</button></p>
+<p id="fewOut"></p>
+</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：检索节点先过滤，再检索（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated, TypedDict
+
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+    product_id: str       # 当前用户的产品，从登录身份来，不从提问里猜
+    retrieved: list       # 检索到的片段
+
+def retrieve_node(state: AgentState):
+    # 关键：过滤是检索的条件，写在查询里，不是回答后才删
+    hits = search_knowledge(
+        query=state["messages"][-1].content,
+        product_id=state["product_id"],  # 硬性过滤：只返回本产品的片段
+    )
+    # 审计：记下谁、按哪个 product_id、返回了哪些片段
+    audit_log(state["product_id"], [h["id"] for h in hits])
+    # 最小样本数：少于 5 条，只给趋势，不展开逐条原文
+    if len(hits) < 5:
+        return {"retrieved": [{"trend_only": True, "count": len(hits)}]}
+    return {"retrieved": hits}
+
+graph = StateGraph(AgentState)
+graph.add_node("retrieve", retrieve_node)
+graph.add_edge(START, "retrieve")
+graph.add_edge("retrieve", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>示例 2：敏感操作 interrupt，写 TAPD 前停住等人</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode
+from langgraph.types import interrupt
+from langgraph.checkpoint.memory import MemorySaver
+
+def review_node(state: AgentState):
+    # 敏感操作：进 TAPD 之前先停住，等人确认
+    decision = interrupt({
+        "action": "写入 TAPD",
+        "demand": state["messages"][-1].content,
+        "options": ["继续", "改了再继续", "拒绝"],
+    })
+    return {"messages": [decision]}
+
+graph = StateGraph(AgentState)
+graph.add_node("review", review_node)   # 人工审核节点
+graph.add_node("tools", ToolNode([write_tapd]))  # 写 TAPD 的工具节点，按生产配置
+graph.add_edge(START, "review")
+graph.add_edge("review", "tools")
+graph.add_edge("tools", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 给示例 1 的 <code>search_knowledge</code> 写一个假实现：库里混着两个产品的片段，只返回 <code>product_id</code> 匹配的，跑通后换角色再跑一次。<br>
+2. 把最小样本数的判断改成可配置的阈值（默认 5），命中 3 条和命中 6 条时分别看回答有什么不同。<br>
+3. 写一条权限验收回归用例：拿没权限的账号问别家产品的问题，断言检索结果为空、回答里不出现别家产品的原文。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 权限隔离应该落在哪一层？</strong></p><button data-i="0">检索层：检索时按 product_id 硬性过滤</button><button data-i="1">只在界面上藏住别人的反馈</button><button data-i="2">只在回答后删掉敏感句子</button><div class="ans">解析：选 A。只做 UI 层是本项目最难的 Bug：检索层没过滤，Agent 回答带出了别家产品反馈。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 每条记录和知识片段要带什么，才能做检索层过滤？</strong></p><button data-i="0">带提问者的姓名</button><button data-i="1">带 product_id</button><button data-i="2">带发布时间</button><div class="ans">解析：选 B。修复就是记录和知识片段带 product_id，检索时按它硬性过滤。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 检索命中少于 5 条时，应该怎么做？</strong></p><button data-i="0">把仅有的几条原文全部展开</button><button data-i="1">直接说没有数据</button><button data-i="2">只给趋势，不展开逐条原文</button><div class="ans">解析：选 C。最小样本数规则：少于 5 条只给趋势，避免暴露个别反馈的细节。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 审计要记下哪三件事？</strong></p><button data-i="0">谁问的、按哪个 product_id 过滤的、返回了哪些片段</button><button data-i="1">模型名字、温度、token 数</button><button data-i="2">提问时间、回答长度、点赞数</button><div class="ans">解析：选 A。出了问题能查，权限验收也有据可查。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 写 TAPD 这类敏感操作，应该怎么做？</strong></p><button data-i="0">让 Agent 自己做完，别打扰人</button><button data-i="1">interrupt 停住，等人工确认后再继续</button><button data-i="2">先写进去，错了再删</button><div class="ans">解析：选 B。敏感操作跑到这一步先 interrupt 停住，等人拍板。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 防再犯权限 Bug，靠什么？</strong></p><button data-i="0">多写提示词提醒模型</button><button data-i="1">上线后等用户投诉</button><button data-i="2">权限验收回归：拿没权限的账号去问，看能不能问出别人的东西</button><div class="ans">解析：选 C。这是本项目的防再犯手段，也是评测抓手之一。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：你们的权限隔离是怎么做的？为什么不是只做 UI 层？</summary><p>数据按产品隔离：记录和知识片段都带 product_id，检索层按 product_id 硬性过滤。只做 UI 层是本项目最难的 Bug——检索层没过滤，Agent 回答带出了别家产品反馈。过滤必须发生在检索之前，不是回答之后。</p></details>
+<details><summary>Q2：最小样本数是什么意思？为什么是少于 5 条只给趋势？</summary><p>样本太少时逐条引用容易暴露个别反馈的细节。规则是命中少于 5 条只给趋势，不展开逐条原文。这条规则写进检索节点，是硬规则，不是提示词里的建议。</p></details>
+<details><summary>Q3：敏感操作你们怎么管？interrupt 在哪里停？</summary><p>写 TAPD、改知识库这类敏感操作，跑到这一步先 interrupt 停住，等人工确认后再继续：继续、改了再继续、拒绝三条路。Checkpoint 用 thread_id 做会话隔离，中断后同一 thread 再 invoke 从快照续跑。</p></details>
+<details><summary>Q4：这个 Bug 你是怎么发现和修复的？防再犯做了什么？</summary><p>发现：Agent 回答带出了别家产品反馈，说明隔离只做了 UI 层。修复：记录和知识片段带 product_id，检索层硬性过滤 + 最小样本数。防再犯：权限验收回归——拿没权限的账号去问，看能不能问出别人的东西。</p></details>
+<details><summary>Q5：权限之外，这个项目还有哪些安全和评测抓手？</summary><p>数据先清洗、脱敏、打标再进分析，脱敏在入库前；需求归纳强制绑定原文引用；知识库加版本号和更新触发器。评测抓手是需求闭环可追踪 + 人工抽查（10%–20%）+ 权限验收回归。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>权限上线前先问三句：过滤写在检索条件里了吗？少于 5 条只给趋势了吗？审计记下了谁、按哪个 product_id、返回了哪些片段吗？有一句答不上来，就别上。还有一句：拿没权限的账号问过吗？</p>
+<p><strong>简历讲法：</strong>别写“做过权限控制”，写“检索层按 product_id 硬性过滤 + 最小样本数（少于 5 条只给趋势），敏感操作 interrupt 等人工确认；修复过只做 UI 层隔离的 Bug，防再犯靠权限验收回归”。前者是名词，后者是可追问的项目。</p>
+<p><strong>明日预告：</strong>Day 13 讲需求闭环：需求怎么进 TAPD，人工审核 interrupt 后才写，Checkpoint 断点续跑，TAPD 状态怎么回写。</p>
+</div>
+<div class="nav"><span><a href="day11.html">← Day 11</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day13.html">Day 13 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+
+// Day 12 互动组件：角色切换 + 最小样本数演示
+var role = null;
+var roleNames = { A: '创意产品同学', B: '其他产品同学' };
+document.getElementById('roleA').addEventListener('click', function(){
+  role = 'A';
+  document.getElementById('demoRole').textContent = '当前角色：创意产品同学（product_id = creative）';
+  document.getElementById('demoOut').textContent = '已切换角色，点“提问”看检索结果。';
+});
+document.getElementById('roleB').addEventListener('click', function(){
+  role = 'B';
+  document.getElementById('demoRole').textContent = '当前角色：其他产品同学（product_id = other）';
+  document.getElementById('demoOut').textContent = '已切换角色，点“提问”看检索结果。';
+});
+document.getElementById('askBtn').addEventListener('click', function(){
+  if (!role) {
+    document.getElementById('demoOut').textContent = '先选一个角色，再提问。';
+    return;
+  }
+  if (role === 'A') {
+    document.getElementById('demoOut').textContent = '检索层过滤 product_id = creative，命中本产品反馈多条。回答：用户普遍反映投放效果有提升，操作路径仍有优化空间（附原文引用）。—— 看不到其他产品的反馈。';
+  } else {
+    document.getElementById('demoOut').textContent = '检索层过滤 product_id = other，命中本产品反馈。回答：本产品用户对投放效果的反馈以正面为主（附原文引用）。—— 创意产品的反馈一条也检索不到。';
+  }
+});
+document.getElementById('fewBtn').addEventListener('click', function(){
+  document.getElementById('fewOut').textContent = '命中 3 条（少于 5 条）：只给趋势——“近期反馈呈正面趋势”，不展开逐条原文。';
+});
+</script>
+
+</body>
+</html>

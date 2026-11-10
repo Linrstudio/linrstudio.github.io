@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LangGraph 7 天实战课：从一张图到多 Agent 协作</title>
+<title>LangGraph 14 天实战课：从一张图到多 Agent 协作</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
 h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
@@ -17,13 +17,14 @@ code{background:#f2f2f2;border-radius:4px;padding:1px 5px}
 </style>
 </head>
 <body>
-<h1>LangGraph 7 天实战课</h1>
+<h1>LangGraph 14 天实战课</h1>
 <p><span class="tag">从一张图到多 Agent 协作</span> <span class="tag">每天一课</span></p>
-<p>LangChain 课里你已经手写过 Tool Calling 循环，LangGraph 就是把这个循环画成一张图：节点是步骤，边是流向，状态是共享的记事本。这门课 7 天讲完一张图的全部本事，最后落到一个能放进简历的多 Agent 项目上。目标岗是 <strong>AI 应用落地 / Agent 前端 / Agent 工具链</strong>，不对标 LLM 基建岗。</p>
+<p>LangChain 课里你已经手写过 Tool Calling 循环，LangGraph 就是把这个循环画成一张图：节点是步骤，边是流向，状态是共享的记事本。这门课 14 天讲完一张图的全部本事：第 1 周学图本身，第 2 周拿一个真实项目（广告投放用户之声 Agent）实战，最后落到一个能放进简历的多 Agent 项目上。目标岗是 <strong>AI 应用落地 / Agent 前端 / Agent 工具链</strong>，不对标 LLM 基建岗。</p>
 <div class="note">
 <p><strong>学习路线</strong><br>
-Day 1 图是什么 → Day 2 状态与 Reducer → Day 3 条件边与路由 → Day 4 工具节点与 ReAct → Day 5 Checkpoint 与断点续跑 → Day 6 人工介入与中断 → Day 7 子图、多 Agent 图与复盘</p>
-<p><strong>今天进度：Day 7 已上线（7 天完结）</strong>。先从 Day 1 开始，不用跳着看。</p>
+第 1 周：Day 1 图是什么 → Day 2 状态与 Reducer → Day 3 条件边与路由 → Day 4 工具节点与 ReAct → Day 5 Checkpoint 与断点续跑 → Day 6 人工介入与中断 → Day 7 子图、多 Agent 图与复盘<br>
+第 2 周：Day 8 项目全景 → Day 9 数据层 → Day 10 分析层 → Day 11 对话追问 → Day 12 权限与安全 → Day 13 需求闭环 → Day 14 知识库更新与复盘</p>
+<p><strong>今天进度：Day 14 已上线（14 天完结）</strong>。先从 Day 1 开始，不用跳着看。</p>
 </div>
 <div class="card">
 <p><strong>相关课程：</strong><a href="../langchain-course/index.html">LangChain 30 天实战课 →</a><br>
@@ -34,7 +35,7 @@ Day 1 图是什么 → Day 2 状态与 Reducer → Day 3 条件边与路由 → 
 LangChain 第 5 周 + LangGraph 7 天做在一起的 Duolingo 版：两条轨道，自由选课，答对加 XP、答错扣 ❤️，通关成绩存在浏览器里。文字课都在，卡片里有原文链接。</p>
 </div>
 
-<h2>7 天课表</h2>
+<h2>14 天课表</h2>
 <ol>
 <li><a href="day01.html"><strong>Day 1：图是什么：StateGraph、节点、边、END</strong></a> <span class="done">● 已上线</span></li>
 <li><a href="day02.html"><strong>Day 2：状态与 Reducer：AgentState、add_messages、为什么状态要可合并</strong></a> <span class="done">● 已上线</span></li>
@@ -43,6 +44,13 @@ LangChain 第 5 周 + LangGraph 7 天做在一起的 Duolingo 版：两条轨道
 <li><a href="day05.html"><strong>Day 5：Checkpoint 与断点续跑：MemorySaver、thread_id、从中断处继续</strong></a> <span class="done">● 已上线</span></li>
 <li><a href="day06.html"><strong>Day 6：人工介入与中断：interrupt、human-in-the-loop、审核后继续</strong></a> <span class="done">● 已上线</span></li>
 <li><a href="day07.html"><strong>Day 7：子图、多 Agent 图与复盘：子图、Supervisor 图、7 天复盘与面试讲法</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day08.html"><strong>Day 8：项目全景：从调研数据到 TAPD 的一张图</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day09.html"><strong>Day 9：数据层：清洗、脱敏、打标三个节点</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day10.html"><strong>Day 10：分析层：并行分析、画像子图与条件边</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day11.html"><strong>Day 11：对话追问：ReAct、检索与引用绑定</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day12.html"><strong>Day 12：权限与安全：检索层过滤与人工介入</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day13.html"><strong>Day 13：需求闭环：进 TAPD、断点续跑与评测</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day14.html"><strong>Day 14：知识库更新与复盘：版本戳、竞品对比与面试讲法</strong></a> <span class="done">● 已上线</span></li>
 </ol>
 
 <h2>每课的固定结构</h2>

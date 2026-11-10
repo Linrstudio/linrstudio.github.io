@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 13：需求闭环：进 TAPD、断点续跑与评测 | LangGraph 7 天实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 13 / 14</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 13：需求闭环：进 TAPD、断点续跑与评测</h1>
+<p>洞察不能停在聊天框里。需求要进 TAPD 才算落地，落地之后要能追踪，跑一半断了要能续跑。今天把这条闭环走通。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 210" width="100%" role="img" aria-label="需求闭环：需求归纳后人工审核中断，批准进 TAPD、修改后继续、拒绝则结束">
+<rect x="24" y="20" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="94" y="49" text-anchor="middle" font-size="13" fill="#222">需求归纳</text>
+<line x1="164" y1="44" x2="214" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="214,44 202,38 202,50" fill="#0b62d6"/>
+<rect x="214" y="20" width="140" height="48" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="284" y="49" text-anchor="middle" font-size="13" fill="#222">人工审核 interrupt</text>
+<line x1="354" y1="44" x2="404" y2="44" stroke="#0b62d6" stroke-width="2"/><polygon points="404,44 392,38 392,50" fill="#0b62d6"/>
+<rect x="404" y="20" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="474" y="49" text-anchor="middle" font-size="13" fill="#222">写 TAPD（工具节点）</text>
+<line x1="474" y1="68" x2="474" y2="118" stroke="#0b62d6" stroke-width="2"/><polygon points="474,118 468,106 480,106" fill="#0b62d6"/>
+<rect x="354" y="118" width="240" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="474" y="147" text-anchor="middle" font-size="13" fill="#222">TAPD 状态回写进 State</text>
+<text x="24" y="200" font-size="13" fill="#222">批准：继续写 TAPD；修改：改了再继续；拒绝：图结束，不写 TAPD</text>
+</svg>
+<h3>1. 需求闭环是什么：从反馈到 TAPD，再到可追踪</h3>
+<p>从反馈中洞察出的需求，直接对接 TAPD 跟踪落地。闭环的意思是：需求不是写完就丢，而是能在 TAPD 里被跟踪，状态还能回写回来。</p>
+<p>需求归纳强制绑定原文引用。没有引用的需求不进 TAPD，这是 Day 11 定下的规矩。</p>
+<h3>2. 写 TAPD 之前，先过人工审核</h3>
+<p>写 TAPD 是写操作，不能让 Agent 自己悄悄写。在工具节点前用 <code>interrupt</code> 停住，等人审核。</p>
+<p>审核有三条路：批准，继续写 TAPD；修改，改了再继续；拒绝，图结束，不写 TAPD。这三条路和 Day 6 的中断三条路是同一套。</p>
+<h3>3. Checkpoint 断点续跑：审核可以慢慢等</h3>
+<p>审核可能等几小时，甚至隔天。图停在中断点，Checkpoint 用 <code>thread_id</code> 存住快照。</p>
+<p>人回来点批准，同一 <code>thread_id</code> 再 invoke，图从快照续跑，不用从头再分析一遍。多 Agent 链路长、状态多，线上问题难复现，靠可复现工程闭环兜底：checkpoint 存快照、链路追踪留完整调用链、评估集回归、smoke test 先跑通主链路——出了问题能按 trace 和评估集复现，而不是凭印象猜。</p>
+<h3>4. 评测抓手：三条线兜底</h3>
+<p>评测不靠感觉，靠三条线：需求闭环可追踪、人工抽查 10%–20%、权限验收回归。</p>
+<p>人工抽查看归纳得对不对、引用绑得牢不牢；权限验收回归是 Day 12 的防再犯手段：拿没权限的账号去问，看还漏不漏别家产品反馈。</p>
+<div class="warn"><strong>容易踩的坑：</strong>中断之后以为图自己会继续跑。不会。interrupt 停住后，必须有人给决定、再 invoke 一次，图才从 Checkpoint 续跑；没人给决定，图就一直停在那里。</div>
+<div class="card">
+<p><strong>🎮 审批模拟：一条需求进 TAPD</strong></p>
+<p>需求：投放后台的操作路径太深，用户找了很久才找到。引用已绑定原文。图已停在人工审核，等你决定。</p>
+<p><button id="tapd-approve" style="padding:7px 12px;border-radius:999px;border:1px solid #22a35a;background:#dcfce7;cursor:pointer">批准</button>
+<button id="tapd-edit" style="padding:7px 12px;border-radius:999px;border:1px solid #d99a00;background:#fff7e6;cursor:pointer">修改</button>
+<button id="tapd-reject" style="padding:7px 12px;border-radius:999px;border:1px solid #d33;background:#fee2e2;cursor:pointer">拒绝</button>
+<button id="tapd-resume" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">中断后刷新状态续跑</button>
+<button id="tapd-reset" style="padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer">重新来一条</button></p>
+<p id="tapd-status">状态：⏸ 已中断，等人工审核（Checkpoint 已存，thread_id 固定）</p>
+<p id="tapd-path">路径：需求归纳 → 人工审核 interrupt（停在这里）</p>
+</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：工具节点调 TAPD，前面先 interrupt（先看形状）</h3>
+<pre><code>from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import interrupt
+from langgraph.graph.message import add_messages
+from typing import Annotated, TypedDict
+
+class LoopState(TypedDict):
+    messages: Annotated[list, add_messages]
+    requirement: str        # 归纳出的需求，已绑定原文引用
+    tapd_status: str        # TAPD 回写的状态：待写 / 已创建 / 已拒绝
+
+# TAPD 工具：按生产配置填接口与字段，这里只看形状
+def create_tapd_issue(requirement: str) -> str:
+    """把需求写进 TAPD，返回 TAPD 里的状态。"""
+    return "已创建（按生产配置调 TAPD 接口）"
+
+def review_node(state: LoopState) -> LoopState:
+    # 人工审核：三条路，批准 / 修改 / 拒绝
+    decision = interrupt({
+        "requirement": state["requirement"],
+        "options": ["批准", "修改", "拒绝"],
+    })
+    if decision == "拒绝":
+        return {"tapd_status": "已拒绝"}
+    if decision == "修改":
+        return {"requirement": decision["改后需求"], "tapd_status": "待写"}
+    return {"tapd_status": "待写"}  # 批准：继续往下走
+
+def route_after_review(state: LoopState) -> str:
+    # 拒绝就结束，不写 TAPD；否则进工具节点写 TAPD
+    return END if state["tapd_status"] == "已拒绝" else "tapd_tools"
+
+graph = StateGraph(LoopState)
+graph.add_node("review", review_node)
+graph.add_node("tapd_tools", ToolNode([create_tapd_issue]))
+graph.add_edge(START, "review")
+graph.add_conditional_edges("review", route_after_review,
+                            {END: END, "tapd_tools": "tapd_tools"})
+graph.add_edge("tapd_tools", END)
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<h3>示例 2：断点续跑 + TAPD 状态回写</h3>
+<pre><code># 第一次跑：图在 interrupt 处停住，等审核
+config = {"configurable": {"thread_id": "loop-001"}}
+app.invoke({"requirement": "投放后台操作路径太深，引用已绑定"},
+           config=config)
+# 图停住了，Checkpoint 已存快照，thread_id 是 loop-001
+
+# 人回来点“批准”，同一 thread 再 invoke，接着跑
+app.invoke(None, config=config)  # 从快照续跑：写 TAPD
+
+# TAPD 状态回写：工具返回的状态写进 State，后面能查
+# tapd_status 从“待写”变成“已创建”，需求闭环可追踪
+state = app.get_state(config)
+print(state.values["tapd_status"])  # 已创建</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来：在 review 节点前故意不加 interrupt，看 Agent 会不会直接写 TAPD——再把 interrupt 加回去，对比两次的差别。<br>
+2. 模拟一次“修改”：审核时把需求改短一半，确认图改了再继续、而不是按原需求写 TAPD。<br>
+3. 模拟一次断点续跑：第一次 invoke 停在中断点，换一个 thread_id 再 invoke，看它为什么不能续跑；换回原 thread_id，看它从哪里继续。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 需求闭环是什么意思？</strong></p><button data-i="0">洞察出的需求进 TAPD 跟踪落地，状态还能回写回来</button><button data-i="1">需求写在聊天框里就行</button><button data-i="2">需求分析完就删掉</button><div class="ans">解析：选 A。闭环就是需求能被跟踪，状态能回写，不是一次性输出。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 为什么写 TAPD 之前要先人工审核？</strong></p><button data-i="0">为了让图跑得慢一点</button><button data-i="1">为了多记一条日志</button><button data-i="2">写 TAPD 是写操作，不能让 Agent 自己悄悄写</button><div class="ans">解析：选 C。写操作要 interrupt 停住，等人批准、修改或拒绝。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 审核点“修改”，图怎么走？</strong></p><button data-i="0">直接结束</button><button data-i="1">改了再继续，按改后的需求写 TAPD</button><button data-i="2">按原需求写 TAPD，改动忽略</button><div class="ans">解析：选 B。修改是三条路之一：改了再继续，不是拒绝也不是原样通过。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 审核等了一天，图怎么续跑？</strong></p><button data-i="0">同一 thread_id 再 invoke，从 Checkpoint 快照续跑</button><button data-i="1">换一个 thread_id 再跑</button><button data-i="2">从头再分析一遍</button><div class="ans">解析：选 A。Checkpoint 用 thread_id 存快照，同一 thread 再 invoke 接着跑。</div></div>
+<div class="q" data-answer="2"><p><strong>5. TAPD 状态回写有什么用？</strong></p><button data-i="0">只是为了好看</button><button data-i="1">为了多存一份数据</button><button data-i="2">让需求闭环可追踪：后面能查到这条需求走到哪一步了</button><div class="ans">解析：选 C。状态写回 State，需求从“待写”到“已创建”全程可查。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 这门课的评测抓手是哪三条？</strong></p><button data-i="0">跑得快、代码少、模型大</button><button data-i="1">需求闭环可追踪 + 人工抽查 10%–20% + 权限验收回归</button><button data-i="2">只看人工抽查</button><div class="ans">解析：选 B。三条线兜底：闭环可追踪、人工抽查、权限验收回归。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：需求怎么从 Agent 进 TAPD？</summary><p>洞察出的需求先绑定原文引用，再过人工审核 interrupt，批准后由工具节点调 TAPD 写进去，TAPD 的状态再回写进 State，全程可追踪。</p></details>
+<details><summary>Q2：人工审核的三条路分别怎么走？</summary><p>批准：继续，工具节点写 TAPD；修改：改了再继续，按改后的需求写；拒绝：图结束，不写 TAPD。三条路用 interrupt + 条件边实现。</p></details>
+<details><summary>Q3：审核要等很久，图会丢吗？</summary><p>不会。图停在 interrupt 处，Checkpoint 用 thread_id 存住快照；人回来给决定后，同一 thread 再 invoke，图从快照续跑，不用从头再分析。</p></details>
+<details><summary>Q4：TAPD 状态回写是干嘛的？</summary><p>让需求闭环可追踪：tapd_status 从“待写”变成“已创建”，后面随时能查到这条需求走到哪一步了，而不是写完就丢。</p></details>
+<details><summary>Q5：这个项目的评测怎么做？</summary><p>三条线：需求闭环可追踪、人工抽查 10%–20%（看归纳得对不对、引用绑得牢不牢）、权限验收回归（拿没权限的账号去问，看还漏不漏别家产品反馈）。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>写操作上生产前，先问三句：写 TAPD 前有没有 interrupt？拒绝的路走不走得到（会不会误写）？中断后换了 thread_id 还能不能续跑（应该不能）？三问有一个答不上来，闭环就别上。</p>
+<p><strong>简历讲法：</strong>别写“做过需求自动同步”，写“从 0 到 1 主导搭建：反馈洞察出的需求绑定原文引用，人工审核 interrupt 后由工具节点写 TAPD，状态回写可追踪；Checkpoint 用 thread_id 做断点续跑；评测是闭环可追踪 + 人工抽查 10%–20% + 权限验收回归”。</p>
+<p><strong>明日预告：</strong>Day 14 是最后一课：知识库怎么持续更新、竞品对比怎么做、以及怎么把这 14 天讲成一个 5 分钟的面试故事。</p>
+</div>
+<div class="nav"><span><a href="day12.html">← Day 12</a> &nbsp; <a href="index.html">课程首页</a></span><span><a href="day14.html">Day 14 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+// 审批模拟：一条需求进 TAPD
+var tapdState = 'waiting';
+function tapdSet(status, path){
+  document.getElementById('tapd-status').textContent = '状态：' + status;
+  document.getElementById('tapd-path').textContent = '路径：' + path;
+}
+document.getElementById('tapd-approve').addEventListener('click', function(){
+  tapdState = 'approved';
+  tapdSet('✅ 已批准，继续：工具节点写 TAPD，tapd_status 待写 → 已创建',
+    '需求归纳 → 人工审核 interrupt → 批准 → 写 TAPD → 状态回写');
+});
+document.getElementById('tapd-edit').addEventListener('click', function(){
+  tapdState = 'edited';
+  tapdSet('✏️ 已修改，改了再继续：按改后的需求写 TAPD，原需求不进 TAPD',
+    '需求归纳 → 人工审核 interrupt → 修改 → 写 TAPD（改后需求）→ 状态回写');
+});
+document.getElementById('tapd-reject').addEventListener('click', function(){
+  tapdState = 'rejected';
+  tapdSet('⛔ 已拒绝，图结束：不写 TAPD，tapd_status = 已拒绝',
+    '需求归纳 → 人工审核 interrupt → 拒绝 → END');
+});
+document.getElementById('tapd-resume').addEventListener('click', function(){
+  if (tapdState === 'waiting') {
+    tapdSet('⏸ 还在等审核：Checkpoint 已存快照，先点批准 / 修改 / 拒绝',
+      '需求归纳 → 人工审核 interrupt（停在这里，等决定）');
+  } else {
+    tapdSet('▶️ 已续跑：同一 thread_id 再 invoke，从 Checkpoint 快照接着跑，不用从头分析',
+      '中断点 → 续跑 → 写 TAPD / 结束（按刚才的决定）');
+  }
+});
+document.getElementById('tapd-reset').addEventListener('click', function(){
+  tapdState = 'waiting';
+  tapdSet('⏸ 已中断，等人工审核（Checkpoint 已存，thread_id 固定）',
+    '需求归纳 → 人工审核 interrupt（停在这里）');
+});
+</script>
+</body>
+</html>
