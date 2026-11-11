@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<link rel="icon" href="data:,">
+<title>FastAPI 教程 · Python 速通 + 从入门到生产级 Agent 后端</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7f5; --surface:#ffffff; --surface2:#eef3f1; --ink:#17201d; --muted:#5b6b66; --line:#dde5e1;
+  --teal:#009485; --teal-dark:#007a6e; --teal-soft:#e0f2ef; --amber:#b45309; --amber-bg:#fef3c7; --red:#b42318; --red-bg:#fef2f2;
+  --code-bg:#0f1f1c; --code-ink:#d7ece8; --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0c1210; --surface:#141c19; --surface2:#1a2421; --ink:#e8efec; --muted:#9db0a8; --line:#27352f; --teal:#2dd4bf; --teal-dark:#2dd4bf; --teal-soft:#12312c; --amber-bg:#2a2110; --red-bg:#2b1414; --code-bg:#0a1513; --code-ink:#cfe8e2; }
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans SC",system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.75;font-size:16px}
+a{color:var(--teal-dark)}
+code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.86em;background:var(--surface2);padding:.12em .38em;border-radius:6px}
+pre code{background:none;padding:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px 64px}
+.hero{padding:28px 0 10px}
+.hero-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.pill{font-size:13px;font-weight:700;letter-spacing:.04em;padding:6px 12px;border-radius:999px;background:var(--teal-soft);color:var(--teal-dark);border:1px solid var(--line)}
+.pill.plain{background:var(--surface);color:var(--muted)}
+h1{font-size:clamp(30px,5vw,52px);line-height:1.08;letter-spacing:-.02em;margin:6px 0 12px;font-weight:900}
+h1 em{font-style:normal;color:var(--teal)}
+.lead{font-size:17px;color:var(--muted);max-width:760px;margin:0}
+.lead strong{color:var(--ink)}
+.roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 8px}
+@media(max-width:760px){.roadmap{grid-template-columns:1fr 1fr}}
+.rm{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.rm b{display:block;font-size:15px} .rm span{font-size:13px;color:var(--muted);line-height:1.5;display:block}
+.rm i{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--teal);font-weight:700}
+.levelbar{position:sticky;top:10px;z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.levelbar .lb-title{font-weight:900;font-size:14px;margin-right:2px}
+.lvlbtn{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);cursor:pointer;font-weight:600;font-size:14px;font-family:inherit}
+.lvlbtn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lvl-note{flex-basis:100%;font-size:13px;color:var(--muted);margin:2px 0 0}
+body[data-readlevel="0"] [data-minlevel="1"],body[data-readlevel="0"] [data-minlevel="2"],body[data-readlevel="1"] [data-minlevel="2"]{display:none !important}
+.cm{color:#7fb5a8}
+body.hide-comments .cm{display:none}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:28px;align-items:start;margin-top:18px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}}
+nav.side{position:sticky;top:76px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+@media(max-width:860px){nav.side{position:static;display:flex;overflow-x:auto;gap:6px;padding:8px} nav.side a{white-space:nowrap}}
+nav.side a{display:flex;align-items:center;min-height:40px;padding:8px 10px;border-radius:9px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500}
+nav.side a.active{background:var(--teal-soft);color:var(--teal-dark);font-weight:700}
+nav.side a small{margin-left:auto;color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:11px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 24px;margin-bottom:20px}
+@media(max-width:560px){section{padding:20px 16px}}
+.sec-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
+.num{flex:0 0 auto;width:42px;height:42px;border-radius:11px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-weight:700}
+h2{font-size:24px;line-height:1.25;margin:2px 0 4px;letter-spacing:-.01em}
+h3{font-size:17px;margin:26px 0 8px;line-height:1.4}
+h3:first-of-type{margin-top:14px}
+.sub{color:var(--muted);font-size:14px;margin:0}
+p{margin:10px 0} ul,ol{padding-left:20px;margin:8px 0} li{margin:5px 0}
+.codeblock{position:relative;background:var(--code-bg);color:var(--code-ink);border-radius:12px;margin:12px 0;overflow:hidden}
+.codeblock pre{margin:0;padding:16px;font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.65;overflow-x:auto}
+.copybtn{position:absolute;top:8px;right:8px;min-height:36px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;font-size:13px;cursor:pointer;z-index:2}
+.callout{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+.callout.warn{background:var(--amber-bg);border:1px solid #f0d48a}
+.callout.danger{background:var(--red-bg);border:1px solid #f0b4ae}
+.callout.good{background:var(--teal-soft);border:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.mini{background:var(--surface2);border-radius:12px;padding:16px}
+.mini b{display:block;margin-bottom:4px}.mini p{font-size:14px;color:var(--muted);margin:4px 0}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+@media(max-width:760px){.vs{grid-template-columns:1fr}}
+.vs h4{margin:10px 0 0;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+.vs .codeblock{margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top;min-width:110px}
+th{background:var(--surface2);font-weight:700}
+.tips{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.tips{grid-template-columns:1fr}}
+.tip{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface)}
+.tip h4{margin:0 0 6px;font-size:15px} .tip p{font-size:14px;color:var(--muted);margin:6px 0}
+.tip .codeblock pre{font-size:12.5px;padding:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0}
+.chipbtn{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font-weight:600;font-size:14px;font-family:inherit}
+.chipbtn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.search{flex:1;min-width:180px;min-height:42px;border:1px solid var(--line);border-radius:999px;padding:0 16px;background:var(--surface2);color:var(--ink);font-size:15px}
+.progress{height:8px;background:var(--surface2);border-radius:999px;overflow:hidden;margin:10px 0 4px}
+.progress i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.qa{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
+.qa-head{width:100%;text-align:left;background:none;border:none;color:var(--ink);padding:16px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;min-height:52px;font-family:inherit}
+.qa-head b{font-size:15.5px;line-height:1.5;flex:1}
+.tag{flex:0 0 auto;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--teal-soft);color:var(--teal-dark)}
+.tag.hard{background:var(--amber-bg);color:var(--amber)}
+.qa-body{display:none;padding:0 16px 16px 16px;font-size:14.5px;color:var(--muted);border-top:1px dashed var(--line)}
+.qa.open .qa-body{display:block} .qa.open .chev{transform:rotate(180deg)}
+.chev{transition:transform .2s;color:var(--muted)}
+.qa-body strong{color:var(--ink)}
+details.adv{border:1px dashed var(--line);border-radius:12px;padding:6px 16px 10px;margin:14px 0;background:var(--surface2)}
+details.adv summary{cursor:pointer;font-weight:700;font-size:14.5px;padding:8px 0;min-height:40px}
+details.adv summary .tag{margin-right:8px}
+.foot{color:var(--muted);font-size:13px;text-align:center;padding:10px}
+.kbd{font-family:"JetBrains Mono",monospace;font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 6px;background:var(--surface)}
+.step-note{font-size:13.5px;color:var(--teal-dark);font-weight:700;margin:14px 0 0}
+</style>
+</head>
+<body data-readlevel="0">
+<div class="wrap">
+<header class="hero">
+  <div class="hero-top"><span class="pill">PYTHON · AGENT 后端</span><span class="pill plain">Python 不熟也能看</span><span class="pill plain">含 Python 速通</span><span class="pill plain">含 25 道面试题</span></div>
+  <h1>FastAPI 教程<br>先补 Python，再<em>扛住 Agent 落地</em></h1>
+  <p class="lead">一句话：<strong>FastAPI 是 Python 的 Express，但自带 TypeScript 级别的类型校验 + 自动生成的接口文档。</strong>这版按「分级阅读」重排：默认只展开入门，进阶和高级收起来，想看再点开；代码全部带逐行中文注释，也可以一键关掉只看纯代码。Python 基础不熟没关系，第 00 章先用 JS/TS 对照把语法速通过一遍。</p>
+  <div class="roadmap">
+    <div class="rm"><i>00 速通</i><b>先补 Python</b><span>变量、函数、类、装饰器、async，全部 JS/TS 对照</span></div>
+    <div class="rm"><i>01 入门</i><b>能跑起来</b><span>安装、路由、Pydantic、/docs、接 LangChain</span></div>
+    <div class="rm"><i>02 进阶</i><b>能做项目</b><span>Depends、APIRouter、Lifespan、SSE 流式</span></div>
+    <div class="rm"><i>03 高级</i><b>敢上生产</b><span>分层、异步 DB、JWT 隔离、幂等限流、队列</span></div>
+    <div class="rm"><i>04 技巧</i><b>写得顺手</b><span>12 个实战小招，抄过去就能用</span></div>
+    <div class="rm"><i>05 题库</i><b>面试自测</b><span>25 题 · 按难度分级 · 点开看答案</span></div>
+  </div>
+</header>
+
+<div class="levelbar" role="group" aria-label="阅读分级">
+  <span class="lb-title">阅读分级</span>
+  <button class="lvlbtn on" data-lvl="0">只看入门</button>
+  <button class="lvlbtn" data-lvl="1">入门 + 进阶</button>
+  <button class="lvlbtn" data-lvl="2">全部（含高级）</button>
+  <button class="lvlbtn" id="cmToggle" aria-pressed="true">逐行注释：开</button>
+  <p class="lvl-note" id="lvlNote">当前是入门模式：第 00 章 Python 速通 + 第 01 章入门 + 基础面试题。进阶、高级章节已收起，学完一档再往上切，不用一口气啃完。</p>
+</div>
+
+<div class="layout">
+<nav class="side" id="sidenav" aria-label="目录">
+  <a href="#python">Python 速通 <small>00</small></a>
+  <a href="#ch1">入门 <small>01</small></a>
+  <a href="#ch2" data-minlevel="1">进阶 <small>02</small></a>
+  <a href="#ch3" data-minlevel="2">高级 · 生产 <small>03</small></a>
+  <a href="#tips" data-minlevel="1">技巧速查 <small>04</small></a>
+  <a href="#level">学到什么程度 <small>05</small></a>
+  <a href="#interview">面试题库 <small>25题</small></a>
+  <a href="#cheat">对照 + 术语 <small>表</small></a>
+</nav>
+
+<main>
+<!-- CH0 PYTHON -->
+<section id="python">
+  <div class="sec-head"><div class="num">00</div><div><h2>Python 速通：只学 FastAPI 用得到的那部分</h2><p class="sub">目标：30 分钟过完。心智模型一句话——Python 就是「不用分号、靠缩进分代码块、用 dict 代替对象」的 JS。下面每节左边 Python、右边你熟悉的 JS/TS，看对照就懂。</p></div></div>
+
+  <h3>0.1 变量：不用 let / const，直接赋值</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>name = "chat"      # 定义字符串，不用写 let/const
+count = 3          # 数字也一样，直接赋值
+price = 9.9        # 小数就是 float
+ok = True          # 布尔值首字母大写：True / False
+nothing = None     # 空值叫 None，不叫 null</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>const name = "chat";
+const count = 3;
+const price = 9.9;
+const ok = true;      // 小写 true / false
+const nothing = null; // Python 里写作 None</pre></div></div>
+  </div>
+  <p>Python 是动态类型：变量不用声明类型，同一个变量可以先装数字再装字符串（不推荐，但语法允许）。类型主要写在函数参数和类字段上，给 FastAPI 做校验用，见 0.4。</p>
+
+  <h3>0.2 容器：list 就是数组，dict 就是对象</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>tags = ["a", "b"]        # list，相当于 JS 数组
+tags.append("c")         # 往末尾加元素，相当于 push
+first = tags[0]          # 下标取值，和 JS 一样
+
+user = {"name": "lin", "age": 18}  # dict，相当于 JS 对象
+n = user["name"]         # 用方括号 + 键取值
+n2 = user.get("name")    # get 取不到返回 None，不报错
+user["vip"] = True       # 加新键，直接赋值</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>const tags = ["a", "b"];
+tags.push("c");
+const first = tags[0];
+
+const user = { name: "lin", age: 18 };
+const n = user.name;      // JS 用点号，Python 用方括号
+const n2 = user?.name;
+user.vip = true;</pre></div></div>
+  </div>
+  <div class="callout warn"><strong>最容易写错的一点：</strong>Python 里取 dict 的值用 <code>user["name"]</code>，没有 <code>user.name</code> 这种点号写法（点号是给对象属性和 Pydantic 模型用的）。字符串拼接常用 f-string：<code>f"hi {name}"</code>，就是 JS 的模板字符串 <code>`hi ${name}`</code>。</div>
+
+  <h3>0.3 函数：def 开头，缩进代替大括号</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>def add(a, b=1):   # def 定义函数；b=1 是默认参数
+    return a + b   # 靠缩进（4 个空格）表示在函数里
+
+add(2)             # 不传 b，用默认值 → 3
+add(2, b=5)        # 按名字传参，叫关键字参数 → 7
+add(2, 5)          # 按位置传参也行 → 7</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>function add(a, b = 1) {  // 靠 { } 分代码块
+  return a + b;
+}
+
+add(2);            // 3
+add(2, 5);         // 7（JS 没有按名字传参）</pre></div></div>
+  </div>
+  <ul>
+    <li><strong>缩进就是语法：</strong>同一层缩进必须对齐，缩进错了直接报错。看到冒号 <code>:</code> 就意味着下一行要缩进。</li>
+    <li><strong>没有分号，没有大括号：</strong>一行一句，块靠缩进区分。刚开始最不习惯的就是这个，看多了就好。</li>
+    <li>函数可以有多个返回值：<code>return a, b</code> 实际上是返回一个元组，接收时 <code>x, y = f()</code> 拆开，像 JS 的数组解构。</li>
+  </ul>
+
+  <h3>0.4 类型注解：写法几乎就是 TS 把 number 换成 int</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>def greet(name: str, age: int = 0) -&gt; str:
+    # name: str 表示 name 是字符串，相当于 TS 的 name: string
+    # age: int = 0 表示 age 是整数、默认 0
+    # -&gt; str 表示返回值是字符串
+    return f"hi {name}"
+
+session_id: str | None = None
+# str | None 表示「字符串或者空」，相当于 TS 的 string | null</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>function greet(name: string, age: number = 0): string {
+  return `hi ${name}`;
+}
+
+let session_id: string | null = null;</pre></div></div>
+  </div>
+  <p>关键区别：TS 的类型在运行时会被擦掉，Python 的注解运行时还在——<strong>FastAPI 正是靠这些注解在运行时做校验和生成文档</strong>，所以在 FastAPI 里类型注解不是装饰，是功能本身。常用对照：<code>str</code>↔string、<code>int</code>↔整数、<code>float</code>↔小数、<code>bool</code>↔boolean、<code>list[str]</code>↔string[]、<code>dict</code>↔对象。</p>
+
+  <h3>0.5 类：class + __init__，self 就是 this</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>class Counter:               # class 定义类
+    def __init__(self):      # __init__ 是构造函数
+        self.n = 0           # self 就是 this，必须显式写出来
+
+    def inc(self):           # 每个方法第一个参数都是 self
+        self.n += 1          # 用 self.n 访问自己的字段
+        return self.n
+
+c = Counter()                # 创建实例，不用写 new
+c.inc()                      # 调用方法，self 自动传入</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>class Counter {
+  constructor() {     // 对应 __init__
+    this.n = 0;       // this 对应 self（但不用写在参数里）
+  }
+  inc() {
+    this.n += 1;
+    return this.n;
+  }
+}
+const c = new Counter();  // JS 要写 new，Python 不用
+c.inc();</pre></div></div>
+  </div>
+  <div class="callout good"><strong>好消息：</strong>FastAPI 里你最常写的类是 Pydantic 模型，它是「简化版类」——只写字段名 + 类型，不用写 <code>__init__</code>，Pydantic 自动帮你生成构造函数：<code>class Item(BaseModel): name: str</code> 就完事了。这是全教程最友好的部分。</div>
+
+  <h3>0.6 装饰器：@ 开头的那行，做的事就是「把函数交给别人登记一下」</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>def log(fn):            # 一个普通函数，参数是另一个函数
+    def wrapper():      # 在里面定义新函数
+        print("调用前")  # 先做点事
+        return fn()     # 再调用原来的函数
+    return wrapper      # 返回新函数
+
+@log                    # 把下面的函数交给 log 处理
+def hello():
+    print("hello")
+
+hello()  # 实际跑的是 wrapper：先打印「调用前」，再打印 hello</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>function log(fn) {
+  return function () {
+    console.log("调用前");
+    return fn();
+  };
+}
+
+// JS 没有 @ 语法，要手动包一层：
+const hello = log(function hello() {
+  console.log("hello");
+});
+hello();</pre></div></div>
+  </div>
+  <p>记住一句话就够应付 FastAPI：<code>@app.get("/")</code> 等价于 <code>函数 = app.get("/")(函数)</code>，也就是把函数注册进路由表。装饰器是 FastAPI 路由的全部秘密，第 01 章会细讲。</p>
+
+  <h3>0.7 async / await：和 JS 几乎一模一样</h3>
+  <div class="vs">
+    <div><h4>PYTHON</h4><div class="codeblock"><pre>import asyncio           # 异步工具包，相当于 JS 内置的 Promise 体系
+
+async def fetch_data():  # async def 定义异步函数
+    await asyncio.sleep(1)  # await 等待，相当于 JS 的 await + 定时器
+    return {"ok": True}     # 返回 dict
+
+async def main():
+    data = await fetch_data()  # 调用异步函数必须 await，不然拿到的是协程对象
+    print(data)</pre></div></div>
+    <div><h4>JS / TS 对照</h4><div class="codeblock"><pre>async function fetchData() {
+  await new Promise(r =&gt; setTimeout(r, 1000));
+  return { ok: true };
+}
+
+async function main() {
+  const data = await fetchData();
+  console.log(data);
+}</pre></div></div>
+  </div>
+  <ul>
+    <li><code>async for chunk in ...</code> 对照 JS 的 <code>for await (const chunk of ...)</code>，流式输出时用。</li>
+    <li>最大的坑和 JS 一样：<strong>忘了 await</strong>。JS 里忘 await 拿到 Promise，Python 里忘 await 拿到 coroutine 对象，还会打一条警告。</li>
+    <li>同步等待千万别写 <code>time.sleep()</code> 放在 async 函数里，要用 <code>await asyncio.sleep()</code>，原因第 02 章讲。</li>
+  </ul>
+
+  <h3>0.8 import 与差异速查</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from fastapi import FastAPI   # 从 fastapi 包里拿 FastAPI，相当于 import { FastAPI } from "fastapi"
+import json                   # 导入整个 json 模块，相当于 import json from "json"（使用时写 json.dumps）
+from pydantic import BaseModel, Field  # 一次拿多个名字，用逗号分开
+
+# 一个 .py 文件就是一个模块：main.py 里写的东西，在别处用 from main import app 拿
+# 运行哪个文件、从哪导入，决定了 uvicorn main:app 里 main 和 app 的含义（第 01 章会再讲）</pre></div>
+  <table>
+    <tr><th>场景</th><th>Python</th><th>JS / TS</th></tr>
+    <tr><td>空值</td><td><code>None</code></td><td><code>null</code></td></tr>
+    <tr><td>布尔</td><td><code>True</code> / <code>False</code>（首字母大写）</td><td><code>true</code> / <code>false</code></td></tr>
+    <tr><td>字符串模板</td><td><code>f"hi {name}"</code></td><td><code>`hi ${name}`</code></td></tr>
+    <tr><td>取长度</td><td><code>len(tags)</code></td><td><code>tags.length</code></td></tr>
+    <tr><td>逻辑运算</td><td><code>and</code> / <code>or</code> / <code>not</code></td><td><code>&amp;&amp;</code> / <code>||</code> / <code>!</code></td></tr>
+    <tr><td>取 dict 的值</td><td><code>user["name"]</code> / <code>user.get("name")</code></td><td><code>user.name</code> / <code>user?.name</code></td></tr>
+    <tr><td>注释</td><td><code># 注释</code></td><td><code>// 注释</code></td></tr>
+    <tr><td>代码块</td><td>冒号 + 缩进（4 空格）</td><td>大括号 { }</td></tr>
+    <tr><td>遍历</td><td><code>for item in items:</code></td><td><code>for (const item of items)</code></td></tr>
+    <tr><td>条件表达式</td><td><code>a if cond else b</code></td><td><code>cond ? a : b</code></td></tr>
+  </table>
+  <div class="callout good"><strong>速通自检（能答上来就可以进第 01 章）：</strong>① <code>str | None</code> 是什么意思？② <code>@</code> 开头的那行在干嘛？③ dict 取值用点号还是方括号？④ async 函数调用时忘了 await 会拿到什么？答案分别在 0.4、0.6、0.2、0.7 里，卡住就回去扫一眼对照表。</div>
+</section>
+
+<!-- CH1 -->
+<section id="ch1">
+  <div class="sec-head"><div class="num">01</div><div><h2>入门：先跑起来，再理解原理</h2><p class="sub">目标：30 分钟内写出第一个接口，并在 /docs 里点着调通它。每个例子都是「先最简版，再展开」。</p></div></div>
+
+  <h3>1.1 安装与最小例子</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>pip install fastapi "uvicorn[standard]"
+# pip 是 Python 的包管理器，相当于 npm
+# fastapi 是框架本体；uvicorn 是跑服务的服务器，相当于 node 运行时那一层
+# 引号别漏：uvicorn[standard] 表示连带装齐标准版的额外依赖</pre></div>
+  <p class="step-note">第一步 · 最简版：一个文件、一个接口</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># main.py —— 文件名叫 main，后面启动命令会用到
+from fastapi import FastAPI  # 导入 FastAPI 类，相当于 import express
+
+app = FastAPI()  # 创建应用实例，相当于 const app = express()
+
+@app.get("/")  # 注册路由：GET 请求访问 / 时，交给下面这个函数
+def read_root():  # 处理函数，不需要 req / res 参数
+    return {"hello": "world"}  # 返回 dict，FastAPI 自动转成 JSON 响应</pre></div>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>uvicorn main:app --reload
+# main 是文件名（模块名），app 是文件里 FastAPI() 实例的变量名，别写反
+# --reload 是开发模式：改代码自动重启，生产环境不要加
+# 打开 http://127.0.0.1:8000/docs 就是自动生成的 Swagger 文档，能直接点着调接口</pre></div>
+  <p class="step-note">第二步 · 加上路径参数和查询参数（FastAPI 入门的完整形态）</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>@app.get("/items/{item_id}")  # {item_id} 是路径参数，占位写法
+def read_item(item_id: int, q: str | None = None):
+    # item_id: int —— 名字和路径里的占位对上，就是路径参数；标了 int，传非数字直接 422
+    # q: str | None = None —— 不在路径里，所以是查询参数；有默认值 None，表示可不传
+    return {"item_id": item_id, "q": q}  # 访问 /items/5?q=hi 就返回 {"item_id": 5, "q": "hi"}</pre></div>
+
+  <h3>1.2 <code>app</code> 和 <code>@app</code> 到底什么关系？</h3>
+  <p>同一个东西。<code>app = FastAPI()</code> 先创建一个应用实例，里面存着所有路由。<code>@app.get("/")</code> 就是调用它身上的 <code>get</code> 方法，把下面的函数注册成路由（装饰器的原理见 0.6）。</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># 装饰器写法，等价于下面这样手动注册：
+def read_root():  # 先定义一个普通函数
+    return {"hello": "world"}  # 函数体和之前一样
+
+read_root = app.get("/")(read_root)  # 把函数交给 app.get("/") 处理，登记进路由表</pre></div>
+  <ul>
+    <li>没有单独的 <code>@app</code> 写法，一定是 <code>@app.get</code> / <code>@app.post</code>，<code>@</code> 只是 Python 装饰器语法。</li>
+    <li>变量名不固定：写成 <code>my_app = FastAPI()</code>，就得写 <code>@my_app.get("/")</code>，启动也要改成 <code>uvicorn main:my_app</code>。</li>
+    <li>前端类比：Express 是 <code>const app = express(); app.get("/", handler)</code>，装饰器只是把注册挪到了函数头顶。</li>
+  </ul>
+
+  <h3>1.3 函数名可以随便取吗？</h3>
+  <p>可以。路由只看装饰器，不看函数名，<code>hello()</code>、<code>foo()</code> 都能跑。</p>
+  <details class="adv"><summary><span class="tag">展开</span>唯一的例外：函数名会影响文档</summary>
+  <p>函数名默认会变成文档里的 <code>operationId</code>，别在同一文件里重复定义同名函数——后一个 <code>def</code> 会盖掉前一个在代码里的名字，虽然路由本身还能跑，但看着很乱，文档里也容易混。起个有意义、不重名的名字就行。</p></details>
+
+  <h3>1.4 核心就 4 个概念</h3>
+  <div class="grid2">
+    <div class="mini"><b>① 装饰器 = 路由</b><p><code>@app.get</code> / <code>@app.post</code>，跟 Express 的 <code>app.get()</code> 一样，函数名不重要，路径和方法才重要。</p></div>
+    <div class="mini"><b>② 类型注解 = 校验 + 文档</b><p>传错类型直接 422，不用手写 <code>if (!price) return 400</code>，/docs 里自动显示结构。</p></div>
+    <div class="mini"><b>③ 三种参数分得很清</b><p>路径参数 <code>/items/{id}</code>、查询参数 <code>?skip=0</code>、请求体（Pydantic 模型）——位置决定来源。</p></div>
+    <div class="mini"><b>④ def 还是 async def</b><p>要等 IO（大模型、DB、外部 API）用 <code>async def</code>；纯计算用 <code>def</code>，FastAPI 自动丢线程池。</p></div>
+  </div>
+
+  <h3>1.5 用 Pydantic 定义请求体</h3>
+  <p class="step-note">第一步 · 最简版：只写字段和类型</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from pydantic import BaseModel  # 导入 Pydantic 的基类，所有请求模型都继承它
+
+class Item(BaseModel):  # 定义一个数据模型，相当于 TS 里定义 interface + 校验规则
+    name: str  # 必填字段：名字是字符串，没默认值就必须传
+    price: float  # 必填字段：价格是小数，传 "abc" 这种非数字会直接 422
+    is_offer: bool | None = None  # 可选字段：布尔或空，默认 None，不传也不报错
+
+@app.post("/items/")  # 注册 POST /items/ 路由
+def create_item(item: Item):  # 参数类型是 Item 模型，FastAPI 就知道这是请求体，按模型校验
+    return item  # 直接返回模型，自动序列化成 JSON</pre></div>
+  <div class="callout warn"><strong>新手最容易踩的 4 个坑：</strong> ① <code>uvicorn main:app</code> 里 <code>main</code> 是文件名、<code>app</code> 是变量名，别写反；② 改代码不生效多半是没加 <code>--reload</code>；③ Pydantic 现在是 v2，别抄 v1 的 <code>class Config</code> 老写法；④ 别直接 <code>return</code> ORM 对象，先转成 Pydantic 模型，否则容易序列化报错。想在字段上加长度、范围这类约束（进阶写法），看 2.5 的 <code>Field</code>。</div>
+
+  <h3>1.6 接 LangChain 的典型形态（你以后最常用的）</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from pydantic import BaseModel  # 请求体模型还是靠 Pydantic
+
+class ChatRequest(BaseModel):  # 前端 POST /chat 时要传的 JSON 结构
+    message: str  # 用户消息，必填字符串
+    session_id: str | None = None  # 会话 ID，可选；不传就是新会话
+
+@app.post("/chat")  # 注册 POST /chat
+async def chat(req: ChatRequest):  # 用 async def：因为要等大模型返回，是 IO 等待
+    result = await agent.ainvoke(  # ainvoke 是 LangGraph 的异步调用，await 等它跑完
+        {"messages": [("user", req.message)]},  # 把用户消息包成 LangGraph 的输入格式
+        config={"configurable": {"thread_id": req.session_id or "default"}}  # thread_id 决定续哪段对话；没传 session_id 就用 default
+    )
+    return {"reply": result["messages"][-1].content}  # 取最后一条消息的文本返回；[-1] 就是数组最后一个元素，和 JS 一样</pre></div>
+  <p>前端 <code>fetch("/chat", {method:"POST", body: JSON.stringify({message:"hi"})})</code> 就能调通。到这里入门就结束了，下面的进阶默认收起，切到「入门 + 进阶」再继续。</p>
+</section>
+
+<!-- CH2 -->
+<section id="ch2" data-minlevel="1">
+  <div class="sec-head"><div class="num">02</div><div><h2>进阶：从「会写接口」到「会写项目」</h2><p class="sub">目标：能扛住一个真实 Agent 项目的结构，而不是把所有接口堆在 main.py。每节先给最简版，再展开。</p></div></div>
+
+  <h3>2.1 Depends：依赖注入，就是声明式中间件</h3>
+  <p>类比 NestJS / Angular 的 DI。鉴权、拿 DB 连接这类事别在每个接口里手写，声明出来让 FastAPI 帮你跑：</p>
+  <p class="step-note">第一步 · 最简版：一个校验 API Key 的依赖</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from fastapi import Depends, Header, HTTPException  # Depends 声明依赖；Header 读请求头；HTTPException 主动抛 HTTP 错误
+
+async def verify_api_key(x_api_key: str = Header(...)):  # 这是一个依赖函数：参数从请求头 x-api-key 里取
+    # Header(...) 里的 ... 表示必填，没传这个头直接报错
+    if x_api_key != "secret-key":  # 和预设的 key 对不上
+        raise HTTPException(401, "invalid api key")  # 抛错中断请求，返回 401；raise 相当于 JS 的 throw
+    return x_api_key  # 校验通过，把 key 返回出去
+
+@app.post("/chat")  # 路由照常注册
+async def chat(req: ChatRequest, _: str = Depends(verify_api_key)):
+    # 接口多了一个参数：Depends(verify_api_key) 表示「先跑 verify_api_key，通过了才进函数体」
+    # 参数名写 _ 是惯例：表示这个值只是用来触发校验，函数体里不用它
+    ...  # ... 是 Python 的占位符，表示这里省略了函数体</pre></div>
+  <p class="step-note">第二步 · 带 yield 的依赖：自动清理，相当于 try/finally</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>def get_db():  # 依赖函数：负责给出一个数据库连接
+    db = SessionLocal()  # 先打开一个连接（SessionLocal 是提前配好的连接工厂）
+    try:  # try 相当于 JS 的 try，配合下面的 finally 做兜底清理
+        yield db  # yield 把连接「借」给接口用；接口跑完后，执行会回到这里继续往下
+    finally:  # 不管接口成功还是报错，最后都会执行这里
+        db.close()  # 关掉连接，防止连接泄漏</pre></div>
+  <p>依赖可以嵌套：<code>get_current_user</code> 依赖 <code>verify_token</code>，<code>get_admin</code> 再依赖它，层层复用。</p>
+
+  <h3>2.2 APIRouter：按业务拆模块</h3>
+  <p class="step-note">第一步 · 在子文件里定义 router，写法和 app 几乎一样</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># routers/chat.py —— 聊天相关的接口单独放一个文件
+from fastapi import APIRouter  # APIRouter 是「小号的 app」，专门用来分组
+
+router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
+# prefix：这个文件里所有路径自动加前缀 /api/v1/chat，写版本号就改这一处
+# tags：文档里分组显示的名字，/docs 里会按它归类
+
+@router.post("/")  # 注意是 @router 不是 @app；实际路径 = 前缀 + "/" = /api/v1/chat/
+async def chat(...): ...  # 接口实现和之前一样，这里省略</pre></div>
+  <p class="step-note">第二步 · 在 main.py 里组装</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># main.py 只做组装，不写具体接口
+from routers.chat import router as chat_router  # 导入 chat 模块的 router，起个别名防重名
+
+app.include_router(chat_router)  # 把 chat 的全部路由挂到 app 上
+app.include_router(feedback_router)  # 同理挂 feedback 的，路径前缀是 /api/v1/feedback</pre></div>
+
+  <h3>2.3 Lifespan：启动时加载 Agent，别每次请求都重建</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from contextlib import asynccontextmanager  # 导入装饰器，用来定义 lifespan 函数
+
+@asynccontextmanager  # 把下面这个函数变成「启动/关闭管理器」
+async def lifespan(app: FastAPI):  # 服务启动时 FastAPI 会调用它
+    app.state.agent = build_agent()  # yield 之前是启动逻辑：构建 Agent 只跑这一次，结果挂在 app.state 上全局取用
+    print("agent loaded")  # 打条日志确认加载完成
+    yield  # yield 是分界线：服务运行期间停在这里，等关服务时继续往下执行
+    app.state.agent = None  # yield 之后是关闭逻辑：释放 Agent 等资源
+
+app = FastAPI(lifespan=lifespan)  # 创建 app 时把 lifespan 交给它，启动/关闭就都归它管</pre></div>
+  <p>老写法 <code>@app.on_event("startup")</code> 已废弃，现在都用 lifespan。接口里取 Agent：<code>agent = req.app.state.agent</code>（需要给接口加一个 <code>Request</code> 参数拿到 app）。</p>
+
+  <h3>2.4 流式输出：Agent 必须会，不然前端只能干等 10 秒</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from fastapi.responses import StreamingResponse  # 流式响应类型，一边生成一边往前端推
+import json  # 把 dict 转成 JSON 字符串要用
+
+@app.post("/chat/stream")  # 注册 POST /chat/stream
+async def chat_stream(req: ChatRequest):  # 接口函数本身
+    async def gen():  # 在接口里定义一个异步生成器：它不 return，而是多次 yield 吐数据
+        async for chunk in agent.astream(  # astream 是流式调用：Agent 每产出一块就给一块，相当于 for await
+            {"messages": [("user", req.message)]},  # 输入还是同样的消息格式
+            config={"configurable": {"thread_id": req.session_id}}  # 用 session_id 续对话
+        ):
+            msg = chunk.get("agent", {}).get("messages", [None])[-1]  # 从这块状态里安全地取最后一条消息，取不到给 None
+            if msg and msg.content:  # 有消息且有文本才往外推
+                yield f"data: {json.dumps({'text': msg.content})}\n\n"  # SSE 格式：一行 data: 开头、两个换行结尾，缺一不可
+        yield "data: [DONE]\n\n"  # 全部推完后发一个结束标记，前端靠它关流
+    return StreamingResponse(gen(), media_type="text/event-stream")  # 把生成器包成流式响应返回，media_type 告诉前端这是事件流</pre></div>
+  <p>想把工具调用过程也推给前端（显示「正在查知识库…」），用 <code>agent.astream_events()</code>，区分 <code>on_chat_model_stream</code> / <code>on_tool_start</code> / <code>on_tool_end</code>。</p>
+
+  <h3>2.5 校验、错误、跨域：生产标配三件套</h3>
+  <p class="step-note">第一步 · 在 1.5 的最简模型上加约束（Field）</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from pydantic import BaseModel, Field  # Field 用来给字段加约束和默认值
+
+class ChatRequest(BaseModel):  # 还是那个请求模型
+    message: str = Field(..., min_length=1, max_length=4000)
+    # Field(...) 的 ... 表示必填；min_length/max_length 限制消息长度，超了直接 422 不用手写 if
+    session_id: str | None = Field(None, max_length=64)  # 可选，传了也不能超过 64 字符
+    temperature: float = Field(0.7, ge=0, le=2)  # 默认 0.7；ge=0 / le=2 表示必须在 0 到 2 之间</pre></div>
+  <p class="step-note">第二步 · 统一错误格式 + 跨域</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>@app.exception_handler(ValueError)  # 注册异常处理器：接口里抛出 ValueError 时走这里
+async def value_error_handler(request: Request, exc: ValueError):  # request 是当前请求，exc 是抛出的异常对象
+    return JSONResponse(status_code=400,  # 统一返回 400
+        content={"code": "BAD_INPUT", "msg": str(exc)})  # 固定格式 {code, msg}，前端不用猜错误长什么样
+
+# 跨域：前端 localhost:3000 调 localhost:8000，不加直接被浏览器拦
+app.add_middleware(CORSMiddleware,  # 给 app 装上跨域中间件
+    allow_origins=["http://localhost:3000"],  # 只允许这个前端地址跨域，生产别写 "*"
+    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])  # 允许带 Cookie、所有方法和请求头</pre></div>
+
+  <h3>2.6 异步的坑 + 后台任务</h3>
+  <div class="callout danger"><strong>最常见的翻车：</strong>在 <code>async def</code> 里直接调同步阻塞代码（同步 DB 驱动、Playwright 同步 API、重计算），会把整个事件循环卡住。要么接口改用 <code>def</code> 让 FastAPI 丢线程池，要么 <code>await run_in_threadpool(sync_func)</code>。</div>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>from fastapi import BackgroundTasks  # 后台任务工具：响应返回后再慢慢执行
+
+@app.post("/feedback")  # 注册 POST /feedback
+async def submit_feedback(req: Feedback, bg: BackgroundTasks):  # 多声明一个 bg 参数，FastAPI 自动注入
+    bg.add_task(save_to_db_and_index, req)  # 把「写库 + 建索引」登记为后台任务，接口不等它
+    return {"status": "accepted"}  # 立刻返回，任务在响应发出后执行</pre></div>
+  <p>注意：<code>BackgroundTasks</code> 只适合丢了无所谓的活，重要的批量任务要上队列——那是第 03 章 3.5 的内容。</p>
+</section>
+
+<!-- CH3 -->
+<section id="ch3" data-minlevel="2">
+  <div class="sec-head"><div class="num">03</div><div><h2>高级：敢把它放到生产上</h2><p class="sub">以「日均 10 万条反馈 + Agent 分析 + 对接 TAPD」这种量级为例，这 7 块是落地和面试都会被追问的。没到做生产系统的阶段可以先跳过。</p></div></div>
+
+  <h3>3.1 分层架构：接口里别写业务逻辑</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># routers/chat.py 只做翻译：HTTP &lt;-&gt; Service
+@router.post("/chat")  # 路由层只负责收请求、发响应
+async def chat(req: ChatRequest, svc: ChatService = Depends(get_chat_service)):
+    # svc 是通过依赖注入拿到的业务服务，接口自己不 new、也不写业务
+    return await svc.ask(req.message, req.session_id)  # 转手交给 Service，拿到结果直接返回
+# services/chat.py 纯业务，不认识 FastAPI，可以脱离 HTTP 单测
+# repositories/feedback_repo.py 只管 SQL，业务层不直接拼查询</pre></div>
+  <p>测试时用依赖覆盖，不用真起数据库：<code>app.dependency_overrides[get_db] = lambda: fake_db</code>（<code>lambda</code> 是 Python 的匿名函数，相当于 JS 的箭头函数 <code>() =&gt; fake_db</code>）。面试点：<code>Depends</code> 默认缓存，同请求多次依赖同一函数只跑一次；想每次都跑加 <code>use_cache=False</code>。</p>
+
+  <h3>3.2 异步数据库 + 连接池 + LLM 并发限流</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>engine = create_async_engine("postgresql+asyncpg://...",  # 创建异步数据库引擎；asyncpg 是 PostgreSQL 的异步驱动
+    pool_size=20, max_overflow=10, pool_pre_ping=True)  # 连接池：常备 20 条、最多再借 10 条；pre_ping 是用之前先探活，防拿到死连接
+async_session = async_sessionmaker(engine, expire_on_commit=False)  # 造一个会话工厂；expire_on_commit=False 表示提交后对象还能读，不用再查一次
+
+async def get_db():  # 依赖函数：每个请求给一个会话
+    async with async_session() as session:  # async with 是「用完自动关」的语法，相当于 JS 的 using / try-finally
+        yield session  # 把会话借给接口，请求结束自动回收
+
+llm_sem = asyncio.Semaphore(10)  # 信号量：全局最多 10 个并发调模型，防打爆上游限速
+async with llm_sem:  # 进这个块前先抢名额，抢不到就排队等
+    result = await agent.ainvoke(...)  # 名额内才真正调模型</pre></div>
+
+  <h3>3.3 安全：JWT + Scope + 产品隔离</h3>
+  <p>一个真实教训：权限只在 UI 层做了、检索层没过滤，用户就能查到别的产品的数据。正确做法是<strong>鉴权在依赖层做一次，数据隔离在 Repository 层强制带条件</strong>，接口层不信任前端传来的 <code>product_id</code>：</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/token")  # 声明 token 从哪个接口发、请求时从 Authorization 头里取
+
+async def get_current_user(security_scopes: SecurityScopes,  # security_scopes 是 FastAPI 注入的：这个接口要求哪些权限
+                           token: str = Depends(oauth2)):  # 先通过 oauth2 依赖把 token 字符串拿出来
+    payload = decode_jwt(token)  # 解码并验签，得到 {user_id, product_ids, scopes}；验不过这里就抛错了
+    if "feedback:read" not in payload["scopes"]:  # 要求的权限不在 token 里
+        raise HTTPException(403, "scope 不足")  # 返回 403：身份没问题，但权限不够
+    return payload  # 校验通过，把用户信息交给接口
+
+@router.get("/feedback")  # 注册 GET /feedback
+async def list_feedback(product_id: str,  # 前端传来的产品 ID——注意：只能当「想查哪个」，不能当「有权查」
+    user = Security(get_current_user, scopes=["feedback:read"])):  # Security = 带权限要求的 Depends
+    if product_id not in user["product_ids"]:  # 拿 token 里的授权列表对一遍
+        raise HTTPException(403, "无权访问该产品")  # 不在授权范围内直接 403
+    # 往下所有查询都必须带 product_id 条件，Repository 层再强制加一遍，双保险</pre></div>
+
+  <h3>3.4 幂等 + 限流 + 超时：有副作用的操作必备</h3>
+  <div class="codeblock"><button class="copybtn">复制</button><pre># 幂等：TAPD 建单不能因为前端重试就建两张
+async def check_idempotency(key: str = Header(..., alias="Idempotency-Key")):  # 从请求头 Idempotency-Key 取客户端生成的唯一 key
+    if await redis.set(key, "1", nx=True, ex=86400):  # nx=True 表示「key 不存在才写入」；ex=86400 是一天后过期
+        return key  # 写入成功 = 第一次提交，放行
+    raise HTTPException(409, "重复提交")  # 写不进去 = 这个 key 用过了，按重复提交处理
+
+# 限流：Redis 原子计数，每 IP 每分钟 60 次
+count = await redis.incr(f"rl:{client_ip}")  # incr 是原子自增，多实例并发也不会数错
+if count == 1: await redis.expire(f"rl:{client_ip}", 60)  # 第一次计数时给 key 设 60 秒过期，窗口自动重置
+if count > 60: raise HTTPException(429, "too many requests")  # 超限返回 429
+
+# 超时：LLM 调用必须有上限，别让慢请求占住连接
+async with asyncio.timeout(30):  # 30 秒内没跑完就抛 TimeoutError
+    result = await agent.ainvoke(...)  # 在超时保护下调模型</pre></div>
+
+  <h3>3.5 任务队列：BackgroundTasks 扛不住大批量</h3>
+  <p><code>BackgroundTasks</code> 只在当前进程、请求结束后跑，服务一重启任务就丢。日均 10 万条的正确分工：接口只做校验 + 落库 + 推任务马上返回 <code>202 Accepted</code>，Worker 另起进程做清洗、脱敏、切分、建索引、调 TAPD，前端用 <code>GET /jobs/{job_id}</code> 轮询状态。</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>@app.post("/feedback/batch", status_code=202)  # status_code=202 表示「已受理，还没处理完」
+async def ingest_batch(items: list[FeedbackItem]):  # 一次收一批反馈，list[FeedbackItem] 相当于 TS 的 FeedbackItem[]
+    job_id = await enqueue_index_job(items)  # 只把任务推到队列（Redis Stream / ARQ / Celery），重的活不在这里做
+    return {"job_id": job_id, "status": "queued"}  # 立刻返回 job_id，前端拿它轮询处理状态</pre></div>
+
+  <h3>3.6 可观测性 + 健康检查</h3>
+  <ul>
+    <li><strong>统一日志：</strong>自定义 <code>APIRoute</code> 记录 <code>request_id</code>、路径、耗时、状态码，Trace ID 一路透传到 LangSmith，Agent 每一步工具调用都能对上一次 HTTP 请求。</li>
+    <li><code>GET /healthz</code>：进程活着就 200（存活探针）。</li>
+    <li><code>GET /readyz</code>：DB、Redis、模型都连通才 200，否则 503 不接流量（就绪探针）。</li>
+    <li>再往上：OpenTelemetry + Prometheus 看指标和链路。</li>
+  </ul>
+
+  <h3>3.7 WebSocket vs SSE + 部署</h3>
+  <p>SSE 是单向推，够用但前端不能中途打断。需要双向交互（用户中途说「停」、Agent 中途问「确认吗」）用 WebSocket，注意断开时清理 LangGraph checkpoint、并做心跳——Agent 跑 2 分钟没输出，网关会以为连接死了。</p>
+  <div class="codeblock"><button class="copybtn">复制</button><pre>@app.websocket("/ws/chat")  # 注册 WebSocket 路由，写法和普通路由一样换个装饰器
+async def ws_chat(ws: WebSocket):  # ws 是这条长连接本身
+    await ws.accept()  # 先接受连接，不 accept 前端会一直等待
+    try:  # 用 try 包住整个收发循环，专门接下面的断开异常
+        while True:  # 长连接就是一个死循环：收一条、处理一条
+            data = await ws.receive_json()  # 等前端发消息（前端随时能发「取消」）
+            async for event in agent.astream_events(data["message"], version="v2"):  # 订阅 Agent 的事件流
+                if event["event"] == "on_chat_model_stream":  # 是模型吐 token 的事件
+                    await ws.send_json({"type":"token",  # 按 {type, text} 的约定格式推给前端
+                      "text": event["data"]["chunk"].content})  # chunk 里就是这一小段增量文本
+    except WebSocketDisconnect:  # 前端断开会抛这个异常，在这里收尾
+        pass  # pass 是空占位；实际要在这里清理 checkpoint，别留僵尸任务</pre></div>
+  <div class="callout good"><strong>部署一句话：</strong>单进程 <code>uvicorn main:app</code> 只适合开发；生产用 <code>gunicorn -k uvicorn.workers.UvicornWorker -w 4</code>。每个 worker 有自己的连接池和 Agent 实例，Agent 占内存时 worker 数别贪多，先压测再定。推荐骨架：<code>main.py</code> 只组装（lifespan + CORS + include_router），<code>routers/</code> 放接口，<code>deps.py</code> 放鉴权和 DB，<code>services/</code> 放业务和 Agent。</div>
+</section>
+
+<!-- TIPS -->
+<section id="tips" data-minlevel="1">
+  <div class="sec-head"><div class="num">04</div><div><h2>技巧速查：12 个实战小招</h2><p class="sub">都是日常最顺手的写法，看到哪条有用直接抄。注释同样可以一键开关。</p></div></div>
+  <div class="tips">
+    <div class="tip"><h4>1 · Annotated 起别名</h4><div class="codeblock"><pre>CurrentUser = Annotated[dict, Depends(get_current_user)]  # 把「类型 + 依赖」打包成一个别名
+@app.get("/me")  # 之后每个接口只写参数类型 CurrentUser 就行
+async def me(user: CurrentUser): ...  # user 就是校验后的当前用户</pre></div><p>鉴权不用每行写一长串。</p></div>
+    <div class="tip"><h4>2 · 整个 Router 一起鉴权</h4><div class="codeblock"><pre>router = APIRouter(prefix="/admin",  # 管理类接口单独一个 router
+  dependencies=[Depends(require_admin)])  # dependencies 挂在 router 上：下面所有接口先过这一关</pre></div><p>不用每个接口单独加。</p></div>
+    <div class="tip"><h4>3 · Enum 做查询参数</h4><div class="codeblock"><pre>class Sort(str, Enum):  # 定义枚举：值只能是这几个之一
+    newest = "newest"; hottest = "hottest"  # 分号在一行里分隔两句，平时代码别这么写，这里为省行数
+def list_items(sort: Sort = Sort.newest): ...  # 默认 newest；传别的值直接 422</pre></div><p>文档自动变下拉框，传错值直接 422。</p></div>
+    <div class="tip"><h4>4 · 多值查询用 list</h4><div class="codeblock"><pre>def list_items(tags: list[str] = Query(default=[])): ...  # 声明成 list，FastAPI 自动收集重复参数
+# ?tag=a&amp;tag=b 直接拿到 ["a","b"]，不用自己 split</pre></div></div>
+    <div class="tip"><h4>5 · response_model 藏字段</h4><div class="codeblock"><pre>@app.get("/users/{id}", response_model=UserOut,  # 用 UserOut 决定输出结构，没声明的字段不返回
+  response_model_exclude_none=True)  # 值为 None 的字段直接省略，前端不用判空</pre></div><p>密码哈希、内部 ID 不漏出去。</p></div>
+    <div class="tip"><h4>6 · 换 ORJSON 提速</h4><div class="codeblock"><pre>app = FastAPI(default_response_class=ORJSONResponse)  # 创建 app 时换掉默认的 JSON 序列化器
+# pip install orjson 就行，别的代码不用改</pre></div><p>还能直接返回 datetime / UUID。</p></div>
+    <div class="tip"><h4>7 · 生产关文档</h4><div class="codeblock"><pre>is_prod = os.getenv("ENV") == "prod"  # 读环境变量判断是不是生产
+app = FastAPI(docs_url=None if is_prod else "/docs")  # 生产把 /docs 关掉；a if cond else b 是 Python 的条件表达式
+# 单个接口隐藏：给装饰器加 include_in_schema=False</pre></div></div>
+    <div class="tip"><h4>8 · 校验报错改中文</h4><div class="codeblock"><pre>@app.exception_handler(RequestValidationError)  # 专门接校验失败异常
+async def validation_handler(request, exc):  # exc 里是 Pydantic 的详细错误列表
+    return JSONResponse(422, {"msg": "参数不对",  # 固定返回 422 + 一句人话
+      "errors": [{"field": ".".join(map(str, e["loc"][1:])),  # 把错误路径拼成 a.b.c 的字段名
+                   "msg": e["msg"]} for e in exc.errors()]})  # 这一整行是列表推导式，相当于 JS 的 exc.errors().map(e =&gt; ...)</pre></div></div>
+    <div class="tip"><h4>9 · 分页参数收成一个类</h4><div class="codeblock"><pre>class Pagination:  # 把分页参数收成一个类，到处复用
+    def __init__(self, skip: int = 0,  # 构造函数：skip 默认 0
+                 limit: int = Query(20, le=100)):  # limit 默认 20、最大 100，Query 在这里限定它来自查询参数
+        self.skip, self.limit = skip, limit  # 存到自己身上；一行给两个字段赋值
+def list_items(p: Pagination = Depends()): ...  # 接口里 Depends() 一下就拿到分页对象</pre></div></div>
+    <div class="tip"><h4>10 · 大文件分块写</h4><div class="codeblock"><pre>async with aiofiles.open(path, "wb") as f:  # 异步打开文件，用完自动关
+    while chunk := await file.read(1024*1024):  # 每次读 1MB；:= 是「赋值并判断」一体的海象运算符，读到空就是读完
+        await f.write(chunk)  # 读一块写一块，内存里永远只有 1MB</pre></div><p>别 <code>await file.read()</code> 一次读完，会吃爆内存。</p></div>
+    <div class="tip"><h4>11 · Response 设 Cookie / Header</h4><div class="codeblock"><pre>def login(response: Response):  # 多声明一个 Response 参数，FastAPI 会把响应对象给你
+    response.set_cookie("token", "xxx",  # 往响应里种 Cookie
+      httponly=True, samesite="lax")  # httponly 让 JS 读不到这个 Cookie，防 XSS 偷 token
+    return {"ok": True}  # 返回值还是照常写，Cookie 会自动带上</pre></div></div>
+    <div class="tip"><h4>12 · 测试要用 with 触发 lifespan</h4><div class="codeblock"><pre>with TestClient(app) as client:  # with 块里才会触发 lifespan 加载 Agent；with 相当于「进入时启动、退出时清理」
+    r = client.post("/chat", json={"message": "hi"})  # 在块里正常发请求测接口</pre></div><p>另记：Depends 默认缓存，<code>use_cache=False</code> 才每次重跑。</p></div>
+  </div>
+</section>
+
+<!-- LEVEL -->
+<section id="level">
+  <div class="sec-head"><div class="num">05</div><div><h2>做 Agent 开发，FastAPI 要学到什么程度？</h2><p class="sub">结论：要掌握，但不用精通到源码级。目标是 AI 应用落地岗，不是 LLM 基建岗。</p></div></div>
+  <table>
+    <tr><th>档位</th><th>标准</th><th>对应本页章节</th></tr>
+    <tr><td><strong>了解</strong></td><td>知道是干嘛的，会写 Hello World，能调通一个接口</td><td>第 00 章速通 + 第 01 章入门（纯做 Prompt / 编排研究的人到这就够）</td></tr>
+    <tr><td><strong>掌握到能独立交付 ★ 目标</strong></td><td>给一天能从零搭出可给前端用的后端：路由 + Pydantic v2 + Depends + APIRouter、lifespan 加载 Agent、SSE 流式、鉴权与产品隔离、async/同步的坑、超时/幂等/队列分工、uvicorn/gunicorn + Docker + /healthz</td><td>第 01–03 章全部</td></tr>
+    <tr><td><strong>精通源码级</strong></td><td>自写 APIRoute 子类、深度定制 OpenAPI、自造限流中间件、抠 Starlette 性能</td><td>不在本页范围：后端 infra 岗才要，现阶段知道有这回事即可</td></tr>
+  </table>
+  <p>时间分配参考：主线仍是 LangChain / LangGraph / RAG / 评测，FastAPI 占约 20%。推荐节奏：先用「只看入门」模式跑通第 00 + 01 章，再切「入门 + 进阶」重构一遍，最后切「全部」补生产知识并做题库。最好的验证不是看完教程，而是直接搭一套 <code>POST /chat/stream</code> + <code>POST /feedback/analyze</code> + API Key 鉴权的骨架跑通一次——简历上就能写「用 FastAPI 落地了 Agent 服务」，而不是「了解 FastAPI」。</p>
+  <div class="callout good"><strong>换 Node 行不行？</strong>完全行，NestJS ≈ 企业级 Node 框架（装饰器 + DI，DTO + class-validator ≈ Pydantic，Guard ≈ Depends）。最优解是混用：Node 做网关 / BFF（鉴权、限流、SSE 透传），Python + FastAPI 做 Agent 核心（LangChain Python 生态最全、新功能最先到）。只选一个：快速做产品选 Node，投 Agent 岗选 Python。</div>
+</section>
+
+<!-- INTERVIEW -->
+<section id="interview">
+  <div class="sec-head"><div class="num">06</div><div><h2>常见面试题库 · 25 题</h2><p class="sub">题目按难度分级，跟阅读分级联动：入门模式只出基础题，切到进阶 / 全部会逐档放出更难的题。用法：先自己默答一遍，再点开对答案。</p></div></div>
+  <div class="progress"><i id="pbar"></i></div>
+  <p class="sub" id="ptext">已查看 0 / 25 题答案</p>
+  <div class="toolbar">
+    <input class="search" id="qsearch" type="search" placeholder="搜题目，如：异步、Depends、幂等…" aria-label="搜索面试题">
+    <button class="chipbtn on" data-f="all">全部</button>
+    <button class="chipbtn" data-f="base">基础</button>
+    <button class="chipbtn" data-f="dep" data-minlevel="1">校验与依赖</button>
+    <button class="chipbtn" data-f="async" data-minlevel="1">异步与性能</button>
+    <button class="chipbtn" data-f="prod" data-minlevel="2">架构与生产</button>
+    <button class="chipbtn" data-f="agent" data-minlevel="2">Agent 实战</button>
+    <button class="chipbtn" id="collapseAll">收起全部</button>
+  </div>
+  <div id="qlist"></div>
+  <p class="sub" id="noresult" style="display:none">当前分级下没有匹配的题目，换个关键词，或把顶部的阅读分级往上切一档试试。</p>
+</section>
+
+<!-- CHEAT -->
+<section id="cheat">
+  <div class="sec-head"><div class="num">07</div><div><h2>对照速查表 + 术语速查</h2><p class="sub">用你已经会的东西锚定新概念，查起来最快；术语第一次出现看不懂，先来这里对一眼。</p></div></div>
+  <table>
+    <tr><th>概念</th><th>FastAPI</th><th>Express</th><th>NestJS</th></tr>
+    <tr><td>注册路由</td><td><code>@app.get("/")</code></td><td><code>app.get("/", h)</code></td><td><code>@Controller()</code> + <code>@Get()</code></td></tr>
+    <tr><td>请求校验</td><td>Pydantic BaseModel</td><td>手写 / Joi / Zod</td><td>DTO + class-validator</td></tr>
+    <tr><td>依赖注入</td><td><code>Depends(...)</code></td><td>中间件 / 手动传参</td><td>构造函数注入</td></tr>
+    <tr><td>鉴权</td><td>Depends / Security</td><td>中间件</td><td>Guard</td></tr>
+    <tr><td>拆模块</td><td>APIRouter + include_router</td><td>express.Router</td><td>Module</td></tr>
+    <tr><td>流式输出</td><td>StreamingResponse (SSE)</td><td>res.write / SSE</td><td><code>@Sse()</code></td></tr>
+    <tr><td>接口文档</td><td>自动生成 /docs</td><td>手写 Swagger</td><td>@nestjs/swagger</td></tr>
+    <tr><td>启动</td><td><code>uvicorn main:app</code></td><td><code>node app.js</code></td><td><code>npm run start</code></td></tr>
+  </table>
+  <h3>术语速查（一句人话版）</h3>
+  <div class="grid2">
+    <div class="mini"><b>Pydantic</b><p>数据校验库。你写一个带类型的类，它负责检查进来的数据合不合格，FastAPI 的校验和文档都靠它。</p></div>
+    <div class="mini"><b>装饰器</b><p>写在函数头顶、<code>@</code> 开头的那行。作用是把函数交给另一个函数「登记或加工」一下，路由注册就是这么做的。</p></div>
+    <div class="mini"><b>Depends（依赖注入）</b><p>把接口需要的前置工作（鉴权、拿 DB 连接）声明在参数上，FastAPI 在调接口前自动先跑好递给你，不用每个接口手写。</p></div>
+    <div class="mini"><b>ASGI / uvicorn</b><p>ASGI 是 Python 异步服务的接口规范（相当于 Node 里 server 的约定）；uvicorn 是按这个规范真正监听端口、跑起 app 的服务器。</p></div>
+    <div class="mini"><b>lifespan</b><p>服务的「开机和关机流程」：开机时加载 Agent、建连接池，关机时清理。写成一个函数，中间用 yield 分隔开、关两段。</p></div>
+    <div class="mini"><b>序列化</b><p>把 Python 对象（dict、模型、datetime）转成能发给前端的 JSON 文本的过程；反过来解析请求 JSON 是反序列化。</p></div>
+    <div class="mini"><b>幂等</b><p>同一个操作执行一次和执行多次，结果一样。比如建单接口带幂等 key，前端重试多少次都只会建出一张单。</p></div>
+    <div class="mini"><b>SSE</b><p>Server-Sent Events：服务器单向往前端推数据的长连接方式，格式就是一行行 <code>data: ...</code>，打字机式输出用的就是它。</p></div>
+    <div class="mini"><b>Scope（权限范围）</b><p>token 里带着的权限清单，比如 <code>feedback:read</code>。接口声明自己需要哪个 scope，token 里没有就返回 403。</p></div>
+    <div class="mini"><b>checkpointer / thread_id</b><p>LangGraph 存对话状态的机制：thread_id 标示是哪一段对话，checkpointer 负责把每步状态存到 Redis / DB，换个进程也能续上。</p></div>
+  </div>
+</section>
+<p class="foot">学习路径建议：只看入门模式跑通第 00 + 01 章 → 切到入门 + 进阶，用第 02 章的结构重构一遍 → 切到全部，对着第 06 章题库自测，答不出的题回对应章节补。</p>
+</main>
+</div>
+</div>
+
+<script>
+var QA = [
+ {c:"base",q:"FastAPI 为什么快？它和 Flask / Django 有什么区别？",a:"FastAPI 基于 <strong>Starlette（ASGI 异步框架）+ Pydantic（数据校验）</strong>，原生支持 async，IO 密集场景吞吐远高于同步的 Flask；和 Django 比，它不带 ORM、后台、模板这些全家桶，是轻量 API 框架，校验和文档由类型注解自动生成。选型：只做 API / Agent 服务选 FastAPI，重后台和 ORM 生态选 Django，极简脚本才用 Flask。"},
+ {c:"base",q:"@app.get(\"/\") 的原理是什么？app 和 @app 是什么关系？",a:"<code>app = FastAPI()</code> 是应用实例，<code>@app.get(\"/\")</code> 是装饰器调用：<code>app.get(\"/\")</code> 返回一个装饰器，把函数注册进路由表，等价于 <code>read_root = app.get(\"/\")(read_root)</code>。变量名可任意改，改了装饰器和启动命令要同步改。"},
+ {c:"base",q:"接口的函数名重要吗？重名会怎样？",a:"<strong>不影响路由</strong>，路由只看装饰器的路径和方法。但函数名默认是文档里的 <code>operationId</code>，且同文件重名定义时后一个会覆盖前一个的 Python 名字，所以要起唯一、有意义的名字。"},
+ {c:"base",q:"路径参数、查询参数、请求体，FastAPI 怎么区分？",a:"看参数的<strong>位置和类型</strong>：出现在路径模板 <code>{id}</code> 里的是路径参数；普通标量参数且不在路径里的是查询参数（有默认值即可选）；类型是 <strong>Pydantic 模型</strong>的参数就是请求体。单值想强制放 Body 用 <code>Body(...)</code> 标注。"},
+ {c:"base",q:"uvicorn main:app 里两个名字分别指什么？--reload 是干嘛的？",a:"<code>main</code> 是<strong>文件名（模块名）</strong>，<code>app</code> 是文件里 <code>FastAPI()</code> 实例的<strong>变量名</strong>。<code>--reload</code> 是开发模式下监听文件变化自动重启，生产不要开。"},
+ {c:"dep",q:"Pydantic v1 和 v2 有哪些关键区别？老教程哪些写法不能抄？",a:"v2 用 Rust 重写、速度大幅提升；<code>class Config</code> 改为 <code>model_config = ConfigDict(...)</code>，<code>.dict()</code> 改 <code>.model_dump()</code>，<code>orm_mode</code> 改 <code>from_attributes=True</code>，校验器推荐 <code>@field_validator</code>。抄代码先确认版本。"},
+ {c:"dep",q:"422 错误什么时候发生？怎么给前端友好的报错？",a:"请求数据<strong>过不了 Pydantic 校验</strong>时自动返回 422（类型错、缺必填、违反 Field 约束），业务错误才是你手动 raise 的 400/403/404。友好化：注册 <code>RequestValidationError</code> 的 exception_handler，把 <code>loc/msg</code> 转成前端能用的字段名 + 中文提示。"},
+ {c:"dep",q:"Depends 是怎么工作的？默认缓存是什么意思？",a:"FastAPI 在调用接口前先<strong>递归解析依赖树</strong>、逐个执行并把结果注入参数。同一请求内同一依赖默认<strong>只执行一次并缓存</strong>（多次 Depends(get_db) 拿到同一个连接）；需要每次新建用 <code>Depends(f, use_cache=False)</code>。依赖函数带 <code>yield</code> 时，yield 后代码在响应返回后执行，做清理。"},
+ {c:"dep",q:"依赖可以嵌套和复用吗？整个模块统一鉴权怎么做？",a:"可以：依赖里再 Depends 另一个依赖，形成链（验 token → 取用户 → 验管理员）。模块级统一鉴权：<code>APIRouter(dependencies=[Depends(require_admin)])</code>，该 router 下所有接口自动先过这一关；也可以在 <code>app.include_router(..., dependencies=[...])</code> 时加。"},
+ {c:"dep",q:"response_model 有什么用？为什么不能直接 return ORM 对象？",a:"response_model 决定<strong>输出的结构</strong>：过滤掉模型里没声明的字段（如密码哈希）、做序列化转换、生成文档。直接返回 ORM 对象可能漏内部字段、遇到懒加载或不可序列化类型报错。常用参数：<code>response_model_exclude_none=True</code> 去掉 None 字段。"},
+ {c:"async",q:"def 和 async def 接口有什么区别？选错会怎样？",a:"<code>async def</code> 直接在事件循环上跑，里面有同步阻塞调用会<strong>卡住所有请求</strong>；<code>def</code> 接口 FastAPI 自动丢到<strong>线程池</strong>跑，阻塞只占一个线程。规则：全程 await 的 IO 用 async def；含同步驱动、Playwright、重计算的用 def，或在 async 里用 <code>run_in_threadpool</code> 包起来。"},
+ {c:"async",q:"在 async 接口里调同步代码，有哪些补救办法？",a:"① 接口改 <code>def</code>（最简单，适合整段都是同步活）；② <code>await run_in_threadpool(sync_fn, args)</code> 只包阻塞的那一段；③ 换异步替代品（psycopg2 → asyncpg、requests → httpx.AsyncClient）。不要用 <code>time.sleep</code>，要用 <code>await asyncio.sleep</code>。"},
+ {c:"async",q:"怎么限制同时调用大模型的并发数？超时怎么处理？",a:"全局 <code>asyncio.Semaphore(10)</code>，调模型前 <code>async with sem</code>，防止打爆上游限速和本地内存。超时用 <code>asyncio.timeout(30)</code> 包住调用，在 exception_handler 里把 TimeoutError 转成 <strong>504 + 可重试错误码</strong>，并配合有限次重试（指数退避），别无限重试。"},
+ {c:"async",q:"SSE 流式输出怎么实现？和 WebSocket 怎么选？",a:"SSE：接口返回 <code>StreamingResponse(异步生成器, media_type=\"text/event-stream\")</code>，生成器里逐块 <code>yield \"data: {...}\\n\\n\"</code>。选型：<strong>只需服务端单向推（打字机输出）用 SSE</strong>，简单且能走普通 HTTP；需要双向（中途打断、来回确认）才上 WebSocket，并处理心跳与断线清理。"},
+ {c:"prod",q:"APIRouter 怎么组织一个大项目？main.py 应该放什么？",a:"按业务域拆 router（chat / feedback / admin），各自带 <code>prefix</code> 和 <code>tags</code> 做版本与分组；<code>main.py</code> 只做组装：创建 app、注册 lifespan 和中间件、<code>include_router</code>。再往下分层：routers 只做 HTTP 翻译，services 放业务，repositories 放数据访问。"},
+ {c:"prod",q:"lifespan 和 @app.on_event(\"startup\") 有什么区别？",a:"<code>on_event</code> 已<strong>废弃</strong>。lifespan 是一个 async context manager：<code>yield</code> 前是启动逻辑（加载 Agent、建连接池），yield 后是关闭清理，两段在同一个函数里成对出现，还能把资源放 <code>app.state</code> 供全局取用。"},
+ {c:"prod",q:"JWT + 权限 Scope 怎么做？数据权限隔离应该在哪一层？",a:"依赖层：<code>OAuth2PasswordBearer</code> 取 token → 解码校验签名与过期 → 用 <code>Security(dep, scopes=[...])</code> 验 scope，不足返回 403。<strong>数据隔离不能只靠前端或接口层判断</strong>，要在 Repository 层强制给所有查询加租户/产品条件（如 product_id in 用户授权列表），否则检索、导出等旁路接口会漏。"},
+ {c:"prod",q:"创建类接口怎么做幂等？为什么需要它？",a:"有副作用的接口（建单、扣费、写 TAPD）在网络重试、用户连点时会重复执行。用客户端传的 <code>Idempotency-Key</code> + Redis <code>SET NX</code> 占位：第一次正常执行并缓存结果，重复 key 直接返回缓存结果或 409。注意 key 要有过期时间，并和业务单号绑定校验。"},
+ {c:"prod",q:"限流怎么做？放在哪一层？",a:"中间件或依赖层统一做，基于 Redis 原子操作（INCR + EXPIRE 固定窗口，或 Lua 做滑动窗口 / 令牌桶），key 按 IP、用户或 API Key 分维度。超限返回 <strong>429</strong> 并带 Retry-After。别用进程内计数器——多 worker / 多实例下不共享，等于没限。"},
+ {c:"prod",q:"BackgroundTasks 和 Celery / ARQ 这类队列怎么分工？",a:"BackgroundTasks 跑在<strong>当前进程、响应返回之后</strong>，无持久化、无重试，进程重启任务就丢，只适合发通知、写日志这种丢了无所谓的活。清洗、索引、批量分析等重要或耗时任务必须进<strong>队列</strong>：接口落库后投递任务返回 202，独立 Worker 消费，前端轮询任务状态。"},
+ {c:"prod",q:"healthz 和 readyz 有什么区别？生产怎么部署？",a:"<code>/healthz</code> 是存活探针：进程能响应就 200，挂了就重启；<code>/readyz</code> 是就绪探针：DB、Redis、下游都连通才 200，否则 503 摘流量。部署：<code>gunicorn -k uvicorn.workers.UvicornWorker -w N</code> 或容器多副本，worker 数结合 CPU 与 Agent 内存压测决定，文档在生产环境关闭。"},
+ {c:"prod",q:"怎么测 FastAPI 接口？依赖怎么替换成假的？",a:"用 <code>TestClient(app)</code>（基于 httpx），且要用 <code>with TestClient(app) as client</code> 才会触发 lifespan。替换依赖：<code>app.dependency_overrides[get_db] = lambda: fake_db</code>，测完清空。因为 Service 层不依赖 HTTP，分层后还能直接对 Service 做单元测试。"},
+ {c:"agent",q:"Agent 对话接口怎么设计？session 怎么管理？",a:"请求体带 <code>message</code> 和可选 <code>session_id</code>，服务端把它映射成 LangGraph 的 <code>thread_id</code>（config.configurable），由 checkpointer 按 thread 存对话状态；没传就新建会话并把 id 返回给前端。接口层只负责会话标识和鉴权，<strong>对话状态不要存在接口进程的全局变量里</strong>，多 worker 下会串话/丢失，要放 Redis / DB。"},
+ {c:"agent",q:"流式输出时，怎么把工具调用过程也展示给前端？",a:"用 <code>agent.astream_events(..., version=\"v2\")</code> 订阅事件流：<code>on_chat_model_stream</code> 推 token，<code>on_tool_start / on_tool_end</code> 推工具名和状态，转成 SSE 事件（如 <code>{type:\"tool\", name:\"search_kb\"}</code>）发给前端显示「正在查知识库…」。注意过滤掉内部事件，别把完整 prompt 和中间推理原样暴露。"},
+ {c:"agent",q:"日均 10 万条反馈的批量分析接口，你会怎么设计？",a:"拆成<strong>接入与处理两段</strong>：接入接口只做校验、脱敏前置检查、落库、投递队列，立即返回 202 + job_id；Worker 集群消费做清洗、打标、向量化和索引，靠队列削峰。配套：幂等 key 防重复投递、Semaphore 限 LLM 并发、失败任务进死信队列可重放、job 状态接口给前端轮询，全链路带 request_id / job_id 做追踪。"}
+];
+var catLevel={base:0,dep:1,async:1,prod:2,agent:2};
+var catName={base:"基础",dep:"校验与依赖",async:"异步与性能",prod:"架构与生产",agent:"Agent 实战"};
+var readLevel=0;
+var list=document.getElementById('qlist'), seen={};
+QA.forEach(function(item,idx){
+  var d=document.createElement('div'); d.className='qa'; d.dataset.cat=item.c; d.dataset.minlevel=catLevel[item.c]; d.dataset.text=(item.q+item.a).toLowerCase();
+  d.innerHTML='<button class="qa-head" aria-expanded="false"><span class="tag'+(catLevel[item.c]===2?' hard':'')+'">'+catName[item.c]+'</span><b>'+(idx+1)+'. '+item.q+'</b><span class="chev">▾</span></button><div class="qa-body">'+item.a+'</div>';
+  d.querySelector('.qa-head').addEventListener('click',function(){
+    var open=d.classList.toggle('open'); this.setAttribute('aria-expanded',open);
+    if(open && !seen[idx]){seen[idx]=1; updateProgress();}
+  });
+  list.appendChild(d);
+});
+function updateProgress(){
+  var n=Object.keys(seen).length;
+  document.getElementById('pbar').style.width=(n/QA.length*100)+'%';
+  document.getElementById('ptext').textContent='已查看 '+n+' / '+QA.length+' 题答案';
+}
+var curFilter='all';
+function applyFilter(){
+  var kw=document.getElementById('qsearch').value.trim().toLowerCase(), vis=0;
+  document.querySelectorAll('.qa').forEach(function(d){
+    var ok=parseInt(d.dataset.minlevel,10)<=readLevel&&(curFilter==='all'||d.dataset.cat===curFilter)&&(!kw||d.dataset.text.indexOf(kw)>-1);
+    d.style.display=ok?'':'none'; if(ok)vis++;
+  });
+  document.getElementById('noresult').style.display=vis?'none':'block';
+}
+document.querySelectorAll('[data-f]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('[data-f]').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on'); curFilter=b.dataset.f; applyFilter();
+  });
+});
+document.getElementById('qsearch').addEventListener('input',applyFilter);
+document.getElementById('collapseAll').addEventListener('click',function(){
+  document.querySelectorAll('.qa.open').forEach(function(d){d.classList.remove('open'); d.querySelector('.qa-head').setAttribute('aria-expanded','false');});
+  window.scrollTo({top:document.getElementById('interview').offsetTop-10,behavior:'smooth'});
+});
+// reading levels
+var lvlNotes=[
+ '当前是入门模式：第 00 章 Python 速通 + 第 01 章入门 + 基础面试题。进阶、高级章节已收起，学完一档再往上切，不用一口气啃完。',
+ '当前是进阶模式：入门全部内容 + 第 02 章进阶、第 04 章技巧、校验与异步类面试题。高级生产篇仍收起。',
+ '当前是全部模式：所有章节和 25 道面试题都展开，适合查漏补缺和面试前通刷。'
+];
+document.querySelectorAll('.lvlbtn[data-lvl]').forEach(function(b){
+  b.addEventListener('click',function(){
+    readLevel=parseInt(b.dataset.lvl,10);
+    document.body.dataset.readlevel=readLevel;
+    document.querySelectorAll('.lvlbtn[data-lvl]').forEach(function(x){x.classList.toggle('on',x===b)});
+    document.getElementById('lvlNote').textContent=lvlNotes[readLevel];
+    if(curFilter!=='all'){
+      var fb=document.querySelector('[data-f="'+curFilter+'"]');
+      if(fb&&fb.dataset.minlevel!==undefined&&parseInt(fb.dataset.minlevel,10)>readLevel){
+        curFilter='all';
+        document.querySelectorAll('[data-f]').forEach(function(x){x.classList.toggle('on',x.dataset.f==='all')});
+      }
+    }
+    applyFilter();
+  });
+});
+applyFilter();
+// comment toggle: wrap the "# ..." part of each code line in a span so it can be hidden
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function wrapComments(pre){
+  var lines=pre.textContent.split('\n');
+  var out=lines.map(function(line){
+    var inS=false,inD=false,cut=-1;
+    for(var i=0;i<line.length;i++){
+      var ch=line[i];
+      if(ch==="'"&&!inD)inS=!inS;
+      else if(ch==='"'&&!inS)inD=!inD;
+      else if(ch==='#'&&!inS&&!inD){cut=i;break;}
+    }
+    if(cut===-1)return esc(line);
+    return esc(line.slice(0,cut))+'<span class="cm">'+esc(line.slice(cut))+'</span>';
+  });
+  pre.innerHTML=out.join('\n');
+}
+document.querySelectorAll('.codeblock pre').forEach(wrapComments);
+var cmBtn=document.getElementById('cmToggle');
+cmBtn.addEventListener('click',function(){
+  var hidden=document.body.classList.toggle('hide-comments');
+  cmBtn.textContent=hidden?'逐行注释：关':'逐行注释：开';
+  cmBtn.setAttribute('aria-pressed',hidden?'false':'true');
+});
+// copy buttons
+document.querySelectorAll('.codeblock').forEach(function(block){
+  var btn=block.querySelector('.copybtn'); if(!btn)return;
+  btn.addEventListener('click',function(){
+    var text=block.querySelector('pre').innerText;
+    if(navigator.clipboard){navigator.clipboard.writeText(text);}
+    btn.textContent='已复制 ✓'; setTimeout(function(){btn.textContent='复制'},1400);
+  });
+});
+// nav highlight
+var links=document.querySelectorAll('#sidenav a');
+var secs=['python','ch1','ch2','ch3','tips','level','interview','cheat'].map(function(id){return document.getElementById(id)});
+var io=new IntersectionObserver(function(es){
+  es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id)}); }});
+},{rootMargin:'-30% 0px -60% 0px'});
+secs.forEach(function(s){if(s)io.observe(s)});
+</script>
+</body>
+</html>
