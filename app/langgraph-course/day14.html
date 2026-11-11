@@ -79,17 +79,24 @@ from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from typing import Annotated, TypedDict
 
-class KBState(TypedDict):
+class FeedbackState(TypedDict):
     messages: Annotated[list, add_messages]
     kb_version: str          # 当前知识库版本戳，如 v1.2
     updated_chunks: list     # 这次更新入库的知识片段
+    has_new_data: bool       # 是否有新调研数据（更新触发器用）
+    product_id: str          # 权限过滤用：片段与记录都带 product_id
+    product_kb: dict         # 产品知识库，最新版本戳
+    competitor_kb: dict      # 竞品知识库，最新版本戳
+    capability: str          # 要对比的能力
+    comparison_changed: bool  # 对比结果是否变了
+    decision: str            # 人工复核的决定（review 节点写回）
 
-def check_trigger(state: KBState):
+def check_trigger(state: FeedbackState):
     # 触发器：新调研数据到了，或产品/竞品有新动作，就更新
     # 没触发就直接结束，触发了才进更新节点
     return "update_kb" if state.get("has_new_data") else END
 
-def update_kb(state: KBState):
+def update_kb(state: FeedbackState):
     # 更新节点：清洗、脱敏、打标后入库，片段带上新版本戳
     # 版本号按生产配置递增，这里只演示形状
     new_version = bump_version(state["kb_version"])  # 如 v1.1 -> v1.2
@@ -99,11 +106,11 @@ def update_kb(state: KBState):
         c["product_id"] = state.get("product_id")  # 权限过滤用
     return {"kb_version": new_version, "updated_chunks": chunks}
 
-def compare_competitor(state: KBState):
+def compare_competitor(state: FeedbackState):
     # 竞品对比节点：拿最新版本戳的两个库做能力比较
     return {"messages": [compare(state["kb_version"])]}
 
-graph = StateGraph(KBState)
+graph = StateGraph(FeedbackState)
 graph.add_node("update_kb", update_kb)
 graph.add_node("compare", compare_competitor)
 graph.add_conditional_edges(START, check_trigger, {"update_kb": "update_kb", END: END})
@@ -112,9 +119,10 @@ graph.add_edge("compare", END)
 app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>示例 2：竞品对比节点 + 引用绑定（先看形状）</h3>
 <pre><code>from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.types import interrupt
 
-def compare_node(state):
+def compare_node(state: FeedbackState):
     # 对比节点只做一件事：拿最新版本的两个库，对同一个能力做比较
     # 结论必须绑定原文引用：每条结论后面跟一条知识片段出处
     result = compare_capability(
@@ -125,18 +133,37 @@ def compare_node(state):
     # 引用绑定：结论没有出处，就不输出结论，只说“知识库里没有”
     return {"messages": [bind_citations(result)]}
 
-def route_after_compare(state):
+def route_after_compare(state: FeedbackState):
     # 对比结果变了（比如竞品追上来了），才需要人工看一眼
     return "human_review" if state.get("comparison_changed") else END
 
-graph = StateGraph(KBState)
+def human_review(state: FeedbackState):
+    # 人工复核节点：interrupt 在这里等人确认，恢复后继续往下走
+    # 注意：ToolNode 不能直接接在这里——它只认最后一个 AIMessage 的
+    # tool_calls，而对比节点产出的不是带 tool_calls 的 AIMessage
+    decision = interrupt("对比结果变了，请确认是否把结论进 TAPD 跟踪")
+    return {"decision": decision}
+
+def agent_node(state: FeedbackState):
+    # 模型节点：拿到人工确认后，由模型决定要不要调 TAPD 工具
+    # 只有它产出的 AIMessage 带 tool_calls，ToolNode 才会真正跑起来
+    agent = build_agent_with_tools([tapd_tool])  # 占位：把工具绑到模型上
+    return {"messages": [agent.invoke(state["messages"])]}
+
+graph = StateGraph(FeedbackState)
 graph.add_node("compare", compare_node)
+graph.add_node("human_review", human_review)
+graph.add_node("agent", agent_node)
 graph.add_node("tools", ToolNode([tapd_tool]))  # 对比结论进 TAPD 跟踪
 graph.add_edge(START, "compare")
 graph.add_conditional_edges("compare", route_after_compare,
-                            {"human_review": "tools", END: END})
+                            {"human_review": "human_review", END: END})
+graph.add_edge("human_review", "agent")
+graph.add_conditional_edges("agent", tools_condition,
+                            {"tools": "tools", END: END})
 graph.add_edge("tools", END)
-app = graph.compile(checkpointer=MemorySaver(), interrupt_before=["tools"])</code></pre>
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
+<p>为什么这样接：ToolNode 会在输入里找不到 AIMessage 时抛错，而最后一个 AIMessage 没有 tool_calls 时它一次都不跑。所以 ToolNode 前面必须是一个能产出 tool_calls 的模型节点（这里是 agent），不能直接接对比节点；人工复核也不要用编译期拦截拦在 tools 前面，改成 review 节点里调 interrupt，等人确认后再进 agent。</p>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 给你的知识库状态加一个 kb_version 字段：更新节点每次跑完，版本号递增，入库的每个片段都带上新版本戳。<br>

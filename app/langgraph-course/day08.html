@@ -86,7 +86,7 @@ class FeedbackState(TypedDict):
     analysis: dict            # 定量、定性、交叉分析与用户画像
     messages: Annotated[list, add_messages]  # 对话追问，追加式
     requirements: list        # 洞察出的需求，强制绑定原文引用
-    tapd_status: dict         # 需求进 TAPD 后的跟踪状态
+    tapd_status: str           # 需求进 TAPD 后的跟踪状态（待写 / 已创建 / 已拒绝）
 
 graph = StateGraph(FeedbackState)
 graph.add_node("clean_tag", clean_tag_node)      # 清洗、脱敏、打标
@@ -100,11 +100,8 @@ graph.add_edge("analyze", "chat")
 graph.add_edge("chat", "requirements")
 graph.add_edge("requirements", "tapd")
 graph.add_edge("tapd", END)
-# interrupt_before="tapd"：写 TAPD 前停住，等人工审核（Day 12、Day 13 讲）
-app = graph.compile(
-    checkpointer=MemorySaver(),
-    interrupt_before=["tapd"],
-)</code></pre>
+# 生产里写 TAPD 前的人工审批用 tapd 节点里的 interrupt()（Day 12、Day 13 讲），编译期中断参数只留调试用
+app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>示例 2：跑一次全景图（概念代码，按生产配置）</h3>
 <pre><code># 调研数据先放进 State，thread_id 做会话隔离
 config = {"configurable": {"thread_id": "feedback-2026"}}
@@ -112,8 +109,11 @@ result = app.invoke(
     {"raw_feedback": load_feedback()},  # 数据源按生产配置
     config=config,
 )
-# 中断在写 TAPD 前：人工审核通过后再续跑
-# app.invoke(None, config=config)  # 同一 thread_id，从 Checkpoint 续跑
+# 写 TAPD 前的人工审核（tapd 节点里的 interrupt()，Day 12、Day 13 讲）：审核通过后再续跑
+# 注意：invoke(None) 传不回决定值，interrupt() 会拿到 None、等于默认批准，人的决定就丢了；
+# interrupt() 续跑必须用 Command(resume=决定值）
+from langgraph.types import Command
+result = app.invoke(Command(resume="批准"), config=config)  # 同一 thread_id，从 Checkpoint 续跑
 print(result["requirements"])  # 每条需求都带原文引用
 print(result["tapd_status"])   # 需求进 TAPD 后的跟踪状态</code></pre>
 <h3>动手任务（10 分钟）</h3>
@@ -172,7 +172,7 @@ var pipeSteps = [
   { label: '第 3 步：分析。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: { 定量, 定性, 交叉, 画像 }  // 结合 4 年数据纵向对比\n}' },
   { label: '第 4 步：对话追问。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...]  // 产品同学的追问 + 带引用的回答\n}' },
   { label: '第 5 步：需求归纳。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...],\n  requirements: [...]  // 每条强制绑定原文引用\n}' },
-  { label: '第 6 步：TAPD。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...],\n  requirements: [...],\n  tapd_status: {...}  // 需求进 TAPD 后的跟踪状态\n}\n走完了：需求对接 TAPD 跟踪落地。' }
+  { label: '第 6 步：TAPD。', state: 'State = {\n  raw_feedback: [...],\n  cleaned_feedback: [...],\n  analysis: {...},\n  messages: [...],\n  requirements: [...],\n  tapd_status: "已创建"  // 需求进 TAPD 后的跟踪状态\n}\n走完了：需求对接 TAPD 跟踪落地。' }
 ];
 var pipeIndex = 0;
 document.getElementById('pipeNext').addEventListener('click', function(){

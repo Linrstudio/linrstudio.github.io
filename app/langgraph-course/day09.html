@@ -76,7 +76,7 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <tr><th>节点</th><th>读什么</th><th>往 State 里写什么</th></tr>
 <tr><td>清洗</td><td>原始反馈</td><td>cleaned_feedback（清洗后的列表）</td></tr>
 <tr><td>脱敏</td><td>清洗后的反馈</td><td>masked_feedback（脱敏后的列表，入库用这份）</td></tr>
-<tr><td>打标</td><td>脱敏后的反馈</td><td>tags（标签列表，复核后才定稿）</td></tr>
+<tr><td>打标</td><td>脱敏后的反馈</td><td>tags（模型打的标签列表）与 reviewed_tags（人工复核后的定稿，入库用这份）</td></tr>
 </table>
 <div class="warn"><strong>容易踩的坑：</strong>脱敏放在入库之后做。数据一进库，Agent 就能检索到；事后删库里的原始文本，也删不掉已经生成的引用和快照。脱敏节点必须排在入库之前，顺序写进图里，别靠人记。</div>
 
@@ -89,30 +89,31 @@ from langgraph.checkpoint.memory import MemorySaver
 import operator
 
 # State：每个节点只写自己那一份，用 reducer 追加，不覆盖
-class DataState(TypedDict):
+class FeedbackState(TypedDict):
     messages: Annotated[list, add_messages]  # 对话记录，追加
     raw_feedback: list  # 原始反馈
     cleaned_feedback: Annotated[list, operator.add]  # 清洗后，追加
     masked_feedback: Annotated[list, operator.add]  # 脱敏后，追加
     tags: Annotated[list, operator.add]  # 标签，追加
+    reviewed_tags: list  # 人工复核后的定稿，覆盖式，不配 reducer
 
-def clean_node(state: DataState):
+def clean_node(state: FeedbackState):
     # 去掉空反馈、重复提交、乱码；删了什么记下来
     cleaned = [f for f in state["raw_feedback"] if f.strip()]
     return {"cleaned_feedback": cleaned}
 
-def mask_node(state: DataState):
+def mask_node(state: FeedbackState):
     # 脱敏：姓名、电话、邮箱、公司名全部替换掉
     # 注意：这一步在入库前做，入库用的就是 masked_feedback
     masked = [mask_pii(f) for f in state["cleaned_feedback"]]
     return {"masked_feedback": masked}
 
-def tag_node(state: DataState):
+def tag_node(state: FeedbackState):
     # 打标：模型先打标签，标签列表写进 State
     tags = [tag_one(f) for f in state["masked_feedback"]]
     return {"tags": tags}
 
-graph = StateGraph(DataState)
+graph = StateGraph(FeedbackState)
 graph.add_node("clean", clean_node)
 graph.add_node("mask", mask_node)
 graph.add_node("tag", tag_node)
@@ -128,17 +129,17 @@ from langgraph.types import interrupt
 from langgraph.prebuilt import ToolNode
 
 # 人工复核节点：把模型打的标签给人看，人改完再继续
-def review_node(state: DataState):
+def review_node(state: FeedbackState):
     # interrupt 停住：等人工复核，改完的标签由人工传回来
     reviewed_tags = interrupt({"tags": state["tags"], "note": "请复核标签，打错的改掉"})
-    return {"tags": reviewed_tags}
+    return {"reviewed_tags": reviewed_tags}
 
-# 入库节点：只写脱敏后的反馈 + 复核后的标签，不写原始文本
-def store_node(state: DataState):
+# 入库节点：入库只用 reviewed_tags，不写原始文本
+def store_node(state: FeedbackState):
     # 按生产配置接知识库写入工具；这里只看形状
     return {"messages": ["已入库：脱敏后的反馈 + 复核后的标签"]}
 
-graph = StateGraph(DataState)
+graph = StateGraph(FeedbackState)
 graph.add_node("tag", tag_node)
 graph.add_node("review", review_node)  # 人工复核
 graph.add_node("store", store_node)  # 入库
@@ -151,7 +152,7 @@ app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 写一个 mask_pii 函数：把一段文本里的电话和邮箱替换成占位符，跑通一次，再检查脱敏后的文本里还剩不剩原始信息。<br>
-2. 给 DataState 加一个字段 reviewed_tags：模型打的标签放 tags，人工改完的放 reviewed_tags，入库只用 reviewed_tags。<br>
+2. 把入库改成只读 reviewed_tags：故意在 tags 里留一个错标签，跑一次确认错标签没进库。<br>
 3. 把三个节点的顺序画成一张小图，标出“脱敏在入库前”这个点，再想一想：如果清洗和打标调换顺序，会出什么问题？</p>
 </div>
 

@@ -77,7 +77,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from typing import Annotated, TypedDict
 
 # State：消息走 add_messages 追加；citations 存本轮回答的引用
-class ChatState(TypedDict):
+class FeedbackState(TypedDict):
     messages: Annotated[list, add_messages]
     citations: list  # 每条是 {"quote": 原文片段, "source": 出处}
 
@@ -89,12 +89,16 @@ def retrieve(query: str):
 tools = [retrieve]
 agent = build_agent_with_tools(tools)  # 模型绑定工具，按生产配置
 
-def answer_node(state: ChatState):
+def agent_node(state: FeedbackState):
+    # 模型节点：思考要不要查、查什么；返回的消息由 add_messages 追加
+    return {"messages": [agent.invoke(state["messages"])]}
+
+def answer_node(state: FeedbackState):
     # 模型根据检索到的片段作答；每句结论挂引用，写进 citations
     reply = agent.invoke(state["messages"])
     return {"messages": [reply], "citations": extract_citations(reply)}
 
-graph = StateGraph(ChatState)
+graph = StateGraph(FeedbackState)
 graph.add_node("agent", agent_node)        # 思考：要不要查、查什么
 graph.add_node("tools", ToolNode(tools))   # 行动：执行检索
 graph.add_node("answer", answer_node)      # 引用绑定后作答
@@ -111,13 +115,17 @@ app.invoke(
     config={"configurable": {"thread_id": "creative-001"}},
 )</code></pre>
 <h3>示例 2：检索为空时说“没有”（先看形状）</h3>
-<pre><code>def answer_node(state: ChatState):
-    hits = state.get("retrieved", [])  # 检索工具写回的片段
-    if not hits:
+<pre><code>from langchain_core.messages import ToolMessage
+
+def answer_node(state: FeedbackState):
+    # 检索结果在 ToolMessage 里，不在 state 的 retrieved 字段里：
+    # ToolNode 跑完检索工具后，把结果作为 ToolMessage 追加到 messages
+    tool_msgs = [m for m in state["messages"] if isinstance(m, ToolMessage)]
+    if not tool_msgs:
         # 知识库里没有：老实说没有，不编、不猜
         return {"messages": [("assistant",
             "知识库里没有相关反馈，我没法回答这个问题。")]}
-    # 有片段才作答，每句结论挂引用
+    # 有片段才作答，每句结论挂引用；最后一条 ToolMessage 的内容就是检索结果
     reply = agent.invoke(state["messages"])
     return {"messages": [reply], "citations": extract_citations(reply)}</code></pre>
 <h3>动手任务（10 分钟）</h3>

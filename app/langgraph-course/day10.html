@@ -88,7 +88,8 @@ from langgraph.types import Send
 from typing import Annotated
 from typing_extensions import TypedDict
 
-class AnalysisState(TypedDict):
+# 7 天共用 FeedbackState，各天只列自己用的字段
+class FeedbackState(TypedDict):
     tagged_data: list  # Day 9 打标完的数据：清洗、脱敏、打标已完成
     quant_result: dict
     qual_result: dict
@@ -116,20 +117,15 @@ def summarize_node(state):
     # 汇总节点：四路结果都到齐后才拼成一份分析
     return {"summary": "定量 + 定性 + 交叉 + 画像已汇总"}
 
-graph = StateGraph(AnalysisState)
+graph = StateGraph(FeedbackState)
 graph.add_node("quant", quant_node)
 graph.add_node("qual", qual_node)
 graph.add_node("cross", cross_node)
 graph.add_node("persona", persona_subgraph)  # 子图就是一个节点
 graph.add_node("summarize", summarize_node)
-graph.add_edge(START, "fan_out")
-graph.add_conditional_edges("fan_out", fan_out,
-    {"quant": "quant", "qual": "qual", "cross": "cross", "persona": "persona"})
+graph.add_conditional_edges(START, fan_out)
 # 四路都指向汇总节点：到齐后收口
-graph.add_edge("quant", "summarize")
-graph.add_edge("qual", "summarize")
-graph.add_edge("cross", "summarize")
-graph.add_edge("persona", "summarize")
+graph.add_edge(["quant", "qual", "cross", "persona"], "summarize")
 graph.add_edge("summarize", END)
 app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>示例 2：交叉分析的条件边（问题决定路线）</h3>

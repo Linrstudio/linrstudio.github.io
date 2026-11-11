@@ -67,13 +67,14 @@ table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8
 <h2>二、代码示例</h2>
 <h3>示例 1：工具节点调 TAPD，前面先 interrupt（先看形状）</h3>
 <pre><code>from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import interrupt
 from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage
 from typing import Annotated, TypedDict
 
-class LoopState(TypedDict):
+class FeedbackState(TypedDict):
     messages: Annotated[list, add_messages]
     requirement: str        # 归纳出的需求，已绑定原文引用
     tapd_status: str        # TAPD 回写的状态：待写 / 已创建 / 已拒绝
@@ -83,44 +84,68 @@ def create_tapd_issue(requirement: str) -> str:
     """把需求写进 TAPD，返回 TAPD 里的状态。"""
     return "已创建（按生产配置调 TAPD 接口）"
 
-def review_node(state: LoopState) -> LoopState:
+def review_node(state: FeedbackState) -> FeedbackState:
     # 人工审核：三条路，批准 / 修改 / 拒绝
+    # resume 值是 dict：{"decision": "批准"}
+    #   / {"decision": "修改", "改后需求": "..."} / {"decision": "拒绝"}
     decision = interrupt({
         "requirement": state["requirement"],
         "options": ["批准", "修改", "拒绝"],
     })
-    if decision == "拒绝":
+    d = decision.get("decision") if isinstance(decision, dict) else decision
+    if d == "拒绝":
         return {"tapd_status": "已拒绝"}
-    if decision == "修改":
+    if d == "修改":
         return {"requirement": decision["改后需求"], "tapd_status": "待写"}
     return {"tapd_status": "待写"}  # 批准：继续往下走
 
-def route_after_review(state: LoopState) -> str:
-    # 拒绝就结束，不写 TAPD；否则进工具节点写 TAPD
-    return END if state["tapd_status"] == "已拒绝" else "tapd_tools"
+def agent_node(state: FeedbackState) -> FeedbackState:
+    # 模型节点：按批准后的需求产出 tool_calls，再由 ToolNode 执行
+    # build_agent_with_tools 为按生产配置的封装（绑定模型 + TAPD 工具），这里只看形状
+    agent = build_agent_with_tools([create_tapd_issue])  # 按生产配置
+    result = agent.invoke({"messages": [HumanMessage(content=state["requirement"])]})
+    return {"messages": result["messages"]}
 
-graph = StateGraph(LoopState)
+def write_back_node(state: FeedbackState) -> FeedbackState:
+    # 工具跑完，把结果写回 tapd_status：按生产配置读工具返回的状态
+    return {"tapd_status": "已创建"}
+    # 也可以让工具直接返回 Command(update={"tapd_status": "已创建"})
+
+def route_after_review(state: FeedbackState) -> str:
+    # 拒绝就结束，不写 TAPD；否则进模型节点，由它产出 tool_calls 再写 TAPD
+    return END if state["tapd_status"] == "已拒绝" else "agent"
+
+graph = StateGraph(FeedbackState)
 graph.add_node("review", review_node)
+graph.add_node("agent", agent_node)
 graph.add_node("tapd_tools", ToolNode([create_tapd_issue]))
+graph.add_node("write_back", write_back_node)
 graph.add_edge(START, "review")
 graph.add_conditional_edges("review", route_after_review,
-                            {END: END, "tapd_tools": "tapd_tools"})
-graph.add_edge("tapd_tools", END)
+                            {END: END, "agent": "agent"})
+graph.add_conditional_edges("agent", tools_condition,
+                            {"tools": "tapd_tools", END: END})
+graph.add_edge("tapd_tools", "write_back")
+graph.add_edge("write_back", END)
 app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>示例 2：断点续跑 + TAPD 状态回写</h3>
-<pre><code># 第一次跑：图在 interrupt 处停住，等审核
+<pre><code>from langgraph.types import Command
+
+# 第一次跑：图在 interrupt 处停住，等审核
 config = {"configurable": {"thread_id": "loop-001"}}
 app.invoke({"requirement": "投放后台操作路径太深，引用已绑定"},
            config=config)
 # 图停住了，Checkpoint 已存快照，thread_id 是 loop-001
 
 # 人回来点“批准”，同一 thread 再 invoke，接着跑
-app.invoke(None, config=config)  # 从快照续跑：写 TAPD
+# 注意：必须用 Command(resume=决定值) 把决定传回去；
+# invoke(None) 会让 interrupt() 拿到 None，等于默认批准，人的决定就丢了
+app.invoke(Command(resume={"decision": "批准"}), config=config)  # 从快照续跑：写 TAPD
 
 # TAPD 状态回写：工具返回的状态写进 State，后面能查
 # tapd_status 从“待写”变成“已创建”，需求闭环可追踪
 state = app.get_state(config)
-print(state.values["tapd_status"])  # 已创建</code></pre>
+print(state.values["tapd_status"])  # 已创建（write_back 节点回写）</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 把示例 1 跑起来：在 review 节点前故意不加 interrupt，看 Agent 会不会直接写 TAPD——再把 interrupt 加回去，对比两次的差别。<br>

@@ -74,12 +74,13 @@ from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from typing import Annotated, TypedDict
 
-class AgentState(TypedDict):
+class FeedbackState(TypedDict):
     messages: Annotated[list, add_messages]
     product_id: str       # 当前用户的产品，从登录身份来，不从提问里猜
     retrieved: list       # 检索到的片段
+    decision: str         # 人工决定：继续 / 改了再继续 / 拒绝（示例 2 用）
 
-def retrieve_node(state: AgentState):
+def retrieve_node(state: FeedbackState):
     # 关键：过滤是检索的条件，写在查询里，不是回答后才删
     hits = search_knowledge(
         query=state["messages"][-1].content,
@@ -92,33 +93,52 @@ def retrieve_node(state: AgentState):
         return {"retrieved": [{"trend_only": True, "count": len(hits)}]}
     return {"retrieved": hits}
 
-graph = StateGraph(AgentState)
+graph = StateGraph(FeedbackState)
 graph.add_node("retrieve", retrieve_node)
 graph.add_edge(START, "retrieve")
 graph.add_edge("retrieve", END)
 app = graph.compile(checkpointer=MemorySaver())</code></pre>
 <h3>示例 2：敏感操作 interrupt，写 TAPD 前停住等人</h3>
 <pre><code>from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.types import interrupt
 from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated, TypedDict
 
-def review_node(state: AgentState):
+class FeedbackState(TypedDict):
+    messages: Annotated[list, add_messages]
+    decision: str  # 人工决定：继续 / 改了再继续 / 拒绝
+
+def review_node(state: FeedbackState):
     # 敏感操作：进 TAPD 之前先停住，等人确认
     decision = interrupt({
         "action": "写入 TAPD",
         "demand": state["messages"][-1].content,
         "options": ["继续", "改了再继续", "拒绝"],
     })
-    return {"messages": [decision]}
+    # 决定单独存 decision 字段，别塞进 messages
+    return {"decision": decision}
 
-graph = StateGraph(AgentState)
+def agent_node(state: FeedbackState):
+    # 拒绝：不产 tool_calls，tools_condition 直接走 END
+    if state["decision"] == "拒绝":
+        return {"messages": []}
+    # build_agent_with_tools 为按生产配置的封装（绑定模型 + TAPD 工具），这里只看形状
+    agent = build_agent_with_tools([write_tapd])  # 按生产配置
+    result = agent.invoke({"messages": state["messages"]})
+    return {"messages": result["messages"]}
+
+graph = StateGraph(FeedbackState)
 graph.add_node("review", review_node)   # 人工审核节点
+graph.add_node("agent", agent_node)  # 模型节点：产出 tool_calls 才进 tools
 graph.add_node("tools", ToolNode([write_tapd]))  # 写 TAPD 的工具节点，按生产配置
 graph.add_edge(START, "review")
-graph.add_edge("review", "tools")
+graph.add_edge("review", "agent")
+graph.add_conditional_edges("agent", tools_condition, {"tools": "tools", END: END})
 graph.add_edge("tools", END)
-app = graph.compile(checkpointer=MemorySaver())</code></pre>
+app = graph.compile(checkpointer=MemorySaver())
+# 续跑：必须用 Command(resume=决定) 把决定传回去；invoke(None) 会让 interrupt() 拿到 None，等于默认批准，人的决定就丢了（Day 13 讲）</code></pre>
 <h3>动手任务（10 分钟）</h3>
 <div class="card">
 <p>1. 给示例 1 的 <code>search_knowledge</code> 写一个假实现：库里混着两个产品的片段，只返回 <code>product_id</code> 匹配的，跑通后换角色再跑一次。<br>
