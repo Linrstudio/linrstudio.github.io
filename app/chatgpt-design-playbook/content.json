@@ -4,19 +4,38 @@
     "kicker": "ChatGPT 设计实操知识库",
     "lead": "把模糊的审美要求，变成清楚的任务、视觉约束和验收标准。覆盖海报、网页 UI、图标、小程序、H5、App、动效与图表。",
     "note": "这里整理的是可复用的设计工作方法，不是灵感词堆叠。规范和经验会分开标注；涉及平台版本或设备差异的建议，需要按目标环境复核。",
-    "updated": "2026-11-09",
-    "badges": ["8 个设计主题", "每节含可复制提示词", "官方资料与社区经验分栏"]
+    "updated": "2026-11-12",
+    "badges": [
+      "8 个设计主题",
+      "每节含可复制提示词",
+      "官方资料与社区经验分栏"
+    ]
   },
   "workflow": {
     "title": "先把任务说清，再让画面变好",
     "intro": "ChatGPT 更容易在上下文、真实内容和边界都明确时给出可用方案。把设计过程拆成可检查的小步，而不是只追加形容词。",
     "note": "参考图先分配角色：例如图 A 只参考构图，图 B 只参考配色，图 C 只参考材质；明确哪些部分要借鉴、哪些文字 / Logo / 版式不得复制。",
     "steps": [
-      {"title": "给出真实任务", "body": "说明用户、使用场景、核心任务、输出物和成功标准。资料不足的地方标成待确认，不让模型猜业务事实。"},
-      {"title": "把风格变成约束", "body": "写清主体、层级、布局、材质、光线、色板、字体气质、尺寸和禁止项；少用没有解释的“高级、科技感”。"},
-      {"title": "带上真实内容", "body": "提供真实文案、字段、数据、长短标题和异常状态。设计要能容纳实际内容，而不是只适配占位文字。"},
-      {"title": "一次只改一件事", "body": "先看构图，再调对比、层级或细节。每轮写清本轮改什么、哪些元素必须保持不变。"},
-      {"title": "按交付标准验收", "body": "检查中文文字、尺寸、状态、响应式、对比度、数据口径和导出格式。探索草稿不等于可交付的设计文件。"}
+      {
+        "title": "给出真实任务",
+        "body": "说明用户、使用场景、核心任务、输出物和成功标准。资料不足的地方标成待确认，不让模型猜业务事实。"
+      },
+      {
+        "title": "把风格变成约束",
+        "body": "写清主体、层级、布局、材质、光线、色板、字体气质、尺寸和禁止项；少用没有解释的“高级、科技感”。"
+      },
+      {
+        "title": "带上真实内容",
+        "body": "提供真实文案、字段、数据、长短标题和异常状态。设计要能容纳实际内容，而不是只适配占位文字。"
+      },
+      {
+        "title": "一次只改一件事",
+        "body": "先看构图，再调对比、层级或细节。每轮写清本轮改什么、哪些元素必须保持不变。"
+      },
+      {
+        "title": "按交付标准验收",
+        "body": "检查中文文字、尺寸、状态、响应式、对比度、数据口径和导出格式。探索草稿不等于可交付的设计文件。"
+      }
     ]
   },
   "base_prompt": {
@@ -33,29 +52,79 @@
       "title": "平面与海报设计",
       "summary": "把风格词翻译成看得见的构图约束；让文字、底图和准确性检查各自有明确步骤。",
       "principles": [
-        {"title": "把风格词拆成可观察参数", "body": "不要只写“高级、电影感、极简”。写清主体和背景、材质或媒介、光线、色板、字体气质、构图位置、视线顺序和禁止项；同时说清画布比例与文字区。需要多个比例时分别重组主体、文字区和留白，不要默认直接裁切同一版。"},
-        {"title": "先定阅读层级和留白", "body": "明确一级主标题、二级信息和三级细节各自的位置与作用。用字号、粗细、对比和位置建立 1→2→3 的阅读顺序；把安全边距和低细节文字区写成约束。"},
-        {"title": "准确中文文字与底图分层", "body": "优先先生成留出文字安全区的底图，再用编辑器放入真实文字。若必须让模型生成文字，把文案逐字引用，指定位置和层级，并要求不出现额外文字；交付前逐字校对。"},
-        {"title": "每轮只调一个变量", "body": "在固定比例和主体条件下，依次测试构图、背景明暗、标题位置或色彩。写明“只改什么”和“保持什么”，保留上一版，避免多个改动混在一起。"}
+        {
+          "title": "把风格词拆成可观察参数",
+          "body": "不要只写“高级、电影感、极简”。写清主体和背景、材质或媒介、光线、色板、字体气质、构图位置、视线顺序和禁止项；同时说清画布比例与文字区。需要多个比例时分别重组主体、文字区和留白，不要默认直接裁切同一版。"
+        },
+        {
+          "title": "先定阅读层级和留白",
+          "body": "明确一级主标题、二级信息和三级细节各自的位置与作用。用字号、粗细、对比和位置建立 1→2→3 的阅读顺序；把安全边距和低细节文字区写成约束。"
+        },
+        {
+          "title": "准确中文文字与底图分层",
+          "body": "优先先生成留出文字安全区的底图，再用编辑器放入真实文字。若必须让模型生成文字，把文案逐字引用，指定位置和层级，并要求不出现额外文字；交付前逐字校对。"
+        },
+        {
+          "title": "每轮只调一个变量",
+          "body": "在固定比例和主体条件下，依次测试构图、背景明暗、标题位置或色彩。写明“只改什么”和“保持什么”，保留上一版，避免多个改动混在一起。"
+        },
+        {
+          "title": "把多尺寸海报当作回归测试",
+          "body": "保存一份固定基线（提示词、参考图、画幅、质量、格式与输出）；不同尺寸分别重排并检查，不默认从主版裁切。逐尺寸核对文字、视觉层级、安全区和品牌元素；每轮只改一个变量，某个尺寸漂移时回到最后通过的版本，只修失败项。"
+        },
+        {
+          "title": "给像素级不变区域设合成出口",
+          "body": "官方提醒连续编辑仍可能改变需要保留的细节。先写出不变项；若 Logo、已审定标题或几何必须逐像素一致，不再靠提示词要求“完全不变”，而是把批准的局部结果用外部编辑器合成回原图。ChatGPT 界面与 API 的导出能力分别核对，不把 API 的 SVG 等功能外推到界面。"
+        }
       ],
-      "prompt": "请为【用途 / 场景：[填写]】制作一张【海报类型：[填写]】。输出规格：画布比例 [填写]、方向 [填写]、观看距离 / 缩略图场景 [填写]、四边安全边距 [填写]。若需多种比例，请分别重排构图，不要直接裁切同一画面。先生成留有清晰文字安全区的底图，文字作为独立图层处理。\n核心信息：一级主标题“[逐字准确填写]”，位置 [填写]；二级信息“[逐字准确填写]”，位置 [填写]；三级信息“[逐字准确填写]”，位置 [填写]。除此之外，不要生成其他文字、字母、数字、Logo 或水印。\n可见风格约束：主体 [填写]；媒介 / 材质 [填写]；主色 / 辅助色 / 强调色 [填写]；光线 [填写]；主体位置和尺寸 [填写]；视线顺序 [填写]；文字区保持低细节且无高对比主体；禁止 [填写]。请先给出 3 个只在构图上不同的方案。选定后每轮只改一个变量，并列出本轮变化与保持不变的内容。使用局部编辑时圈出目标区域，写清唯一改动并检查选择范围是否越界。",
+      "prompt": "请为【用途 / 场景：[填写]】制作一张【海报类型：[填写]】。输出规格：画布比例 [填写]、方向 [填写]、观看距离 / 缩略图场景 [填写]、四边安全边距 [填写]。若需多种比例，请分别重排构图，不要直接裁切同一画面。先生成留有清晰文字安全区的底图，文字作为独立图层处理。\n核心信息：一级主标题“[逐字准确填写]”，位置 [填写]；二级信息“[逐字准确填写]”，位置 [填写]；三级信息“[逐字准确填写]”，位置 [填写]。除此之外，不要生成其他文字、字母、数字、Logo 或水印。\n可见风格约束：主体 [填写]；媒介 / 材质 [填写]；主色 / 辅助色 / 强调色 [填写]；光线 [填写]；主体位置和尺寸 [填写]；视线顺序 [填写]；文字区保持低细节且无高对比主体；禁止 [填写]。请先给出 3 个只在构图上不同的方案。选定后每轮只改一个变量，并列出本轮变化与保持不变的内容。使用局部编辑时圈出目标区域，写清唯一改动并检查选择范围是否越界。\n【多尺寸回归基线】\n保存基线：提示词、参考图、比例、质量、输出格式。先生成【主版比例】，再分别重排生成【1:1 / 9:16 等尺寸】，不简单裁切。每个尺寸逐项核对中文文字、无额外文字、主体/品牌一致和安全边距。一次只改一个变量；若仅某尺寸失败，从最后通过版本只修该项并保留前后版本。\n【像素级不变与合成回退】\n先确认哪些区域允许变化、哪些需像素级保持。只编辑我标注的区域，逐轮只改一个变量并列出是否有未标注漂移；若 Logo/标题/几何必须完全不变，请停止重绘并给出可合成的局部结果建议，我会在外部编辑器把批准部分合成回基准图。分别说明 ChatGPT 界面实际支持的导出与 API 能力，不要互相推断。",
       "checklist": [
         "逐字比对主标题、副标题、日期、地点和网址；检查错漏字、标点和数字。优先回到文字层修正，不要靠锐化掩盖错误。",
         "缩成手机缩略图或远距离看，能否迅速读到主信息，再自然找到次级信息？避免多个元素同时争夺第一注意力。",
         "确认目标比例与安全边距；如需竖版、方版等多规格，分别重排主体和文字区，不要只裁切同一构图；文字不贴边、不被主体切穿，留白和文字区不被高细节破坏。",
         "检查文字与背景对比度：WCAG 2.2 普通文字至少 4.5:1，大号文字至少 3:1；海报图片中的文字也要检查。",
-        "每轮只改变一个变量，比较时固定画布比例、文案与其他约束，并保留上一版。局部选择编辑后检查改动是否越出选区，文字、主体和二维码留白等固定项是否保持。"
+        "每轮只改变一个变量，比较时固定画布比例、文案与其他约束，并保留上一版。局部选择编辑后检查改动是否越出选区，文字、主体和二维码留白等固定项是否保持。",
+        "把提示词、参考图、画幅、质量、格式保存为同一基线；每个比例独立重排并逐项回归检查，文字、安全区、主体或品牌漂移时只修失败尺寸。",
+        "Logo、精确排版或几何需像素级保真时，叠加比较编辑前后；提示词不保证像素锁定，应用外部编辑器合成批准局部结果。把 ChatGPT UI 与 API 实际格式/尺寸能力分开核实。"
       ],
       "official_sources": [
-        {"title": "OpenAI Image prompting", "url": "https://developers.openai.com/api/docs/guides/image-prompting", "supports": "官方图像提示指南建议描述主体、构图、风格和约束；精确文字加引号并指定位置，编辑时说明保留项、每轮改一个目标。"},
-        {"title": "W3C WCAG 2.2：Contrast (Minimum)", "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html", "supports": "解释普通文字最低 4.5:1、大号文字 3:1 的对比度要求，也适用于以图像呈现的文字。"},
-        {"title": "OpenAI Help Center：Images in ChatGPT", "url": "https://help.openai.com/en/articles/11084440-images-in-chatgpt", "supports": "可上传图片、描述编辑或圈选局部；官方提醒选择范围可能不精确，编辑后要检查是否越界。页面未显示明确发布日期。"},
-        {"title": "OpenAI：Introducing ChatGPT Images 2.6", "url": "https://openai.com/index/introducing-images-2-6/", "supports": "2026-11-04 发布说明：支持复用参考图并在连续编辑中更好保留细节，适合固定参考与保留项后逐轮修改。"}
+        {
+          "title": "OpenAI Image prompting",
+          "url": "https://developers.openai.com/api/docs/guides/image-prompting",
+          "supports": "官方图像提示指南建议描述主体、构图、风格和约束；精确文字加引号并指定位置，编辑时说明保留项、每轮改一个目标。 该指南还支持固定 prompt / 参考图 / size / quality / format 做 baseline 比较，检查 text、layout、identity、details，并逐轮只改一个设置；日期未核实。 文档提醒重复编辑仍可能改变应保留的细节；像素级保真应将批准编辑合成回原图，而不只依赖提示词。部分建议适用于图像编辑，API 特有能力不可外推到 ChatGPT UI。"
+        },
+        {
+          "title": "W3C WCAG 2.2：Contrast (Minimum)",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+          "supports": "解释普通文字最低 4.5:1、大号文字 3:1 的对比度要求，也适用于以图像呈现的文字。"
+        },
+        {
+          "title": "OpenAI Help Center：Images in ChatGPT",
+          "url": "https://help.openai.com/en/articles/11084440-images-in-chatgpt",
+          "supports": "可上传图片、描述编辑或圈选局部；官方提醒选择范围可能不精确，编辑后要检查是否越界。页面未显示明确发布日期。"
+        },
+        {
+          "title": "OpenAI：Introducing ChatGPT Images 2.6",
+          "url": "https://openai.com/index/introducing-images-2-6/",
+          "supports": "2026-11-04 发布说明：支持复用参考图并在连续编辑中更好保留细节，适合固定参考与保留项后逐轮修改。 公告区分 ChatGPT/Codex/API 功能；图像标注可用于界面编辑，SVG 导出属于 API 能力，不能推断 ChatGPT UI 一定可导出 SVG。"
+        }
       ],
       "community_sources": [
-        {"title": "Adobe Express：A beginner's guide to how to design a poster", "url": "https://www.adobe.com/express/learn/blog/poster-layout-design", "supports": "从清晰主信息、阅读层级、文字、图像、色彩与留白等角度介绍海报实践；是教程经验，不是强制规范。"},
-        {"title": "Canva：The ultimate guide to visual hierarchy", "url": "https://www.canva.com/learn/visual-hierarchy/", "supports": "介绍字体层级、间距、对比与视线流的实践方法；具体取舍仍需按项目测试。"},
-        {"title": "How To Make A Social Media Poster Using ChatGPT Web [2026 Guide]", "url": "https://www.youtube.com/watch?v=3eWdhtJaNSI", "supports": "YouTube 教程（2026-09-22，90 天内）：选择 poster/flyer 模板、先出草稿，再检查文字/间距/配色，用 select/edit 圈选单一区域并只改指定项；仅引用操作步骤，不采用宣传主张。"}
+        {
+          "title": "Adobe Express：A beginner's guide to how to design a poster",
+          "url": "https://www.adobe.com/express/learn/blog/poster-layout-design",
+          "supports": "从清晰主信息、阅读层级、文字、图像、色彩与留白等角度介绍海报实践；是教程经验，不是强制规范。"
+        },
+        {
+          "title": "Canva：The ultimate guide to visual hierarchy",
+          "url": "https://www.canva.com/learn/visual-hierarchy/",
+          "supports": "介绍字体层级、间距、对比与视线流的实践方法；具体取舍仍需按项目测试。"
+        },
+        {
+          "title": "How To Make A Social Media Poster Using ChatGPT Web [2026 Guide]",
+          "url": "https://www.youtube.com/watch?v=3eWdhtJaNSI",
+          "supports": "YouTube 教程（2026-09-22，90 天内）：选择 poster/flyer 模板、先出草稿，再检查文字/间距/配色，用 select/edit 圈选单一区域并只改指定项；仅引用操作步骤，不采用宣传主张。"
+        }
       ],
       "caveat": "AI 生成图适合探索画面方向，不保证印刷文字准确或达到印刷交付要求。最终检查真实尺寸、观看距离、印刷颜色和打样效果。"
     },
@@ -65,34 +134,128 @@
       "title": "网页设计与网页 UI",
       "summary": "先理清用户任务和页面状态，再建立设计 tokens 与组件规则，让真实内容驱动布局。",
       "principles": [
-        {"title": "先设计任务路径和信息架构", "body": "列出用户、核心任务、成功标准、入口和出口，再确定页面树、导航标签和每页主次 CTA。标签用用户熟悉的词，不从视觉装饰开始。"},
-        {"title": "拿真实内容做布局", "body": "提供长短标题、摘要、数字、真实图片、空数据和错误文案，定义长度、换行与截断规则。真实文案能暴露占位样例看不出的布局问题。"},
-        {"title": "建立视觉契约 / tokens", "body": "至少定义语义颜色、字体层级、字号与行高、间距阶梯、圆角、边框、阴影、容器和断点。组件引用同一组 tokens，避免页面各自出现临时值。"},
-        {"title": "先列状态，再画默认态", "body": "按场景覆盖 loading、empty、populated、focus、disabled、error、权限不足和离线。每种状态都写触发条件、反馈、恢复动作和键盘 / 读屏语义。"},
-        {"title": "按可用空间重排响应式布局", "body": "按实际可用窗口空间而非设备名称决定何时切换布局；在断点处明确哪些内容显示、隐藏、堆叠、分栏或改序。正文应能随窄视口重排；表格 / 地图等确需二维浏览的内容局部滚动，不要让整页横向溢出。"},
-        {"title": "先定义 UI 评估量表，再看截图迭代", "body": "生成前先列 5–7 项可检查标准，例如信息清晰、任务可完成、响应式、关键状态、无障碍、一致性和内容完整。保存基线与本轮唯一改动；没有真实视口、状态或操作证据，不判为通过。"}
+        {
+          "title": "先设计任务路径和信息架构",
+          "body": "列出用户、核心任务、成功标准、入口和出口，再确定页面树、导航标签和每页主次 CTA。标签用用户熟悉的词，不从视觉装饰开始。"
+        },
+        {
+          "title": "拿真实内容做布局",
+          "body": "提供长短标题、摘要、数字、真实图片、空数据和错误文案，定义长度、换行与截断规则。真实文案能暴露占位样例看不出的布局问题。"
+        },
+        {
+          "title": "建立视觉契约 / tokens",
+          "body": "至少定义语义颜色、字体层级、字号与行高、间距阶梯、圆角、边框、阴影、容器和断点。组件引用同一组 tokens，避免页面各自出现临时值。"
+        },
+        {
+          "title": "先列状态，再画默认态",
+          "body": "按场景覆盖 loading、empty、populated、focus、disabled、error、权限不足和离线。每种状态都写触发条件、反馈、恢复动作和键盘 / 读屏语义。"
+        },
+        {
+          "title": "按可用空间重排响应式布局",
+          "body": "按实际可用窗口空间而非设备名称决定何时切换布局；在断点处明确哪些内容显示、隐藏、堆叠、分栏或改序。正文应能随窄视口重排；表格 / 地图等确需二维浏览的内容局部滚动，不要让整页横向溢出。"
+        },
+        {
+          "title": "先定义 UI 评估量表，再看截图迭代",
+          "body": "生成前先列 5–7 项可检查标准，例如信息清晰、任务可完成、响应式、关键状态、无障碍、一致性和内容完整。保存基线与本轮唯一改动；没有真实视口、状态或操作证据，不判为通过。"
+        },
+        {
+          "title": "把最糟状态和不可变区域标在截图上",
+          "body": "除桌面 / 手机默认态外，再提供最长文案、展开或错误状态截图；圈出可改区域，用箭头写明层级或间距问题，并标注圈外不可变项。要求复用现有组件与 tokens，再以多视口截图做最小迭代。这是社区实操，不是官方硬规范。"
+        },
+        {
+          "title": "先写机器可读 UI 规格契约",
+          "body": "在写代码或出高保真稿前，先把页面层级、组件 anatomy、props / variants / states、design tokens、响应式内容约束、无障碍与每项可观察验收写成结构化规格；再按规格实现并用同一矩阵复测。W3C 社区组 Schema 是非规范性工作，不是强制标准。"
+        },
+        {
+          "title": "用状态驱动方式验收可访问组件",
+          "body": "对输入组件列出 default、临界值、超限、提交错误、焦点、读屏和无 JavaScript 状态；错误需具体说明问题和修复方式，实时计数与提交错误分开，超限后允许用户修正。核心输入/提交保留语义 HTML 和静态提示；在 TalkBack 与 VoiceOver 上分别验证，不把单一读屏行为泛化。"
+        }
       ],
-      "prompt": "你是网页产品设计师和前端设计系统顾问。请基于资料，为【产品 / 页面：[填写]】产出可交付的网页 UI 规格；不要编造未提供的业务事实，不确定处标成待确认。\n目标用户与任务：[填写]；真实内容样本（标题、正文、字段、长短文案、图片、空数据、错误文案）：[粘贴]；页面范围、入口和权限：[填写]；品牌与技术约束：[填写]。\n请依次输出：1）设计目标和验收标准；2）页面树与导航标签；3）使用真实内容的页面结构；4）视觉 tokens（语义色、字号 / 行高、间距、圆角、边框、阴影、容器、断点）；5）组件及变体；6）页面状态矩阵（加载、空、成功、焦点、禁用、错误、权限、离线按适用项覆盖）；7）按紧凑 / 中等 / 扩展可用窗口空间规划重排（不要只列设备名称），说明内容何时显示、隐藏、堆叠、分栏或改序；网页在 320 CSS px 检查普通正文是否横向溢出，确需二维浏览的表格 / 地图等只让局部容器滚动；检查最长中文文案与大字号是否截断；8）可执行 QA 清单。每条建议说明理由；把待确认项单独列出。另先建立 5–7 项 UI 验收 rubric（清晰度、任务完成、响应式、状态、无障碍、一致性、内容完整性），完成后逐项附实测证据；每轮只修最低的一项。",
+      "prompt": "你是网页产品设计师和前端设计系统顾问。请基于资料，为【产品 / 页面：[填写]】产出可交付的网页 UI 规格；不要编造未提供的业务事实，不确定处标成待确认。\n目标用户与任务：[填写]；真实内容样本（标题、正文、字段、长短文案、图片、空数据、错误文案）：[粘贴]；页面范围、入口和权限：[填写]；品牌与技术约束：[填写]。\n请依次输出：1）设计目标和验收标准；2）页面树与导航标签；3）使用真实内容的页面结构；4）视觉 tokens（语义色、字号 / 行高、间距、圆角、边框、阴影、容器、断点）；5）组件及变体；6）页面状态矩阵（加载、空、成功、焦点、禁用、错误、权限、离线按适用项覆盖）；7）按紧凑 / 中等 / 扩展可用窗口空间规划重排（不要只列设备名称），说明内容何时显示、隐藏、堆叠、分栏或改序；网页在 320 CSS px 检查普通正文是否横向溢出，确需二维浏览的表格 / 地图等只让局部容器滚动；检查最长中文文案与大字号是否截断；8）可执行 QA 清单。每条建议说明理由；把待确认项单独列出。另先建立 5–7 项 UI 验收 rubric（清晰度、任务完成、响应式、状态、无障碍、一致性、内容完整性），完成后逐项附实测证据；每轮只修最低的一项。\n【截图批注迭代】\n请再附一张最长文案 / 展开 / 错误状态截图；我已圈出修改区并标注必须保持不变的区域。沿用现有设计系统，只做最小调整；在 1440px、768px、390px 分别截默认态与最糟状态，列出差异和待验项。\n【机器可读 UI 规格契约】\n先输出 ui-spec.json，再实现：列页面信息层级、组件 anatomy / props / variants / states、token 引用、按内容变化的响应式规则、无障碍要求，以及逐项可观察验收。至少覆盖 320/768/1280px 和一个断点间宽度、长标题、焦点、加载/空/错误。最后只修失败项并重跑同一矩阵。把 W3C 社区组草案、WCAG 要求和项目建议分栏。\n【可访问组件状态矩阵】\n先列 default/near-limit/over-limit/submit-error/focus/screen-reader/no-JS 状态；每一行写触发条件、可见反馈、label/description/ARIA 关系、恢复动作与可观察断言。实现语义 HTML：实时计数用于反馈，提交超限时给具体错误且可修复；无 JavaScript 仍保留输入、提交与静态限制说明。最后分别用 TalkBack、VoiceOver、键盘和窄屏测试，并标记平台差异。",
       "checklist": [
         "核心任务、导航和返回是否清楚？每个链接或按钮的文案是否能预告点击后的内容？",
         "用最长标题、真实数字、空数据、错误文案和真实图片测试；字号、行高、对比度和截断规则是否可读？",
         "检查每个组件的加载、空、焦点、禁用、错误和权限状态；状态是否有反馈和恢复动作？",
         "从窄屏开始验证导航、卡片、表格、表单和按钮如何重排；以 320 CSS px 检查普通内容的重排，确需二维浏览的内容只在独立容器内滚动，不能让整页横向溢出。",
         "测试长中文 / 英文文案、较大字体、键盘操作、窗口缩放和不同浏览器；记录复现宽度与失败状态。",
-        "留存桌面/手机基线截图与改后截图；逐项验证 rubric 标准并记录触发的 UI 状态。未提供证据的标准标为待验，而非通过。"
+        "留存桌面/手机基线截图与改后截图；逐项验证 rubric 标准并记录触发的 UI 状态。未提供证据的标准标为待验，而非通过。",
+        "除默认态外，检查长文案 / 展开 / 错误等最糟状态截图；核对箭头标注、圈外不可变区和多视口改后结果。",
+        "提交前核对 UI 规格是否覆盖页面层级、组件 anatomy/variants/states、token、响应式和无障碍；每条要求有可观察测试，W3C 社区组 Schema 不标作强制标准。",
+        "同一输入组件分别执行聚焦→输入临界值→超限→提交→修正；记录可见计数/错误、Tab 顺序、TalkBack/VoiceOver 播报和无 JavaScript 行为，确认没有重复播报且仍可恢复。"
       ],
       "official_sources": [
-        {"title": "MDN：Responsive design", "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design", "supports": "介绍流式布局、相对单位、Grid / Flexbox 和媒体查询，并建议按内容需要设置断点。"},
-        {"title": "web.dev：Responsive web design basics", "url": "https://web.dev/articles/responsive-web-design-basics", "supports": "强调让内容决定布局变化，并检查阅读行长、容器宽度、输入方式和响应式结构。"},
-        {"title": "W3C：WAI-ARIA 1.1", "url": "https://www.w3.org/TR/wai-aria-1.1/", "supports": "说明交互组件的角色、状态和属性语义应与实际行为相符。"},
-        {"title": "OpenAI：Prompt engineering best practices for ChatGPT", "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt", "supports": "建议提示词清晰具体、提供充分上下文并通过迭代改写改善结果。"},
-        {"title": "W3C WCAG 2.2：Reflow（重排）", "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html", "supports": "WCAG 2.2 AA 要求普通纵向滚动内容在 320 CSS px 宽度下无信息 / 功能损失地重排；确需二维布局的局部内容有例外。"},
-        {"title": "Material Design 3：Breakpoints", "url": "https://m3.material.io/foundations/layout/breakpoints", "supports": "建议按可用窗口空间设计断点，并明确在不同宽度下显示、隐藏、拆分、重排或调整哪些元素。"},
-        {"title": "OpenAI：Prompt engineering", "url": "https://developers.openai.com/api/docs/guides/prompt-engineering", "supports": "建议用清楚的身份、任务、上下文和评估标准组织前端工作，并测试 UI 状态；页面未显示发布日期。"},
-        {"title": "OpenAI：GPT-6 and Intelligent UI for everyone", "url": "https://openai.com/index/gpt-6-for-everyone/", "supports": "2026-10-07 公告将界面清晰度、可用性与完整性作为评估维度，可转成项目自己的验收 rubric；不是具体断点或视觉数值规范。"}
+        {
+          "title": "MDN：Responsive design",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design",
+          "supports": "介绍流式布局、相对单位、Grid / Flexbox 和媒体查询，并建议按内容需要设置断点。 该文页面 2026-09-04 更新；建议以流式布局、相对单位和 flexible grid 构建响应式界面，并在内容开始变差的位置设置断点，而非围绕少数设备尺寸。"
+        },
+        {
+          "title": "web.dev：Responsive web design basics",
+          "url": "https://web.dev/articles/responsive-web-design-basics",
+          "supports": "强调让内容决定布局变化，并检查阅读行长、容器宽度、输入方式和响应式结构。"
+        },
+        {
+          "title": "W3C：WAI-ARIA 1.1",
+          "url": "https://www.w3.org/TR/wai-aria-1.1/",
+          "supports": "说明交互组件的角色、状态和属性语义应与实际行为相符。"
+        },
+        {
+          "title": "OpenAI：Prompt engineering best practices for ChatGPT",
+          "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt",
+          "supports": "建议提示词清晰具体、提供充分上下文并通过迭代改写改善结果。"
+        },
+        {
+          "title": "W3C WCAG 2.2：Reflow（重排）",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+          "supports": "WCAG 2.2 AA 要求普通纵向滚动内容在 320 CSS px 宽度下无信息 / 功能损失地重排；确需二维布局的局部内容有例外。"
+        },
+        {
+          "title": "Material Design 3：Breakpoints",
+          "url": "https://m3.material.io/foundations/layout/breakpoints",
+          "supports": "建议按可用窗口空间设计断点，并明确在不同宽度下显示、隐藏、拆分、重排或调整哪些元素。"
+        },
+        {
+          "title": "OpenAI：Prompt engineering",
+          "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+          "supports": "建议用清楚的身份、任务、上下文和评估标准组织前端工作，并测试 UI 状态；页面未显示发布日期。"
+        },
+        {
+          "title": "OpenAI：GPT-6 and Intelligent UI for everyone",
+          "url": "https://openai.com/index/gpt-6-for-everyone/",
+          "supports": "2026-10-07 公告将界面清晰度、可用性与完整性作为评估维度，可转成项目自己的验收 rubric；不是具体断点或视觉数值规范。"
+        },
+        {
+          "title": "OpenAI Codex：Build responsive front-end designs",
+          "url": "https://developers.openai.com/codex/use-cases/frontend-designs",
+          "supports": "建议将截图和 brief 转为响应式 UI，复用仓库设计系统，并以 Playwright 在不同视口比较、迭代；页面未显示发布日期。"
+        },
+        {
+          "title": "W3C UI Specification Schema Community Group（非规范性）",
+          "url": "https://www.w3.org/groups/cg/uispec/",
+          "supports": "W3C 社区组工作，探索以机器可读结构描述 UI 的 design、layout、behaviour、constraints，并连接 anatomy / states / design tokens / 自动测试；不是正式标准或强制要求，发布日期未核实。"
+        },
+        {
+          "title": "MDN：Mobile accessibility",
+          "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Accessibility/Mobile",
+          "supports": "页面 2026-11-02 更新；提供 TalkBack 与 VoiceOver 移动浏览器操作检查，并提醒在真实移动平台验证。属于开发文档，不是 W3C 规范性标准。"
+        },
+        {
+          "title": "GOV.UK Design System：Character count",
+          "url": "https://design-system.service.gov.uk/components/character-count/",
+          "supports": "示例将实时计数与字段错误分开、超限后允许修正、无 JavaScript 时保留静态提示，并记录重复播报与非拉丁字符计数问题；页面未见可核实发布日期，作为政府设计系统实现参考。"
+        }
       ],
       "community_sources": [
-        {"title": "Nielsen Norman Group：Information Scent", "url": "https://www.nngroup.com/articles/information-scent/", "supports": "从用户如何预测链接目标的角度说明标签、摘要和上下文的重要性；属于研究 / 实践文章，不是网页标准。"}
+        {
+          "title": "Nielsen Norman Group：Information Scent",
+          "url": "https://www.nngroup.com/articles/information-scent/",
+          "supports": "从用户如何预测链接目标的角度说明标签、摘要和上下文的重要性；属于研究 / 实践文章，不是网页标准。"
+        },
+        {
+          "title": "the fastest prompt i've found for UI changes isn't a prompt",
+          "url": "https://www.reddit.com/r/vibecoding/comments/1x8g0ch/the_fastest_prompt_ive_found_for_ui_changes_isnt/",
+          "supports": "Reddit 社区实操：在截图上圈选、画箭头并写短标签；另附最长文案 / 展开 / 错误等最糟状态，并标出不可变区域。页面显示 23d ago，绝对日期未显示；作为社区经验，不当作规范。"
+        }
       ],
       "caveat": "断点、token 数值和状态覆盖需要按真实内容、组件库与目标浏览器验证。WAI-ARIA 是辅助技术语义的规范，不等于用 ARIA 替代原生 HTML 控件。"
     },
@@ -102,29 +265,109 @@
       "title": "Icon 图标设计",
       "summary": "先确保图标表达单一概念，再统一网格、笔画和视觉重量，最后检查实际尺寸与可访问名称。",
       "principles": [
-        {"title": "每个图标只表达一个概念", "body": "优先选择熟悉、直接的视觉隐喻，删除不影响识别的细节。在最小实际尺寸下测试；太复杂时做小尺寸简化，而不是只缩小大图。"},
-        {"title": "明确整组图标的系统规则", "body": "统一画布、live area、keyline、圆角、端点、笔画 / 填充模式和视角。Material 的 24dp 网格是其自身体系的建议，不要直接当作 iOS 或网页硬规则。"},
-        {"title": "按视觉重量做光学修正", "body": "网格是起点。圆形、尖角或非对称图形可微调位置和留白，但保留基本几何比例；并排查看全组与文字、控件的视觉重量。"},
-        {"title": "把矢量文件与无障碍一起验收", "body": "交付可缩放 SVG 时检查是否含可编辑 path / shape，而非只把位图嵌进 SVG；按目标平台检查画布、坐标、笔画和像素对齐。有可见文字标签时图标通常是装饰；无文字标签的图标按钮需提供可访问名称。"}
+        {
+          "title": "每个图标只表达一个概念",
+          "body": "优先选择熟悉、直接的视觉隐喻，删除不影响识别的细节。在最小实际尺寸下测试；太复杂时做小尺寸简化，而不是只缩小大图。"
+        },
+        {
+          "title": "明确整组图标的系统规则",
+          "body": "统一画布、live area、keyline、圆角、端点、笔画 / 填充模式和视角。Material 的 24dp 网格是其自身体系的建议，不要直接当作 iOS 或网页硬规则。"
+        },
+        {
+          "title": "按视觉重量做光学修正",
+          "body": "网格是起点。圆形、尖角或非对称图形可微调位置和留白，但保留基本几何比例；并排查看全组与文字、控件的视觉重量。"
+        },
+        {
+          "title": "把矢量文件与无障碍一起验收",
+          "body": "交付可缩放 SVG 时检查是否含可编辑 path / shape，而非只把位图嵌进 SVG；按目标平台检查画布、坐标、笔画和像素对齐。有可见文字标签时图标通常是装饰；无文字标签的图标按钮需提供可访问名称。"
+        },
+        {
+          "title": "管理图标版本与迁移路径",
+          "body": "为每个图标登记 stable_id、语义、版本、状态、canonical 下载地址与 replacement_id；退役资产移入 retired 清单，旧下载包可保留，但不要静默覆盖旧 URL。此项是社区资产治理经验，几何 / ARIA 规则仍按目标平台验证。"
+        },
+        {
+          "title": "生成前建立语义—渲染—平台契约",
+          "body": "先为每个图标写清动作隐喻、装饰/信息/功能语义、无文字时的可访问名称，再统一 SVG viewBox、尺寸、相对缩放和平台差异；在 16/24/32px 检查可辨识性。矢量草案不是平台规范，ARIA 方案只按 Web 上下文应用。"
+        },
+        {
+          "title": "让 SVG 几何与本地化名称分离",
+          "body": "Web 图标几何文件保持语言无关；当前语言的可访问名称由应用组件注入。带可见文字时 SVG 作为装饰；无文字按钮由外层 button/link 提供当前语言标签；独立信息 SVG 才使用图像语义。SVG 2 中多重 title/desc 本地化仍有实现不确定性，需在浏览器 accessibility tree 与读屏中测试，不能套用到原生 iOS/Android。"
+        }
       ],
-      "prompt": "你是 UI 图标设计师。为【产品 / 功能：[填写]】设计一组【数量：[填写]】个图标，目标平台【iOS / Android / Web / 其他：[填写]】，实际尺寸【填写】，使用场景与用户【填写】。先列每个图标的单一概念、推荐隐喻和可能歧义；再定义这组图标共用的画布、live area、网格、keyline、笔画、端点、圆角、填充 / 描边、视角、颜色和状态规则。要求同组视觉重量与细节级别一致；对非对称形状做有依据的光学对齐；为最小尺寸删除不可辨细节。最后给出可编辑 SVG（真实 path / shape，不嵌入位图）、viewBox / width / height、命名规则、浅 / 深背景预览、实际尺寸 QA，以及可访问名称 / aria 处理建议。所有坐标与尺寸按目标图标系统验收；若参考 IBM 32px 规范，明确它仅适用于 IBM 资产，不泛化到其他平台。把平台要求和可讨论建议分开；信息不足时先列假设。",
+      "prompt": "你是 UI 图标设计师。为【产品 / 功能：[填写]】设计一组【数量：[填写]】个图标，目标平台【iOS / Android / Web / 其他：[填写]】，实际尺寸【填写】，使用场景与用户【填写】。先列每个图标的单一概念、推荐隐喻和可能歧义；再定义这组图标共用的画布、live area、网格、keyline、笔画、端点、圆角、填充 / 描边、视角、颜色和状态规则。要求同组视觉重量与细节级别一致；对非对称形状做有依据的光学对齐；为最小尺寸删除不可辨细节。最后给出可编辑 SVG（真实 path / shape，不嵌入位图）、viewBox / width / height、命名规则、浅 / 深背景预览、实际尺寸 QA，以及可访问名称 / aria 处理建议。所有坐标与尺寸按目标图标系统验收；若参考 IBM 32px 规范，明确它仅适用于 IBM 资产，不泛化到其他平台。把平台要求和可讨论建议分开；信息不足时先列假设。\n【资产版本与退役】\n请为每个图标生成 stable_id、语义、状态（current / retired）、版本、canonical_url、replacement_id 和变更说明；列出旧下载包、文档与邮件模板中需迁移的引用。禁止静默替换旧 URL；把平台专属 aria 规则单列。\n【语义—渲染—平台契约】\n先为每个图标列 action_label、隐喻、decorative/informative/functional、无文字时 accessible name、目标平台和 16/24/32px 风险；再输出统一 viewBox、width、height 的可缩放 SVG，并检查小尺寸。内联 Web SVG 可按 W3C Design System 指引评估 em 缩放；文字伴随的装饰图标与无文字功能按钮使用不同无障碍标记。把草案建议、平台要求和设计判断分开。\n【本地化名称与 SVG 分层】\n先判断图标是装饰、图标按钮还是独立信息图。装饰 SVG 隐藏；无文字按钮由外层控件从应用翻译资源注入 aria-label，SVG 不重复播报；独立信息 SVG 只给一个可定位的 title/name。不要在同一 SVG 塞多个语言 title/desc；给出 en/zh 切换后的 DOM 和可访问性树检查步骤，并注明浏览器/读屏范围。",
       "checklist": [
         "只看图标不看文字时，目标用户能否说出大致动作 / 对象？概念不清先改隐喻，不先加装饰。",
         "检查画布、live area、keyline、网格对齐、笔画、圆角和端点；是否和同组保持一致？",
         "在实际小尺寸、常用尺寸和放大尺寸下看整组；对比笔画、视觉面积和边界留白，必要时做小幅光学修正。",
         "在浅色 / 深色背景和实际控件中检查清晰度、状态区分和点击区域；不要只在放大的设计稿上判断。",
-        "检查 SVG 源码是否含真实 path / shape、无嵌入位图；尺寸、坐标、笔画与像素网格符合目标平台。无文字标签的图标按钮是否有可访问名称，装饰图标是否避免多余播报？"
+        "检查 SVG 源码是否含真实 path / shape、无嵌入位图；尺寸、坐标、笔画与像素网格符合目标平台。无文字标签的图标按钮是否有可访问名称，装饰图标是否避免多余播报？",
+        "抽查图标资产是否有唯一 stable_id、当前版本和 canonical URL；退役项是否有 replacement_id 或保留理由；旧 URL 是否避免静默返回不同图形？",
+        "逐个检查 16/24/32px 是否仍能区分动作；核对 SVG 的 viewBox、width/height 和缩放方式；Web 内联图标按上下文区分装饰、图像与按钮，不把 Web ARIA 规则直接套到原生 App。",
+        "Web 中将同一个 Search 图标做 en→zh 切换，确认外层按钮名称随语言变化、装饰 SVG 不重复播报；独立信息 SVG 只有一个预期名称。记录浏览器/读屏器，不能把 Web ARIA 直接套到原生 App。"
       ],
       "official_sources": [
-        {"title": "Apple HIG：Icons", "url": "https://developer.apple.com/design/human-interface-guidelines/icons", "supports": "Apple 建议图标表达单一概念、保持一组中的尺寸 / 细节 / 笔画 / 视角一致，并对非对称图形做光学居中。"},
-        {"title": "Material Design 3：Designing icons", "url": "https://m3.material.io/styles/icons/designing-icons", "supports": "Material 指南介绍其 24dp 画布、live area、keyline、整数定位与光学校正规则。"},
-        {"title": "W3C Design System：SVG icons", "url": "https://design-system.w3.org/styles/svg-icons.html", "supports": "区分装饰性和有意义的 SVG 图标，并说明尺寸属性、aria-hidden 与可访问名称等标记处理。"},
-        {"title": "OpenAI：Prompt engineering best practices", "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt", "supports": "支持用清晰具体的输入、上下文和迭代修改来组织设计任务。"},
-        {"title": "IBM Design Language：UI icons — Contribute", "url": "https://www.ibm.com/design/language/iconography/ui-icons/contribute/", "supports": "IBM 规范（页面 2026-11-05 更新）要求其 32px 图标像素对齐、整数坐标、展开笔画并尽量合并形状；这些数值仅属 IBM 体系。"}
+        {
+          "title": "Apple HIG：Icons",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/icons",
+          "supports": "Apple 建议图标表达单一概念、保持一组中的尺寸 / 细节 / 笔画 / 视角一致，并对非对称图形做光学居中。"
+        },
+        {
+          "title": "Material Design 3：Designing icons",
+          "url": "https://m3.material.io/styles/icons/designing-icons",
+          "supports": "Material 指南介绍其 24dp 画布、live area、keyline、整数定位与光学校正规则。"
+        },
+        {
+          "title": "W3C Design System：SVG icons",
+          "url": "https://design-system.w3.org/styles/svg-icons.html",
+          "supports": "区分装饰性和有意义的 SVG 图标，并说明尺寸属性、aria-hidden 与可访问名称等标记处理。 该页面还建议内联 SVG 使用 viewBox、width、height 和相对 em；按上下文用 aria-hidden / role=img / 隐藏名称区分装饰图标与有意义图标按钮，属于 Web 设计系统实践。"
+        },
+        {
+          "title": "OpenAI：Prompt engineering best practices",
+          "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt",
+          "supports": "支持用清晰具体的输入、上下文和迭代修改来组织设计任务。"
+        },
+        {
+          "title": "IBM Design Language：UI icons — Contribute",
+          "url": "https://www.ibm.com/design/language/iconography/ui-icons/contribute/",
+          "supports": "IBM 规范（页面 2026-11-05 更新）要求其 32px 图标像素对齐、整数坐标、展开笔画并尽量合并形状；这些数值仅属 IBM 体系。"
+        },
+        {
+          "title": "VA.gov Design System：Icon",
+          "url": "https://design.va.gov/components/icon",
+          "supports": "页面显示 2026-08-06 更新；强调图标语义一致、避免重复图标、区分装饰与语义图标并检查可见标签。这些组件尺寸 / ARIA 约束属于 VA Web 体系。"
+        },
+        {
+          "title": "U.S. Web Design System：Icon list",
+          "url": "https://designsystem.digital.gov/components/icon-list/",
+          "supports": "图标应强化文字而非单独承载含义；同一列表保持图标库与外观一致，并区分装饰 SVG 与需朗读的语义 SVG。页面相关更新表列出 2024-12-18。"
+        },
+        {
+          "title": "W3C：Scalable Vector Graphics (SVG) 2 — Candidate Recommendation Snapshot",
+          "url": "https://www.w3.org/TR/SVG2/",
+          "supports": "2026-10-06 快照说明 SVG 可缩放、可样式化并嵌入 HTML；这是 Candidate Recommendation Snapshot，不是跨平台强制规范，也不代表最终标准。 快照还指出 SVG 2 多个 title/desc 本地化方案属于 at-risk，且依赖浏览器/作者工具实现；不要把多重本地化 title/desc 当成稳定跨浏览器契约。该文档是候选快照，不是最终规范。"
+        }
       ],
       "community_sources": [
-        {"title": "UX Planet：Practical Guide To Icon Design", "url": "https://uxplanet.org/practical-guide-to-icon-design-794baf5624c8", "supports": "设计实践文章建议在实际尺寸查看、统一 stroke、使用 live area / keyline，并谨慎做光学调整；不是平台规范。"},
-        {"title": "Can ChatGPT Make SVG Files? What Actually Works", "url": "https://www.reddit.com/r/howto_recraft/comments/1wdpusz/can_chatgpt_make_svg_files_what_actually_works/", "supports": "Reddit 实操帖记录 SVG 代码检查、放大检查和独立路径可编辑性检查；原文仅显示相对日期，确切日期未核实，不作为近期来源。"}
+        {
+          "title": "UX Planet：Practical Guide To Icon Design",
+          "url": "https://uxplanet.org/practical-guide-to-icon-design-794baf5624c8",
+          "supports": "设计实践文章建议在实际尺寸查看、统一 stroke、使用 live area / keyline，并谨慎做光学调整；不是平台规范。"
+        },
+        {
+          "title": "Can ChatGPT Make SVG Files? What Actually Works",
+          "url": "https://www.reddit.com/r/howto_recraft/comments/1wdpusz/can_chatgpt_make_svg_files_what_actually_works/",
+          "supports": "Reddit 实操帖记录 SVG 代码检查、放大检查和独立路径可编辑性检查；原文仅显示相对日期，确切日期未核实，不作为近期来源。"
+        },
+        {
+          "title": "How do you retire an icon once people have already downloaded the SVG?",
+          "url": "https://www.reddit.com/r/DesignSystems/comments/1wtklt5/how_do_you_retire_an_icon_once_people_have/",
+          "supports": "Reddit 设计系统讨论建议使用 stable ID / status / replacement ID / 版本和迁移表；canonical 下载页只放当前版本，保留旧包但不静默替换旧 URL。页面约显示 1mo ago，具体日期未核实；作为社区流程经验。"
+        },
+        {
+          "title": "SVG 2 and Accessible Icons: What Developers Need to Know in 2026",
+          "url": "https://dev.to/svgicons/svg-2-and-accessible-icons-what-developers-need-to-know-in-2026-4fol",
+          "supports": "dev.to 社区技术文章给出 HTML/React 示例：区分装饰 SVG、icon-only button 与 informative SVG，并从应用翻译资源注入 label；页面发布日期未核实，不作为近期社媒证据。"
+        }
       ],
       "caveat": "Material、Apple 与 IBM 的数值和绘制建议均适用于各自体系；不能不加判断地跨平台套用。AI 草图仍需检查 SVG 路径、渲染、导出和辅助技术语义。Reddit 社区帖的确切发布日期未核实。"
     },
@@ -134,29 +377,100 @@
       "title": "微信小程序",
       "summary": "同时考虑微信导航、系统安全区、页面状态和大屏适配；自定义实现须核对基础库与客户端版本。",
       "principles": [
-        {"title": "让用户知道在哪、去哪、如何返回", "body": "次级页面保留清楚的返回入口，同时考虑 iOS 右滑、Android 返回键和微信右上角菜单。Tab 导航用于平级区域，官方指南建议 2–5 项，通常不超过 4 项。"},
-        {"title": "按状态设计而不只画首页", "body": "列出首次和局部加载、空数据、网络 / 接口错误、表单错误、成功和无权限状态。长耗时提供取消或进度，错误要给出可恢复的下一步。"},
-        {"title": "安全区读取，不写死某个机型像素", "body": "优先使用系统导航能力；自定义时读取 statusBarHeight 与 safeArea，判断字段是否存在，并注明基础库 / 客户端门槛。安全区之外还要为微信官方菜单留空间。"},
-        {"title": "把大屏和 PC 也纳入验证", "body": "按实际可用窗口宽度而非设备名称定义伸缩、换行、分页或侧栏策略；横竖屏或窗口变化可核对 onResize / wx.onWindowResize，宽屏方案可按官方文档评估媒体查询、Flex / Grid、match-media 或 row / col。检查导航、刷新和鼠标 / 键盘操作，并记录基础库版本后真机回归。"}
+        {
+          "title": "让用户知道在哪、去哪、如何返回",
+          "body": "次级页面保留清楚的返回入口，同时考虑 iOS 右滑、Android 返回键和微信右上角菜单。Tab 导航用于平级区域，官方指南建议 2–5 项，通常不超过 4 项。"
+        },
+        {
+          "title": "按状态设计而不只画首页",
+          "body": "列出首次和局部加载、空数据、网络 / 接口错误、表单错误、成功和无权限状态。长耗时提供取消或进度，错误要给出可恢复的下一步。"
+        },
+        {
+          "title": "安全区读取，不写死某个机型像素",
+          "body": "优先读取 wx.getWindowInfo() 的 statusBarHeight 与 safeArea；safeArea 字段可能缺省，必须有兼容分支。使用 wx.canIUse / API 存在判断或数值化分段比较基础库版本；不要直接比较版本字符串。先确认 API 能力和最低基础库，再决定安全区与大屏布局。"
+        },
+        {
+          "title": "把大屏和 PC 也纳入验证",
+          "body": "按实际可用窗口宽度而非设备名称定义伸缩、换行、分页或侧栏策略；横竖屏或窗口变化可核对 onResize / wx.onWindowResize，宽屏方案可按官方文档评估媒体查询、Flex / Grid、match-media 或 row / col。检查导航、刷新和鼠标 / 键盘操作，并记录基础库版本后真机回归。"
+        },
+        {
+          "title": "把自定义导航做成运行时状态契约",
+          "body": "若使用 custom navigation，先检查目标微信客户端/基础库是否支持，再读取状态栏与胶囊按钮几何并计算布局；测量缺失或异常时要有仍可用的降级样式。分别验证 iOS、Android、PC 与低版本；社区固定像素兜底仅供测试起点，不当成官方规则。"
+        },
+        {
+          "title": "对 Skyline 复杂页面做运行时状态回归",
+          "body": "启用 Skyline 时记录 wx.getSkylineInfo 的版本，并把长列表、嵌套滚动、swiper 切换、窗口变化和页面销毁列为回归状态。针对目标版本检查滚动锚定、嵌套滚动交接、卡死与资源释放；官方某版修复不等于所有系统/客户端组合均无问题。"
+        }
       ],
-      "prompt": "请把下列微信小程序需求转成可交付设计验收清单。页面 / 核心任务：[填写]；用户：[填写]；入口、层级与完成去向：[填写]；组件范围：[填写]；设备范围（iOS / Android / 微信 PC）与最小基础库：[填写]；品牌和真实内容：[填写]。\n请输出：1）页面结构与组件层级；2）当前层级、返回方式、Tab 数量与微信右上角菜单避让；3）安全区和状态栏策略，不要写死机型像素，说明 safeArea 字段缺失时的方案；4）首次加载、局部加载、空数据、错误、表单错误、成功、无权限状态矩阵；5）平台版本限制和兼容风险；窗口变宽时按实际可用空间规划显示、隐藏、换行或分栏，不要只列设备型号；分别列手机竖屏、手机横屏、平板与 PC 窄/宽窗口矩阵，并记录基础库版本；说明 onResize / wx.onWindowResize、媒体查询、Flex / Grid、match-media 或 row / col 的适用场景；6）5 条可执行 QA。每条标为“微信官方规范”“实现建议”或“待真机验证”；不要把社区文章当规范。",
+      "prompt": "请把下列微信小程序需求转成可交付设计验收清单。页面 / 核心任务：[填写]；用户：[填写]；入口、层级与完成去向：[填写]；组件范围：[填写]；设备范围（iOS / Android / 微信 PC）与最小基础库：[填写]；品牌和真实内容：[填写]。\n请输出：1）页面结构与组件层级；2）当前层级、返回方式、Tab 数量与微信右上角菜单避让；3）安全区和状态栏策略，不要写死机型像素，说明 safeArea 字段缺失时的方案；4）首次加载、局部加载、空数据、错误、表单错误、成功、无权限状态矩阵；5）平台版本限制和兼容风险；窗口变宽时按实际可用空间规划显示、隐藏、换行或分栏，不要只列设备型号；分别列手机竖屏、手机横屏、平板与 PC 窄/宽窗口矩阵，并记录基础库版本；说明 onResize / wx.onWindowResize、媒体查询、Flex / Grid、match-media 或 row / col 的适用场景；6）5 条可执行 QA。每条标为“微信官方规范”“实现建议”或“待真机验证”；不要把社区文章当规范。\n【API 能力与版本门槛】\n对每个 API 先标最低基础库版本；优先用 wx.canIUse / API 存在判断，或把版本号按数字分段比较，禁止直接比较版本字符串。对 wx.getWindowInfo().safeArea 缺省的环境给出兜底，并在最低支持版本以下验证降级。\n【自定义导航运行时契约】\n若采用 navigationStyle=custom，先列目标微信客户端和基础库的官方支持门槛；测量 statusBarHeight 与 menuButton/capsule 几何，给出测量缺失/异常时可用的降级布局。分别覆盖 iOS、Android、Windows/Mac 与低版本，并写真机验收步骤。不要把社区固定像素当通用规范；基础库版本用数值分段比较或 API 能力判断。\n【Skyline 运行时回归】\n若页面启用 Skyline，先记录 wx.getSkylineInfo() 版本。为长列表+嵌套滚动+swiper 输出状态矩阵：快速滚动、内外层交接、窗口缩放/旋转、swiper 切换、页面退出重入。每个状态给可观察断言和错误日志字段，检查白屏/卡死、跳动/锚定、布局溢出与资源释放；按目标微信客户端/基础库真机复测，不把单版修复推广到未测平台。",
       "checklist": [
         "在有刘海 / 打孔屏和无安全区概念的设备上检查状态栏、底部操作和弹窗；safeArea 不存在时页面是否仍能使用？",
         "核对次级页返回、系统返回键 / 手势、微信右上角菜单与 Tab；是否有控件重叠或不一致？",
         "逐一演练加载、空、网络错误、表单错误、成功和无权限；错误是否说明原因并提供重试 / 返回等动作？",
         "对照目标基础库与客户端，检查自定义导航配置和 safeArea API 的版本门槛及降级方案。",
-        "在不同手机宽度和微信 PC 窗口测试文字完整性、触控 / 鼠标目标、滚动与键盘操作；记录基础库版本、窗口尺寸、回归路径和结果。"
+        "在不同手机宽度和微信 PC 窗口测试文字完整性、触控 / 鼠标目标、滚动与键盘操作；记录基础库版本、窗口尺寸、回归路径和结果。",
+        "验证 safeArea 存在与缺省两种情况；用 wx.canIUse / API 存在判断或数值化版本比较，确认低于最低基础库时走降级而非报错。",
+        "若使用 custom navigation，核对微信官方客户端/基础库门槛；真机记录状态栏与胶囊矩形，测量失败时仍有可用降级，分别测试 iOS/Android/PC，不照搬社区固定像素。",
+        "Skyline 页面记录引擎版本；在长列表、嵌套滚动、swiper、窗口变化和页面销毁/重进下检查卡死、滚动锚定、布局跳动与资源释放。区分未测试的客户端/系统组合。"
       ],
       "official_sources": [
-        {"title": "微信小程序设计指南", "url": "https://developers.weixin.qq.com/miniprogram/design/", "supports": "官方指南涉及导航层级、Tab 数量、右上角菜单避让、反馈状态、触控热区与设计基准。"},
-        {"title": "微信小程序：页面配置", "url": "https://developers.weixin.qq.com/miniprogram/dev/reference/configuration/page.html", "supports": "说明 navigationStyle、标题 / 颜色、下拉刷新和部分页面能力的配置与兼容门槛。"},
-        {"title": "微信小程序：wx.getWindowInfo", "url": "https://developers.weixin.qq.com/miniprogram/dev/api/base/system/wx.getWindowInfo.html", "supports": "定义 statusBarHeight、窗口尺寸和 safeArea 信息，并提醒兼容没有安全区数据的设备。"},
-        {"title": "微信小程序大屏适配指南", "url": "https://developers.weixin.qq.com/miniprogram/design/adapt.html", "supports": "介绍 PC / 不同窗口尺寸的栅格与响应策略，以及导航、刷新和鼠标交互适配。"},
-        {"title": "微信小程序：大屏适配与窗口变化接口", "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/ability/adapt.html", "supports": "实现文档列出 onResize / wx.onWindowResize、媒体查询、Flex、Grid、match-media 与 row / col 等方法；页面显示最后编辑于 2026-07-23，非近 90 天更新。"},
-        {"title": "微信小程序：基础库更新日志 v3.x", "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/release/", "supports": "官方版本记录页面显示 2026-10-21 更新；验收时记录目标基础库版本并按更新日志复核兼容范围。"}
+        {
+          "title": "微信小程序设计指南",
+          "url": "https://developers.weixin.qq.com/miniprogram/design/",
+          "supports": "官方指南涉及导航层级、Tab 数量、右上角菜单避让、反馈状态、触控热区与设计基准。"
+        },
+        {
+          "title": "微信小程序：页面配置",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/reference/configuration/page.html",
+          "supports": "说明 navigationStyle、标题 / 颜色、下拉刷新和部分页面能力的配置与兼容门槛。 页面还列出 navigationStyle=default/custom 的可用值、iOS/Android 微信客户端与 Windows/Mac 基础库支持条件，以及 homeButton 的客户端门槛；按目标平台版本建立验收分支。"
+        },
+        {
+          "title": "微信小程序：wx.getWindowInfo",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/api/base/system/wx.getWindowInfo.html",
+          "supports": "定义 statusBarHeight、窗口尺寸和 safeArea 信息，并提醒兼容没有安全区数据的设备。"
+        },
+        {
+          "title": "微信小程序大屏适配指南",
+          "url": "https://developers.weixin.qq.com/miniprogram/design/adapt.html",
+          "supports": "介绍 PC / 不同窗口尺寸的栅格与响应策略，以及导航、刷新和鼠标交互适配。"
+        },
+        {
+          "title": "微信小程序：大屏适配与窗口变化接口",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/ability/adapt.html",
+          "supports": "实现文档列出 onResize / wx.onWindowResize、媒体查询、Flex、Grid、match-media 与 row / col 等方法；页面显示最后编辑于 2026-07-23，非近 90 天更新。"
+        },
+        {
+          "title": "微信小程序：基础库更新日志 v3.x",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/release/",
+          "supports": "官方版本记录页面显示 2026-10-21 更新；验收时记录目标基础库版本并按更新日志复核兼容范围。"
+        },
+        {
+          "title": "微信小程序：低版本兼容",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html",
+          "supports": "页面最后编辑于 2026-08-21；介绍 wx.canIUse、API 存在判断和数值化版本比较，明确不要直接比较版本字符串。"
+        },
+        {
+          "title": "微信小程序：Skyline 更新日志",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/runtime/skyline/changelog.html",
+          "supports": "2026-10-16 页面 / Skyline 1.4.24 更新记录列出 scroll-view 自动撑高、swiper transformer 卡死、list-view scroll anchoring、nested-scroll-body offset-top、页面销毁内存与布局性能修复；可通过 wx.getSkylineInfo 查询运行时版本。修复范围限于日志所列版本和场景，仍需目标设备回归。"
+        }
       ],
       "community_sources": [
-        {"title": "掘金：iPhone X 安全区域在微信小程序和 H5 的屏幕适配", "url": "https://juejin.cn/post/6844904106088202254", "supports": "通过实例讨论底部固定元素与 Home Indicator 重叠及几种 safe area 处理思路；属于历史社区经验，不能替代官方兼容文档。"}
+        {
+          "title": "掘金：iPhone X 安全区域在微信小程序和 H5 的屏幕适配",
+          "url": "https://juejin.cn/post/6844904106088202254",
+          "supports": "通过实例讨论底部固定元素与 Home Indicator 重叠及几种 safe area 处理思路；属于历史社区经验，不能替代官方兼容文档。"
+        },
+        {
+          "title": "微信小程序自定义导航栏跨端适配与动态计算方案",
+          "url": "https://blog.csdn.net/weixin_42609225/article/details/165427405",
+          "supports": "CSDN 社区实操（2026-09-14 16:58:07）：读取系统信息与胶囊矩形，按测量值计算布局，并讨论测量失败的 fallback 和返回/首页行为。属于社区实现，固定像素只作测试假设，需按基础库与真机复核。"
+        },
+        {
+          "title": "微信小程序安全区域适配实战：从刘海屏到底部小黑条的全面解决方案",
+          "url": "https://blog.csdn.net/weixin_29006701/article/details/158586927",
+          "supports": "CSDN 社区实操（2026-09-22 12:17:05）：用 safe-area padding 处理底部固定按钮与 Home Indicator 的遮挡/点击问题；属于社区做法，需按微信客户端和真机验证。"
+        }
       ],
       "caveat": "微信文档会更新；基础库、客户端和渲染框架可能影响组件行为。版本和安全区相关内容应以目标设备实测为准，尤其不要直接照搬旧社区文章中的固定像素或 CSS 方案。"
     },
@@ -166,31 +480,109 @@
       "title": "H5 移动网页",
       "summary": "从窄视口和真实触控开始设计；重点检查安全区、软键盘、动态视口、加载与内嵌浏览器差异。",
       "principles": [
-        {"title": "移动优先，而不是桌面缩小", "body": "用 viewport 设置移动视口；先定义窄屏信息顺序，再按内容拥挤点扩展布局。以 320 CSS px 检查正文重排和整页横向溢出；图片不溢出容器，确需二维浏览的内容限制在独立区域。"},
-        {"title": "为安全区和视口变化留余量", "body": "全屏背景可延伸到边缘，但固定头部、底栏和关键操作使用 safe-area-inset。地址栏、横竖屏和设备圆角都可能改变可见区域。"},
-        {"title": "让触控与键盘都能用", "body": "扩大图标按钮的真实点击区域并留间距；键盘弹出时输入框和提交按钮仍应可见。不同浏览器的虚拟键盘 API 支持不一致，优先依赖原生滚动并准备降级。若运行在原生 Android WebView 容器，可另检查宿主 IME 的可见性与 bottom inset；原生 WindowInsets 不是纯 H5 通用 API。"},
-        {"title": "针对目标浏览器验证加载与交互", "body": "区分首屏、局部请求、慢请求和失败状态；在 iOS Safari、Android Chrome 与目标内嵌 WebView 检查地址栏、固定定位、键盘和横竖屏。"}
+        {
+          "title": "移动优先，而不是桌面缩小",
+          "body": "用 viewport 设置移动视口；先定义窄屏信息顺序，再按内容拥挤点扩展布局。以 320 CSS px 检查正文重排和整页横向溢出；图片不溢出容器，确需二维浏览的内容限制在独立区域。"
+        },
+        {
+          "title": "为安全区和视口变化留余量",
+          "body": "全屏背景可延伸到边缘，但固定头部、底栏和关键操作使用 safe-area-inset。地址栏、横竖屏和设备圆角都可能改变可见区域。"
+        },
+        {
+          "title": "让触控与键盘都能用",
+          "body": "扩大图标按钮的真实点击区域并留间距；键盘弹出时输入框和提交按钮仍应可见。不同浏览器的虚拟键盘 API 支持不一致，优先依赖原生滚动并准备降级。若运行在原生 Android WebView 容器，可另检查宿主 IME 的可见性与 bottom inset；原生 WindowInsets 不是纯 H5 通用 API。"
+        },
+        {
+          "title": "针对目标浏览器验证加载与交互",
+          "body": "区分首屏、局部请求、慢请求和失败状态；在 iOS Safari、Android Chrome 与目标内嵌 WebView 检查地址栏、固定定位、键盘和横竖屏。"
+        },
+        {
+          "title": "把 iOS 独立 PWA 键盘适配单独实测",
+          "body": "一条 iOS 26.x 独立 PWA 社区实验观察到 100dvh / interactive-widget 在其环境未随键盘变化，而评论有相反经验。将 visualViewport.height 与 innerHeight、clientHeight 一起记录，先在目标设备验证；不要把单帖结果当成通用浏览器规则。"
+        },
+        {
+          "title": "先声明浏览器环境变量，再设计降级",
+          "body": "把 safe-area、virtual keyboard、text scaling 等浏览器环境输入列出来，用 CSS env() fallback 生成可重排方案；逐浏览器测试变量支持、320 CSS px、文本放大、键盘和方向变化。MDN 描述的是 Web 平台能力；WCAG 3.0 对应条目仍在开发，不当作现行最终标准。"
+        },
+        {
+          "title": "为复杂手势提供简单指针替代",
+          "body": "滑动、拖拽、双击、捏合或多指手势可保留，但不能成为唯一完成路径；为同一功能提供不依赖速度、压力、双指或精确拖动的单指点击/连续点击入口。WCAG 3.0 相关条目仍为 Working Draft / Developing，不应表述为现行法定要求；在目标浏览器和辅助技术中实测。"
+        }
       ],
-      "prompt": "你是移动 Web / H5 设计评审专家。项目页面：[填写]；用户和网络场景：[填写]；目标浏览器（iOS Safari、Android Chrome、微信 WebView 等）及版本：[填写]；页面线框 / 截图 / 代码：[粘贴]；品牌、性能和无障碍约束：[填写]。\n请输出：1）移动端默认布局与扩展规则；2）viewport、横向溢出、图片和横竖屏检查；至少在 320 CSS px 验证普通内容重排，确需二维浏览的内容限制在自身容器；3）刘海 / 底部手势区 / 地址栏安全区策略；4）触控目标、焦点顺序、输入方式与软键盘出现后的布局；若 Android 原生宿主嵌入 WebView，另记录宿主的 IME 可见性与 bottom inset（WindowInsetsCompat），不要把原生 API 当作纯 H5 通用接口；5）首屏、局部加载、慢请求和失败 / 重试状态；6）分别针对 iOS Safari、Android Chrome 和 [内嵌浏览器] 的适配风险、降级方案与实机测试步骤；7）8 条按优先级排序的 QA（前置条件、操作、预期结果、严重度）。把官方规范、项目偏好和待实测能力分开；不要猜测浏览器支持。",
+      "prompt": "你是移动 Web / H5 设计评审专家。项目页面：[填写]；用户和网络场景：[填写]；目标浏览器（iOS Safari、Android Chrome、微信 WebView 等）及版本：[填写]；页面线框 / 截图 / 代码：[粘贴]；品牌、性能和无障碍约束：[填写]。\n请输出：1）移动端默认布局与扩展规则；2）viewport、横向溢出、图片和横竖屏检查；至少在 320 CSS px 验证普通内容重排，确需二维浏览的内容限制在自身容器；3）刘海 / 底部手势区 / 地址栏安全区策略；4）触控目标、焦点顺序、输入方式与软键盘出现后的布局；若 Android 原生宿主嵌入 WebView，另记录宿主的 IME 可见性与 bottom inset（WindowInsetsCompat），不要把原生 API 当作纯 H5 通用接口；5）首屏、局部加载、慢请求和失败 / 重试状态；6）分别针对 iOS Safari、Android Chrome 和 [内嵌浏览器] 的适配风险、降级方案与实机测试步骤；7）8 条按优先级排序的 QA（前置条件、操作、预期结果、严重度）。把官方规范、项目偏好和待实测能力分开；不要猜测浏览器支持。\n【iOS 独立 PWA 键盘分支】\n若目标包含 iOS 独立 PWA，请单独在真机比较 innerHeight、documentElement.clientHeight、visualViewport.height / offsetTop；验证键盘打开时输入框与提交区是否可见、收起后是否留空。把 100dvh / interactive-widget 作为待测分支，不默认保证；避免未经验证的 scrollIntoView 或 fixed 键盘偏移。\n【环境变量与 fallback 矩阵】\n先列 safe-area-inset、keyboard-inset、preferred-text-scale 等可能的 CSS env() 输入及浏览器支持风险；每项都给不支持时的 fallback，不假设固定栏会自动避开键盘。输出可重排布局和测试矩阵：320 CSS px、200% 文本、横竖屏、键盘打开/关闭、触控、Tab/Shift+Tab；至少记录 iOS Safari、Android Chrome、Firefox/目标 WebView 的实测与降级。把 WCAG 3.0 Developing 草案和现行规范分开。\n【复杂手势的替代路径】\n列出页面中的 swipe/drag/double-tap/pinch/多指手势；每项保留原交互并给出无需速度、压力或多指的替代路径，优先单指 tap 或连续 tap。为两种路径分别写触控、键盘/辅助技术、取消/失败和可见反馈验收；说明 W3C WCAG 3.0 是 Working Draft/Developing，哪些还需目标设备实测。",
       "checklist": [
         "在窄 / 宽视口、横竖屏打开：至少在 320 CSS px 检查普通正文重排；viewport 是否正确，是否整页意外横向滚动，图片是否溢出？确需二维浏览的表格 / 图表是否只在自身容器内滚动？",
         "检查安全区、地址栏变化、底部手势区和固定操作条；关键文字 / 按钮是否被遮挡？",
         "检查触控目标与相邻间距。WCAG 一般最低目标是 24×24 CSS px；Android 指导建议 48×48dp，单位和适用语境不同。",
         "逐个聚焦输入框并弹出软键盘：输入内容与提交控件是否可见，页面是否出现双重滚动或固定栏遮挡？Android 原生 WebView 宿主另记录 IME visible / bottom inset；iOS Safari、微信 WebView 与纯 H5 分别实测，勿互套原生 API。",
-        "在慢网、断网、接口延迟与失败下检查占位、局部进度、错误反馈和可重试性；再用目标设备验证浏览器差异。"
+        "在慢网、断网、接口延迟与失败下检查占位、局部进度、错误反馈和可重试性；再用目标设备验证浏览器差异。",
+        "iOS 独立 PWA 另行测试：聚焦 textarea 时记录 innerHeight / clientHeight / visualViewport；确认输入区随键盘可见、消息区仍可滚动且收起后无空白。社区实测与评论有相反结果，不能仅凭单帖判定。",
+        "逐浏览器核对 env() 变量是否支持及 fallback 是否生效；测试 320 CSS px、200% 文本、键盘开关、横竖屏与键盘操作；不把 WCAG 3.0 Developing 草案当成现行强制标准。",
+        "逐个手势完成两次同一任务：先用复杂手势，再用不依赖时序/多指的单指替代；检查取消、焦点与读屏反馈，并记录 iOS Safari、Android Chrome 结果。WCAG 3.0 Developing 不当现行强制标准。"
       ],
       "official_sources": [
-        {"title": "MDN：Viewport concepts", "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/CSSOM_view/Viewport_concepts", "supports": "解释布局视口、视觉视口和移动浏览器的视口设置。"},
-        {"title": "MDN：env() CSS function", "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/env", "supports": "定义 safe-area-inset 等环境变量及 env() fallback 用法。"},
-        {"title": "W3C：Target Size (Minimum)", "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html", "supports": "解释 24×24 CSS px 一般最低目标尺寸及间距等例外。"},
-        {"title": "Android Developers：Make apps more accessible", "url": "https://developer.android.com/guide/topics/ui/accessibility/apps", "supports": "Android 指导建议交互触控区域至少 48×48dp。"},
-        {"title": "Chrome Developers：VirtualKeyboard API", "url": "https://developer.chrome.com/docs/web-platform/virtual-keyboard", "supports": "介绍虚拟键盘几何信息、事件和特性检测；须为不支持的浏览器准备降级。"},
-        {"title": "Apple：Responsive Design Mode", "url": "https://developer.apple.com/documentation/safari-developer-tools/responsive-design-mode", "supports": "可调整视口和方向做适配检查，但文档提醒模拟不能完全替代软键盘等真实设备行为。"},
-        {"title": "W3C WCAG 2.2：Reflow（重排）", "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html", "supports": "WCAG 2.2 AA 要求普通纵向滚动内容在 320 CSS px 宽度下无信息 / 功能损失地重排；二维内容例外仅限必要区域。"},
-        {"title": "Android Developers：Control and animate the software keyboard", "url": "https://developer.android.com/develop/ui/views/layout/sw-keyboard", "supports": "Android Views 宿主文档（2026-10-28 更新）说明可用 WindowInsetsCompat 查询 IME visible 与 bottom inset；仅适用于原生宿主实现，不是纯网页 API。"}
+        {
+          "title": "MDN：Viewport concepts",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/CSSOM_view/Viewport_concepts",
+          "supports": "解释布局视口、视觉视口和移动浏览器的视口设置。"
+        },
+        {
+          "title": "MDN：env() CSS function",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/env",
+          "supports": "定义 safe-area-inset 等环境变量及 env() fallback 用法。 页面 2026-10-08 更新；除 safe-area-inset 外，还记录 keyboard-inset-* 与 preferred-text-scale 等环境变量及 fallback；keyboard-inset 能力和具体浏览器支持须逐项特性检测。"
+        },
+        {
+          "title": "W3C：Target Size (Minimum)",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+          "supports": "解释 24×24 CSS px 一般最低目标尺寸及间距等例外。"
+        },
+        {
+          "title": "Android Developers：Make apps more accessible",
+          "url": "https://developer.android.com/guide/topics/ui/accessibility/apps",
+          "supports": "Android 指导建议交互触控区域至少 48×48dp。"
+        },
+        {
+          "title": "Chrome Developers：VirtualKeyboard API",
+          "url": "https://developer.chrome.com/docs/web-platform/virtual-keyboard",
+          "supports": "介绍虚拟键盘几何信息、事件和特性检测；须为不支持的浏览器准备降级。"
+        },
+        {
+          "title": "Apple：Responsive Design Mode",
+          "url": "https://developer.apple.com/documentation/safari-developer-tools/responsive-design-mode",
+          "supports": "可调整视口和方向做适配检查，但文档提醒模拟不能完全替代软键盘等真实设备行为。"
+        },
+        {
+          "title": "W3C WCAG 2.2：Reflow（重排）",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+          "supports": "WCAG 2.2 AA 要求普通纵向滚动内容在 320 CSS px 宽度下无信息 / 功能损失地重排；二维内容例外仅限必要区域。"
+        },
+        {
+          "title": "Android Developers：Control and animate the software keyboard",
+          "url": "https://developer.android.com/develop/ui/views/layout/sw-keyboard",
+          "supports": "Android Views 宿主文档（2026-10-28 更新）说明可用 WindowInsetsCompat 查询 IME visible 与 bottom inset；仅适用于原生宿主实现，不是纯网页 API。"
+        },
+        {
+          "title": "Chrome Developers：Chrome on Android edge-to-edge migration guide",
+          "url": "https://developer.chrome.com/docs/css-ui/edge-to-edge",
+          "supports": "Android Chrome 专属指南（2025-02-28 更新）说明 edge-to-edge 与 safe-area-inset 用法；不能据此推断 iOS 独立 PWA 键盘行为。"
+        },
+        {
+          "title": "W3C：Web Content Accessibility Guidelines (WCAG) 3.0（Working Draft）",
+          "url": "https://www.w3.org/TR/wcag-3.0/",
+          "supports": "2026-09-10 页面中的键盘与 reflow 条目仍标为 Developing；只作为未来标准工作线索，不可表述为已生效的强制成功标准。 2026-09-10 Working Draft 的 Pointer input 条目要求复杂指针输入不能成为唯一完成方式，应提供简单指针输入或不要求时序的连续简单输入；状态仍为 Developing，不是已生效的最终合规准则。"
+        }
       ],
       "community_sources": [
-        {"title": "Nielsen Norman Group：Skeleton Screens 101", "url": "https://www.nngroup.com/articles/skeleton-screens/", "supports": "讨论如何让 skeleton 接近最终内容结构，以及何时选择占位、spinner 或进度反馈；属于 UX 实践而非 Web 标准。"}
+        {
+          "title": "Nielsen Norman Group：Skeleton Screens 101",
+          "url": "https://www.nngroup.com/articles/skeleton-screens/",
+          "supports": "讨论如何让 skeleton 接近最终内容结构，以及何时选择占位、spinner 或进度反馈；属于 UX 实践而非 Web 标准。"
+        },
+        {
+          "title": "iOS standalone PWA: how do you keep a chat composer above the on-screen keyboard?",
+          "url": "https://www.reddit.com/r/webdev/comments/1vhkz4y/ios_standalone_pwa_how_do_you_keep_a_chat/",
+          "supports": "Reddit 单一 iOS 26.x PWA 实测记录 visualViewport 与 100dvh / interactive-widget 的差异，并有评论报告相反结果；页面约显示 23d ago，绝对日期未显示。只作为需真机复测的实验线索。"
+        }
       ],
       "caveat": "iOS Safari、Android Chrome、微信内嵌浏览器和其他 WebView 的视口、键盘与固定定位行为可能不同。Chrome 的 VirtualKeyboard API 不是所有浏览器通用能力；关键路径要在目标设备上实测。"
     },
@@ -200,36 +592,134 @@
       "title": "原生 App 设计",
       "summary": "分别遵循 iOS 与 Android 的导航习惯；把加载、空、错、成功和无障碍状态当作设计的一部分。",
       "principles": [
-        {"title": "按平台建立导航骨架", "body": "iOS 标签栏承载平级顶层区域，不把一次性操作伪装成标签；Android 先核对当前平台组件和返回行为。明确深链、返回及状态保留规则。"},
-        {"title": "按窗口类别重排并保留状态", "body": "分别依据 iOS size class 与 Android window width class 规划 compact / medium / expanded 布局；明确何时 reflow、reveal 或改变 presentation，而不是拉伸/裁切。同一任务在旋转、折叠或分屏后保留导航、筛选、滚动与页面状态。"},
-        {"title": "区分加载、空和错误", "body": "已有内容刷新时尽量保留内容并提示局部更新；真正空状态说明为何为空，首次使用与无搜索结果分开；错误要说明问题和下一步。"},
-        {"title": "把无障碍当作组件契约", "body": "为控件提供清楚名称、角色、状态和操作；在最大辅助文字尺寸下检查文字和图标可读性。字号变大时允许行高和容器增长，必要时把并排内容改为堆叠，避免裁切、重叠和截断；状态不要只用颜色表达。"},
-        {"title": "让错误恢复而不丢用户工作", "body": "失败时保留输入内容，支持安全重试和返回；网络失败、无权限、首次为空与已清空列表不要混成一个“暂无数据”。"}
+        {
+          "title": "按平台建立导航骨架",
+          "body": "iOS 标签栏承载平级顶层区域，不把一次性操作伪装成标签；Android 先核对当前平台组件和返回行为。明确深链、返回及状态保留规则。"
+        },
+        {
+          "title": "按窗口类别重排并保留状态",
+          "body": "分别依据 iOS size class 与 Android window width class 规划 compact / medium / expanded 布局；明确何时 reflow、reveal 或改变 presentation，而不是拉伸/裁切。同一任务在旋转、折叠或分屏后保留导航、筛选、滚动与页面状态。"
+        },
+        {
+          "title": "区分加载、空和错误",
+          "body": "已有内容刷新时尽量保留内容并提示局部更新；真正空状态说明为何为空，首次使用与无搜索结果分开；错误要说明问题和下一步。"
+        },
+        {
+          "title": "把无障碍当作组件契约",
+          "body": "为控件提供清楚名称、角色、状态和操作；在最大辅助文字尺寸下检查文字和图标可读性。字号变大时允许行高和容器增长，必要时把并排内容改为堆叠，避免裁切、重叠和截断；状态不要只用颜色表达。"
+        },
+        {
+          "title": "让错误恢复而不丢用户工作",
+          "body": "失败时保留输入内容，支持安全重试和返回；网络失败、无权限、首次为空与已清空列表不要混成一个“暂无数据”。"
+        },
+        {
+          "title": "自定义输入场区分组合与提交",
+          "body": "Android 17 的 CJKV 物理键盘输入会改善读屏对组合输入的反馈；若使用自定义 InputConnection，检查 composition 与 commit 事件语义。标准 TextView 默认启用相关支持；不要把这条平台变化套到 iOS 或普通文本输入控件。"
+        },
+        {
+          "title": "用字号矩阵做组件压力测试",
+          "body": "除了默认字号，给每个关键组件列出小/中/大/特大字号下的换行、纵向重排和信息保留规则；在 iOS 辅助字号（如 AX3/AX5）和 Android 最大字体下完成同一任务。Android Compose Text autoSize 可作实现选项，但不能以缩小正文代替可读性与布局测试。"
+        },
+        {
+          "title": "Compose 先选缩放策略，再做双路径测试",
+          "body": "Android Compose 按内容特性在 density scaling 与 font scaling 中选一种，不要盲目叠加：阅读密集页可评估字体缩放，视觉结构化布局可优先评估整体 density scaling。Modifier.transformable 只检测手势，不会自动应用缩放；必须提供非手势调节/重置，并同时测试应用内缩放和系统字号/显示设置。此建议仅限 Android/Compose。"
+        }
       ],
-      "prompt": "你是原生 App 设计评审员。平台【iOS / Android / 双平台：[填写]】；技术栈：[填写]；产品场景和核心任务：[填写]；现有页面树 / 线框：[粘贴]；数据、网络、权限、登录情况：[填写]；用户与无障碍要求：[填写]。\n请输出：1）导航层级、返回、深链和状态保留，并区分 iOS / Android 惯例；2）各页面状态矩阵，覆盖初始加载、刷新、成功、首次为空、无搜索结果、错误、权限不足、离线；每个状态写触发条件、文案、操作、是否保留内容；3）控件名称 / 角色 / 状态、阅读顺序、动态字体、对比度、触控区域、非颜色提示和 VoiceOver / TalkBack 播报建议；按实际可用尺寸类而非设备名规划布局，并检查最大辅助文字尺寸下并排内容是否需要改为堆叠；4）5 条可执行 QA，至少覆盖返回、深链、重复重试、断网、空结果、读屏和大字体；5）风险和待查证平台规则。不要编造 API 或规范数字。分别依据 iOS size class 与 Android window width class 给出 compact / medium / expanded 布局；说明 reflow / reveal / presentation change 与旋转、折叠、分屏后的状态保持。",
+      "prompt": "你是原生 App 设计评审员。平台【iOS / Android / 双平台：[填写]】；技术栈：[填写]；产品场景和核心任务：[填写]；现有页面树 / 线框：[粘贴]；数据、网络、权限、登录情况：[填写]；用户与无障碍要求：[填写]。\n请输出：1）导航层级、返回、深链和状态保留，并区分 iOS / Android 惯例；2）各页面状态矩阵，覆盖初始加载、刷新、成功、首次为空、无搜索结果、错误、权限不足、离线；每个状态写触发条件、文案、操作、是否保留内容；3）控件名称 / 角色 / 状态、阅读顺序、动态字体、对比度、触控区域、非颜色提示和 VoiceOver / TalkBack 播报建议；按实际可用尺寸类而非设备名规划布局，并检查最大辅助文字尺寸下并排内容是否需要改为堆叠；4）5 条可执行 QA，至少覆盖返回、深链、重复重试、断网、空结果、读屏和大字体；5）风险和待查证平台规则。不要编造 API 或规范数字。分别依据 iOS size class 与 Android window width class 给出 compact / medium / expanded 布局；说明 reflow / reveal / presentation change 与旋转、折叠、分屏后的状态保持。\n【Android 17 自定义输入】\n若页面使用自定义 Android InputConnection，补充 Android 17 CJKV 组合输入与 TalkBack 验收：候选组合阶段与最终提交阶段是否能被读屏区分？若使用标准 TextView，标注“默认支持、无需额外适配”；不要将此 API 假设为 iOS 规则。\n【动态字号压力测试交付单】\n为每个关键组件输出默认、iOS small/medium/large/extra large（含 AX3/AX5）与 Android 系统放大/最大字号矩阵；标注哪些文字可换行、并排元素何时转纵向、什么信息不可截断、读屏名称与失败回退。若 Compose Material 3 支持 Text autoSize，可列为实现选项并注明库版本；不可用缩小正文来掩盖布局问题。每个状态给截图/录屏和可观察验收。\n【Compose 缩放策略决策卡】\n仅针对 Android Jetpack Compose。根据页面是阅读密集还是视觉结构化，在 density scaling 与 font scaling 中二选一并说明理由，不要叠加；说明 Modifier.transformable 只检测手势而非自动缩放。交付最小/默认/最大比例、非手势调节与重置入口、设置保存、组件重排规则；分别测试应用内缩放与系统 font/display scale，并记录横移、截断、重叠、焦点与 TalkBack。",
       "checklist": [
         "分别验证 iOS 与 Android 的顶层导航、系统返回、手势返回、深链和返回后的滚动 / 选中状态。",
         "在 compact phone、medium、expanded tablet/foldable 完成同一任务；旋转、折叠或分屏后检查导航、筛选、滚动和状态保持，确认内容重排而非拉伸或裁切。",
         "用慢网、断网、无结果、首次使用、无权限和服务端错误触发状态；是否避免把加载瞬间误显示为空？",
         "反复重试、恢复网络并重新提交：按钮是否防重复，错误是否给出行动，输入内容是否保留？",
         "用 VoiceOver 和 TalkBack 浏览：图标按钮是否有名称，状态可读，加载 / 错误是否能在不抢焦点时播报？",
-        "启用系统大字体、增加对比度或深色模式；文本和状态是否仍可辨，触控区是否足够？"
+        "启用系统大字体、增加对比度或深色模式；文本和状态是否仍可辨，触控区是否足够？",
+        "仅当使用自定义 InputConnection 时，在 Android 17 用 CJKV 物理键盘 / IME 与 TalkBack 验证 composition 和 commit；标准 TextView 按平台默认能力测试，不额外套用自定义 API。",
+        "在 iOS small/medium/large/extra large（含 AX3/AX5）及 Android 最大字体下完成同一核心任务；检查重排、文字保留和读屏。若使用 Compose Text autoSize，记录库版本，并确认没有靠过度缩小正文通过检查。",
+        "仅针对 Android Compose：先记录 density scaling 或 font scaling 的选择理由；验证 Modifier.transformable 后状态确实生效；设置与重置可不用手势完成；同一页面分别测试应用内设置和系统字号/显示缩放的最小、默认、最大档位。"
       ],
       "official_sources": [
-        {"title": "Apple HIG：Accessibility", "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility", "supports": "介绍动态字体、对比度、VoiceOver 描述、控件尺寸与手势替代等无障碍实践。"},
-        {"title": "Apple HIG：Tab bars", "url": "https://developer.apple.com/design/human-interface-guidelines/tab-bars", "supports": "说明标签栏用于顶层导航而非操作，并给出可见性、标签和内容不可用时的处理建议。"},
-        {"title": "Apple HIG：Loading", "url": "https://developer.apple.com/design/human-interface-guidelines/loading", "supports": "讨论快速占位、等待反馈，以及确定 / 不确定进度的选择。"},
-        {"title": "Android Developers：Accessibility principles", "url": "https://developer.android.com/guide/topics/ui/accessibility/principles", "supports": "要求控件有清楚标签、自定义控件提供角色 / 状态语义，并避免只靠颜色传递差异。"},
-        {"title": "Android Developers：Manage and present loading states", "url": "https://developer.android.com/topic/libraries/architecture/paging/load-state", "supports": "介绍加载、错误和未加载状态及缓存内容下的反馈处理。"},
-        {"title": "W3C：Guidance on Applying WCAG to Mobile Applications", "url": "https://www.w3.org/TR/wcag2mobile-22/", "supports": "覆盖移动应用控件名称、焦点顺序、错误识别和辅助技术状态消息。"},
-        {"title": "Apple HIG：Layout", "url": "https://developer.apple.com/design/human-interface-guidelines/layout", "supports": "建议按实际 size class 与可用空间适配布局；较大动态文字可能需要上下堆叠内容并增高容器。"},
-        {"title": "Apple HIG：Typography", "url": "https://developer.apple.com/design/human-interface-guidelines/typography", "supports": "建议在各种字体尺寸下验证布局，减少截断，并在最大辅助文字尺寸下调整列数与内容排列。"},
-        {"title": "Apple HIG：Designing for iPhone Duo", "url": "https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo", "supports": "2026-09-09 页面建议使用 size classes 与安全区适配不同姿态，跨显示屏保持功能和元素状态一致。"},
-        {"title": "Android Developers：Adapt layouts | Mobile", "url": "https://developer.android.com/design/ui/mobile/guides/layout-and-content/adapt-layout", "supports": "2026-10-22 页面依据 window width class 选择 reflow、reveal 或 presentation change，并给出 compact/medium/expanded 的多窗布局建议。"}
+        {
+          "title": "Apple HIG：Accessibility",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+          "supports": "介绍动态字体、对比度、VoiceOver 描述、控件尺寸与手势替代等无障碍实践。"
+        },
+        {
+          "title": "Apple HIG：Tab bars",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/tab-bars",
+          "supports": "说明标签栏用于顶层导航而非操作，并给出可见性、标签和内容不可用时的处理建议。"
+        },
+        {
+          "title": "Apple HIG：Loading",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/loading",
+          "supports": "讨论快速占位、等待反馈，以及确定 / 不确定进度的选择。"
+        },
+        {
+          "title": "Android Developers：Accessibility principles",
+          "url": "https://developer.android.com/guide/topics/ui/accessibility/principles",
+          "supports": "要求控件有清楚标签、自定义控件提供角色 / 状态语义，并避免只靠颜色传递差异。"
+        },
+        {
+          "title": "Android Developers：Manage and present loading states",
+          "url": "https://developer.android.com/topic/libraries/architecture/paging/load-state",
+          "supports": "介绍加载、错误和未加载状态及缓存内容下的反馈处理。"
+        },
+        {
+          "title": "W3C：Guidance on Applying WCAG to Mobile Applications",
+          "url": "https://www.w3.org/TR/wcag2mobile-22/",
+          "supports": "覆盖移动应用控件名称、焦点顺序、错误识别和辅助技术状态消息。"
+        },
+        {
+          "title": "Apple HIG：Layout",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/layout",
+          "supports": "建议按实际 size class 与可用空间适配布局；较大动态文字可能需要上下堆叠内容并增高容器。"
+        },
+        {
+          "title": "Apple HIG：Typography",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/typography",
+          "supports": "建议在各种字体尺寸下验证布局，减少截断，并在最大辅助文字尺寸下调整列数与内容排列。"
+        },
+        {
+          "title": "Apple HIG：Designing for iPhone Duo",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo",
+          "supports": "2026-09-09 页面建议使用 size classes 与安全区适配不同姿态，跨显示屏保持功能和元素状态一致。"
+        },
+        {
+          "title": "Android Developers：Adapt layouts | Mobile",
+          "url": "https://developer.android.com/design/ui/mobile/guides/layout-and-content/adapt-layout",
+          "supports": "2026-10-22 页面依据 window width class 选择 reflow、reveal 或 presentation change，并给出 compact/medium/expanded 的多窗布局建议。"
+        },
+        {
+          "title": "Android Developers：Behavior changes: Apps targeting Android 17 or higher",
+          "url": "https://developer.android.com/about/versions/17/behavior-changes-17",
+          "supports": "页面 2026-10-31 UTC 更新；新增 AccessibilityEvent / TextAttribute 以改善 CJKV 物理键盘组合输入的读屏反馈。标准 TextView 默认支持；自定义 InputConnection 才需检查 composition / commit 语义。"
+        },
+        {
+          "title": "Apple App Store Connect：Larger Text evaluation criteria",
+          "url": "https://developer.apple.com/help/app-store-connect/manage-app-accessibility/larger-text-evaluation-criteria/",
+          "supports": "官方评估页面建议测试 small/medium/large/extra large；指出 AX3 超过 200%、AX5 正文超过 300%，要求放大后避免重叠/严重截断并调整并排元素为换行或纵向布局；页面日期未核实。"
+        },
+        {
+          "title": "Android Developers：Compose Material 3 Version 1.5 release notes",
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material3",
+          "supports": "1.5.0-rc01 发布于 2026-11-04；1.5.0-beta01（2026-10-07）为 Text 增加 autoSize 支持。它是库/API能力，不是平台强制标准，也不能代替可读性和布局验收。 补充说明：Text autoSize 是 Material 3 1.5 库能力，可作为文本缩放实现选项；不替代可读性与布局测试，也不是平台强制要求。"
+        },
+        {
+          "title": "Android Developers：Support user-scalable content — Jetpack Compose",
+          "url": "https://developer.android.com/develop/ui/compose/accessibility/scalable-content",
+          "supports": "页面 2026-10-22 更新；提供 density scaling 与 font scaling 的选择依据，说明 Modifier.transformable 只检测手势，建议非手势调节/重置并同时测试应用内与系统设置。仅适用于 Android Jetpack Compose，非 iOS 规范。"
+        }
       ],
       "community_sources": [
-        {"title": "Nielsen Norman Group：Designing Empty States", "url": "https://www.nngroup.com/articles/empty-state-interface-design/", "supports": "建议空状态说明系统情况、提供上下文与下一步，并避免加载期间误报为空；属于可用性实践。"},
-        {"title": "Nielsen Norman Group：Error-Message Guidelines", "url": "https://www.nngroup.com/articles/error-message-guidelines/", "supports": "建议错误提示靠近问题源、解释发生了什么并提供恢复动作；不是平台规范。"}
+        {
+          "title": "Nielsen Norman Group：Designing Empty States",
+          "url": "https://www.nngroup.com/articles/empty-state-interface-design/",
+          "supports": "建议空状态说明系统情况、提供上下文与下一步，并避免加载期间误报为空；属于可用性实践。"
+        },
+        {
+          "title": "Nielsen Norman Group：Error-Message Guidelines",
+          "url": "https://www.nngroup.com/articles/error-message-guidelines/",
+          "supports": "建议错误提示靠近问题源、解释发生了什么并提供恢复动作；不是平台规范。"
+        }
       ],
       "caveat": "Apple、Android 文档针对各自平台；WCAG 移动应用说明页面包含解释性指导。控件与读屏播报仍要在目标系统版本、组件库和真实设备上复核。"
     },
@@ -239,32 +729,95 @@
       "title": "动效设计",
       "summary": "先说明动效为什么存在，再指定触发、起止、时长和缓动，并提供减少动态版本。",
       "principles": [
-        {"title": "没有明确目的就删掉", "body": "动效应表达反馈、状态变化、空间 / 导航关系或操作确认；如果删除后用户仍能理解，优先删除装饰性动效。"},
-        {"title": "写成可执行的状态规格", "body": "描述触发器、起始状态、目标状态、变化属性、方向、时长、缓动、可取消性和结束后的可操作状态。"},
-        {"title": "时长按频率与变化规模调整", "body": "频繁微反馈应短而克制，较大变化可适当延长。常见时长只能当起步假设，需按平台组件和真实设备调整。"},
-        {"title": "提供低动态替代", "body": "尊重系统或浏览器的减少动态偏好。去掉非必要的位移、缩放、视差和持续振荡；用淡入或即时切换保留状态信息。"}
+        {
+          "title": "没有明确目的就删掉",
+          "body": "动效应表达反馈、状态变化、空间 / 导航关系或操作确认；如果删除后用户仍能理解，优先删除装饰性动效。"
+        },
+        {
+          "title": "写成可执行的状态规格",
+          "body": "描述触发器、起始状态、目标状态、变化属性、方向、时长、缓动、可取消性和结束后的可操作状态。"
+        },
+        {
+          "title": "时长按频率与变化规模调整",
+          "body": "频繁微反馈应短而克制，较大变化可适当延长。常见时长只能当起步假设，需按平台组件和真实设备调整。"
+        },
+        {
+          "title": "提供低动态替代",
+          "body": "尊重系统或浏览器的减少动态偏好。去掉非必要的位移、缩放、视差和持续振荡；用淡入或即时切换保留状态信息。"
+        },
+        {
+          "title": "把可运行规格与评审 GIF 分层交付",
+          "body": "Web 动效可同时交付可审查 HTML / CSS 与仅供评审的 GIF：时间线写成 keyframes，优先检查 transform / opacity；真实文本保留为可编辑槽位。线上减少动态应由 HTML / CSS 响应 prefers-reduced-motion，GIF 本身不能替代该机制。"
+        }
       ],
-      "prompt": "你是交互动效设计师。项目 / 页面：[填写]；用户任务和使用频率：[填写]；平台、框架和组件约束：[填写]；触发场景：[点击 / 拖拽 / 滚动 / 加载等]；起始状态：[填写]；目标状态：[填写]；动效目的：[反馈 / 状态 / 空间导航 / 确认]；品牌规范和减少动态要求：[填写]。\n请输出：1）动效目的以及不应使用动效的理由；2）触发→进行中→成功 / 失败 / 取消 / 超时的状态机；3）动效规格（元素、起点、终点、时长、延迟、缓动、方向、触发 / 中断和结束状态）；4）普通动态与低动态两套方案；5）设计标注、开发参数与验收边界；6）若生成 GIF sprite sheet，说明帧数、等尺寸网格、固定机位、连续动作与首尾循环关系（Images 2.6 示例为 6 帧，不是跨项目硬规范）；7）QA 清单。缺少信息时标为待确认；每个时长说明选择理由，优先短、克制、可取消。",
+      "prompt": "你是交互动效设计师。项目 / 页面：[填写]；用户任务和使用频率：[填写]；平台、框架和组件约束：[填写]；触发场景：[点击 / 拖拽 / 滚动 / 加载等]；起始状态：[填写]；目标状态：[填写]；动效目的：[反馈 / 状态 / 空间导航 / 确认]；品牌规范和减少动态要求：[填写]。\n请输出：1）动效目的以及不应使用动效的理由；2）触发→进行中→成功 / 失败 / 取消 / 超时的状态机；3）动效规格（元素、起点、终点、时长、延迟、缓动、方向、触发 / 中断和结束状态）；4）普通动态与低动态两套方案；5）设计标注、开发参数与验收边界；6）若生成 GIF sprite sheet，说明帧数、等尺寸网格、固定机位、连续动作与首尾循环关系（Images 2.6 示例为 6 帧，不是跨项目硬规范）；7）QA 清单。缺少信息时标为待确认；每个时长说明选择理由，优先短、克制、可取消。\n【Web 动效交付分层】\n若目标是 Web，请同时交付可运行 HTML/CSS 和只供评审的短 GIF / 帧表；在 HTML/CSS 中实现 prefers-reduced-motion，真实文字做成命名槽位，报告翻译溢出、性能、可访问名称及状态链接。不要把 GIF 当作线上减少动态方案。",
       "checklist": [
         "动效是否明确反馈、状态、空间关系或确认？删除后是否仍可理解？",
         "是否定义起点、终点、成功 / 失败 / 取消 / 超时状态？动画过程是否阻塞其他操作？",
         "时长是否适合该操作的频率和变化规模？有没有无意义等待、过冲或互相抢注意力？",
         "进入 / 离开方向和手势是否一致？低端设备掉帧时，用户是否仍能理解状态？",
         "启用减少动态后，非必要位移和持续动画是否移除或替换，状态信息是否仍然完整？",
-        "若交付 GIF sprite sheet，检查帧数与单格尺寸、固定机位、主体/背景一致、动作连续及首尾能否自然循环；帧数按具体用途决定。"
+        "若交付 GIF sprite sheet，检查帧数与单格尺寸、固定机位、主体/背景一致、动作连续及首尾能否自然循环；帧数按具体用途决定。",
+        "检查 Web 线上版本是否用 HTML/CSS 响应 prefers-reduced-motion；GIF 仅作评审，不能作为唯一线上动效。核对真实文本槽位、翻译溢出与交互状态连接。"
       ],
       "official_sources": [
-        {"title": "Apple HIG：Motion", "url": "https://developer.apple.com/design/human-interface-guidelines/motion", "supports": "建议动效有目的、可选、不遮盖体验；反馈要准确，并避免高频交互中的多余动效。"},
-        {"title": "Material Design 3：Easing and duration", "url": "https://m3.material.io/styles/motion/easing-and-duration", "supports": "介绍缓动与时长的起步配对及按变化范围和进入 / 退出语义选择；页面注明其旧数值体系正在迁移。"},
-        {"title": "W3C WCAG 2.2：Animation from Interactions", "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html", "supports": "解释交互触发的非必要动效应支持关闭或替代，避免引发眩晕等不适。"},
-        {"title": "MDN：prefers-reduced-motion", "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion", "supports": "说明如何检测减少动态偏好并为非必要动画提供替代。"},
-        {"title": "OpenAI：Prompt engineering best practices", "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt", "supports": "支持用明确输入、上下文与迭代改写来组织动效交付任务。"},
-        {"title": "OpenAI：Introducing Images 2.6", "url": "https://openai.com/index/introducing-images-2-6/", "supports": "2026-11-04 公告给出无缝 GIF sprite sheet 提示例：6 个等尺寸连续帧、固定视角、主体与背景细节一致、第 6 帧平滑接第 1 帧；这是示例格式，不是所有动画的硬性要求。"}
+        {
+          "title": "Apple HIG：Motion",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+          "supports": "建议动效有目的、可选、不遮盖体验；反馈要准确，并避免高频交互中的多余动效。"
+        },
+        {
+          "title": "Material Design 3：Easing and duration",
+          "url": "https://m3.material.io/styles/motion/easing-and-duration",
+          "supports": "介绍缓动与时长的起步配对及按变化范围和进入 / 退出语义选择；页面注明其旧数值体系正在迁移。"
+        },
+        {
+          "title": "W3C WCAG 2.2：Animation from Interactions",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html",
+          "supports": "解释交互触发的非必要动效应支持关闭或替代，避免引发眩晕等不适。"
+        },
+        {
+          "title": "MDN：prefers-reduced-motion",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion",
+          "supports": "说明如何检测减少动态偏好并为非必要动画提供替代。"
+        },
+        {
+          "title": "OpenAI：Prompt engineering best practices",
+          "url": "https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt",
+          "supports": "支持用明确输入、上下文与迭代改写来组织动效交付任务。"
+        },
+        {
+          "title": "OpenAI：Introducing Images 2.6",
+          "url": "https://openai.com/index/introducing-images-2-6/",
+          "supports": "2026-11-04 公告给出无缝 GIF sprite sheet 提示例：6 个等尺寸连续帧、固定视角、主体与背景细节一致、第 6 帧平滑接第 1 帧；这是示例格式，不是所有动画的硬性要求。"
+        },
+        {
+          "title": "W3C：Media Queries Level 5",
+          "url": "https://www.w3.org/TR/mediaqueries-5/",
+          "supports": "2026-02-19 Working Draft 定义 prefers-reduced-motion 的 reduce / no-preference；该页面为工作草案，非最终标准。"
+        }
       ],
       "community_sources": [
-        {"title": "Nielsen Norman Group：The Role of Animation and Motion in UX", "url": "https://www.nngroup.com/articles/animation-purpose-ux/", "supports": "从反馈、状态与空间关系等用途讨论动效取舍；属于 UX 实践分析。"},
-        {"title": "Nielsen Norman Group：Executing UX Animations: Duration and Motion Characteristics", "url": "https://www.nngroup.com/articles/animation-duration/", "supports": "讨论如何在规格中写触发、变换、时长和缓动，并将数值作为经验范围而非硬性标准。"},
-        {"title": "4 Steps to Master Motion Design in 2026 (GPT 6.1 Sol)", "url": "https://www.youtube.com/watch?v=EpR0b7dPaBo&vl=fr", "supports": "YouTube 视频（2026-11-03）展示“收集参考→用 ChatGPT 做资产→规划网站/动效→用 Codex 构建”的流程，并提到 GSAP ScrollTrigger/React；仅引用公开步骤，不采用外链推广内容。"}
+        {
+          "title": "Nielsen Norman Group：The Role of Animation and Motion in UX",
+          "url": "https://www.nngroup.com/articles/animation-purpose-ux/",
+          "supports": "从反馈、状态与空间关系等用途讨论动效取舍；属于 UX 实践分析。"
+        },
+        {
+          "title": "Nielsen Norman Group：Executing UX Animations: Duration and Motion Characteristics",
+          "url": "https://www.nngroup.com/articles/animation-duration/",
+          "supports": "讨论如何在规格中写触发、变换、时长和缓动，并将数值作为经验范围而非硬性标准。"
+        },
+        {
+          "title": "4 Steps to Master Motion Design in 2026 (GPT 6.1 Sol)",
+          "url": "https://www.youtube.com/watch?v=EpR0b7dPaBo&vl=fr",
+          "supports": "YouTube 视频（2026-11-03）展示“收集参考→用 ChatGPT 做资产→规划网站/动效→用 Codex 构建”的流程，并提到 GSAP ScrollTrigger/React；仅引用公开步骤，不采用外链推广内容。"
+        },
+        {
+          "title": "Figma Motion on Editions",
+          "url": "https://x.com/Danetag/status/2118002349226577939",
+          "supports": "Shopify 设计师 2026-11-05 的 X 帖展示 Figma Motion 转 HTML/CSS keyframes、文本槽位和 report.md 的工作流；提到 prefers-reduced-motion 与 transform / opacity。属于 Web 团队实践，不是原生 App 规范。"
+        }
       ],
       "caveat": "没有适用于所有平台的统一时长或缓动。Material 的数值是平台实践并处于更新中；项目应按目标组件、频率和设备测试，减少动态需求不可只靠静态说明。"
     },
@@ -274,29 +827,94 @@
       "title": "图表与数据可视化",
       "summary": "先核对数据来源、口径和计算，再选图表；清楚标注单位、标签和可访问编码。",
       "principles": [
-        {"title": "先审数据来源和口径", "body": "记录数据来源、日期、筛选条件、单位和定义；检查缺失、重复、异常值、数据类型与合计关系。未经确认，不让模型擅自修数。"},
-        {"title": "先写要表达的结论，再选图形", "body": "趋势、类别比较、相关性和构成适合不同图形。先明确要回答的问题，再比较候选图表；不要为了视觉好看误导比例或截断坐标轴。"},
-        {"title": "标签与单位让图表可独立阅读", "body": "标清标题、轴、单位、时间粒度、样本量、图例顺序和四舍五入规则。关键系列可直接标注，避免只有悬停才读得到；若复杂表格或图形确需二维浏览，只让该区域滚动，周边正文仍应重排。"},
-        {"title": "人工复核计算与颜色编码", "body": "抽查数据点和汇总值，审阅 ChatGPT 生成的代码与假设。颜色不能是唯一线索；结合文字、线型或形状，并检查图形对比度。"}
+        {
+          "title": "先审数据来源和口径",
+          "body": "记录数据来源、日期、筛选条件、单位和定义；检查缺失、重复、异常值、数据类型与合计关系。未经确认，不让模型擅自修数。"
+        },
+        {
+          "title": "先写要表达的结论，再选图形",
+          "body": "趋势、类别比较、相关性和构成适合不同图形。先明确要回答的问题，再比较候选图表；不要为了视觉好看误导比例或截断坐标轴。"
+        },
+        {
+          "title": "标签与单位让图表可独立阅读",
+          "body": "标清标题、轴、单位、时间粒度、样本量、图例顺序和四舍五入规则。关键系列可直接标注，避免只有悬停才读得到；若复杂表格或图形确需二维浏览，只让该区域滚动，周边正文仍应重排。"
+        },
+        {
+          "title": "人工复核计算与颜色编码",
+          "body": "抽查数据点和汇总值，审阅 ChatGPT 生成的代码与假设。颜色不能是唯一线索；结合文字、线型或形状，并检查图形对比度。"
+        },
+        {
+          "title": "筛选后同步图表、摘要和数据表",
+          "body": "如果图表带筛选器，要求同一筛选同时更新图形、指标卡、摘要和可读数据表；用原数据手算总计、一个分组值和筛选后总计，验证各视图口径一致。窄屏优先筛选 / 分组，不把图表压扁。"
+        },
+        {
+          "title": "把图表交付做成可复核证据包",
+          "body": "除图形外同时交付数据来源/更新时间、可下载 CSV/Excel、等价表格/摘要和简短 alt text；窄屏做单独截图，抽查原数据与图中数值并做键盘/屏幕阅读器人工检查。360px 是压力测试视口，不是通用标准；设计系统建议与 WCAG 要求分开。"
+        }
       ],
-      "prompt": "请基于我提供的结构化数据制作一张可交付中文图表。数据来源 / 文件：[填写]；数据日期：[填写]；统计口径和单位：[填写]；要回答的问题 / 主结论：[填写]；比较维度、指标、筛选和计算方法：[填写]。\n阶段一只审计、不出图：核验每列数据类型、缺失值、重复行、异常值、重复计数与合计关系，输出问题、影响和处理建议；未获确认不要擅自修数。待我确认口径后再进入阶段二，比较趋势、条形、散点、构成等候选并说明所选图表为何合适；不得为了美观改变比例或用截断坐标轴误导比较。\n图表应有表达主结论与时间范围的标题、完整轴标题 / 单位 / 时间粒度 / 标签 / 图例 / 舍入规则；颜色不能是唯一编码，关键图形与邻近颜色对比目标至少 3:1。最后附数据摘要、关键计算、方法 / 代码、假设、限制和逐项 QA，并列出 3 个可回查的原表单元格/数值。来源无法验证时明确写“无法确认”，不要猜。",
+      "prompt": "请基于我提供的结构化数据制作一张可交付中文图表。数据来源 / 文件：[填写]；数据日期：[填写]；统计口径和单位：[填写]；要回答的问题 / 主结论：[填写]；比较维度、指标、筛选和计算方法：[填写]。\n阶段一只审计、不出图：核验每列数据类型、缺失值、重复行、异常值、重复计数与合计关系，输出问题、影响和处理建议；未获确认不要擅自修数。待我确认口径后再进入阶段二，比较趋势、条形、散点、构成等候选并说明所选图表为何合适；不得为了美观改变比例或用截断坐标轴误导比较。\n图表应有表达主结论与时间范围的标题、完整轴标题 / 单位 / 时间粒度 / 标签 / 图例 / 舍入规则；颜色不能是唯一编码，关键图形与邻近颜色对比目标至少 3:1。最后附数据摘要、关键计算、方法 / 代码、假设、限制和逐项 QA，并列出 3 个可回查的原表单元格/数值。来源无法验证时明确写“无法确认”，不要猜。\n【筛选与等价数据同步】\n若有筛选器，请让图、指标卡、文字摘要和数据表读取同一筛选结果并同步更新。列出总计、一个分组值、筛选后总计三个可手算样例；约 375px 窄屏检查标签可读与无整页横向溢出。\n【图表证据包】\n只使用我给的原始数据。交付一个中心结论的图表（类别/系列按需要控制），并同时提供来源 URL、更新时间、可下载 CSV/Excel、等价数据表、纯文本摘要和不超过 250 字的 alt text（图表类型/范围/主结论）。做 360px 窄屏截图，检查标题/轴/标签不重叠；从原数据抽查至少 5 个点，核对摘要与表格；用键盘操作并人工检查屏幕阅读器语境。无法验证项标为未验证。标清 CFPB/USWDS 的设计建议与 WCAG 适用要求。",
       "checklist": [
         "每个指标能否追溯到来源、日期、筛选条件和单位？是否存在未说明的合并、换算、缺失值处理或重复计数？",
         "抽查至少 3 个关键数据点和一个汇总值能否由原始数据复算？百分比、增长率、舍入和轴范围是否一致？",
         "图表是否对应趋势、比较、构成或相关性任务？标题、轴、单位、时间粒度、标签和图例是否完整？",
         "信息是否不依赖颜色单独传达？检查关键图形对比度、色觉差异和灰度下的系列辨别。",
-        "审阅模型生成的代码、方法、假设与输出；静态图片、交互图表和原始数值是否相符？"
+        "审阅模型生成的代码、方法、假设与输出；静态图片、交互图表和原始数值是否相符？",
+        "改变筛选条件后，图、摘要、指标卡和数据表是否同步？手算总计、一个分组值和筛选后总计，核对四处口径一致；窄屏下确认标签可读。",
+        "图表同时提供来源/更新时间、可下载 CSV/Excel、等价表/摘要和简短 alt text；360px 检查无重叠；抽查至少 5 个数值，并做键盘与屏幕阅读器人工检查。把设计系统建议与强制规范分开。"
       ],
       "official_sources": [
-        {"title": "OpenAI：Data analysis with ChatGPT", "url": "https://help.openai.com/en/articles/8437071-data-analysis-with-chatgpt", "supports": "建议使用列名清楚、每行一条记录的结构化数据，明确计算和图表要求，并复核代码、输出与假设。"},
-        {"title": "OpenAI：Extracting Insights with ChatGPT Data Analysis", "url": "https://help.openai.com/en/articles/9213685-extracting-insights-with-chatgpt-data-analysis", "supports": "说明可检查缺失值、异常值、重复行和类型，并提醒图表选择可能不符合意图，需要指定并复核。"},
-        {"title": "W3C WCAG：Use of Color", "url": "https://www.w3.org/WAI/WCAG21/Understanding/use-of-color.html", "supports": "要求不能只靠颜色传达理解信息所必需的差异。"},
-        {"title": "W3C WCAG：Non-text Contrast", "url": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html", "supports": "解释有意义的图形部分与相邻颜色至少 3:1 的非文本对比要求。"},
-        {"title": "W3C WCAG 2.2：Reflow（重排）", "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html", "supports": "说明窄视口下普通内容应重排；确需二维浏览的图表 / 表格可限于局部区域，避免整页横向滚动。"},
-        {"title": "OpenAI Academy：Analyzing data with ChatGPT", "url": "https://openai.com/academy/data-analysis/", "supports": "2026-04-10 的通用指南（已超过 90 天）：建议提供数据定义、时间范围、分组、轴标签和单位，并抽查重要计算；不是近期发布，也不是专门的图表无障碍标准。"}
+        {
+          "title": "OpenAI：Data analysis with ChatGPT",
+          "url": "https://help.openai.com/en/articles/8437071-data-analysis-with-chatgpt",
+          "supports": "建议使用列名清楚、每行一条记录的结构化数据，明确计算和图表要求，并复核代码、输出与假设。"
+        },
+        {
+          "title": "OpenAI：Extracting Insights with ChatGPT Data Analysis",
+          "url": "https://help.openai.com/en/articles/9213685-extracting-insights-with-chatgpt-data-analysis",
+          "supports": "说明可检查缺失值、异常值、重复行和类型，并提醒图表选择可能不符合意图，需要指定并复核。"
+        },
+        {
+          "title": "W3C WCAG：Use of Color",
+          "url": "https://www.w3.org/WAI/WCAG21/Understanding/use-of-color.html",
+          "supports": "要求不能只靠颜色传达理解信息所必需的差异。"
+        },
+        {
+          "title": "W3C WCAG：Non-text Contrast",
+          "url": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html",
+          "supports": "解释有意义的图形部分与相邻颜色至少 3:1 的非文本对比要求。"
+        },
+        {
+          "title": "W3C WCAG 2.2：Reflow（重排）",
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+          "supports": "说明窄视口下普通内容应重排；确需二维浏览的图表 / 表格可限于局部区域，避免整页横向滚动。"
+        },
+        {
+          "title": "OpenAI Academy：Analyzing data with ChatGPT",
+          "url": "https://openai.com/academy/data-analysis/",
+          "supports": "2026-04-10 的通用指南（已超过 90 天）：建议提供数据定义、时间范围、分组、轴标签和单位，并抽查重要计算；不是近期发布，也不是专门的图表无障碍标准。"
+        },
+        {
+          "title": "U.S. Web Design System：Data visualizations",
+          "url": "https://designsystem.digital.gov/components/data-visualizations/",
+          "supports": "官方建议熟悉的图表类型、单图聚焦中心主题，并提供文字标签、摘要和底层数据表；页面未显示可见发布日期。 官方指导还建议提供等价数据表/文字、不要依赖 hover 传达含义，并进行人工测试；其为设计系统建议，不等同于 WCAG 规范性成功标准。"
+        },
+        {
+          "title": "CFPB Design System：Data visualization guidelines",
+          "url": "https://cfpb.github.io/design-system/guidelines/data-visualization-guidelines",
+          "supports": "页面显示 2026-11-04 最后编辑：建议单图聚焦一个主点、数据类型不超过 5；提供描述性标题/轴标签、可下载 Excel/CSV、≤250 字且含图表类型/数据/结论的 alt text，并标注来源和更新时间。这是设计系统指导，不是普遍法律强制标准。"
+        }
       ],
       "community_sources": [
-        {"title": "Datawrapper：A friendly guide to choosing a chart type", "url": "https://www.datawrapper.de/blog/chart-types-guide", "supports": "从趋势、比较、占比和相关性等表达目标出发选择图形，建议先明确主陈述；属于实践教程，不是规范。"}
+        {
+          "title": "Datawrapper：A friendly guide to choosing a chart type",
+          "url": "https://www.datawrapper.de/blog/chart-types-guide",
+          "supports": "从趋势、比较、占比和相关性等表达目标出发选择图形，建议先明确主陈述；属于实践教程，不是规范。"
+        },
+        {
+          "title": "How to Create a Sales Dashboard with ChatGPT (Step by Step)",
+          "url": "https://www.youtube.com/watch?v=pgFJwUrWVGc",
+          "supports": "YouTube 教程（页面显示 2026-10-20）：用真实示例数据建立筛选、图表、指标卡和源数据表，手算指标并测试非法输入；页面未展示具体 375px 设备矩阵，仍需自行补测。"
+        }
       ],
       "caveat": "ChatGPT 可能选错图表、推断不完整或无法准确读取扫描表格。W3C 的 Understanding 页面是解释性指导；关键数据和计算必须回到原始来源人工核对。"
     }
@@ -313,10 +931,34 @@
     "title": "新增内容会带着来源一起进来",
     "intro": "记录这份手册的整理范围和后续维护方式。",
     "entries": [
-      {"date": "2026-11-08", "text": "首版上线：建立通用设计简报流程，整理海报、网页 UI、图标、小程序、H5、App、动效与图表 8 个主题。"},
-      {"date": "2026-11-08", "text": "响应式与多画幅补充（官方规范）：网页 UI / H5 按可用窗口空间重排，补充 WCAG 2.2 的 320 CSS px Reflow 检查与 Material 3 断点；小程序与 App 加入大字号、真实长文案及窗口尺寸验证；海报提示词补充多比例需分别重排。今日没有可纳入的近期、非推广型社媒实测，不新增社区来源。"},
-      {"date": "2026-11-09", "text": "今日补充：海报局部编辑越界检查、网页 UI 评估 rubric、可编辑 SVG 验收、小程序设备/基础库矩阵、Android WebView 软键盘 inset、原生 App 跨屏状态保持、Images 2.6 GIF sprite sheet、图表先审计再出图。社区案例有限，按日期与证据分栏；日期无法核实或推广内容不冒充近期实测。"},
-      {"date": "持续更新", "text": "后续按新问题补充提示词、验收清单和来源；若官方文档或平台行为变更，更新相关条目并标注需要复测的版本。"}
+      {
+        "date": "2026-11-08",
+        "text": "首版上线：建立通用设计简报流程，整理海报、网页 UI、图标、小程序、H5、App、动效与图表 8 个主题。"
+      },
+      {
+        "date": "2026-11-08",
+        "text": "响应式与多画幅补充（官方规范）：网页 UI / H5 按可用窗口空间重排，补充 WCAG 2.2 的 320 CSS px Reflow 检查与 Material 3 断点；小程序与 App 加入大字号、真实长文案及窗口尺寸验证；海报提示词补充多比例需分别重排。今日没有可纳入的近期、非推广型社媒实测，不新增社区来源。"
+      },
+      {
+        "date": "2026-11-09",
+        "text": "今日补充：海报局部编辑越界检查、网页 UI 评估 rubric、可编辑 SVG 验收、小程序设备/基础库矩阵、Android WebView 软键盘 inset、原生 App 跨屏状态保持、Images 2.6 GIF sprite sheet、图表先审计再出图。社区案例有限，按日期与证据分栏；日期无法核实或推广内容不冒充近期实测。"
+      },
+      {
+        "date": "2026-11-10",
+        "text": "今日补充：网页 UI 加入截图批注、最糟状态与不可变区回归；Icon 增加 stable_id / 版本 / 退役迁移；小程序细化 API 能力判断与版本比较；H5 加入 iOS 独立 PWA 键盘实测分支（社区结果有相反反馈）；原生 App 补 Android 17 自定义 CJKV 输入读屏检查；Web 动效分开交付 HTML/CSS 与评审 GIF；图表筛选后同步图、摘要、指标卡和表格。海报现有参考图分工已覆盖，未重复收录提示词清单；小程序与 App 无合格的新社媒例子。官方规范与社区经验分栏，平台专属结论不泛化。"
+      },
+      {
+        "date": "2026-11-11",
+        "text": "今日补充：海报加入固定基线下的多尺寸回归；网页 UI 加入机器可读组件/状态/token 规格契约（W3C 社区组工作非规范性）；Icon 整合语义、渲染与平台验收；小程序补 custom 导航的客户端门槛、胶囊测量与失败降级；H5 增加浏览器环境变量与 fallback 矩阵（WCAG 3.0 仍为开发中草案）；App 增加组件级动态字号压力测试；图表补可下载数据、等价表/alt text、窄屏和人工复核证据包。动效本日无合格新项。社区实操来源仅小程序 CSDN 技术文章（2026-09-14、09-22）；其他主题未找到符合非推广、可复现条件的新社媒来源，故不凑数。"
+      },
+      {
+        "date": "2026-11-12",
+        "text": "今日补充：海报明确像素级不变区域应将批准编辑合成回基准图，并区分 ChatGPT UI 与 API 能力；网页 UI 增加可访问组件状态矩阵、读屏与无 JavaScript 验收；Icon 增加几何与本地化名称分层及 en/zh 读屏测试；小程序新增 Skyline 长列表/嵌套滚动/窗口变化运行时回归；H5 为复杂手势增加简单指针替代路径（WCAG 3.0 仍为开发中草案）；Android Compose 增加 density/font scaling 决策和非手势双路径测试。动效和图表无去重后的新内容。社区来源有限：图标社区文章日期未核实，不作为近期依据；未发现可纳入的近期非推广小程序/海报/动效/图表实操。官方与社区来源分栏，草案和平台能力明确限界。"
+      },
+      {
+        "date": "持续更新",
+        "text": "后续按新问题补充提示词、验收清单和来源；若官方文档或平台行为变更，更新相关条目并标注需要复测的版本。"
+      }
     ]
   },
   "maintenance": {
