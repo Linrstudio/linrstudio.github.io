@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5ef">
+  <meta name="description" content="从 React 经验出发，系统掌握 Vue 2、Vue 3 与 uni-app 的学习路线、迁移练习、面试题库和每日打卡。">
+  <title>Vue 学习工作台 · 从 React 到 Vue 与 uni-app</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#home" aria-label="Vue 学习工作台首页">
+        <span class="brand-mark">v</span>
+        <span class="brand-name">Vue<span class="brand-light">学练场</span><small>FRONTEND MASTERY</small></span>
+      </a>
+      <div class="nav-label">学习空间</div>
+      <nav class="side-nav">
+        <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span><span>今日学习</span><span class="nav-dot"></span></button>
+        <button class="nav-item" data-view="roadmap"><span class="nav-icon">▤</span><span>8 周路线</span></button>
+        <button class="nav-item" data-view="quiz"><span class="nav-icon">✳</span><span>面试题库</span><span class="nav-count" id="wrong-count">0</span></button>
+        <button class="nav-item" data-view="compare"><span class="nav-icon">⇄</span><span>框架对照</span></button>
+        <button class="nav-item" data-view="profile"><span class="nav-icon">◷</span><span>学习档案</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note">
+          <span class="note-spark">✦</span>
+          <strong>不从零开始</strong>
+          <p>用 React 经验做脚手架，重点攻克响应式思维、跨端边界与面试表达。</p>
+          <button class="text-button" data-go="compare">先看对照卡 <span>↗</span></button>
+        </div>
+        <div class="local-note"><span class="local-dot"></span>进度只保存在此浏览器</div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">v</span><strong>Vue 学练场</strong></div>
+        <div class="crumb"><span>学习空间</span><span class="crumb-slash">/</span><strong id="page-crumb">今日学习</strong></div>
+        <div class="top-actions">
+          <div class="today-date" id="today-date"></div>
+          <span class="top-divider"></span>
+          <div class="streak-pill" title="连续学习天数"><span class="streak-mark">✦</span><strong id="top-streak">0</strong><span>天连续</span></div>
+          <div class="avatar" title="Arale 的学习档案">A</div>
+        </div>
+      </header>
+
+      <section class="view active" id="view-home" aria-labelledby="home-title">
+        <div class="hero-panel">
+          <div class="hero-copy">
+            <div class="eyebrow light-eyebrow"><span class="eyebrow-mark"></span>你的前端进阶路线</div>
+            <h1 id="home-title">把 Vue 学懂，<br><span>也把它讲出来。</span></h1>
+            <p>从 React 熟悉的地方出发，8 周打通 Vue 2、Vue 3 与 uni-app 的原理、迁移和面试表达。</p>
+            <button class="button button-lime" id="start-today"><span>开始今日学习</span><span class="button-arrow">↗</span></button>
+            <div class="hero-footnote"><span class="mini-check">✓</span>每天 20 分钟 · 1 个概念 · 5 道复习题 · 1 次口头输出</div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <div class="hero-sticker sticker-react">React<br><small>已有经验</small></div>
+            <div class="hero-sticker sticker-uni">uni-app<br><small>多端实战</small></div>
+            <div class="mastery-ring"><div class="ring-track"></div><div class="ring-progress" id="hero-ring"></div><div class="ring-content"><strong id="hero-percent">0%</strong><span>路线进度</span></div></div>
+            <div class="hero-vue">V</div>
+            <div class="hero-caption">Vue mastery<br><b>从理解到迁移</b></div>
+          </div>
+          <div class="hero-grain"></div>
+        </div>
+
+        <div class="stats-row">
+          <article class="stat-card stat-streak"><span class="stat-icon icon-streak">✦</span><div><span class="stat-label">连续学习</span><strong><span id="stat-streak">0</span><small>天</small></strong></div><span class="stat-foot" id="streak-foot">今天迈出第一步</span></article>
+          <article class="stat-card stat-xp"><span class="stat-icon icon-xp">✧</span><div><span class="stat-label">累计经验值</span><strong><span id="stat-xp">0</span><small> XP</small></strong></div><span class="stat-foot">每次练习都算数</span></article>
+          <article class="stat-card stat-accuracy"><span class="stat-icon icon-accuracy">◎</span><div><span class="stat-label">答题正确率</span><strong><span id="stat-accuracy">—</span></strong></div><span class="stat-foot"><span id="answered-count">0</span> 道题已练习</span></article>
+          <article class="stat-card stat-week"><span class="stat-icon icon-week">▤</span><div><span class="stat-label">当前学习单元</span><strong><span id="stat-week">01</span><small> / 08</small></strong></div><span class="stat-foot">Vue 2 · 响应式与更新</span></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="dashboard-main">
+            <article class="panel today-panel">
+              <div class="panel-heading">
+                <div><div class="section-kicker">FRIDAY · YOUR DAILY QUEST</div><h2>今天的学习任务</h2></div>
+                <div class="daily-progress-wrap"><span id="daily-progress-label">0 / 3 完成</span><div class="mini-progress"><span id="daily-progress-bar"></span></div></div>
+              </div>
+              <div class="quest-list" id="today-tasks"></div>
+              <div class="quest-footer"><span class="quest-foot-label"><span class="tiny-star">✦</span>完成 3 项，点亮今日连续学习</span><button class="subtle-button" id="daily-checkin" disabled>完成今日任务后打卡 <span>→</span></button></div>
+            </article>
+
+            <article class="panel current-unit">
+              <div class="unit-topline"><span class="unit-chip" id="current-week-chip">WEEK 01</span><span class="unit-meta">主线课程 <span>·</span> 约 20 分钟/天</span><button class="arrow-link" data-go="roadmap">查看完整路线 <span>↗</span></button></div>
+              <div class="unit-layout">
+                <div class="unit-copy"><h2 id="current-week-title">Vue 2：响应式与更新链路</h2><p id="current-week-goal">先把 Vue 的“自动追踪”讲清楚：数据如何变成依赖，依赖又如何驱动视图更新。</p><div class="unit-tags"><span>原理拆解</span><span>React 对照</span><span>面试表达</span></div></div>
+                <div class="unit-progress"><div class="unit-progress-circle"><strong id="week-progress-percent">0%</strong><span>本周完成</span></div><div class="unit-progress-bars"><span class="progress-bar-line"><i id="week-progress-bar"></i></span><span class="progress-caption" id="week-progress-caption">本周 0 / 7 天</span></div></div>
+              </div>
+              <div class="unit-accept"><span class="accept-mark">✓</span><div><b>本周验收</b><span id="current-week-accept">不用背术语，能画出一次 Vue 2 数据变更到视图更新的链路。</span></div><button class="tiny-link" data-go="roadmap">查看日程</button></div>
+            </article>
+
+            <article class="panel review-panel">
+              <div class="panel-heading review-heading"><div><div class="section-kicker">SMART REVIEW</div><h2>该复习的，别让它溜走</h2></div><button class="text-button" data-go="quiz">进入题库 <span>↗</span></button></div>
+              <div class="review-list" id="review-list"></div>
+            </article>
+          </div>
+
+          <aside class="dashboard-side">
+            <article class="focus-card">
+              <div class="focus-top"><span class="focus-mark">✳</span><span>本周练习节奏</span></div>
+              <h3>先理解，<br>再迁移。</h3>
+              <p>每周一个验收目标，不以“看完”当作“学会”。</p>
+              <div class="rhythm-list"><span><i class="rhythm-dot dot-lime"></i>2 天 <b>理解</b></span><span><i class="rhythm-dot dot-lilac"></i>1 天 <b>对比</b></span><span><i class="rhythm-dot dot-peach"></i>2 天 <b>练习</b></span><span><i class="rhythm-dot dot-blue"></i>1 天 <b>测试</b></span><span><i class="rhythm-dot dot-gray"></i>1 天 <b>复盘</b></span></div>
+              <button class="focus-link" data-go="roadmap">打开本周路线 <span>→</span></button>
+              <div class="focus-decoration">V</div>
+            </article>
+            <article class="panel week-map-panel">
+              <div class="panel-heading compact-heading"><div><div class="section-kicker">YOUR JOURNEY</div><h2>8 周全景</h2></div><button class="icon-button" data-go="roadmap" aria-label="查看完整学习路线">↗</button></div>
+              <div class="journey-line" id="journey-line"></div>
+              <button class="journey-footer" data-go="roadmap">查看每周目标与验收 <span>→</span></button>
+            </article>
+            <div class="daily-tip"><span class="tip-quote">“</span><p>已有 React 经验是加速器。把注意力放在 Vue 的响应式边界、组件模型和跨端取舍上。</p><span class="tip-source">TODAY’S REMINDER</span></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="view-roadmap" aria-labelledby="roadmap-title">
+        <div class="page-intro"><div><div class="eyebrow"><span class="eyebrow-mark"></span>THE 8-WEEK PATH</div><h1 id="roadmap-title">从 Vue 2 到跨端实战，<br><span>每周都有一个验收点。</span></h1><p>按“理解 → 对比 → 练习 → 测试 → 复盘”循环。你可以按顺序走，也可以直接跳到当前最需要的主题。</p></div><div class="intro-side"><span class="intro-number">08</span><span>WEEKS<br>TO MASTERY</span></div></div>
+        <div class="roadmap-summary"><div><span class="summary-dot lime-dot"></span><b>基础与原理</b><span>Vue 2 · Vue 3</span></div><div><span class="summary-dot lilac-dot"></span><b>迁移与选型</b><span>Vue 2 → Vue 3</span></div><div><span class="summary-dot peach-dot"></span><b>跨端与实战</b><span>uni-app</span></div><div><span class="summary-dot blue-dot"></span><b>表达与验收</b><span>面试综合</span></div></div>
+        <div class="roadmap-list" id="roadmap-list"></div>
+      </section>
+
+      <section class="view" id="view-quiz" aria-labelledby="quiz-title">
+        <div class="page-intro quiz-intro"><div><div class="eyebrow"><span class="eyebrow-mark"></span>INTERVIEW GYM</div><h1 id="quiz-title">不只会选，<br><span>还要说得清为什么。</span></h1><p>按技术域筛题。选好答案后看解析，再用自己的话讲一遍；错题会保存在本机，方便下次复习。</p></div><div class="quiz-total-card"><strong id="quiz-total">0</strong><span>道精挑练习题</span><small>原理 · 场景 · 排错 · 表达</small></div></div>
+        <div class="quiz-toolbar"><label class="search-box"><span>⌕</span><input id="bank-search" type="search" placeholder="搜索关键词，例如 nextTick、分包" aria-label="搜索题目"></label><label class="select-label"><span>技术域</span><select id="topic-filter"><option value="all">全部主题</option><option value="Vue 2">Vue 2</option><option value="Vue 3">Vue 3</option><option value="迁移对比">迁移对比</option><option value="uni-app">uni-app</option><option value="React 对照">React 对照</option></select></label><label class="select-label"><span>难度</span><select id="level-filter"><option value="all">全部难度</option><option value="基础">基础</option><option value="进阶">进阶</option><option value="深入">深入</option></select></label><button class="button button-dark" id="wrong-filter">错题本 <span class="wrong-badge" id="wrong-badge">0</span></button><button class="button button-outline" id="random-practice">随机 5 题 <span>↗</span></button></div>
+        <div class="quiz-results-line"><span id="results-label">显示全部题目</span><button class="clear-filters" id="clear-filters">清除筛选</button></div>
+        <div class="question-list" id="question-list"></div>
+        <div class="empty-state hidden" id="empty-questions"><span>✳</span><h3>这里还没有题目</h3><p>试试换个筛选条件，或者搜索另一个关键词。</p></div>
+      </section>
+
+      <section class="view" id="view-compare" aria-labelledby="compare-title">
+        <div class="page-intro compare-intro"><div><div class="eyebrow"><span class="eyebrow-mark"></span>TRANSLATE YOUR EXPERIENCE</div><h1 id="compare-title">带着 React 经验，<br><span>换一副 Vue 的眼镜。</span></h1><p>不把两套框架硬套在一起。先认出相似的问题，再理解模型差异和使用边界。</p></div><div class="compare-bubble"><span>React</span><b>⇄</b><span>Vue</span></div></div>
+        <div class="compare-callout"><span class="callout-icon">✦</span><div><b>先记住这条主线</b><p>React 更强调显式地描述状态如何驱动渲染；Vue 通过响应式依赖追踪自动知道哪些副作用需要重新执行。两者都能做好组件化、状态管理与性能优化，但心智模型不同。</p></div></div>
+        <div class="compare-grid" id="compare-grid"></div>
+        <article class="panel migration-panel"><div class="section-kicker">MIGRATION EXERCISE</div><h2>把熟悉的 React 习惯，翻译成 Vue 问题</h2><p>挑一个你做过的 React 功能（表单、列表筛选或弹窗），先不写代码，回答下面三问，再去 Vue 3 实现。</p><div class="migration-steps"><div><span>01</span><b>状态在哪里？</b><p>是组件本地状态、父级状态，还是跨页面共享状态？Vue 中用 ref/reactive、props/emit 还是 Pinia？</p></div><div><span>02</span><b>谁依赖它？</b><p>React 中哪些组件重渲染？Vue 中哪些 effect 会订阅这个状态？有没有不必要的依赖？</p></div><div><span>03</span><b>换端会怎样？</b><p>如果这个功能进 uni-app，是否依赖 DOM、浏览器 API 或平台特有的交互？</p></div></div><button class="button button-dark" data-go="roadmap">打开迁移周课程 <span>↗</span></button></article>
+      </section>
+
+      <section class="view" id="view-profile" aria-labelledby="profile-title">
+        <div class="page-intro profile-intro"><div><div class="eyebrow"><span class="eyebrow-mark"></span>YOUR LEARNING LOG</div><h1 id="profile-title">稳稳积累，<br><span>你走过的每一步都算数。</span></h1><p>这是保存在当前浏览器里的个人学习记录。换设备或清理浏览器数据后，记录不会自动同步。</p></div><div class="profile-avatar">A</div></div>
+        <div class="profile-stats stats-row"><article class="stat-card stat-streak"><span class="stat-icon icon-streak">✦</span><div><span class="stat-label">当前连续</span><strong><span id="profile-streak">0</span><small>天</small></strong></div><span class="stat-foot">最长连续 <b id="longest-streak">0</b> 天</span></article><article class="stat-card stat-xp"><span class="stat-icon icon-xp">✧</span><div><span class="stat-label">累计经验值</span><strong><span id="profile-xp">0</span><small> XP</small></strong></div><span class="stat-foot">下一等级 <b id="next-level">100</b> XP</span></article><article class="stat-card stat-accuracy"><span class="stat-icon icon-accuracy">◎</span><div><span class="stat-label">总答题正确率</span><strong><span id="profile-accuracy">—</span></strong></div><span class="stat-foot"><span id="profile-answered">0</span> 道题</span></article><article class="stat-card stat-week"><span class="stat-icon icon-week">▣</span><div><span class="stat-label">已完成打卡</span><strong><span id="checkin-total">0</span><small> 天</small></strong></div><span class="stat-foot">学习记录不会上传</span></article></div>
+        <div class="profile-grid"><article class="panel activity-panel"><div class="panel-heading"><div><div class="section-kicker">LAST 28 DAYS</div><h2>学习足迹</h2></div><span class="activity-legend"><i></i>完成每日学习</span></div><div class="activity-months" id="activity-months"></div><div class="activity-grid" id="activity-grid" aria-label="近 28 天学习记录"></div><div class="activity-caption"><span>少</span><i class="activity-cell"></i><i class="activity-cell level-1"></i><i class="activity-cell level-2"></i><i class="activity-cell level-3"></i><span>多</span></div></article><article class="panel mastery-panel"><div class="section-kicker">SKILL MAP</div><h2>能力路线图</h2><p>先按计划学习，每完成一个单元后，在路线页标记验收完成。</p><div id="skill-map"></div><button class="text-button" data-go="roadmap">继续学习路线 <span>↗</span></button></article></div>
+        <article class="panel profile-tools"><div><div class="section-kicker">YOUR DATA</div><h2>学习数据管理</h2><p>数据存储在 localStorage。可以导出备份，或在需要时清空本机记录。</p></div><div class="tool-buttons"><button class="button button-outline" id="export-data">导出学习记录 <span>↓</span></button><button class="button button-danger" id="reset-data">清空本机记录</button></div></article>
+      </section>
+
+      <footer class="app-footer"><span>Vue 学练场 · 为有 React 经验的前端开发者设计</span><span>LEARN THE MODEL · PRACTICE THE TRADE-OFFS</span></footer>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="移动端导航"><button class="mobile-nav-item active" data-view="home"><span>⌂</span><small>今日</small></button><button class="mobile-nav-item" data-view="roadmap"><span>▤</span><small>路线</small></button><button class="mobile-nav-item" data-view="quiz"><span>✳</span><small>题库</small></button><button class="mobile-nav-item" data-view="compare"><span>⇄</span><small>对照</small></button><button class="mobile-nav-item" data-view="profile"><span>◷</span><small>档案</small></button></nav>
+
+  <div class="modal-backdrop hidden" id="modal-backdrop" role="presentation">
+    <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-top"><span class="modal-kicker" id="modal-kicker">TODAY’S LESSON</span><button class="modal-close" id="modal-close" aria-label="关闭">×</button></div>
+      <h2 id="modal-title"></h2>
+      <div class="modal-content" id="modal-content"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
