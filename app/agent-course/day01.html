@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 1：Agent 是什么：定义、组成与分类 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 1 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 1：Agent 是什么：定义、组成与分类</h1>
+<p>大模型本身只会一件事：接一句话，回一段话。你问它“帮我查上季度销量并写成摘要”，它能写出漂亮的回答框架，却查不到真实数据，也记不住上次的结论。Agent 就是把模型放进一个能办事的身体里：它能拆任务、查资料、调工具、记结果，再根据环境反馈决定下一步。今天先把 Agent 的定义、组成与分类这张全景图立起来，后面 21 天就是往这张图里逐块填血肉。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="Agent 四能力闭环：感知、规划、行动、记忆围绕 LLM 转动">
+<rect x="294" y="55" width="140" height="60" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="80" text-anchor="middle" font-size="14" fill="#222">LLM（大脑）</text><text x="364" y="100" text-anchor="middle" font-size="12" fill="#555">理解 · 推理 · 生成</text>
+<rect x="20" y="55" width="110" height="60" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="75" y="90" text-anchor="middle" font-size="13" fill="#222">感知</text>
+<rect x="150" y="10" width="110" height="48" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="205" y="40" text-anchor="middle" font-size="13" fill="#222">规划</text>
+<rect x="468" y="10" width="110" height="48" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="523" y="40" text-anchor="middle" font-size="13" fill="#222">行动</text>
+<rect x="598" y="55" width="110" height="60" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="653" y="90" text-anchor="middle" font-size="13" fill="#222">记忆</text>
+<line x1="130" y1="85" x2="294" y2="85" stroke="#22a35a" stroke-width="2"/><polygon points="294,85 282,79 282,91" fill="#22a35a"/>
+<line x1="434" y1="85" x2="598" y2="85" stroke="#22a35a" stroke-width="2"/><polygon points="598,85 586,79 586,91" fill="#22a35a"/>
+<path d="M 653 55 C 653 10, 600 10, 578 10" fill="none" stroke="#22a35a" stroke-width="2" stroke-dasharray="5,4"/><polygon points="578,10 590,6 590,16" fill="#22a35a"/>
+<path d="M 150 34 C 110 10, 60 10, 75 55" fill="none" stroke="#22a35a" stroke-width="2" stroke-dasharray="5,4"/><polygon points="75,55 71,43 81,49" fill="#22a35a"/>
+<text x="364" y="150" text-anchor="middle" font-size="13" fill="#222">感知 → 规划 → 行动 → 记忆 → 再感知：闭环转动，任务才推得下去</text>
+</svg>
+<h3>1. 一句话定义与 Agent 公式</h3>
+<p>AI Agent（智能体）是以大模型为认知核心，结合规划、记忆与工具调用，能在多步交互中根据环境反馈持续决策并完成任务的系统。业界常用一句公式概括：</p>
+<p><strong>Agent ≈ LLM + Planning（规划）+ Memory（记忆）+ Tools（工具）</strong></p>
+<p>缺一块会怎样？缺规划，Agent 变成“只会接话”的聊天，长任务容易跑偏；缺记忆，长对话丢线索，多会话无法延续用户偏好；缺工具，只能“空谈”，查不了实时信息、改不了系统状态。LLM 是中枢，但单靠 LLM、没有外环，就不是完整的 Agent。</p>
+<h3>2. 四能力闭环：感知、规划、记忆、行动</h3>
+<p>LLM 是 Agent 的“大脑”，提供推理和生成能力；Agent 是 LLM 的“完整身体”，具备四个能力组成的闭环。<strong>感知</strong>把多模态输入（文本、文件、接口返回、页面结构）转成模型可用的表示，并抽取任务相关状态；<strong>规划</strong>把模糊目标拆成可执行步骤，并在执行中动态调整；<strong>行动</strong>真正调用工具、触发环境变化；<strong>记忆</strong>把中间结果记下来，供下一轮使用。闭环的典型形态是 <strong>Thought（推理）→ Action（行动）→ Observation（观察）→ … → Final Answer</strong>：模型输出的往往不是最终答案，而是“下一步动作”，环境返回观察结果，再进入下一轮推理。</p>
+<h3>3. 与 Chain、ChatBot 的本质区别</h3>
+<p>三者常被混用，面试最爱问的区分点就一个：<strong>控制流在哪</strong>。</p>
+<table>
+<tr><th>维度</th><th>ChatBot</th><th>LLM Chain</th><th>Agent</th></tr>
+<tr><td>控制流</td><td>多为线性对话</td><td>开发者定义的 DAG / 序列</td><td>模型驱动的分支与循环</td></tr>
+<tr><td>工具</td><td>可有可无</td><td>可嵌入固定节点</td><td>动态选择与多轮调用</td></tr>
+<tr><td>状态</td><td>主要会话上下文</td><td>链各节点显式传递</td><td>记忆 + 环境观察</td></tr>
+<tr><td>适用</td><td>问答、闲聊、简单引导</td><td>ETL 式固定流程</td><td>开放问题、研究、自动化任务</td></tr>
+</table>
+<p><strong>本质区别一句话：Chain 的控制流在代码里；Agent 的控制流在模型决策 + 环境反馈里</strong>（仍可由代码设边界）。ChatBot 加上插件也不一定就变成 Agent——若插件调用由固定规则触发（如关键词路由），更像“带工具的 Bot”；只有模型在多步推理中自主选择工具与参数、并形成闭环迭代，才贴近 Agent。关键在是否具备<strong>多步自主决策与反馈闭环</strong>。二者也可结合：链负责稳定流程，Agent 负责链内某段的灵活分支。</p>
+<h3>4. 六大组成</h3>
+<p><strong>感知（Perception）</strong>：输入处理与状态抽取，常与结构化抽取、OCR、HTML 解析、日志解析结合，关键是减少噪声进上下文。<strong>规划（Planning）</strong>：拆子目标与步骤，可以是一次性计划或每步重规划，常见实现有 CoT、ReAct、Planner-Executor 双模块、树搜索、任务图。<strong>记忆（Memory）</strong>：短期（当前会话上下文、工具轨迹）与长期（用户画像、文档知识、向量库、图数据库），工程要点是摘要压缩、引用溯源、记忆冲突解决、权限与隐私。<strong>工具（Tools）</strong>：对外部世界可执行的操作抽象，要有清晰 schema（名称、描述、参数 JSON Schema），要点是最小权限、参数校验、错误信息回灌模型。<strong>执行（Action）</strong>：真正调用工具并处理超时、重试、幂等等工程问题。<strong>反思（Reflection）</strong>：对失败或质量不佳的结果自省——纠错、换策略、生成检查清单，常与自我批评、验证器配合；不是必须，但对高风险或易错工具场景收益大，代价是额外延迟与 Token。</p>
+<h3>5. 五步工作流程</h3>
+<p>可以记成一句口诀：<strong>听懂 → 拆活 → 动手 → 对账 → 交卷</strong>。① <strong>输入处理</strong>：意图识别、指代消解、安全过滤、加载相关记忆与文档；② <strong>任务分解</strong>：生成子任务列表或决策树，复杂任务可配合人在回路确认里程碑；③ <strong>工具选择与调用</strong>：由模型或路由模块选工具，执行器做鉴权、限流与结果规范化；④ <strong>结果整合</strong>：合并多源信息，解决冲突（例如时间更新的数据优先）；⑤ <strong>输出生成</strong>：面向用户的自然语言答案 + 可选引用与操作轨迹（便于审计）。为避免 Agent 在工具调用间“迷失”，要明确停止条件与最大步数、维护任务清单与当前子目标、对每步输出要求结构化、关键步骤强制验证。</p>
+<h3>6. 五种经典分类</h3>
+<p>分类来自经典 AI 教材的智能体理论，可与 LLM Agent 对照理解。<strong>反应式（Reactive）</strong>：类似反射，输入→动作，几乎不维护复杂内部模型，优点是快、可解释、易测试，缺点是对长程依赖与复杂推理弱。<strong>基于模型（Model-based）</strong>：脑中有“世界模型”，能预测行动后果，如显式维护状态机、仿真环境或知识图谱。<strong>基于目标（Goal-based）</strong>：明确要达成什么状态，能选路径。<strong>基于效用（Utility-based）</strong>：在多个冲突目标间权衡，选期望效用最大的行动——目标型关注“是否达成”，效用型在成本、时延、风险、用户偏好之间做综合最优。<strong>学习型（Learning）</strong>：从反馈中更新策略或模型，如 RLHF、在线反馈、Bandit 选工具。LLM Agent 一般是<strong>混合型</strong>：底层是模型推理，上层可接目标/效用（打分选路径）+ 记忆（世界状态）+ 学习（反馈更新）。</p>
+<h3>7. 应用场景速览</h3>
+<p>优先落地的场景是“高频、可工具化、可评估”的。<strong>智能客服</strong>：工单查询、订单状态、退换货政策，需知识库对齐、身份鉴权、升级人工策略。<strong>代码助手</strong>：读仓库、跑测试、提 PR，需沙箱、diff 审查、最小权限。<strong>数据分析</strong>：NL2SQL、制图、解读，需数据治理、行级权限、结果校验。<strong>自动化运维</strong>：查日志、重启服务、开单，需审批流、灰度、回滚。<strong>知识管理</strong>：摘要、标签、关联检索，需溯源、版本、权限。企业内部落地最先关心的三个非功能需求是：<strong>安全与合规</strong>（权限、审计）、<strong>可控性</strong>（人在回路、工具白名单）、<strong>可观测性</strong>（轨迹、指标、回放）。</p>
+<div class="warn"><strong>容易踩的坑：</strong>Agent 的“自主”不是不受控。自主是在约束空间内的决策：工具白名单、参数校验、人在回路（HITL）、预算与步数上限、输出审核，缺了护栏的自主就是事故。面试被追问“自主是不是不受控”，就按这五条护栏答。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：最小“思考—行动—观察”循环（离线可跑，用假模型演示循环骨架）</h3>
+<pre><code>def run_agent(user_goal, tools, llm, max_steps=8):
+    """最小 Agent 循环：模型决定下一步动作，工具返回观察结果，再进入下一轮。"""
+    messages = [
+        {"role": "system", "content": "你是可调用工具的 Agent。"},
+        {"role": "user", "content": user_goal},
+    ]
+    for _ in range(max_steps):
+        plan = llm(messages)  # 模型决定：结束 or 调用某工具
+        action = parse_tool_call(plan)  # 从模型输出解析结构化动作
+        if action["name"] == "finish":
+            return action["args"]["answer"]
+        obs = tools[action["name"]](**action["args"])  # 真实环境反馈
+        messages.append({"role": "assistant", "content": plan})
+        messages.append({"role": "user", "content": f"工具结果：{obs}"})
+    return "超过最大步数，未完成。"
+
+
+def parse_tool_call(text):
+    """极简解析：生产环境请用 JSON / tool_calls 结构化输出。"""
+    import json
+    return json.loads(text)
+
+
+def fake_llm(messages):
+    """假模型：第一轮调搜索，第二轮结束。真实场景换成 API 调用。"""
+    if len(messages) <= 2:
+        return '{"name": "search_kb", "args": {"query": "退货政策"}}'
+    return '{"name": "finish", "args": {"answer": "已查到：7 天无理由退货。"}}'
+
+
+tools = {"search_kb": lambda query: f"知识库命中：[{query}] 相关条款 3 条"}
+print(run_agent("我们公司的退货政策是什么？", tools, fake_llm))
+# 已查到：7 天无理由退货。</code></pre>
+<h3>示例 2：现代 LangChain 1.x 写法——create_agent（需配模型 API Key）</h3>
+<pre><code># LangChain 1.x：Agent 用 create_agent 构建。
+# 注意：AgentExecutor 在 1.x 已删除，不要再用；create_react_agent 已 deprecated，也不要再用。
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+
+
+@tool
+def search_kb(query: str) -> str:
+    """在公司知识库中按关键词搜索。"""
+    return f"知识库命中：[{query}] 相关条款 3 条"
+
+
+# model 换成你项目里实际的 ChatModel；以官方最新文档为准
+agent = create_agent(
+    model="gpt-4o-mini",
+    tools=[search_kb],
+    system_prompt="你是客服助手。涉及事实类问题必须先调用工具查证，不要凭记忆回答。",
+)
+
+result = agent.invoke({"messages": [{"role": "user", "content": "退货政策是什么？"}]})
+print(result["messages"][-1].content)</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再加一个假工具 <code>calculator</code>：让假模型先调计算器算 37×24，再调 <code>finish</code> 返回答案，观察轨迹里多了哪一轮 Observation。<br>
+2. 故意让假模型返回一个不存在的工具名（如 <code>{"name": "no_such_tool", ...}</code>），看看循环会怎样崩——然后给它加一层“工具不存在时把错误写回 messages 让模型重试”的保护。<br>
+3. 把 <code>max_steps</code> 改成 1 再跑，确认超过步数上限时返回什么——生产环境必须有这个硬上限，防止死循环。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Agent 公式“LLM + 规划 + 记忆 + 工具”中，缺了规划会怎样？</strong></p><button data-i="0">只能空谈，查不了实时信息</button><button data-i="1">变成只会接话的聊天，长任务易跑偏或一步登天完不成</button><button data-i="2">长对话会丢线索，多会话无法延续用户偏好</button><div class="ans">解析：选 B。缺规划跑偏；缺工具才“只能空谈”；缺记忆才丢线索。</div></div>
+<div class="q" data-answer="2"><p><strong>2. Agent 与 LLM Chain 的本质区别是？</strong></p><button data-i="0">Agent 用的模型更大</button><button data-i="1">Chain 不能用工具，Agent 能</button><button data-i="2">Chain 的控制流在代码里，Agent 的控制流在模型决策 + 环境反馈里</button><div class="ans">解析：选 C。Chain 也可以在固定节点里嵌工具，关键区别在控制流归谁定。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 四能力闭环指的是哪四个能力？</strong></p><button data-i="0">感知、规划、记忆、行动</button><button data-i="1">推理、检索、生成、评估</button><button data-i="2">输入、输出、存储、计算</button><div class="ans">解析：选 A。LLM 是大脑，四能力是身体的闭环：感知 → 规划 → 行动 → 记忆。</div></div>
+<div class="q" data-answer="1"><p><strong>4. Agent 六大组成中，哪一项负责“对失败结果自省、纠错换策略”？</strong></p><button data-i="0">感知</button><button data-i="1">反思</button><button data-i="2">执行</button><div class="ans">解析：选 B。反思不是必须的，但在高风险或易错工具场景收益大，代价是额外延迟与 Token。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 基于效用的 Agent 与基于目标的 Agent 有什么区别？</strong></p><button data-i="0">效用型没有目标</button><button data-i="1">两者完全一样，只是叫法不同</button><button data-i="2">目标型关注是否达成，效用型在多个冲突目标间权衡选综合最优</button><div class="ans">解析：选 C。效用型在成本、时延、风险、用户偏好之间做权衡，而非单点达成。</div></div>
+<div class="q" data-answer="0"><p><strong>6. ChatBot 加上插件就一定变成 Agent 了吗？</strong></p><button data-i="0">不一定：若插件由固定规则触发，更像带工具的 Bot；只有模型多步自主选工具并形成闭环才贴近 Agent</button><button data-i="1">一定是，插件就是 Agent 的标志</button><button data-i="2">一定不是，ChatBot 永远成不了 Agent</button><div class="ans">解析：选 A。关键在是否具备多步自主决策与反馈闭环，而不是有没有插件。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：一句话说明什么是 AI Agent？</summary><p>AI Agent 是以大模型为认知核心，结合规划、记忆与工具调用，能在多步交互中根据环境反馈持续决策并完成任务的系统；其本质是闭环的感知—思考—行动循环，而不仅是单次文本生成。</p></details>
+<details><summary>Q2：为什么说 Agent = LLM + Planning + Memory + Tools？缺一块会怎样？</summary><p>缺规划：容易变成“只会接话”的聊天，长任务易跑偏或一步登天完不成。缺记忆：长对话会丢线索，多会话无法延续用户偏好与任务状态。缺工具：只能“空谈”，无法查实时信息、执行代码、改系统状态。LLM 仍是中枢，但单靠 LLM 没有外环则不是完整 Agent。</p></details>
+<details><summary>Q3：Agent 和 Prompt Chain 有什么本质区别？</summary><p>Prompt Chain 的拓扑与顺序主要由工程侧固定；Agent 在运行时在动作空间中做选择，并依赖 Observation 更新信念，适合输入与路径不确定的任务。二者可结合：链负责稳定流程，Agent 负责链内某段的灵活分支。</p></details>
+<details><summary>Q4：Agent 的记忆一般怎么设计？</summary><p>分层设计最常见：工作记忆（当前轨迹与关键结论）+ 会话记忆（摘要滚动）+ 长期记忆（向量检索/结构化库）。写入要区分“事实”与“推断”，并带时间戳与来源，便于更新与撤销。Day 15 会展开讲记忆系统。</p></details>
+<details><summary>Q5：规划和执行要不要拆开两个模型？</summary><p>视任务而定。Planner-Executor 拆分可提升可控性（强模型规划、快模型执行）；单模型端到端更简单但易在长链路漂移。可混合：规划用强模型，执行层做确定性校验。Day 2 会讲 Planner-Executor 的具体形态。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>企业内部落地 Agent，先关心的不是模型选型，而是三个非功能需求：安全与合规（权限、审计）、可控性（人在回路、工具白名单）、可观测性（轨迹、指标、回放）。先把护栏搭好，再谈能力。</p>
+<p><strong>简历讲法：</strong>别写“了解 AI Agent”，写“用 LLM + 规划 + 记忆 + 工具搭了客服 Agent：模型多步自主选工具查知识库，工具白名单 + 最大步数 + 人在回路做护栏，轨迹可审计”。前者是名词，后者是可追问的架构。</p>
+<p><strong>明日预告：</strong>Day 2 讲推理与执行范式：CoT、ReAct、Plan-and-Execute——Agent 到底是“边想边做”还是“先想好再做”，以及两种 ReAct Prompt 模板怎么写。</p>
+</div>
+<div class="nav"><span><a href="index.html">← 课程首页</a></span><span><a href="day02.html">Day 2 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

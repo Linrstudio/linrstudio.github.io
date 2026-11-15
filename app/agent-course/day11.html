@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 11：RAG 进阶架构：Self-RAG、Agentic RAG 与 GraphRAG | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 11 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 11：RAG 进阶架构：Self-RAG、Agentic RAG 与 GraphRAG</h1>
+<p>Day 7 到 Day 10 的 RAG 是一条直线：检索 → 生成，一次过。但直线有三个硬伤：所有问题都无差别检索 k 个片段（写首诗也要检索，浪费还添噪声）；召回的片段不管对错都塞给模型（无关甚至矛盾的上下文反而带偏答案）；向量只能找“局部相似的块”，答不了“这几家公司之间是什么关系”这种多跳问题。今天的进阶架构，就是在直线里加进三样东西：<strong>判断</strong>（要不要检索、证据够不够）、<strong>循环</strong>（不够就再查）、<strong>关系</strong>（用图补向量缺的那一环）。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 210" width="100%" role="img" aria-label="进阶 RAG 心智图：问题先经路由与反思门控，再决定检索、再检索或直接生成">
+<rect x="20" y="15" width="140" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="90" y="42" text-anchor="middle" font-size="13" fill="#222">用户问题</text>
+<line x1="160" y1="37" x2="205" y2="37" stroke="#0b62d6" stroke-width="2"/><polygon points="205,37 193,31 193,43" fill="#0b62d6"/>
+<rect x="205" y="15" width="180" height="44" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="295" y="42" text-anchor="middle" font-size="13" fill="#222">反思门控 Retrieve?</text>
+<line x1="385" y1="37" x2="430" y2="37" stroke="#0b62d6" stroke-width="2"/><polygon points="430,37 418,31 418,43" fill="#0b62d6"/>
+<rect x="430" y="15" width="140" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="500" y="42" text-anchor="middle" font-size="13" fill="#222">检索 K 个片段</text>
+<line x1="500" y1="59" x2="500" y2="82" stroke="#0b62d6" stroke-width="2"/><polygon points="500,82 494,70 506,70" fill="#0b62d6"/>
+<rect x="390" y="82" width="220" height="44" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="500" y="109" text-anchor="middle" font-size="13" fill="#222">反思 IsREL / IsSUP / IsUSE</text>
+<line x1="500" y1="126" x2="500" y2="149" stroke="#0b62d6" stroke-width="2"/><polygon points="500,149 494,137 506,137" fill="#0b62d6"/>
+<rect x="390" y="149" width="220" height="44" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="500" y="176" text-anchor="middle" font-size="13" fill="#222">选最佳段落，带引用生成</text>
+<line x1="390" y1="104" x2="130" y2="104" stroke="#d33" stroke-width="2" stroke-dasharray="5,4"/><line x1="130" y1="104" x2="130" y2="59" stroke="#d33" stroke-width="2" stroke-dasharray="5,4"/><polygon points="130,59 124,71 136,71" fill="#d33"/>
+<text x="40" y="98" font-size="12" fill="#d33">证据不足：再检索</text>
+<text x="205" y="80" font-size="12" fill="#666">No：直接生成（如写诗）</text>
+<line x1="295" y1="59" x2="295" y2="82" stroke="#666" stroke-width="2"/><polygon points="295,82 289,70 301,70" fill="#666"/>
+<rect x="205" y="82" width="180" height="44" rx="10" fill="#f2f2f2" stroke="#666" stroke-width="2"/><text x="295" y="109" text-anchor="middle" font-size="13" fill="#222">直接生成，不检索</text>
+<text x="20" y="200" font-size="12" fill="#666">Adaptive 路由在入口分流；Agentic 把整条链变成可循环的 Agent；GraphRAG 在检索侧加一路知识图谱。</text>
+</svg>
+
+<h3>1. Self-RAG：按需检索 + 反思 token</h3>
+<p>Self-RAG（2023 年论文《Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection》）的核心思想是：<strong>让模型自己决定要不要检索，并自己给自己的输出打分</strong>。它在模型词表里加了一组特殊的反思 token（reflection tokens），分两类：</p>
+<table>
+<tr><th>反思 token</th><th>问什么</th><th>取值</th></tr>
+<tr><td><code>Retrieve</code></td><td>这个问题需不需要检索外部信息？</td><td>Yes / No / Continue（继续用已有证据）</td></tr>
+<tr><td><code>IsREL</code></td><td>这个片段和问题相关吗？</td><td>相关 / 不相关</td></tr>
+<tr><td><code>IsSUP</code></td><td>生成的这句话有片段支持吗？</td><td>完全支持 / 部分支持 / 不支持</td></tr>
+<tr><td><code>IsUSE</code></td><td>这句回答对问题有用吗？</td><td>1–5 分，5 最有用</td></tr>
+</table>
+<p>推理流程是：模型先预测 <code>Retrieve</code>——写“最佳夏日假期”这种创意任务就直接生成，不检索；事实性问题则检索 K 个片段，对每个片段并行生成一个候选段落，再用 <code>IsREL / IsSUP / IsUSE</code> 三组分数给候选打分，选最好的。打分细节叫<strong>树解码</strong>（tree-decoding）：每个片段的得分是各反思 token 归一化概率的加权和，权重是可调的超参数——想要事实准确就调高 <code>IsSUP</code> 的权重，想要开放创意就调低；再用段落级束搜索（beam search）保留得分最高的 B 个续写。也可以设<strong>阈值</strong>：只有 <code>Retrieve=Yes</code> 的概率超过阈值才真正触发检索。</p>
+<p>训练分两步：先用 GPT-4 生成反思 token 的标注，蒸馏到一个内部评判模型（critic model）；再用评判模型给训练语料里的每个片段打上反思 token，用标准的 next-token 目标训练生成模型——检索到的文本块在算损失时被遮住，模型只学“输出 + 反思 token”。这样推理时就不再需要评判模型，生成模型自己会反思。论文配套的 <code>selfrag_llama2_7b / 13b</code> 是 2023 年的模型，这里只讲机制、不推荐用这个旧模型——今天的工程落地更多是借它的思路：用结构化输出或小模型做同样的门控和打分，见示例 1。</p>
+<div class="warn"><strong>一句话记住 Self-RAG：</strong>检索不是必经之路，而是模型每一步都要重新判断的决定；答案不是一次生成的，而是多个候选按“相关、支持、有用”打分选出来的。它的代价是：要训练（或至少要精心设计提示）才能让模型可靠地输出反思信号。</div>
+
+<h3>2. Agentic RAG：把 RAG 变成多步决策循环</h3>
+<p>Agentic RAG 的定义很简单：<strong>由 Agent 决定何时检索、检索什么、是否再检索</strong>，并且可以调用多个工具（搜索、数据库、代码执行），而不只是查一次向量库。普通 RAG 是“一次检索、一次生成”；Agentic RAG 是“检索 → 看结果 → 觉得不够 → 换个问法再检索 → 够了才生成”的循环，适合多跳、需要多源拼证据的复杂任务。</p>
+<p>它和 Self-RAG 的共同点是都引入了多步决策与反思，区别在实现位置：Agentic 常外显为<strong>工具调用与规划</strong>（Agent 的循环在系统层面看得见），Self-RAG 把“要不要检索、证据是否支持”内嵌在<strong>生成格式</strong>里（反思 token），更偏训练与解码策略。面试常问这道对比题，记住“外显工具循环 vs 内嵌反思 token”就够了。</p>
+
+<h3>3. Corrective RAG：检索不好就纠正，而不是硬着头皮生成</h3>
+<p>Corrective RAG（CRAG）给检索加了一个质检岗：检索结果先过一道评估，<strong>不达标就触发纠正动作</strong>——改写查询、换索引源、或联网搜索——而不是把烂证据塞给模型。典型触发信号有四个，面试常考：</p>
+<ul>
+<li><strong>检索置信度低</strong>：Top1 与 Top2 的分数差距很小，分不清谁更相关；</li>
+<li><strong>实体不一致</strong>：检索结果里的实体和问题里的实体对不上；</li>
+<li><strong>重排后仍低分</strong>：重排模型也觉得这些片段不行；</li>
+<li><strong>生成与引用冲突</strong>：答案和引用的证据互相矛盾（可用一致性检测发现）。</li>
+</ul>
+
+<h3>4. Adaptive RAG：按问题类型路由，不过度检索</h3>
+<p>不是所有问题都值得走完整链路。Adaptive RAG 在入口放一个<strong>轻量分类器或小模型</strong>，判断“需不需要检索 / 需要 SQL 还是文档 / 是否需要多跳”，再把问题分发到不同的子管道：简单事实走单跳向量检索，复杂问题走多跳或工具链路，纯知识性问题甚至不检索。它和 Agentic RAG 的边界是：Adaptive 强调<strong>路由策略</strong>（入口一次分流），Agentic 强调<strong>循环决策与工具调用</strong>（过程中反复决定）。</p>
+<p>路由误判怎么防？三个办法：<strong>混合路由</strong>（短路链路和完整链路并行跑，取好的）；<strong>置信度阈值 + 默认安全策略</strong>（不确定就走更强的检索，宁可多花点钱也别答错）；<strong>持续用线上反馈迭代分类器</strong>。</p>
+
+<h3>5. GraphRAG / KG 增强：向量找不到关系，就建一张图</h3>
+<p>典型向量 RAG 有两个短板：<strong>抓不到长程关联知识</strong>（A 和 C 的关系要经过 B，向量相似度看不出来），以及<strong>信息密度低</strong>（上下文窗口小时尤其吃亏）。KG 增强的办法是加一路与向量库平行的知识图谱：从文本抽取实体与关系建图，检索时先从问题抽实体作种子节点，在图上采样子图，再把子图转成文本片段作上下文；也可以把查询转成图查询语言（如 Cypher）直接查图。GraphRAG 在此基础上更进一步，适合<strong>多跳关系问题和全局问题</strong>（如“这批文档的整体主题是什么”），常用社区摘要做全局聚合。</p>
+<p>但图不是免费的：<strong>构图与抽取成本高</strong>、抽取错误会污染整张图、运维复杂。判断标准很实际：如果数据以说明文、FAQ 为主，向量 RAG + 混合检索 + 重排通常足够；只有关系问题占比高、团队又有图谱与评测能力时，才值得上 GraphRAG。小公司先别急着建图。</p>
+
+<h3>6. 模块化 RAG：六个可插拔的模块</h3>
+<p>模块化 RAG 把“索引 → 检索 → 生成”的固定三段拆成可替换、可重排的模块，论文里列了六个：</p>
+<table>
+<tr><th>模块</th><th>干什么</th></tr>
+<tr><td>搜索模块</td><td>不只查向量库：可用 LLM 生成 SQL、Cypher 等查询语言查结构化数据、搜索引擎、知识图</td></tr>
+<tr><td>记忆模块</td><td>用 LLM 自身的记忆引导检索，找与当前输入最匹配的记忆</td></tr>
+<tr><td>额外生成模块</td><td>检索内容冗余或噪声大时，让 LLM 直接生成需要的上下文，而非只从数据源取</td></tr>
+<tr><td>任务适应模块</td><td>把 RAG 调整适配各种下游任务</td></tr>
+<tr><td>对齐模块</td><td>在检索器里加可训练的 Adapter，解决查询与文档之间的对齐问题</td></tr>
+<tr><td>验证模块</td><td>检索后加一道验证：评估文档与查询的相关性，挡住不可靠的检索结果</td></tr>
+</table>
+<p>两种组织模式：<strong>增加或替换模块</strong>（保留“检索—阅读”骨架，加新模块，如重写—检索—阅读 RRR）；<strong>调整模块间工作流程</strong>（加强语言模型与检索模型之间的互动）。Self-RAG、Corrective RAG 都可以看作在这个框架里加了“验证 / 反思”模块。</p>
+
+<h3>7. RA-DIT：RAG 与微调一起做</h3>
+<p>RAG 和微调不是二选一。RA-DIT 的做法是双向更新：<strong>更新 LLM</strong>，让它在给定检索增强指令时更可能给出正确答案（更会用背景知识，即使检索到的块是错的也能靠自身知识兜底）；<strong>更新检索器</strong>，让文档与查询在语义上更相关。结果是模型既会用检索到的证据，又不被错误检索带偏。记住这个配合原则：微调改善格式与领域表达，RAG 提供可更新事实——事实类优先 RAG。</p>
+
+<h3>8. 多模态 RAG：文本 + 表格 + 图片</h3>
+<p>核心 idea 是<strong>多向量检索器</strong>（Multi-Vector Retriever）：把“用于检索的东西”和“用于生成的东西”分开——检索用摘要的向量，生成用原始内容。半结构化 RAG（文本 + 表格）的流程是：版面分析拆出文本与表格 → 各自生成摘要 → 摘要向量化入库（同时存摘要和原文）→ 查询召回原文喂给 LLM。多模态（再加图片）有三条路线：</p>
+<ul>
+<li><strong>路线 1</strong>：文本/表格摘要 + 原始图片都用多模态 embedding 向量化入库；召回原文与原图，喂给多模态 LLM 生成；</li>
+<li><strong>路线 2</strong>：先用多模态大模型给图片生成摘要，三类摘要一起向量化；生成时若没有多模态大模型，就召回原文 + 图片摘要，用纯文本 LLM 生成；</li>
+<li><strong>路线 3</strong>：同路线 2 的索引方式，但生成时召回原文与原图，喂给多模态大模型。</li>
+</ul>
+<p>私有化部署时整条流水线可本地化（图片摘要、开源 embedding、本地向量库、本地生成模型），源材料里的具体模型名是 2023 年的，以官方最新文档为准。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Self-RAG 思路的反思门控（可跑，无需 API Key）</h3>
+<p>不用训练模型也能落地 Self-RAG 的思路：把 <code>Retrieve / IsREL / IsSUP</code> 做成三个可替换的判断函数——演示里用规则实现，生产里换成 LLM 结构化输出或小分类器。控制流才是重点。</p>
+<pre><code># 反思门控 RAG：演示版（规则版 critic，生产可换成 LLM 结构化输出）
+from dataclasses import dataclass
+
+@dataclass
+class Doc:
+    text: str
+    keywords: list
+    score: float = 0.0  # 检索分数，演示用关键词命中数模拟
+
+# 演示用小知识库：每条配关键词，避免单字误命中
+KB = [
+    Doc("公司年假 15 天，需提前两周申请。", ["年假", "休假"]),
+    Doc("报销流程：提交发票后 5 个工作日到账。", ["报销", "发票"]),
+    Doc("公司总部位于上海浦东新区。", ["总部", "上海"]),
+]
+
+def retrieve(query, k=2):
+    """演示检索：按关键词命中数打分排序"""
+    for d in KB:
+        d.score = sum(kw in query for kw in d.keywords)
+    scored = sorted(KB, key=lambda d: d.score, reverse=True)
+    return [d for d in scored if d.score > 0][:k]
+
+def should_retrieve(query):
+    """Retrieve 门控：创意类问题不检索（生产：LLM 判断）"""
+    creative = ["写首诗", "编个故事", "起个名字"]
+    return not any(c in query for c in creative)
+
+def is_relevant(doc, query):
+    """IsREL：片段与问题是否相关"""
+    return doc.score >= 1
+
+def is_supported(answer, docs):
+    """IsSUP：答案里的关键主张是否有片段支持（演示：答案须复述证据原文）"""
+    return any(d.text in answer for d in docs)
+
+def self_rag_answer(query):
+    if not should_retrieve(query):  # Retrieve=No：直接生成
+        return f"（直接生成，不检索）关于「{query}」，这是我的创作……", []
+    docs = retrieve(query)
+    docs = [d for d in docs if is_relevant(d, query)]  # IsREL 过滤
+    if not docs:  # 无相关证据：宁可拒答也不编
+        return "知识库中没有相关内容，我无法回答。", []
+    answer = f"根据资料：{docs[0].text}"  # 演示：直接引用最佳片段
+    if not is_supported(answer, docs):  # IsSUP 校验
+        return "检索到的证据不足以支持答案，请换个问法。", docs
+    return answer, docs  # IsUSE：生产里可再让 LLM 给 1-5 分
+
+for q in ["年假多少天？", "写首诗赞美秋天", "公司食堂在哪？"]:
+    ans, used = self_rag_answer(q)
+    print(q, "→", ans)
+# 年假多少天？ → 根据资料：公司年假 15 天，需提前两周申请。
+# 写首诗赞美秋天 → （直接生成，不检索）关于「写首诗赞美秋天」，这是我的创作……
+# 公司食堂在哪？ → 知识库中没有相关内容，我无法回答。</code></pre>
+
+<h3>示例 2：Corrective + Adaptive：带纠正的路由循环（可跑）</h3>
+<p>入口按问题类型路由（Adaptive），检索后检查 Top1/Top2 差距与实体一致性，不达标就改写查询再检索一次（Corrective）。</p>
+<pre><code># Adaptive 路由 + Corrective 再检索：演示版
+from dataclasses import dataclass
+
+@dataclass
+class Hit:
+    text: str
+    score: float
+
+KB = [
+    ("公司年假 15 天，需提前两周申请。", ["年假", "休假"]),
+    ("报销流程：提交发票后 5 个工作日到账。", ["报销", "发票"]),
+    ("上海总部地址：浦东新区陆家嘴。", ["总部", "地址", "上海"]),
+]
+
+def search(query):
+    hits = []
+    for text, keys in KB:
+        s = sum(k in query for k in keys)
+        if s:
+            hits.append(Hit(text, float(s)))
+    return sorted(hits, key=lambda h: h.score, reverse=True)
+
+def route(query):
+    """Adaptive 路由：简单事实走单跳，比较类问题走多路"""
+    if "和" in query and ("区别" in query or "对比" in query):
+        return "multi_hop"
+    return "single_hop"
+
+def needs_correction(hits, query):
+    """Corrective 触发信号：无结果 / Top1 与 Top2 差距小"""
+    if not hits:
+        return True, "无检索结果"
+    if len(hits) >= 2 and hits[0].score - hits[1].score < 1:
+        return True, "Top1/Top2 差距小，置信度低"
+    return False, ""
+
+def rewrite(query):
+    """查询改写：演示版只做同义词扩展，生产用 LLM 改写"""
+    return query.replace("多少天", "天数").replace("在哪", "地址")
+
+def agentic_rag(query, max_rounds=2):
+    path = route(query)
+    print(f"[{path}] {query}")
+    q = query
+    for rnd in range(max_rounds):
+        hits = search(q)
+        bad, reason = needs_correction(hits, q)
+        if not bad:
+            return f"答案：{hits[0].text}"
+        print(f"  第 {rnd + 1} 轮触发纠正：{reason}，改写查询再检索")
+        q = rewrite(q)
+    return "多次检索仍无可靠证据，建议人工确认。"
+
+print(agentic_rag("年假多少天？"))
+print(agentic_rag("总部在哪？"))
+# [single_hop] 年假多少天？
+# 答案：公司年假 15 天，需提前两周申请。
+# [single_hop] 总部在哪？
+# 答案：上海总部地址：浦东新区陆家嘴。</code></pre>
+
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，加一个问题“报销要多久到账？”，看它走哪条分支；再把 <code>should_retrieve</code> 里的创意词换成你自己的判断规则。<br>
+2. 在示例 2 里故意造一个 Top1/Top2 差距小的查询（比如同时命中两条知识的问题），观察纠正分支是否触发。<br>
+3. 思考题：你的知识库里哪类问题最适合 Adaptive 路由（比如“查制度”vs“做对比”）？写出三条路由规则，并说明不确定时默认走哪条链路、为什么。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Self-RAG 的 Retrieve token 是干嘛的？</strong></p><button data-i="0">决定检索几个片段</button><button data-i="1">决定这个问题需不需要检索外部信息</button><button data-i="2">决定用哪个向量库</button><div class="ans">解析：选 B。Retrieve=Yes 才检索，创意任务（如写诗）直接生成，这是“按需检索”。</div></div>
+<div class="q" data-answer="2"><p><strong>2. IsSUP 评估的是什么？</strong></p><button data-i="0">片段和问题是否相关</button><button data-i="1">回答对用户有没有用</button><button data-i="2">生成的这句话有没有检索到的片段支持</button><div class="ans">解析：选 C。IsREL 管相关，IsSUP 管支持，IsUSE 管有用（1–5 分），三者分工不同。</div></div>
+<div class="q" data-answer="0"><p><strong>3. Self-RAG 树解码里，候选段落的得分是怎么算的？</strong></p><button data-i="0">各反思 token 归一化概率的加权和，权重可调，再用段落级束搜索选最优</button><button data-i="1">只看生成概率最高的那句</button><button data-i="2">随机选一个候选</button><div class="ans">解析：选 A。调高 IsSUP 权重偏向事实准确，调低偏向开放创意，无需重新训练就能改行为。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 下列哪个是 Corrective RAG 的典型触发信号？</strong></p><button data-i="0">检索速度太快</button><button data-i="1">Top1 与 Top2 分数差距小，置信度低</button><button data-i="2">用户问题太短</button><div class="ans">解析：选 B。触发信号还包括实体不一致、重排后仍低分、生成与引用冲突，触发后改写查询或换源。</div></div>
+<div class="q" data-answer="2"><p><strong>5. Adaptive RAG 与 Agentic RAG 的边界是？</strong></p><button data-i="0">没有区别，是同一个东西</button><button data-i="1">Adaptive 用图，Agentic 不用图</button><button data-i="2">Adaptive 强调入口路由策略，Agentic 强调过程中的循环决策与工具调用</button><div class="ans">解析：选 C。Adaptive 是入口一次分流，Agentic 是检索—判断—再检索的循环。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 小公司数据以 FAQ 为主时，关于 GraphRAG 的合理判断是？</strong></p><button data-i="0">向量 RAG + 混合检索 + 重排通常足够，关系问题占比高且有图谱能力时再上图</button><button data-i="1">必须立刻上 GraphRAG，否则效果一定差</button><button data-i="2">GraphRAG 没有任何成本，可以无脑上</button><div class="ans">解析：选 A。构图与抽取成本高、抽取错误会污染图、运维复杂，投入前要先看问题类型占比。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Self-RAG 的核心思想是什么？四个反思 token 各自评估什么？</summary><p>按需检索 + 自我反思：模型自己决定要不要检索，并给自己的输出打分。Retrieve 决定是否需要检索；IsREL 评估片段与问题是否相关；IsSUP 评估生成内容是否有片段支持；IsUSE 评估回答对问题有没有用（1–5 分）。推理时用树解码：各反思 token 概率的加权和作段落得分，束搜索选最优候选。</p></details>
+<details><summary>Q2：Agentic RAG 和 Self-RAG 有什么共同点和区别？</summary><p>共同点是都引入了多步决策与反思。区别：Agentic 常外显为工具调用与规划（Agent 决定何时检索、检索什么、是否再检索，可调多工具）；Self-RAG 把“要不要检索、证据是否支持”内嵌在生成格式里（反思 token），更偏训练与解码策略。</p></details>
+<details><summary>Q3：Corrective RAG 的触发信号有哪些？触发后做什么？</summary><p>检索置信度低（Top1 与 Top2 差距小）、检索结果与问题实体不一致、重排后仍低分、生成与引用冲突。触发后执行查询改写、换索引源、或联网搜索，而不是把烂证据硬塞给模型生成。</p></details>
+<details><summary>Q4：GraphRAG 解决普通 RAG 的什么痛点？成本和挑战是什么？</summary><p>解决多跳关系问题和全局聚合类问题（如“整体主题是什么”）：普通向量 RAG 只擅长局部相似块，抓不到长程关联知识。成本：构图与抽取成本高、抽取错误会污染图、运维复杂。适合关系密集、愿意投入工程化的场景；FAQ 为主的小公司先用向量 RAG + 混合检索 + 重排。</p></details>
+<details><summary>Q5：Adaptive RAG 如何避免路由误判？</summary><p>三招：混合路由（短路链路与完整链路并行，取好的）；置信度阈值 + 默认安全策略（不确定就走更强的检索）；持续用线上反馈迭代分类器。核心原则是宁可多花点检索成本，也别把复杂问题错分到简单链路答错。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>进阶架构的上线顺序应该是：先加 Corrective 质检（成本最低，挡住烂证据）→ 再加 Adaptive 路由（省成本，简单问题别走重链路）→ 有多跳需求再考虑 Agentic 循环 → 关系问题占比高才上 GraphRAG。别一上来就建图，图是最后的手段，不是第一个。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 Self-RAG、GraphRAG 等高级架构”，写“给客服 RAG 加了反思门控：创意类问题跳过检索，检索置信度低（Top1/Top2 差距小）时自动改写再检索一次，拒答率与幻觉投诉分别下降 X%”。前者是名词堆砌，后者是可追问的落地动作——记得准备一条可量化的指标。</p>
+<p><strong>明日预告：</strong>Day 12 讲 RAG 失败、评测与生产：十二个痛点怎么逐个解，RAGAS 怎么评，多租户、增量更新、缓存这些上线必备怎么做。</p>
+</div>
+<div class="nav"><span><a href="day10.html">← Day 10</a></span><span><a href="day12.html">Day 12 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

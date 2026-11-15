@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 16：多智能体系统：协作模式、通信、冲突与框架 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 16 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 16：多智能体系统：协作模式、通信、冲突与框架</h1>
+<p>一个 Agent 身兼需求、设计、编码、测试、审查，就像一个人同时当 PM、开发、QA 和客服：什么都干，样样稀松。今天讲多智能体系统——多个相对独立的 Agent 在协作协议下共同完成复杂任务：为什么单 Agent 不够用，三大协作模式怎么选，Agent 之间怎么通信、怎么分任务、吵起来怎么办，状态怎么同步，五大框架各是什么气质，最后看企业落地与生产挑战。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 180" width="100%" role="img" aria-label="三大协作模式：Boss-Worker 星型、Pipeline 链式、民主讨论环形">
+<text x="115" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#222">Boss-Worker（中心化）</text>
+<rect x="65" y="30" width="100" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="115" y="53" text-anchor="middle" font-size="13" fill="#222">Boss / Planner</text>
+<line x1="90" y1="66" x2="60" y2="100" stroke="#0b62d6" stroke-width="2"/><line x1="140" y1="66" x2="170" y2="100" stroke="#0b62d6" stroke-width="2"/>
+<rect x="20" y="100" width="80" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="60" y="123" text-anchor="middle" font-size="13" fill="#222">Worker 1</text>
+<rect x="130" y="100" width="80" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="170" y="123" text-anchor="middle" font-size="13" fill="#222">Worker 2</text>
+<text x="115" y="160" text-anchor="middle" font-size="12" fill="#555">Boss 分解、分配、汇总</text>
+<text x="369" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#222">Pipeline（流水线）</text>
+<rect x="254" y="60" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="287" y="83" text-anchor="middle" font-size="13" fill="#222">分析</text>
+<line x1="320" y1="78" x2="336" y2="78" stroke="#0b62d6" stroke-width="2"/><polygon points="336,78 328,73 328,83" fill="#0b62d6"/>
+<rect x="336" y="60" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="369" y="83" text-anchor="middle" font-size="13" fill="#222">实现</text>
+<line x1="402" y1="78" x2="418" y2="78" stroke="#0b62d6" stroke-width="2"/><polygon points="418,78 410,73 410,83" fill="#0b62d6"/>
+<rect x="418" y="60" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="451" y="83" text-anchor="middle" font-size="13" fill="#222">审查</text>
+<text x="369" y="160" text-anchor="middle" font-size="12" fill="#555">上游输出是下游输入</text>
+<text x="604" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#222">民主讨论（对等）</text>
+<rect x="514" y="40" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="547" y="63" text-anchor="middle" font-size="13" fill="#222">Agent A</text>
+<rect x="628" y="40" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="661" y="63" text-anchor="middle" font-size="13" fill="#222">Agent B</text>
+<rect x="571" y="100" width="66" height="36" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="604" y="123" text-anchor="middle" font-size="13" fill="#222">Agent C</text>
+<line x1="580" y1="58" x2="628" y2="58" stroke="#0b62d6" stroke-width="2"/><line x1="560" y1="76" x2="585" y2="100" stroke="#0b62d6" stroke-width="2"/><line x1="648" y1="76" x2="623" y2="100" stroke="#0b62d6" stroke-width="2"/>
+<text x="604" y="160" text-anchor="middle" font-size="12" fill="#555">多轮发言，必须有硬终止条件</text>
+</svg>
+<h3>1. 为什么需要多 Agent：单 Agent 的三个瓶颈</h3>
+<p>多智能体系统（Multi-Agent System）指多个相对独立的 Agent（通常每个绑定不同角色、工具或策略）在某种协作协议下共同完成复杂任务。与“一个通用大模型 + 长提示词”相比，多 Agent 强调<strong>分工、通信、状态与治理</strong>。单 Agent 和多 Agent 的本质区别不在“调几次模型”，而在<strong>是否显式建模角色、通信与治理</strong>。</p>
+<p>单 Agent 有三个瓶颈：<strong>注意力漂移</strong>——提示词越长，模型越抓不住重点，长上下文下关键约束与中间推理步骤被稀释（常被称为 lost in the middle 类问题）；<strong>推理链断裂</strong>——一步想太多，后面忘了前面，复杂任务需要多步规划与回溯，单轨迹里若缺少外部结构化记忆，易出现自相矛盾或跳步；<strong>能力局限</strong>——单一 system prompt 难以同时覆盖严谨规划、创意发散、代码执行、合规审查，工具权限也难以“全开”而不失控。</p>
+<p>多 Agent 的优势对应着三个：<strong>专业化分工</strong>（每个子 Agent 职责窄而深，提示词与工具集更小、更稳）、<strong>并行处理</strong>（无强依赖的子任务可并行，缩短墙钟时间）、<strong>容错与隔离</strong>（某一子 Agent 失败可重试、替换或降级，审查 Agent 打回实现 Agent 的代码而不污染主对话）。但多 Agent 不一定比单 Agent 更强：更多 Agent 带来协调成本、错误级联、对话冗长；当任务可清晰分工且有评估机制时收益大，否则单 Agent + 强工具可能更简单高效。单 Agent 适合任务边界清晰、工具少、强实时、成本极度敏感的场景；多 Agent 适合任务可分解、需要不同专业视角、需要并行、需要权限隔离、需要可观测的分阶段产出的场景。</p>
+<h3>2. 三大协作模式：Boss-Worker、Pipeline、民主讨论</h3>
+<table><tr><th>模式</th><th>结构</th><th>优点</th><th>风险</th></tr><tr><td><strong>Boss-Worker</strong>（中心化）</td><td>一个 Planner / Manager 分解、分配与汇总，多个 Worker 执行子任务</td><td>决策路径清晰，易做权限与审计</td><td>Boss 成瓶颈与单点，规划错误会放大到全局</td></tr><tr><td><strong>Pipeline</strong>（流水线）</td><td>A → B → C，上游输出作为下游输入，可加质检环</td><td>适合文档/数据处理与固定 SOP，易测试每段 I/O</td><td>错误逐级传递，难处理“回到第一步重想”的大改动（需显式反馈边）</td></tr><tr><td><strong>民主讨论</strong>（Joint Discussion）</td><td>多个对等 Agent 多轮发言，协调者只负责流程</td><td>适合头脑风暴、策略博弈、多角度审稿</td><td>易空转与重复，无终止条件会 Token 爆炸，需要投票/仲裁</td></tr></table>
+<p>Boss-Worker 和 Pipeline 的本质差异：Pipeline 强调<strong>固定的阶段顺序与数据形态</strong>，Boss-Worker 强调<strong>动态任务图</strong>——Boss 可按需增删子任务、并行派发。Pipeline 更像工厂流水线，Boss-Worker 更像项目经理排期。实际中非常常见混合：Boss 定阶段，阶段内 Pipeline，阶段间讨论。</p>
+<p>民主讨论模式如何避免永远开不完会？必须有<strong>硬终止条件</strong>：最大轮数、Token 预算、无新信息阈值（连续两轮无实质变更则停）、或主席裁决；并配合结构化发言（观点 + 证据 + 反对意见）减少废话。讨论适合低风险创意类或人类在环场景，纯自动高风险决策通常要仲裁 + 规则引擎。</p>
+<h3>3. 四种通信机制：直接消息、黑板、Pub-Sub、消息队列</h3>
+<table><tr><th>机制</th><th>核心思想</th><th>优点</th><th>缺点</th></tr><tr><td><strong>直接消息</strong></td><td>A 显式发给 B（点对点）</td><td>简单、易追踪</td><td>N² 连接复杂，需知道对端地址</td></tr><tr><td><strong>共享黑板</strong></td><td>公共读写区，各 Agent 读全局、写局部</td><td>解耦“谁知道谁”</td><td>并发写需锁/版本，易成“垃圾堆”</td></tr><tr><td><strong>Pub-Sub</strong></td><td>主题广播，订阅者自选感兴趣事件</td><td>扩展性好</td><td>主题设计不好会混乱，需保留顺序时更复杂</td></tr><tr><td><strong>消息队列</strong></td><td>先入先出（或可优先级），异步解耦</td><td>削峰、重试、持久化</td><td>延迟增加，需死信与幂等设计</td></tr></table>
+<p>黑板和消息队列的相似与不同是高频面试题：相似是都<strong>解耦发送方与接收方</strong>；不同是黑板通常是<strong>共享状态容器</strong>（读最新快照），强调协作求解；队列是<strong>事件/任务的管道</strong>，强调可靠投递、顺序、削峰。黑板更像“会议室白板”，队列更像“工单系统”。两者可以结合：队列传事件，消费者更新黑板。消息队列的生产要点：持久化（重启不丢）、重试与死信队列（失败可人工排查）、幂等键（防止重复消费导致重复下单等）。与 Pub-Sub 的差别：队列通常点对点消费一条消息（或竞争消费），Pub-Sub 常是多订阅者各拿一份副本，更偏广播。选型提示：强审计、强顺序、高吞吐选队列；探索式协作、快速原型选黑板；简单多角色选直接消息。</p>
+<h3>4. 任务分配四策略：能力、负载、动态、竞拍</h3>
+<p><strong>基于能力（Skill-based）</strong>：为 Agent 声明能力标签（如 <code>python</code>、<code>security_review</code>），调度器做匹配度打分。<strong>基于负载（Load-based）</strong>：看队列深度、进行中任务数、最近失败率，把任务给最空闲且健康的执行器。<strong>动态任务分配</strong>：运行时根据中间结果改派（比如发现需要法律审查则插入新 Agent）。<strong>竞拍机制（Contract Net / Auction）</strong>：任务广播招标，Agent 按报价（成本、ETA、置信度）竞标，Boss 选标，适合异构资源与多候选执行者。</p>
+<p>动态分配和固定 Pipeline 各适合什么场景？固定 Pipeline 适合 SOP 稳定、输入输出契约清晰（如审核流水线）；动态分配适合探索性任务（研究、故障排查），中间可能发现新子问题。工程上常混合：主干 Pipeline + 动态插入节点；动态分配需要预算、最大深度、允许的工具白名单与人类在环来保持可控。</p>
+<h3>5. 冲突解决四方法：投票、仲裁、主席、证据共识</h3>
+<table><tr><th>方法</th><th>做法</th><th>适用</th></tr><tr><td><strong>投票</strong></td><td>多数票或加权票</td><td>意见独立、噪声可平均的场景</td></tr><tr><td><strong>优先级仲裁</strong></td><td>规则：安全 &gt; 产品 &gt; 体验</td><td>合规、强约束领域</td></tr><tr><td><strong>主席 Agent</strong></td><td>指定角色做最终拍板</td><td>需要单一责任点</td></tr><tr><td><strong>基于证据的共识</strong></td><td>必须引用日志、测试结果、CVE 编号等</td><td>技术决策、审计要求高</td></tr></table>
+<p>为什么光有投票不够？因为 LLM Agent 的“独立意见”往往<strong>不独立</strong>——相似训练分布、相似 system 提示，且缺少真实世界证据时，投票可能强化错误（集体偏误）。更稳妥的是<strong>证据门槛 + 优先级规则 + 人类在环</strong>。防“互相附和”还有三招：引入独立审查角色、基于规则的检查、外部工具验证（测试、检索），并明确停止条件与异议处理流程。其中 <strong>Red Team 反方角色</strong>值得单独记住：专门 Agent 负责挑错、攻击假设、构造反例，输出必须回应的质疑清单。</p>
+<h3>6. 状态管理：单一真相源、显式状态机、事件驱动</h3>
+<p>状态包括任务进度、共享事实、用户约束、工具中间结果等。三条原则：<strong>全局状态共享</strong>——单一 Source of Truth（如数据库行 + 版本号），各 Agent 只通过 API 更新，避免各自复制矛盾副本；<strong>状态机管理</strong>——任务阶段用显式状态（<code>PLANNING → CODING → REVIEW → DONE</code>），非法迁移拒绝执行，利于断点续跑；<strong>事件驱动</strong>——状态变更以事件发布，Agent 订阅自己关心的事件，而非轮询黑板。</p>
+<p>为什么推荐状态机而不是纯自然语言传递一切？自然语言灵活但<strong>难校验、难回放、难测试</strong>；状态机提供可验证迁移、清晰终止、可观测指标（卡在何阶段多久）。自然语言可作为附件说明，不应是唯一真相来源。状态存在哪？进程内只适合 demo，生产用 Redis/DB 并加乐观锁。</p>
+<h3>7. 五大框架对比：AutoGen、CrewAI、MetaGPT、ChatDev、LangGraph</h3>
+<table><tr><th>框架</th><th>背景 / 特点</th><th>典型适用</th></tr><tr><td><strong>AutoGen</strong>（微软）</td><td>对话型多 Agent、可与人协作，强调可定制 Agent 与聊天模式；0.4+ 已重构（以官方最新文档为准）</td><td>研究原型、对话式工作流</td></tr><tr><td><strong>CrewAI</strong></td><td>角色（Role）+ 任务（Task）+ 团队（Crew）抽象，贴近“项目组”叙事</td><td>快速搭建“岗位分工”类 Demo</td></tr><tr><td><strong>MetaGPT</strong></td><td>SOP/公司角色隐喻强（PM/架构/工程师），偏软件工程过程仿真</td><td>代码生成流水线、教学</td></tr><tr><td><strong>ChatDev</strong></td><td>虚拟软件公司，多阶段聊天驱动开发</td><td>学术/实验、流程可视化</td></tr><tr><td><strong>LangGraph 多 Agent</strong></td><td>基于图与状态的编排，和 LangChain 生态结合，强调可控循环与检查点</td><td>生产级需要可恢复、可调试的流程</td></tr></table>
+<p>对比维度（面试可用）：编排模型（图/对话/层级）、状态与持久化、人机协作、生态与供应商锁定、可观测性、学习曲线。AutoGen 和 LangGraph 的气质差异：AutoGen 偏<strong>对话与多角色交互</strong>的快速组合，LangGraph 偏<strong>显式图状态机</strong>与检查点/分支；强调生产可恢复与审计时 LangGraph 更易形式化，强调探索式对话与人机混合时 AutoGen 叙事更自然。CrewAI 的 Crew 抽象把角色分工 + 任务依赖 + 执行顺序从 prompt 工程里抽成一等公民，降低“写一大坨 system prompt”的心智负担。MetaGPT 能不能直接上生产？它擅长结构化软件过程与多角色产出的演示与研究，生产需补强测试、强权限、强监控、成本与延迟控制，框架本身不替你完成这些。框架版本迭代快，面试重在设计思想而非死记 API，以官方最新文档为准。</p>
+<h3>8. 企业应用四场景：多 Agent vs BPM</h3>
+<table><tr><th>场景</th><th>多 Agent 角色示例</th><th>价值</th></tr><tr><td><strong>代码开发团队</strong></td><td>PM（需求）、架构师（设计与接口）、工程师（实现）、QA（测试与风险）</td><td>模拟评审与质检，可并行文档与代码</td></tr><tr><td><strong>数据分析团队</strong></td><td>数据工程师（SQL）、分析师（洞察）、可视化（图表）、合规（脱敏）</td><td>敏感操作隔离（脱敏在前，分析在后）</td></tr><tr><td><strong>客服升级系统</strong></td><td>一线客服、政策专员、技术二线、主管批复</td><td>分级权限，复杂 case 可追溯</td></tr><tr><td><strong>文档审核流水线</strong></td><td>格式、事实核查、合规、终审</td><td>固定 Pipeline + 仲裁，易对接人工</td></tr></table>
+<p>企业里多 Agent 与传统工作流引擎（BPM）是什么关系？<strong>BPM 管确定性流程与人工节点，多 Agent 管需要语言推理与开放工具调用的步骤。</strong>常见架构：BPM 编排确定性流程 + LLM Agent 作为某一人工/自动活动；或 Agent 产出结构化决策，由 BPM 落账。谁主谁辅？强合规流程 BPM 主，强探索任务 Agent 主，但要有护栏。企业场景强调职责分离、合规、可审计、SLA——比如数据分析里脱敏 Agent 必须在分析 Agent 之前，敏感数据绝不能先流进分析环节。</p>
+<h3>9. 生产挑战：成本、延迟、死循环、错误隔离、可观测性</h3>
+<p>多 Agent 在生产环境的难点往往不在 demo 跑通，而在成本、延迟、稳定性、可观测。<strong>Token 成本控制</strong>：多轮讨论、重复上下文、冗余工具输出，靠摘要、引用 ID、小模型子任务、缓存、提示压缩。<strong>延迟优化</strong>：串行调用堆叠墙钟时间，靠并行、流式、预取、异步队列、边缘缓存。<strong>死循环防止</strong>：Agent 互相等待或重复同样计划，靠最大步数、状态去重、无进展检测、强制终止节点。<strong>错误传播与隔离</strong>：一步错步步错，靠校验门、断路器、沙箱、回滚到检查点。<strong>调试与可观测</strong>：分布式轨迹难复盘，靠 TraceId、结构化日志、对话/工具全链路导出、评估集。</p>
+<p>死循环检测的组合策略要背下来：全局步数上限；状态哈希去重（连续重复同一计划/同一工具入参则停）；无进展检测（关键指标多轮不变，如 bug 数未降）；预算熔断（Token/费用/时间）。误杀怎么办？提高进展定义粒度，允许人类确认继续。错误隔离的具体实现：沙箱执行与最小权限工具；校验 Agent 作为门禁；检查点（通过后持久化，失败从检查点重试）；不把未经校验的自然语言当 API 参数；工具返回很大时存对象存储，传句柄/摘要进上下文。</p>
+<div class="warn"><strong>容易踩的坑：</strong>多 Agent 最常见的生产事故不是某个 Agent 答错了，而是系统停不下来或错得悄无声息：讨论没有硬终止条件导致 Token 爆炸；没有状态去重，两个 Agent 互相打回、原地打转；没有 TraceId，出问题时根本复盘不了哪一步先错。做多 Agent 之前，先把“刹车”和“日志”写好，再谈协作模式。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：三种协作模式的控制流骨架</h3>
+<pre><code>from typing import Callable, Dict, List
+
+# 角色函数签名：输入任务/主题，返回一句话产出（真实场景里是 LLM 调用）
+Worker = Callable[[str], str]
+
+class BossWorker:
+    """中心化：Boss 分解任务，Worker 执行，Boss 汇总。"""
+
+    def __init__(self, boss, workers: Dict[str, Worker]):
+        self.boss = boss          # boss(task) -> [{"agent": "w1", "prompt": "..."}]
+        self.workers = workers
+
+    def run(self, task: str) -> Dict[str, str]:
+        results = {}
+        for st in self.boss(task):
+            results[st["agent"]] = self.workers[st["agent"]](st["prompt"])
+        return results
+
+
+class Pipeline:
+    """流水线：上游输出是下游输入，适合固定 SOP。"""
+
+    def __init__(self, stages: List[Worker]):
+        self.stages = stages
+
+    def run(self, x: str) -> str:
+        for fn in self.stages:
+            x = fn(x)
+        return x
+
+
+class JointDiscussion:
+    """民主讨论：多轮发言，必须有硬终止条件，否则 Token 爆炸。"""
+
+    def __init__(self, agents, max_rounds: int = 3):
+        self.agents = agents      # agent(topic, transcript) -> 发言
+        self.max_rounds = max_rounds
+
+    def run(self, topic: str) -> List[str]:
+        transcript: List[str] = []
+        for _ in range(self.max_rounds):
+            for i, ag in enumerate(self.agents):
+                transcript.append(f"agent{i}: {ag(topic, transcript)}")
+        return transcript
+
+
+# 用占位模型跑通三种模式
+def fake_model(name: str, prompt: str) -> str:
+    return f"[{name}] 收到：{prompt[:20]}…"
+
+boss = lambda task: [{"agent": "w1", "prompt": task},
+                     {"agent": "w2", "prompt": task}]
+workers = {"w1": lambda p: fake_model("w1", p),
+           "w2": lambda p: fake_model("w2", p)}
+print(BossWorker(boss, workers).run("写一份发布说明"))
+print(Pipeline([lambda x: x + " → 设计", lambda x: x + " → 实现"]).run("需求"))
+print(JointDiscussion([lambda t, tr: "同意", lambda t, tr: "反对"],
+                      max_rounds=2).run("要不要上线"))</code></pre>
+<h3>示例 2：显式状态机 + 死循环刹车</h3>
+<pre><code>from enum import Enum, auto
+from dataclasses import dataclass
+from typing import Callable, List, Set
+
+class Phase(Enum):
+    INIT = auto()
+    PLAN = auto()
+    EXEC = auto()
+    VERIFY = auto()
+    DONE = auto()
+
+ALLOWED = {
+    Phase.INIT: {Phase.PLAN},
+    Phase.PLAN: {Phase.EXEC},
+    Phase.EXEC: {Phase.VERIFY},
+    Phase.VERIFY: {Phase.DONE, Phase.EXEC},  # 不通过可打回重做
+    Phase.DONE: set(),
+}
+
+@dataclass
+class TaskState:
+    """单一 Source of Truth：阶段只能按允许的边迁移。"""
+    phase: Phase = Phase.INIT
+
+    def move(self, nxt: Phase) -> None:
+        if nxt not in ALLOWED[self.phase]:
+            raise ValueError(f"illegal {self.phase} -> {nxt}")
+        self.phase = nxt
+
+
+def run_with_guard(agent_step: Callable[[List[str]], str],
+                   user_goal: str, max_steps: int = 20) -> List[str]:
+    """死循环刹车：步数上限 + 重复动作检测。"""
+    transcript: List[str] = []
+    seen: Set[str] = set()
+    for _ in range(max_steps):
+        action = agent_step(transcript + [f"GOAL: {user_goal}"])
+        if action.strip() in seen:
+            raise RuntimeError("detected repeated action; abort")
+        seen.add(action.strip())
+        transcript.append(action)
+        if "DONE" in action:
+            return transcript
+    raise RuntimeError("max steps exceeded")
+
+
+state = TaskState()
+state.move(Phase.PLAN)
+state.move(Phase.EXEC)
+print(state.phase)  # Phase.EXEC
+
+steps = iter(["查日志", "修 Bug", "DONE"])
+print(run_with_guard(lambda tr: next(steps), "修掉登录报错"))</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑通示例 1，把 <code>JointDiscussion</code> 的 <code>max_rounds</code> 改成 10，再加一个“无新信息阈值”：连续两轮发言完全相同时提前停——这是民主讨论模式的第二道硬终止条件。<br>
+2. 跑通示例 2，故意让状态机从 EXEC 直接跳 DONE，看看非法迁移报什么错；再让 <code>agent_step</code> 永远返回同一句话，验证重复动作检测能不能拦住死循环。<br>
+3. 给示例 1 的 Boss-Worker 加一个能力匹配调度器：Worker 声明 skills（如 {"python", "test"}），Boss 按任务所需技能选最空闲的 Worker（参考“任务分配四策略”里的能力 + 负载组合）。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 单 Agent 的三个瓶颈是？</strong></p><button data-i="0">注意力漂移、推理链断裂、能力局限</button><button data-i="1">模型太小、网速太慢、内存太少</button><button data-i="2">不会写代码、不会画图、不会翻译</button><div class="ans">解析：选 A。长上下文抓不住重点、一步想太多忘了前面、一个 prompt 覆盖不了规划/创意/执行/合规。</div></div>
+<div class="q" data-answer="2"><p><strong>2. Boss-Worker 和 Pipeline 的本质差异是？</strong></p><button data-i="0">Boss-Worker 更快</button><button data-i="1">Pipeline 用的模型更多</button><button data-i="2">Pipeline 强调固定的阶段顺序与数据形态，Boss-Worker 强调动态任务图</button><div class="ans">解析：选 C。Pipeline 像工厂流水线，Boss-Worker 像项目经理排期，可按需增删子任务、并行派发。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 民主讨论模式如何避免永远开不完会？</strong></p><button data-i="0">多请几个 Agent 一起讨论</button><button data-i="1">硬终止条件：最大轮数、Token 预算、无新信息阈值或主席裁决</button><button data-i="2">让讨论无限进行直到自然收敛</button><div class="ans">解析：选 B。没有硬终止条件，讨论会空转重复、Token 爆炸；还要配合结构化发言减少废话。</div></div>
+<div class="q" data-answer="0"><p><strong>4. 黑板模式和消息队列有什么不同？</strong></p><button data-i="0">黑板是共享状态容器（读最新快照），强调协作求解；队列是事件/任务管道，强调可靠投递、顺序、削峰</button><button data-i="1">黑板只能一个人用，队列可以多人用</button><button data-i="2">两者完全一样，只是名字不同</button><div class="ans">解析：选 A。黑板像会议室白板，队列像工单系统；两者可以结合：队列传事件，消费者更新黑板。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 为什么光有投票不够？</strong></p><button data-i="0">投票太慢了</button><button data-i="1">投票需要太多 Agent</button><button data-i="2">LLM Agent 的意见往往不独立（相似训练分布与提示），缺少证据时投票可能强化错误</button><div class="ans">解析：选 C。投票在模型相关性高时会集体偏误，需要证据门槛 + 优先级规则 + 人类在环，并引入 Red Team 反方角色。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 检测多 Agent 死循环的组合策略不包括哪一项？</strong></p><button data-i="0">全局步数上限</button><button data-i="1">让 Agent 自己决定什么时候停，不设任何上限</button><button data-i="2">状态哈希去重、无进展检测、预算熔断</button><div class="ans">解析：选 B。死循环检测靠四招：步数上限、状态哈希去重、无进展检测、预算熔断；“让 Agent 自己决定”等于没有刹车。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：单 Agent 和多 Agent 的本质区别是什么？什么时候该上多 Agent？</summary><p>本质区别不在“调几次模型”，而在是否显式建模角色、通信与治理。单 Agent 适合任务边界清晰、工具少、强实时、成本极度敏感的场景。多 Agent 适合任务可分解、需要不同专业视角、需要并行、需要权限隔离（例如代码执行与对外发布分离）、需要可观测的分阶段产出的场景。</p></details>
+<details><summary>Q2：多 Agent 一定比单 Agent 更强吗？</summary><p>不一定。更多 Agent 可能带来协调成本、错误级联、对话冗长。当任务可清晰分工且有评估机制时收益大；否则单 Agent + 强工具可能更简单高效。成本上 Token 与调用次数通常上升，但小模型子任务 + 大模型仲裁、并行缩短时间、减少无效重试，总成本未必更高，需要按业务度量。</p></details>
+<details><summary>Q3：AutoGen 和 LangGraph 多 Agent 有什么气质差异？</summary><p>AutoGen 偏对话与多角色交互的快速组合；LangGraph 偏显式图状态机与检查点/分支。强调生产可恢复与审计时，LangGraph 往往更易形式化；强调探索式对话与人机混合时，AutoGen 叙事更自然。两者可以混用，例如 LangGraph 节点内嵌 AutoGen 会话，但要统一 trace id 与成本核算。AutoGen 0.4+ 已重构，细节以官方最新文档为准。</p></details>
+<details><summary>Q4：企业里多 Agent 与传统工作流引擎（BPM）的关系是什么？</summary><p>BPM 管确定性流程与人工节点；多 Agent 管需要语言推理与开放工具调用的步骤。常见架构：BPM 编排确定性流程 + LLM Agent 作为某一人工/自动活动；或 Agent 产出结构化决策，由 BPM 落账。强合规流程 BPM 主，强探索任务 Agent 主，但要有护栏。</p></details>
+<details><summary>Q5：如何检测多 Agent 系统的“死循环”？</summary><p>组合策略：全局步数上限；状态哈希去重（连续重复同一计划/同一工具入参则停）；无进展检测（关键指标多轮不变，如 bug 数未降）；预算熔断（Token/费用/时间）。误杀怎么办？提高进展定义粒度，允许人类确认继续。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>多 Agent 上生产之前先回答四个问题：讨论有没有硬终止条件？状态有没有单一真相源和显式状态机？死循环的刹车是哪四招？出问题时 TraceId 能不能把全链路拉出来？答不上来就别急着加 Agent——先加刹车和日志，再谈协作。</p>
+<p><strong>简历讲法：</strong>别写“用过多 Agent 框架”，写“给代码评审做 Boss-Worker：Planner 拆任务，编码/测试/安全三类 Worker 按能力标签调度，审查 Agent 拿优先级仲裁（安全 &gt; 产品 &gt; 体验）做门禁，状态机管 PLANNING → CODING → REVIEW → DONE，死循环靠步数上限 + 状态哈希去重 + 预算熔断三道刹车”。每一句都可追问。</p>
+<p><strong>明日预告：</strong>Day 17 讲 Loop Engineering 导论：从 Prompt 到 Loop，为什么 Agent 的核心不是一次调用、而是一个循环。</p>
+</div>
+<div class="nav"><span><a href="day15.html">← Day 15</a></span><span><a href="day17.html">Day 17 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

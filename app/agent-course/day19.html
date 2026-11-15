@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 19：状态、记忆与并行：Worktree、断点续传与协作模式 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 19 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 19：状态、记忆与并行：Worktree、断点续传与协作模式</h1>
+<p>Loop 跑起来、停得下来之后，下一个问题是：它记得住吗？跑得并行吗？长任务的 Agent 没有记忆会“失忆”，两个 Agent 同时干活会“撞车”，上下文越攒越长会“溢出”。今天讲状态管理与断点续传、记忆层与 RAG 的区别、Worktree 并行隔离，以及 Loop 里的两种协作模式与子 Agent 通信。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="并行隔离示意图：一个任务拆给两个 Agent，各自在独立 Worktree 里工作，最后合并结果">
+<rect x="264" y="10" width="200" height="40" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="35" text-anchor="middle" font-size="13" fill="#222">任务拆分：两个子任务，并行跑</text>
+<line x1="300" y1="50" x2="180" y2="68" stroke="#0b62d6" stroke-width="2"/><polygon points="180,68 186,60 188,68" fill="#0b62d6"/>
+<line x1="428" y1="50" x2="548" y2="68" stroke="#0b62d6" stroke-width="2"/><polygon points="548,68 540,60 542,68" fill="#0b62d6"/>
+<rect x="60" y="68" width="240" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="180" y="88" text-anchor="middle" font-size="13" fill="#222">Agent A · Worktree A</text><text x="180" y="108" text-anchor="middle" font-size="13" fill="#666">独立文件 / 预算 / 记忆</text>
+<rect x="428" y="68" width="240" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="548" y="88" text-anchor="middle" font-size="13" fill="#222">Agent B · Worktree B</text><text x="548" y="108" text-anchor="middle" font-size="13" fill="#666">独立文件 / 预算 / 记忆</text>
+<line x1="180" y1="120" x2="300" y2="138" stroke="#22a35a" stroke-width="2"/><polygon points="300,138 290,132 292,142" fill="#22a35a"/>
+<line x1="548" y1="120" x2="428" y2="138" stroke="#22a35a" stroke-width="2"/><polygon points="428,138 436,132 438,142" fill="#22a35a"/>
+<rect x="264" y="138" width="200" height="30" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="364" y="158" text-anchor="middle" font-size="13" fill="#222">结果合并 + 冲突解决</text>
+</svg>
+<h3>1. 状态机视角：Agent 的工作流不是线性的</h3>
+<p>Loop 的每一轮都依赖上一轮的状态——做了什么、观察到了什么、下一步计划是什么。如果状态管理不当，Agent 会“失忆”：不知道自己在哪、不知道已经尝试过什么、不知道下一步该做什么。状态管理还决定了 Loop 能否从中断处恢复（断点续传）。Day 17 讲过，Loop 循环的本质就是一段不断演化的“工作流状态”；今天把这段状态的“存”和“续”讲透。</p>
+<h3>2. 状态快照六字段：断点续传要存什么</h3>
+<p>断点续传依赖<strong>状态持久化</strong>——把每轮结束时的状态写入持久存储（文件、数据库）。中断后重启时，从持久化存储读取最后保存的状态，从中断处继续，而不是从头开始。一份完整的状态快照应包含六个字段：<strong>① 当前轮次</strong>——第几轮；<strong>② 完整对话历史</strong>——所有 Thought / Action / Observation；<strong>③ 已完成的子任务列表</strong>；<strong>④ 当前任务进度</strong>——做到哪了；<strong>⑤ 中间产物</strong>——已生成的文件、数据；<strong>⑥ 元信息</strong>——开始时间、已耗 Token、已用时间。</p>
+<h3>3. 跨会话记忆：让 Loop 从一次性变成长期运行</h3>
+<p>跨会话记忆通过<strong>持久化存储</strong>实现——把 Loop 的状态、进度、经验写入持久存储（文件、数据库、Linear Board 等）。Codex CLI 的 <code>/goal</code> 功能支持“跨会话保留状态”：设定一个持久目标后，即使关闭会话再打开，Loop 也能从上次中断的地方继续。记忆层记录的朴素内容是“做过什么、现在卡在哪、下一步是什么”——它可以是一个 Markdown 文件、一个 Linear Board 或其他状态记录系统，关键是让 Loop 的各轮之间有了状态的连续性，而不是每轮从零开始。</p>
+<h3>4. 记忆层 vs RAG：“记笔记”vs“查资料”</h3>
+<p>这是面试高频辨析题。RAG 是从外部知识库<strong>检索</strong>相关信息，解决“模型不知道”的问题；记忆层是<strong>记录</strong> Loop 运行过程中的状态和进度，解决“模型忘记了”的问题。一句话：RAG 是“查资料”，记忆层是“记笔记”。两者可以配合——记忆层记录状态，RAG 在需要时检索相关知识来补充上下文。Day 15 讲过记忆系统的三因子检索与高级框架，那里讲“记什么、怎么记”；这里讲记忆层在 Loop 系统里的定位：它是六大核心组件之一，是 Loop 能长期运行的前提。</p>
+<h3>5. Worktree 与并行隔离四件套：多个 Agent 不撞车</h3>
+<p>当同时跑两个以上 Agent 时，经常出现两个 Agent 写同一个文件的“撞车”问题。Git Worktree 的思路是在同一个仓库历史上切出一个独立的工作目录，一个 Agent 的修改完全碰不到另一个的工作内容——等于给每个 Agent 配了独立工位，互不干扰。但 Worktree 只是文件隔离，并行隔离还需要另外三件套：<strong>① 资源隔离</strong>——每个 Agent 独立的 Token 预算和速率限制；<strong>② 状态隔离</strong>——每个 Agent 独立的记忆和上下文；<strong>③ 结果合并</strong>——多个 Agent 完成后的结果汇总和冲突解决机制；<strong>④ 依赖管理</strong>——Agent 之间的任务依赖关系（哪些可以并行、哪些必须串行）。</p>
+<h3>6. Skill 版本化管理：项目知识也要像代码一样管</h3>
+<p>Skill 是项目知识的沉淀，需要像代码一样版本化管理：<strong>① Git 管理</strong>——Skill 文件放在代码仓库中，随项目一起版本控制；<strong>② 变更记录</strong>——每次 Skill 修改记录原因和影响；<strong>③ 兼容性</strong>——新旧版本 Skill 的兼容性管理；<strong>④ A/B 测试</strong>——不同分支用不同 Skill 版本，对比效果。Skill 会随着项目演进而变化——新踩的坑、新加的规范都需要更新 Skill。</p>
+<h3>7. 规划器-执行器在 Loop 里的位置：先规划，后执行</h3>
+<p>规划器-执行器的基础定义 Day 2 已讲过（Plan-and-Execute）：规划器一次性把任务分解成完整的步骤清单，执行器按清单逐条执行，不再反复调用大模型做全局推理。这里只讲它在 Loop 系统里的位置与取舍。在 Loop 里，它解决的是 ReAct“走一步想一步”的两个问题：<strong>短视</strong>——容易陷入局部最优；<strong>昂贵</strong>——每一步都要带着全部历史调一次大模型。取舍是：规划器需要很强的全局推理能力，且 Plan 可能因环境变化而过时——所以 Loop 里常用“规划器出 Plan、执行器跑 Loop、评估者验结果”的组合，Plan 过时了就让规划器重新规划，而不是死守旧 Plan。</p>
+<h3>8. 评估者-优化者模式：写与查分离，防自评放水</h3>
+<p>评估者-优化者模式是 Anthropic 在《Building Effective Agents》中提出的：一个 Agent 生成方案，另一个 Agent 评估并给出改进建议，循环直到达标。在 Loop 中，这个模式体现为<strong>子 Agent 分工</strong>：写代码的 Agent 是“优化者”，检查代码的 Agent 是“评估者”。评估者给出反馈，优化者根据反馈修改，循环直到评估通过。这正是 Day 17 六大组件里子 Agent 模式的核心价值：让写代码的 Agent 自己给自己打分太容易“放水”了——第二个独立的 Agent 配不同的指令，甚至用不同的模型，专门负责检查前者的工作成果。这种“制衡”机制是 Loop 能无人值守运行的关键。</p>
+<h3>9. 四种子 Agent 通信方式：同步还是异步</h3>
+<p>子 Agent 之间的通信方式有四种：<strong>① 共享存储</strong>——通过共享文件或数据库交换信息；<strong>② 消息队列</strong>——通过队列异步传递消息；<strong>③ 直接 API 调用</strong>——Agent 之间通过 HTTP/gRPC 同步调用；<strong>④ A2A 协议</strong>——Agent-to-Agent 标准协议。设计时需要考量：同步 vs 异步、消息可靠性、状态一致性、循环依赖检测（Day 18 讲过的四法在这里同样适用）。</p>
+<h3>10. 上下文溢出五策与模型路由：跑久了怎么办</h3>
+<p>Loop 跑的轮次越多，上下文越长，总有溢出的一天。五种应对策略：<strong>① 摘要压缩</strong>——每 N 轮对历史对话做摘要，替换原始内容；<strong>② 滑动窗口</strong>——只保留最近 K 轮完整上下文；<strong>③ RAG 检索</strong>——把历史存入向量库，按需检索相关部分；<strong>④ 状态摘要</strong>——维护一个精简的“当前状态”摘要，而非保留全部历史；<strong>⑤ 分层记忆</strong>——短期记忆（最近几轮完整）+ 长期记忆（关键事件摘要）。</p>
+<p>不同环节对模型能力的要求也不同，<strong>模型路由</strong>完全可行，而且往往是更优解：规划器需要强推理能力，用高端模型；执行器需要代码生成能力，用中端模型；评估者需要判断能力，可以用不同模型甚至更便宜的模型；简单任务用轻量模型降低成本。源材料里提到的具体模型名有年代感，选型时以官方最新文档为准。</p>
+<div class="warn"><strong>容易踩的坑：只隔离了文件，没隔离状态和预算。</strong>两个 Agent 各用一个 Worktree，但共用一份记忆、共用一个 Token 预算——A 的进度会污染 B 的上下文，A 烧光了预算 B 也跟着停。并行隔离是四件套：文件隔离、资源隔离、状态隔离，再加上结果合并与依赖管理，缺一不可。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：状态快照 + 断点续传（六字段齐全）</h3>
+<pre><code>"""状态快照：六字段齐全的持久化，模拟中断后从断点续跑。"""
+import json
+import time
+from pathlib import Path
+
+SNAPSHOT = Path("snapshot.json")
+
+def make_snapshot(round_no, history, done, progress, artifacts, started_at, tokens):
+    """状态快照六字段：轮次 / 完整历史 / 已完成子任务 / 进度 / 中间产物 / 元信息。"""
+    return {
+        "round": round_no,
+        "history": history,            # 所有 Thought/Action/Observation
+        "done_tasks": done,            # 已完成的子任务列表
+        "progress": progress,          # 当前任务进度
+        "artifacts": artifacts,        # 中间产物
+        "meta": {"started_at": started_at, "tokens_used": tokens,
+                 "elapsed_s": round(time.time() - started_at, 1)},
+    }
+
+def save(snapshot):
+    SNAPSHOT.write_text(json.dumps(snapshot, ensure_ascii=False), encoding="utf-8")
+
+def load():
+    if SNAPSHOT.exists():
+        return json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    return None
+
+def run_loop(interrupt_at=None):
+    snap = load()
+    if snap:  # 断点续传：从上次存的状态继续，而不是从头开始
+        print(f"从快照恢复：第 {snap['round']} 轮，进度 {snap['progress']}%")
+        round_no, history, done = snap["round"], snap["history"], snap["done_tasks"]
+        progress, artifacts = snap["progress"], snap["artifacts"]
+        started_at, tokens = snap["meta"]["started_at"], snap["meta"]["tokens_used"]
+    else:
+        round_no, history, done = 0, [], []
+        progress, artifacts, started_at, tokens = 0, [], time.time(), 0
+    while progress < 100:
+        round_no += 1
+        history.append({"thought": "继续推进", "action": f"step_{round_no}",
+                        "observation": "ok"})
+        done.append(f"子任务 {round_no}")
+        progress += 25
+        artifacts.append(f"产出 {round_no}.md")
+        tokens += 1000
+        save(make_snapshot(round_no, history, done, progress, artifacts,
+                           started_at, tokens))
+        print(f"第 {round_no} 轮：进度 {progress}%，快照已存")
+        if interrupt_at and round_no == interrupt_at:
+            print("模拟中断！下次运行会从快照恢复")
+            return
+    print("任务完成")
+
+run_loop(interrupt_at=2)  # 第一次：跑 2 轮就中断
+run_loop()                # 第二次：从快照恢复，接着跑完</code></pre>
+<h3>示例 2：并行隔离——两个 Agent 各用独立目录，最后合并结果</h3>
+<pre><code>"""并行隔离四件套的最小演示：独立目录（文件隔离）+ 独立预算与记忆
+（资源/状态隔离）+ 结果合并。用顺序执行模拟并行，重点看隔离结构。"""
+import json
+from pathlib import Path
+
+def run_agent(name, budget, workdir):
+    """一个 Agent 在自己的 worktree（独立目录）里干活。"""
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
+    memory = []  # 状态隔离：每个 Agent 独立的记忆
+    spent = 0    # 资源隔离：每个 Agent 独立的 Token 预算
+    for i in range(2):
+        if spent >= budget:
+            print(f"{name}：预算用完，提前停")
+            break
+        memory.append(f"{name} 的第 {i + 1} 步")
+        spent += 500
+        (workdir / f"out_{i + 1}.txt").write_text(
+            f"{name} 的产出 {i + 1}", encoding="utf-8")
+    return {"agent": name, "memory": memory, "spent": spent,
+            "files": sorted(p.name for p in workdir.iterdir())}
+
+def merge(results):
+    """结果合并：汇总各 Agent 的产出，检查冲突。"""
+    merged = {"files": [], "total_spent": 0}
+    for r in results:
+        merged["files"].extend(f"{r['agent']}/{f}" for f in r["files"])
+        merged["total_spent"] += r["spent"]
+    return merged
+
+# 依赖管理：A 和 B 无依赖，可以并行；合并必须等两者都完成
+a = run_agent("Agent-A", budget=1000, workdir="wt_a")
+b = run_agent("Agent-B", budget=1000, workdir="wt_b")
+print(json.dumps(merge([a, b]), ensure_ascii=False, indent=2))</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，确认第一次中断在第 2 轮、第二次从快照恢复跑完；再打开 <code>snapshot.json</code>，数一数六个字段是否齐全。<br>
+2. 在示例 2 里把 Agent-A 的预算改成 500，观察它是否提前停、合并结果里是否只有它的一个产出文件。<br>
+3. 给示例 2 加一个“依赖管理”：让 Agent-B 的第一步依赖 Agent-A 的产出文件存在，不存在就等待一轮再试。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 状态快照的六字段里，哪一项不在其中？</strong></p><button data-i="0">当前轮次、完整对话历史、已完成的子任务列表</button><button data-i="1">当前任务进度、中间产物、元信息（开始时间/已耗 Token/已用时间）</button><button data-i="2">模型版本号、API 密钥、用户密码</button><div class="ans">解析：选 C。六字段是轮次、历史、已完成子任务、进度、中间产物、元信息，不含密钥类信息。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 记忆层和 RAG 的区别，用一句话概括是？</strong></p><button data-i="0">两者完全一样，可以互换</button><button data-i="1">RAG 是“查资料”，记忆层是“记笔记”</button><button data-i="2">RAG 管长期记忆，记忆层管短期记忆</button><div class="ans">解析：选 B。RAG 解决“模型不知道”，记忆层解决“模型忘记了”，两者可以配合。</div></div>
+<div class="q" data-answer="0"><p><strong>3. Worktree 解决的核心问题是？</strong></p><button data-i="0">多个 Agent 同时写同一个文件“撞车”，给每个 Agent 独立的工作目录</button><button data-i="1">模型推理太慢</button><button data-i="2">Token 太贵</button><div class="ans">解析：选 A。Git Worktree 在同一仓库历史上切出独立工作目录，一个 Agent 的修改碰不到另一个的。</div></div>
+<div class="q" data-answer="2"><p><strong>4. 并行隔离除了 Worktree（文件隔离），还需要哪三件套？</strong></p><button data-i="0">更快的模型、更大的显存、更多的轮数</button><button data-i="1">更多的提示词、更长的上下文、更多的工具</button><button data-i="2">资源隔离、状态隔离、结果合并与依赖管理</button><div class="ans">解析：选 C。只隔离文件不隔离状态和预算，A 的进度会污染 B 的上下文，A 烧光预算 B 也跟着停。</div></div>
+<div class="q" data-answer="1"><p><strong>5. 子 Agent 之间的四种通信方式是？</strong></p><button data-i="0">电话、短信、邮件、微信</button><button data-i="1">共享存储、消息队列、直接 API 调用、A2A 协议</button><button data-i="2">共享内存、共享 CPU、共享磁盘、共享网络</button><div class="ans">解析：选 B。设计时要考量同步 vs 异步、消息可靠性、状态一致性、循环依赖检测。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 上下文溢出的应对策略不包括以下哪项？</strong></p><button data-i="0">把所有历史一删了之，从零开始</button><button data-i="1">摘要压缩、滑动窗口</button><button data-i="2">RAG 检索、状态摘要、分层记忆</button><div class="ans">解析：选 A。五策是摘要压缩、滑动窗口、RAG 检索、状态摘要、分层记忆——都是“有选择地保留”，不是一删了之。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Loop 中如何实现“断点续传”？</summary><p>依赖状态持久化：把每轮结束时的状态（已完成步骤、当前上下文、中间产物）写入持久存储（文件、数据库）。中断后重启时从持久化存储读取最后保存的状态，从中断处继续，而不是从头开始。状态快照应包含轮次、完整对话历史、已完成子任务、当前进度、中间产物、元信息六个字段。</p></details>
+<details><summary>Q2：Loop 的“记忆层”和 RAG 有什么区别？</summary><p>RAG 是从外部知识库检索相关信息，解决“模型不知道”的问题；记忆层是记录 Loop 运行过程中的状态和进度，解决“模型忘记了”的问题。RAG 是“查资料”，记忆层是“记笔记”。两者可以配合——记忆层记录状态，RAG 在需要时检索相关知识补充上下文。</p></details>
+<details><summary>Q3：规划器-执行器模式在 Loop 里起什么作用？有什么取舍？</summary><p>它解决 ReAct“走一步想一步”的两个问题：短视（容易陷入局部最优）和昂贵（每步都要带着全部历史调一次大模型）。取舍是：规划器需要很强的全局推理能力，且 Plan 可能因环境变化而过时。Loop 里常用“规划器出 Plan、执行器跑 Loop、评估者验结果”的组合，Plan 过时了就重新规划。基础定义见本课 Day 2 的 Plan-and-Execute。</p></details>
+<details><summary>Q4：什么是“评估者-优化者”模式？在 Loop 中如何应用？</summary><p>一个 Agent 生成方案，另一个 Agent 评估并给出改进建议，循环直到达标。在 Loop 中体现为子 Agent 分工：写代码的 Agent 是“优化者”，检查代码的 Agent 是“评估者”。核心价值是“写”与“查”分离，防止自评放水——这是 Loop 能无人值守运行的关键制衡机制。</p></details>
+<details><summary>Q5：Loop 中如何应对“上下文窗口溢出”？</summary><p>五策：摘要压缩（每 N 轮对历史做摘要替换原始内容）、滑动窗口（只保留最近 K 轮完整上下文）、RAG 检索（历史存入向量库按需检索）、状态摘要（维护精简的当前状态摘要）、分层记忆（短期记忆完整 + 长期记忆摘要）。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>状态快照是 Loop 的“黑匣子”：凌晨 3 点跑了 47 轮出了问题，能不能从快照重建第 47 轮的状态、逐轮回放找到问题引入的轮次，取决于你每轮存了什么。六字段一个都别省，存的时候多花一点，出问题时省的是几个小时。</p>
+<p><strong>简历讲法：</strong>别写“做过并行 Agent”，写“用 Worktree 做文件隔离，配合独立 Token 预算与独立记忆做资源/状态隔离，结果合并时做冲突解决；状态快照六字段持久化，支持跨会话断点续传”。前者是名词，后者是可追问的并行设计。</p>
+<p><strong>明日预告：</strong>Day 20 讲 Loop 可观测性与成本：日志、走偏检测与预算——Loop 跑起来之后，怎么看得见它在干什么、花了多少钱、什么时候走偏了。</p>
+</div>
+<div class="nav"><span><a href="day18.html">← Day 18</a></span><span><a href="day20.html">Day 20 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

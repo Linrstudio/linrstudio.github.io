@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5：Prompt 工程基础：结构、原则与 Few-shot | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 5 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 5：Prompt 工程基础：结构、原则与 Few-shot</h1>
+<p>同一模型、同一个问题，换个 Prompt，答案可以从“完全不能用”变成“直接能上生产”。Prompt 工程不是写几句咒语，而是把业务目标翻译成模型能稳定利用的上下文与指令。今天先把地基打牢：Prompt 为什么有这么大威力、一个完整的 Prompt 由哪五段组成、四条设计原则，以及 Zero/One/Few-shot 该怎么用。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="Prompt 五段结构：角色、任务、上下文、格式、约束依次拼接成完整提示词">
+<rect x="10" y="30" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="70" y="58" text-anchor="middle" font-size="13" fill="#222">角色</text>
+<line x1="130" y1="54" x2="154" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="154,54 142,48 142,60" fill="#0b62d6"/>
+<rect x="154" y="30" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="214" y="58" text-anchor="middle" font-size="13" fill="#222">任务</text>
+<line x1="274" y1="54" x2="298" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="298,54 286,48 286,60" fill="#0b62d6"/>
+<rect x="298" y="30" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="358" y="58" text-anchor="middle" font-size="13" fill="#222">上下文</text>
+<line x1="418" y1="54" x2="442" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="442,54 430,48 430,60" fill="#0b62d6"/>
+<rect x="442" y="30" width="120" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="502" y="58" text-anchor="middle" font-size="13" fill="#222">格式</text>
+<line x1="562" y1="54" x2="586" y2="54" stroke="#0b62d6" stroke-width="2"/><polygon points="586,54 574,48 574,60" fill="#0b62d6"/>
+<rect x="586" y="30" width="120" height="48" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="2"/><text x="646" y="58" text-anchor="middle" font-size="13" fill="#222">约束</text>
+<text x="70" y="100" text-anchor="middle" font-size="12" fill="#666">以什么身份作答</text>
+<text x="214" y="100" text-anchor="middle" font-size="12" fill="#666">具体要完成什么</text>
+<text x="358" y="100" text-anchor="middle" font-size="12" fill="#666">事实材料与状态</text>
+<text x="502" y="100" text-anchor="middle" font-size="12" fill="#666">输出长什么样</text>
+<text x="646" y="100" text-anchor="middle" font-size="12" fill="#666">不要做什么</text>
+<text x="364" y="135" text-anchor="middle" font-size="13" fill="#222">不必每次五段全写，但脑中要有这张清单——最容易漏的是格式与约束</text>
+</svg>
+<h3>1. Prompt 是什么：为什么同一模型表现差异巨大</h3>
+<p>LLM 本质是“在给定前文条件下预测下一个 token”：你提供的 Prompt 会<strong>强烈偏置</strong>后续生成的概率分布。模糊指令 → 模型随机发挥；清晰指令 + 示例 + 格式 → 可控输出。所以 Prompt 工程的定义不是“写提示词”，而是<strong>设计、组织、迭代</strong>输入给模型的文本（以及配套的参数与格式约束），使模型在任务理解、推理质量、输出格式、安全性上达到预期效果。</p>
+<p>在 Agent 场景里，Prompt 还承担角色定义、工具使用规范、错误恢复策略等职责，比纯问答复杂得多。规划、工具选择、结果汇总都依赖提示词，一环薄弱会导致错误级联。这也是为什么有人说 Prompt 是 Agent 的<strong>“软代码”</strong>：行为策略大量编码在 System/User Prompt 与模板里，变更 Prompt 就像改业务规则，需要版本管理与评审。</p>
+<h3>2. 五段结构：角色、任务、上下文、格式、约束</h3>
+<p>一个完整的 Prompt 通常可拆成五块。不必每次全写，但脑中要有谱：</p>
+<table>
+<tr><th>组成部分</th><th>含义</th><th>典型写法</th></tr>
+<tr><td>角色</td><td>模型以什么身份作答</td><td>“你是一名资深数据分析师……”</td></tr>
+<tr><td>任务</td><td>具体要完成什么，动词要清晰可验证</td><td>“请根据下列工单判断优先级并说明理由”</td></tr>
+<tr><td>上下文</td><td>事实材料、用户状态、检索片段</td><td>“以下为知识库片段：……”</td></tr>
+<tr><td>格式</td><td>JSON / XML / 字段列表 / 步骤</td><td>“仅输出 JSON，键为 …”</td></tr>
+<tr><td>约束</td><td>禁止项、长度、风格、安全</td><td>“不得编造链接；不超过 200 字”</td></tr>
+</table>
+<p>其中最容易被忽略的是<strong>格式与负向约束</strong>（不要做什么）：没有格式，程序难接；没有约束，模型容易啰嗦、幻觉或越权。另外注意，上下文与指令要分段或打标签，避免模型混淆“要遵守的规则”和“要处理的材料”——这个区分在 Day 6 讲注入防御时会再次出现。</p>
+<h3>3. 四原则：清晰、具体、结构化、迭代</h3>
+<p><strong>清晰（Clear）</strong>：用词准确、无歧义，避免“它、这个、上面”指代不明；关键术语与业务定义写清楚。歧义会放大模型的随机性，清晰指令缩小“合法输出”的空间，提高一致性。反面例子是“把日期改一下格式”，正面例子是“请将下面文本中的日期统一转换为 ISO 8601 格式（YYYY-MM-DD），若无法解析某日期，保留原文并在该行末尾标注 [UNPARSED]”。</p>
+<p><strong>具体（Specific）</strong>：说明粒度（多长、几个要点）、判定标准（何为“高优先级”）、反例（什么情况算错误）。“简要总结”不如“用三条要点总结下文，每条不超过 25 个汉字；不得引入文中未出现的人名或数字”。</p>
+<p><strong>结构化（Structured）</strong>：用标题、编号、XML 标签、Markdown 小节、分隔线，让模型与人类都易于解析“哪部分是规则、哪部分是数据”。标签化（如 &lt;document&gt;…&lt;/document&gt;）还能降低“把用户数据当指令”的风险。</p>
+<p><strong>迭代（Iterative）</strong>：第一版 Prompt 很少完美，要建立“失败样本集 → 改 Prompt → 回归测试”的闭环。标准做法是：固定评测集与评分标准；分类错误（理解错、知识错、格式错、安全错）；小步修改，一次改一个变量；记录版本与效果，避免“感觉变好”但无数据。</p>
+<h3>4. Zero-shot、One-shot、Few-shot</h3>
+<p><strong>Zero-shot</strong>：不给示例，只给指令与任务说明。<strong>One-shot</strong>：给 1 个输入输出样例。<strong>Few-shot</strong>：给少量（通常 2～8 个）样例，示范期望行为。背后的机制叫上下文学习（in-context learning）：模型在<strong>不更新权重</strong>的情况下，从前文示例中推断映射关系；示例越多，对格式与边界的约束越强，但占用更多 token，且可能过拟合到示例风格。</p>
+<p>Few-shot <strong>不一定</strong>比 Zero-shot 好：任务简单且指令已足够清晰时，Zero-shot 更省 token；输出格式复杂或边界情况多时，Few-shot 往往更稳；若示例质量差或与测试分布不一致，反而有害。示例也不是越多越好，收益递减，且上下文变长会挤占其他信息。</p>
+<h3>5. 示例选择与顺序的影响</h3>
+<p>选示例优先覆盖三类：<strong>典型模式、边界情况、易错反例</strong>，避免高度重复的同质示例。具体建议：包含“最难的合法输入”与“应拒绝/应降级”的样例；若有多类意图，每类至少一例；示例输出风格与生产环境一致（尤其是 JSON 键名与大小写）。</p>
+<p>顺序也有影响：有研究表明（因模型与任务而异），<strong>首尾位置</strong>往往印象更深，中间示例可能被“平均化”。实践中常见做法是由简到繁或先典型后边界，避免第一个示例过难导致整体跑偏。但工程上不要依赖“神秘顺序”，应配合明确规则与格式约束，必要时对比几种顺序做 A/B。</p>
+<h3>6. 动态 Few-shot：按输入检索最相关的示例</h3>
+<p>动态 Few-shot 不是固定写死 5 个例子，而是每次请求前用检索（向量相似度、BM25、规则路由）从示例库中选出与当前用户输入最相近的 k 条，拼进 Prompt。相当于“小样本集合上的 RAG”，提升示例与用户问题的分布匹配度，减少不相关示例带来的干扰。</p>
+<p>它和 RAG 的区别要分清：RAG 检索的是<strong>知识文档</strong>，动态 Few-shot 检索的是<strong>输入输出对（示范）</strong>，二者可以并存。RAG 的完整机制是 Day 7～12 的内容。</p>
+<div class="warn"><strong>容易踩的坑：</strong>一是写 Prompt 只写任务，把格式和约束全漏了——下游解析靠猜，等于白做；二是 Few-shot 示例直接用真实用户对话当样例，泄露隐私——示例要脱敏或用合成数据；三是示例与生产输出风格不一致，比如示例里 JSON 键是驼峰、生产要求下划线，模型会跟着示例走。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：五段式 Prompt 模板函数（纯 Python，可直接跑）</h3>
+<pre><code>def build_prompt(role, task, context, output_format, constraints):
+    """按角色/任务/上下文/格式/约束五段拼装 Prompt。"""
+    return (
+        f"角色：{role}\n\n"
+        f"任务：{task}\n\n"
+        f"上下文：\n{context}\n\n"
+        f"格式：\n{output_format}\n\n"
+        f"约束：\n{constraints}"
+    )
+
+prompt = build_prompt(
+    role="你是电商售后客服质检助手，只根据给定规则做分类，不编造订单信息。",
+    task="阅读用户留言，输出唯一标签：退货 / 换货 / 物流查询 / 其他。",
+    context="用户留言：收到的鞋子尺码小了，想换大一码。",
+    output_format='仅输出一行 JSON：{"label":"...", "confidence":0.0-1.0, "reason":"一句话理由"}',
+    constraints="- 若信息不足以判断，label 填 \"其他\"，confidence 降低并在 reason 说明缺失信息。\n- 不要输出 JSON 以外的任何文字。",
+)
+print(prompt)
+# 把这段 prompt 发给模型，得到的输出可直接 json.loads 解析——
+# 格式段就是为下游解析器服务的。</code></pre>
+<h3>示例 2：动态 Few-shot——按输入检索最相关的示例（纯 Python，可直接跑）</h3>
+<pre><code>import re
+
+# 示例库：输入输出对（示范），生产中应脱敏或用合成数据
+EXAMPLES = [
+    ("App 登录一直转圈，重装也没用。", '{"category":"登录故障","severity":4}'),
+    ("想了解一下会员有哪些权益。", '{"category":"售前咨询","severity":1}'),
+    ("上周扣款两次，要求退款并赔偿。", '{"category":"计费争议","severity":5}'),
+    ("密码忘了，收不到重置短信。", '{"category":"登录故障","severity":3}'),
+    ("发票怎么开？需要提供什么？", '{"category":"售前咨询","severity":1}'),
+]
+
+def score(query, example_text):
+    # 演示用简易相似度：单字重叠数（中文无空格，按词切分会整句成一个词）；
+    # 生产可用向量相似度或 BM25
+    q = set(re.findall(r"[\u4e00-\u9fff]|[a-zA-Z]+", query))
+    e = set(re.findall(r"[\u4e00-\u9fff]|[a-zA-Z]+", example_text))
+    return len(q & e)
+
+def dynamic_few_shot_prompt(user_input, k=2):
+    ranked = sorted(EXAMPLES, key=lambda ex: score(user_input, ex[0]), reverse=True)
+    shots = "\n\n".join(
+        f"示例{i+1}：\n输入：{text}\n输出：{out}"
+        for i, (text, out) in enumerate(ranked[:k])
+    )
+    return (
+        '你是工单分类器。根据用户描述输出 JSON：{"category":"...", "severity":1-5}\n\n'
+        f"{shots}\n\n现在分类：\n输入：{user_input}\n输出："
+    )
+
+print(dynamic_few_shot_prompt("登录验证码一直收不到，急！"))
+# 选中的应是两条登录故障示例，而非固定写死的示例——
+# 这就是动态 Few-shot：检索输入输出对，而不是知识文档。</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 的模板改成你自己的任务（比如从邮件提取会议时间与参会人邮箱），先故意删掉“格式”与“约束”两段，再补回去，对比两次 Prompt 的完整度。<br>
+2. 把示例 2 的 k 从 2 改成 4，再换一个与示例库完全无关的输入（比如“今天天气怎么样”），看看选出的示例是否还相关——体会“不相关示例带来干扰”是什么意思。<br>
+3. 准备 10 条你自己任务的测试用例，跑一遍你的 Prompt，把失败按“理解错 / 知识错 / 格式错 / 安全错”分个类，这是迭代优化的第一步。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 同一模型在不同 Prompt 下表现差异巨大的根本原因是什么？</strong></p><button data-i="0">模型每次运行用的权重不同</button><button data-i="1">LLM 按前文预测下一个 token，Prompt 强烈偏置后续生成的概率分布</button><button data-i="2">Prompt 越长模型越聪明</button><div class="ans">解析：选 B。模糊指令让模型随机发挥，清晰指令加示例加格式才能得到可控输出。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 一个完整 Prompt 的五段结构是？</strong></p><button data-i="0">角色、任务、上下文、格式、约束</button><button data-i="1">问题、答案、解释、总结、附录</button><button data-i="2">输入、处理、输出、日志、监控</button><div class="ans">解析：选 A。不必每次五段全写，但脑中要有这张清单，最容易漏的是格式与约束。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 写 Prompt 时最容易忽略哪一块？</strong></p><button data-i="0">角色</button><button data-i="1">任务</button><button data-i="2">格式与负向约束（不要做什么）</button><div class="ans">解析：选 C。没有格式，程序难接；没有约束，模型容易啰嗦、幻觉或越权。</div></div>
+<div class="q" data-answer="1"><p><strong>4. Few-shot 一定比 Zero-shot 好吗？</strong></p><button data-i="0">一定，示例越多越好</button><button data-i="1">不一定：示例质量差或与测试分布不一致时反而有害，简单任务 Zero-shot 更省 token</button><button data-i="2">一定，Zero-shot 从来不能用</button><div class="ans">解析：选 B。格式复杂或边界情况多时 Few-shot 更稳；示例收益递减，上下文变长会挤占其他信息。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 动态 Few-shot 与 RAG 检索的区别是？</strong></p><button data-i="0">动态 Few-shot 检索的是输入输出对（示范），RAG 检索的是知识文档</button><button data-i="1">两者完全一样</button><button data-i="2">动态 Few-shot 不用检索</button><div class="ans">解析：选 A。二者可以并存：一个给示范，一个给知识。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 迭代优化 Prompt 的正确做法是？</strong></p><button data-i="0">凭感觉改，改到顺眼为止</button><button data-i="1">一次把所有段落都改掉</button><button data-i="2">固定评测集与评分标准，分类错误，小步修改、一次改一个变量，记录版本与效果</button><div class="ans">解析：选 C。没有评测集和版本记录，“感觉变好”可能是错觉。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：你如何理解 Prompt Engineering？它和“调参”有什么区别？</summary><p>Prompt Engineering 主要优化输入侧：措辞、结构、示例、系统提示，有时配合温度、top-p 等解码参数；而传统“调参”多指训练阶段的权重更新（或 LoRA 等）。推理时我们最常动的是 Prompt 与少量解码参数，而不是改模型权重。数据少、迭代快优先 Prompt + 评测；要固化领域行为、长期一致再考虑微调，二者常组合。</p></details>
+<details><summary>Q2：为什么说 Prompt 是 Agent 的“软代码”？</summary><p>因为 Agent 的行为策略——何时推理、何时调工具、输出什么格式——大量编码在 System/User Prompt 与模板里，变更 Prompt 就像改业务规则，需要版本管理与评审，类似代码。规划、工具选择、结果汇总都依赖提示词，一环薄弱会导致错误级联。</p></details>
+<details><summary>Q3：写 Prompt 时最容易忽略哪一块？</summary><p>格式与负向约束。没有格式，程序难接；没有约束，模型容易啰嗦、幻觉或越权。自检清单：是否有明确任务与输出格式？材料与指令是否分开？是否有禁止项与缺信息时的行为？是否可用 10 条用例跑通并记录失败模式？</p></details>
+<details><summary>Q4：Few-shot 示例顺序会影响结果吗？</summary><p>会，属于位置偏差的一种表现：首尾位置往往印象更深，中间示例可能被平均化（因模型与任务而异）。工程上不要依赖“神秘顺序”，应配合明确规则与格式约束，可对比几种顺序做 A/B；常见做法是由简到繁或先典型后边界。</p></details>
+<details><summary>Q5：你如何迭代优化 Prompt？</summary><p>（1）固定评测集与评分标准；（2）分类错误：理解错、知识错、格式错、安全错；（3）小步修改，一次改一个变量；（4）记录版本与效果，避免“感觉变好”但无数据。复杂任务拆步或拆调用，一次只让模型做一件事。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Prompt 模板要进 Git 做版本管理，与模型名、温度一起记录元数据，线上灰度与回滚。评测集是 Prompt 的单元测试：没有 10 条能跑通的用例，就不要说“这个 Prompt 可以了”。示例库要脱敏，禁止把真实用户对话直接当示例。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 Prompt 工程”，写“按角色/任务/上下文/格式/约束五段结构设计工单分类 Prompt，Few-shot 覆盖典型、边界与反例，格式合法率从 X% 提升到 Y%（评测集 N 条）”。前者是名词，后者是可追问的工程过程——数字用你自己的实测填。</p>
+<p><strong>明日预告：</strong>Day 6 讲结构化输出、System Prompt 与 Prompt 安全：JSON/XML/Markdown 输出控制、Pydantic 校验、System Prompt 分层、直接/间接注入与六条防御，以及温度/top-p 与 DSPy 自动优化。</p>
+</div>
+<div class="nav"><span><a href="day04.html">← Day 4</a></span><span><a href="day06.html">Day 6 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 17：Loop Engineering 导论：从 Prompt 到 Loop | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 17 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 17：Loop Engineering 导论：从 Prompt 到 Loop</h1>
+<p>前面十六课，你学会了让 Agent 做一件事：推理、检索、调工具、记东西、多 Agent 协作。但真实项目里，任务不是“做一次”，而是“一直做到做完”：读代码、改文件、跑测试、看日志、继续改——这个过程可能要跑几十轮，还没人盯着。Loop Engineering 就是设计这样一套系统：让 Agent 自己反复做，直到做完。今天先把这个概念的来龙去脉、组件和边界讲清，后四课再逐个拆它的控制、状态、观测与生产。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 130" width="100%" role="img" aria-label="四阶段演进：Prompt Engineering 到 Context Engineering 到 Harness Engineering 到 Loop Engineering，层层叠加">
+<rect x="10" y="40" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="85" y="58" text-anchor="middle" font-size="13" fill="#222">Prompt</text><text x="85" y="76" text-anchor="middle" font-size="13" fill="#222">Engineering</text>
+<line x1="160" y1="64" x2="188" y2="64" stroke="#0b62d6" stroke-width="2"/><polygon points="188,64 176,58 176,70" fill="#0b62d6"/>
+<rect x="188" y="40" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="263" y="58" text-anchor="middle" font-size="13" fill="#222">Context</text><text x="263" y="76" text-anchor="middle" font-size="13" fill="#222">Engineering</text>
+<line x1="338" y1="64" x2="366" y2="64" stroke="#0b62d6" stroke-width="2"/><polygon points="366,64 354,58 354,70" fill="#0b62d6"/>
+<rect x="366" y="40" width="150" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="441" y="58" text-anchor="middle" font-size="13" fill="#222">Harness</text><text x="441" y="76" text-anchor="middle" font-size="13" fill="#222">Engineering</text>
+<line x1="516" y1="64" x2="544" y2="64" stroke="#0b62d6" stroke-width="2"/><polygon points="544,64 532,58 532,70" fill="#0b62d6"/>
+<rect x="544" y="40" width="150" height="48" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="619" y="58" text-anchor="middle" font-size="13" fill="#222">Loop</text><text x="619" y="76" text-anchor="middle" font-size="13" fill="#222">Engineering</text>
+<text x="364" y="112" text-anchor="middle" font-size="13" fill="#666">层层叠加的抽象升级：新范式不取代旧范式，而是盖在它上面</text>
+</svg>
+<h3>1. 什么是 Loop Engineering：从“教它做一件事”到“让它自己做完”</h3>
+<p><strong>Loop Engineering（循环工程）</strong>是指设计一套让 AI Agent 能够<strong>自主发现任务、分配任务、执行任务、验证结果、记录状态</strong>的持续运行系统。Prompt Engineering 是“教 AI 怎么做一件事”，Loop Engineering 是“设计一套系统，让 AI 自己反复做，直到做完”。两者不是替代关系，而是<strong>叠加关系</strong>：Prompt Engineering 没死，它是地基——一个 Loop 本来就是由一堆 Prompt 组成的。Prompt 写得烂，扔进 Loop 里只会让烂活儿产出得更快。</p>
+<h3>2. 为什么 Agent 需要 Loop：真实任务是多步的</h3>
+<p>Agent 不是一次性生成答案，而是要在目标、环境反馈和工具结果之间不断迭代：读取任务 → 规划 → 调用工具 → 观察结果 → 根据结果调整 → 继续下一步。单次问答只能处理简单任务；真实项目里 Agent 要读代码、搜调用链、改文件、跑测试、看日志、继续改。没有 Loop，Agent 就无法根据环境反馈持续调整自己的行为。</p>
+<h3>3. 四阶段演进：Prompt → Context → Harness → Loop</h3>
+<p>AI 工程经历了四个层层叠加的阶段：<strong>Prompt Engineering</strong>（怎么写指令）→ <strong>Context Engineering</strong>（模型能看到什么）→ <strong>Harness Engineering</strong>（单次执行的质量控制）→ <strong>Loop Engineering</strong>（多轮持续执行的整体治理）。源材料提到，Loop Engineering 的兴起有几个引爆点：Claude Code 负责人 Boris Cherny、OpenClaw 作者 Peter Steinberger 的相关表述，以及 Google 工程师 Addy Osmani 把这套实践系统化命名为 Loop Engineering——<strong>以上引言为材料引述，未给出处</strong>，讲的时候不要把它们当确凿事实引用。</p>
+<h3>4. 六大核心组件：一套 Loop 由什么搭成</h3>
+<table><tr><th>组件</th><th>作用</th></tr>
+<tr><td><strong>自动化 / 触发器</strong></td><td>Loop 的心跳，定时或事件触发启动；没有它，Loop 只是“手动跑了一次”</td></tr>
+<tr><td><strong>工作树（Worktree）</strong></td><td>并行隔离，让多个 Agent 互不干扰地工作</td></tr>
+<tr><td><strong>Skill</strong></td><td>沉淀项目知识、规范、踩坑经验，Agent 每次开工先读；本质是一种上下文缓存机制</td></tr>
+<tr><td><strong>连接器（MCP）</strong></td><td>让 Agent 连接真实工具：读 Issue、查数据库、调 API、发消息</td></tr>
+<tr><td><strong>子 Agent</strong></td><td>把做事的人和检查的人分开，防止自评“放水”</td></tr>
+<tr><td><strong>跨会话记忆层</strong></td><td>记录做过什么、卡在哪、下一步是什么，让各轮之间有状态连续性</td></tr></table>
+<p>其中 Skill 解决的是“每次从零推导”的问题：没有 Skill，Loop 每一轮都要从零理解项目该怎么做；有了 Skill，每一轮都能吸取上一次的经验。MCP 则决定了 Loop 的行动力边界——“一个只能看文件系统的 Loop 是个小 Loop，能操作工具干活才是真正的 Loop”。</p>
+<h3>5. 三层技术栈：Prompt / Context / Harness</h3>
+<p>Loop Engineering 的技术栈分三层：<strong>Prompt 层</strong>负责与 LLM 的交互指令设计；<strong>Context 层</strong>负责上下文的构建、检索和管理；<strong>Harness 层</strong>负责测试、校验、评估和质量控制。三层不是替代关系，而是层层叠加——Prompt 层是地基，Context 层在其上构建，Harness 层在最外层做质量兜底。</p>
+<h3>6. 四组关系辨析：最容易被问混的四个概念</h3>
+<p><strong>Loop vs ReAct：</strong>ReAct（Reasoning + Acting，2022 年 Google 论文）本质是一个<strong>Prompt 范式</strong>——用提示词诱导模型按“思考→行动→观察”的格式输出，外面再写个循环把观察结果拼回上下文。Loop Engineering 是一套<strong>系统架构</strong>，还包含自动化触发、并行隔离、技能沉淀、工具连接、子 Agent 分工、跨会话记忆。ReAct 是 Loop 内部的一个执行模式，Loop 是让这个模式长期、稳定、规模化运行的系统工程。</p>
+<p><strong>Loop vs Context Engineering：</strong>Context Engineering 解决“信息够不够”——把任务所需的全部背景塞进上下文窗口；Loop Engineering 在其上解决“活儿能不能持续干完”——自动决定何时需要什么上下文、如何在轮次间传递状态、如何根据反馈调整策略。</p>
+<p><strong>Loop vs Harness：</strong>Harness（挽具 / 治理框架）是围绕模型运行的整套脚手架——测试工具、输入输出约束、格式校验、评估框架，核心是“怎么判断答得对不对”，关注单次执行的质量控制；Loop 关注多轮持续执行的整体治理——不仅判断单次对不对，还要决定不对之后怎么办、怎么恢复、怎么终止。</p>
+<p><strong>Loop vs Agentic Engineering：</strong>Agentic Engineering（智能体工程）关注让 AI Agent 自主行动的系统工程能力，包括工具调用、规划、记忆、异常处理等，范围更广，还包括 Agent 的注册发现、任务分发、A2A 协议、状态共享等。Loop Engineering 是它的一个<strong>核心子集</strong>，聚焦“循环执行”这个维度。Loop 回答“如何让 Agent 持续运行不出错”，Agentic Engineering 回答“如何构建一个完整的 Agent 系统”。</p>
+<h3>7. 与 Vibe Coding 的关系：从单次质量到系统稳定</h3>
+<p>Vibe Coding（氛围编程）关注“单次对话的质量”，大家比拼谁 Prompt 写得溜；Loop Engineering 关注“持续运行的系统稳定性”，比拼谁的系统跑得稳。从 Vibe Coding 到 Loop Engineering，是从“让 AI 生成代码”到“让 AI 系统持续产出可靠结果”的范式跃迁。源材料称 Vibe Coding 是 2025 年的概念、Loop Engineering 是 2026 年的演进——<strong>该年份断言为原文说法</strong>，引用时注明出处即可，不必当作定论。</p>
+<h3>8. 个人 vs 企业：效率与可控性是两回事</h3>
+<p>个人使用 AI 编程关注的是<strong>效率</strong>——一天写出更多代码、一个周末做出一个产品。企业关注的是<strong>可控性</strong>——交付链路是否可控、风险是否可追溯、权限是否清晰、知识是否沉淀、成本是否可预算。一名工程师用 AI 提效 30%，不必然意味着团队交付效率提升 30%——更多代码可能带来更重的 Review 压力。Loop Engineering 本质上在讨论一个更大的问题：当 Agent 具备持续循环执行任务的能力后，组织是否有能力重新设计自己的生产流程。</p>
+<div class="warn"><strong>容易踩的坑：把 Loop 当成“循环跑脚本”。</strong>传统自动化是图灵完备的确定性程序，每一步都在预期内；基于 LLM 的 Agent 是非确定性的概率程序——同样的问题，模型可能给出不同的答案和行动路径。Loop Engineering 不是简单地把脚本循环跑，而是设计一个能处理非确定性输出的系统：需要上下文管理、状态追踪、异常处理、终止判断等传统自动化不需要的组件。简单说，传统自动化是“写死流程”，Loop 是“设计一个能自己决定流程的系统”。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：最小 Loop 骨架（不调真实模型，先看形状）</h3>
+<pre><code>"""最小 Loop 骨架：触发器 + 状态 + 收敛判断 + 预算上限。
+用一个模拟的 step() 代替真实模型调用，先把循环的形状跑通。"""
+
+def step(state):
+    """模拟一轮 Agent 工作：每轮推进一点进度。"""
+    state["round"] += 1
+    state["progress"] += 25
+    print(f"第 {state['round']} 轮：进度 {state['progress']}%")
+    return state
+
+def is_done(state):
+    """收敛判断：进度满 100 即完成。"""
+    return state["progress"] >= 100
+
+def run_loop(max_rounds=10):
+    state = {"round": 0, "progress": 0}  # 状态：轮次与进度
+    while state["round"] < max_rounds:   # 预算上限：最多跑这么多轮
+        step(state)
+        if is_done(state):               # 收敛判断：做完了就停
+            print("任务完成，正常终止")
+            return state
+    print("达到轮数上限，异常终止")
+    return state
+
+run_loop()</code></pre>
+<h3>示例 2：带 Skill 加载与状态持久化的 Loop（六大组件的雏形）</h3>
+<pre><code>"""在骨架上加两件实物：开工前读 Skill 文件，每轮结束把状态写盘。
+真实系统里触发器是 cron/webhook，这里用函数调用代替。"""
+import json
+from pathlib import Path
+
+STATE_FILE = Path("loop_state.json")
+
+def load_skill(path="SKILL.md"):
+    """Skill：项目知识文件，开工前先读，省得每轮从零推导。"""
+    p = Path(path)
+    return p.read_text(encoding="utf-8") if p.exists() else "(暂无 Skill)"
+
+def save_state(state):
+    """记忆层雏形：每轮结束持久化状态，中断后可从这里续跑。"""
+    STATE_FILE.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+def load_state():
+    if STATE_FILE.exists():
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    return {"round": 0, "progress": 0, "done": []}
+
+def run_loop(max_rounds=10):
+    skill = load_skill()
+    print(f"已加载 Skill：{skill[:20]}...")
+    state = load_state()  # 断点续跑：从上次存的状态继续
+    while state["round"] < max_rounds:
+        state["round"] += 1
+        state["progress"] += 25
+        state["done"].append(f"第 {state['round']} 轮产出")
+        save_state(state)  # 每轮结束写盘
+        print(f"第 {state['round']} 轮：进度 {state['progress']}%")
+        if state["progress"] >= 100:
+            print("任务完成，正常终止")
+            return state
+    print("达到轮数上限，异常终止")
+    return state
+
+run_loop()</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再把 <code>max_rounds</code> 改成 2，观察“异常终止”分支的输出——终止条件为什么要区分正常与异常？<br>
+2. 在示例 2 同目录下建一个 <code>SKILL.md</code>，写两行项目规范（如“所有输出用中文”“测试必须通过才算完成”），重新运行，看 Skill 是否被加载。<br>
+3. 故意在示例 2 跑到一半时删掉 <code>loop_state.json</code> 再重跑，对比“有记忆”和“没记忆”时 Loop 的行为有什么不同。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Loop Engineering 的定义是？</strong></p><button data-i="0">教 AI 写出更好的提示词</button><button data-i="1">设计一套让 Agent 自主发现、分配、执行、验证、记录任务的持续运行系统</button><button data-i="2">用循环反复调用大模型直到 token 用完</button><div class="ans">解析：选 B。关键词是“持续运行系统”，五个动词——发现、分配、执行、验证、记录——缺一不可。</div></div>
+<div class="q" data-answer="0"><p><strong>2. Loop Engineering 和 Prompt Engineering 是什么关系？</strong></p><button data-i="0">叠加关系：Prompt 是地基，一个 Loop 本来就是由一堆 Prompt 组成的</button><button data-i="1">替代关系：有了 Loop 就不需要 Prompt 了</button><button data-i="2">竞争关系：两者只能选其一</button><div class="ans">解析：选 A。Prompt 写得烂，扔进 Loop 里只会让烂活儿产出得更快。</div></div>
+<div class="q" data-answer="2"><p><strong>3. AI 工程四阶段演进的正确顺序是？</strong></p><button data-i="0">Loop → Harness → Context → Prompt</button><button data-i="1">Context → Prompt → Loop → Harness</button><button data-i="2">Prompt → Context → Harness → Loop</button><div class="ans">解析：选 C。四个阶段层层叠加，是抽象升级，不是一代取代一代。</div></div>
+<div class="q" data-answer="2"><p><strong>4. 以下哪一项不是 Loop 的六大核心组件？</strong></p><button data-i="0">触发器 / Worktree / Skill</button><button data-i="1">MCP 连接器 / 子 Agent / 跨会话记忆层</button><button data-i="2">向量数据库 / 提示词模板 / 聊天界面</button><div class="ans">解析：选 C。六大组件是触发器、Worktree、Skill、MCP、子 Agent、记忆层。</div></div>
+<div class="q" data-answer="1"><p><strong>5. ReAct 和 Loop Engineering 的本质区别是？</strong></p><button data-i="0">ReAct 更先进，Loop 是它的简化版</button><button data-i="1">ReAct 是 Prompt 范式，Loop 是系统架构；ReAct 是 Loop 内部的一个执行模式</button><button data-i="2">两者完全无关，没有任何交集</button><div class="ans">解析：选 B。ReAct 的“魔法”在于用提示词诱导模型按格式输出；Loop 还要加上触发、隔离、记忆、分工等完整基础设施。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 个人与企业使用 Loop 的本质区别是？</strong></p><button data-i="0">个人关注效率，企业关注可控性（交付可控、风险可追溯、权限清晰、成本可预算）</button><button data-i="1">个人用开源模型，企业用闭源模型</button><button data-i="2">个人不需要 Loop，企业才需要</button><div class="ans">解析：选 A。一名工程师提效 30%，不必然意味着团队交付效率提升 30%——更多代码可能带来更重的 Review 压力。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：什么是 Loop Engineering？和 Prompt Engineering 有什么区别？</summary><p>Loop Engineering 是设计一套让 Agent 自主发现任务、分配任务、执行任务、验证结果、记录状态的持续运行系统。Prompt Engineering 是“教 AI 怎么做一件事”，Loop 是“设计一套系统，让 AI 自己反复做，直到做完”。两者是叠加而非替代：Prompt 是地基，一个 Loop 本来就是由一堆 Prompt 组成的。</p></details>
+<details><summary>Q2：AI 工程经历了哪四个阶段的演进？</summary><p>Prompt Engineering → Context Engineering → Harness Engineering → Loop Engineering，层层叠加的抽象升级。Prompt 管指令，Context 管模型能看到什么，Harness 管单次执行的质量控制，Loop 管多轮持续执行的整体治理。</p></details>
+<details><summary>Q3：Loop 系统的六大核心组件是什么？</summary><p>触发器（Loop 的心跳）、Worktree（并行隔离）、Skill（项目知识沉淀）、MCP 连接器（连接真实工具）、子 Agent（做事与检查分离）、跨会话记忆层（记录做过什么、卡在哪、下一步是什么）。</p></details>
+<details><summary>Q4：Loop Engineering 和 ReAct 是什么关系？</summary><p>ReAct 是 2022 年 Google 论文提出的 Prompt 范式——让模型按“思考→行动→观察”的格式输出。Loop Engineering 是一套系统架构，不仅包含 ReAct 的推理-行动循环，还包含自动化触发、并行隔离、技能沉淀、工具连接、子 Agent 分工、跨会话记忆。ReAct 是 Loop 内部的一个执行模式。</p></details>
+<details><summary>Q5：个人开发者和企业在生产环境使用 Loop 有什么本质区别？</summary><p>个人关注效率——一天写出更多代码；企业关注可控性——交付链路是否可控、风险是否可追溯、权限是否清晰、知识是否沉淀、成本是否可预算。工程师个人提效不必然等于团队交付提效，更多代码可能带来更重的 Review 压力。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>决定搭 Loop 之前先问一句：这任务会重复跑多少次？一次性任务写好 Prompt 更快更省；高频、可验证、有明确完成标准的任务才值得搭 Loop。Loop 的搭建成本要靠多次运行摊回来。</p>
+<p><strong>简历讲法：</strong>别写“了解 Loop Engineering”，写“设计过持续运行的 Agent 系统：触发器启动、Skill 沉淀项目知识、MCP 接真实工具、子 Agent 做检查、记忆层跨会话续跑”。前者是名词，后者是可追问的架构。</p>
+<p><strong>明日预告：</strong>Day 18 讲循环控制与可靠性：终止条件、收敛判断、防死循环与错误恢复——Loop 跑起来之后，怎么保证它停得下来、错了能恢复。</p>
+</div>
+<div class="nav"><span><a href="day16.html">← Day 16</a></span><span><a href="day18.html">Day 18 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

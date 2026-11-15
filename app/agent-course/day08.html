@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 8：文档解析与分块：从 PDF 到可检索的块 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 8 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 8：文档解析与分块：从 PDF 到可检索的块</h1>
+<p>有句话在 RAG 圈子里流传很广：“RAG 70% 的效果由分块决定。”检索的原子单位就是 chunk：切不好块，顶层设计再牛也救不了——一个 200 字的段落被一刀切在两块里，关键结论和证据就从此天各一方。而分块之前还有一道关：PDF、Word、扫描件得先解析成干净的文本。今天把“解析 → 清洗 → 分块”这条离线流水线的前半段讲透。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="解析到分块流程：原始文档、解析、清洗、分块、向量化">
+<rect x="20" y="55" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="75" y="84" text-anchor="middle" font-size="13" fill="#222">原始文档</text>
+<line x1="130" y1="79" x2="152" y2="79" stroke="#0b62d6" stroke-width="2"/><polygon points="152,79 142,73 142,85" fill="#0b62d6"/>
+<rect x="152" y="55" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="207" y="84" text-anchor="middle" font-size="13" fill="#222">解析</text>
+<text x="207" y="122" text-anchor="middle" font-size="11" fill="#666">PDF / OCR / 表格</text>
+<line x1="262" y1="79" x2="284" y2="79" stroke="#0b62d6" stroke-width="2"/><polygon points="284,79 274,73 274,85" fill="#0b62d6"/>
+<rect x="284" y="55" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="339" y="84" text-anchor="middle" font-size="13" fill="#222">清洗</text>
+<text x="339" y="122" text-anchor="middle" font-size="11" fill="#666">去噪 · 去重 · 脱敏</text>
+<line x1="394" y1="79" x2="416" y2="79" stroke="#0b62d6" stroke-width="2"/><polygon points="416,79 406,73 406,85" fill="#0b62d6"/>
+<rect x="416" y="55" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="471" y="84" text-anchor="middle" font-size="13" fill="#222">分块</text>
+<text x="471" y="122" text-anchor="middle" font-size="11" fill="#666">递归 / 语义 / 父子块</text>
+<line x1="526" y1="79" x2="548" y2="79" stroke="#0b62d6" stroke-width="2"/><polygon points="548,79 538,73 538,85" fill="#0b62d6"/>
+<rect x="548" y="55" width="140" height="48" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="618" y="84" text-anchor="middle" font-size="13" fill="#222">可检索的块</text>
+<text x="75" y="122" text-anchor="middle" font-size="11" fill="#666">PDF / Word / HTML</text>
+</svg>
+<h3>1. 文档解析：PDF 的四个坑</h3>
+<p>PDF 是最通用、也最复杂的文档形式，是文档对话的重中之重。PDF 本质是排版指令，不是自然段落，解析有四个经典坑：<strong>扫描件无文本层</strong>，必须走 OCR；<strong>多栏、页眉页脚混入正文</strong>，双栏论文不按阅读顺序重排，正文会从左列下半段跳到右列上半段，上下句颠倒；<strong>表格被拆成无序碎片</strong>，行列关系丢失；<strong>字体编码异常导致乱码</strong>。解析大体有两条路：<strong>基于规则</strong>（根据文档组织特点去算每部分的样式和内容，不通用，因为 PDF 的类型和排版实在太多，无法穷举）；<strong>基于 AI</strong>（目标检测 + OCR 的 pipeline，先用版面分析识别标题、文本、表格、图片等区域，再逐区识别，准确率高、通用性强，缺点是耗时，建议用 GPU 加速）。常用工具：纯文本 PDF 用 pypdf / pdfplumber（表格友好），多格式统一分区用 Unstructured（把文档分成标题、正文、表格等带类型的元素，便于按结构分块），Word 用 python-docx，HTML 用 BeautifulSoup 去导航栏等噪声抽正文，Markdown 结构最清晰、最适合 RAG。工具版本与 API 以官方最新文档为准。</p>
+<h3>2. OCR 流程：把图片里的字变成文本</h3>
+<p>OCR（光学字符识别）用于扫描 PDF、拍照、截图，典型流程是：图像预处理（纠偏、二值化）→ 文字检测（框出文本行）→ 识别（CRNN / Transformer）→ 后处理（词典纠错）。开源方案有 Tesseract、PaddleOCR（中文友好）、EasyOCR；云服务有各大厂商的文档智能服务。OCR 对 RAG 的影响要正视：它会引入<strong>错字、断行、丢标点</strong>，导致检索词不匹配与 Embedding 语义偏移，所以清洗阶段要做规范化，并考虑关键词 + 向量混合检索提高鲁棒性（混合检索见 Day 10）。</p>
+<h3>3. 表格与图片：别让结构在解析时丢光</h3>
+<p><strong>表格</strong>语义依赖行列关系与表头，固定长度切分很容易切断行列。处理策略有四种：整表 Embedding（简单不丢结构，但大表会超 Embedding 模型上限且检索粒度粗）；转文本描述（用 LLM 把表格总结成自然语言，语义紧凑但丢失精确数值与行列关系）；行 / 列独立分块（每行单独存、每块都带上表头，可精确查询某行数据）；混合索引（整表存一份用于宽泛问题，每行存一份用于精确查询）。最佳实践是：行数小于 50 的小表，整表 Embedding + 转文本描述两者都存，先用描述检索、命中后返回原表；大表按行拆块，每块包含表头 + 该行数据，再额外存一份表格摘要。表格识别本身分两步：表格定位（找到表格边界）与结构重建（单元格划分 + 行列关系复原），pdfplumber 的 lattice 模式抽线框表、stream 模式抽无线表。<strong>图片</strong>有两条路：OCR 预处理（把图片变成文本，兼容现有流程、成本低，但丢失布局与图表语义）；多模态 Embedding（用 CLIP 等多模态模型直接把图片编码为向量，保留视觉语义，支持图文联合检索，但推理成本高）。两者可共存：对同一图片同时生成文本向量和多模态向量，检索时加权融合；流程图、架构图类图片还可以用 Caption 模型生成描述文本再入库。</p>
+<h3>4. 清洗清单：解析完先别急着分块</h3>
+<p>清洗是解析与分块之间的必经步骤，清单如下：统一编码为 UTF-8、去除不可见字符（比如零宽字符）；合并多余空白与断行；全角半角、数字与单位格式统一；去重（MinHash / SimHash 或 Embedding 聚类）；按合规要求做 PII 脱敏（电话、身份证等）。另外两个解析阶段的脏数据要顺手处理：<strong>页眉页脚</strong>（每页重复出现，污染 chunk 语义——检测重复模式过滤，或用 pdfplumber 按页边距裁剪固定区域）；<strong>双栏排版</strong>（按区块中心点横坐标的极差判断单双栏，找到中线分开左右栏，每栏按纵坐标排序，再把右栏拼到左栏后面）。</p>
+<h3>5. 六种分块方法：没有银弹，只有最适合你的数据</h3>
+<table>
+<tr><th>方法</th><th>做法</th><th>优点</th><th>缺点</th></tr>
+<tr><td>固定长度</td><td>按字符 / token 数切，如每 512 token 一块</td><td>简单高效</td><td>常在句子中间切断，语义不完整</td></tr>
+<tr><td>递归字符分割</td><td>按分隔符优先级递归切：段落 → 换行 → 句子 → 分句 → 字符</td><td>尽量在自然边界断开，生产默认基线</td><td>中文默认分隔符效果一般，需自定义</td></tr>
+<tr><td>语义分块</td><td>算相邻句子 Embedding 相似度，骤降处断开</td><td>最贴近话题边界</td><td>计算开销大，阈值敏感，短文档效果差</td></tr>
+<tr><td>结构化分块</td><td>按标题 / 段落结构切（Markdown、HTML、docx）</td><td>块内主题一致，可返回完整小节</td><td>长章节仍需二次切分</td></tr>
+<tr><td>延迟分块</td><td>索引阶段只存句子，查询时动态组合成块</td><td>不怕索引时 chunk size 选错</td><td>查询延迟增加，存储要求更高</td></tr>
+<tr><td>滑动窗口</td><td>窗口长 W、步长 S（S &lt; W）滑动切分</td><td>几乎保证任意连续片段都被完整包含</td><td>存储膨胀、检索冗余，需配合去重</td></tr>
+</table>
+<p><strong>递归字符分割</strong>是生产最常用的默认基线：先找高优先级分隔符切，块仍超长就用下一级分隔符继续切，直到满足 chunk_size，再用 chunk_overlap 保留衔接。中文分隔符优先级建议：<code>\n\n</code> &gt; <code>\n</code> &gt; <code>。！？；</code> &gt; <code>，、</code> &gt; 字符——LangChain 的 RecursiveCharacterTextSplitter 默认分隔符是英文向的（<code>["\n\n", "\n", " ", ""]</code>），对中文效果一般，生产中要自定义加上中文标点。<strong>语义分块</strong>的阈值经验：通用范围 0.5–0.7，也可以用相似度序列的均值减一个标准差做动态阈值；短文档（少于 10 句）统计不显著，效果差；可以先固定长度粗切、再语义细切，平衡效率与效果。<strong>延迟分块</strong>反转的是传统顺序：传统是先分块再存向量，延迟分块是先存更细粒度的句子（含位置信息），查询时以命中的句子为中心，动态拉取前后 N 个句子组成上下文窗口。</p>
+<h3>6. chunk size 与 overlap：经验值与两个方向的坑</h3>
+<p><strong>chunk size</strong>：应覆盖一个完整命题（一条规定、一个步骤），常见几百到一两千 token 量级；Embedding 模型对 128–512 token 的文本表现最佳。太小（小于 100 token）会语义碎片化——“虽然……但是……”被拆成两半，检索召回率高但精确率低；太大（大于 1000 token）会多个主题混在一起，向量被平均化，相关段落被噪声埋没。<strong>chunk_overlap</strong>：经验值是 chunk_size 的 <strong>10%–25%</strong>（512 token 的块对应 overlap 50–128 token），原则是重叠长度不小于关键句的平均长度（中文约 20–40 字符）。overlap 太大有三个副作用：存储膨胀（overlap 占 50% 时存储量翻倍）、检索冗余（同一句子出现在相邻两块中，query 会同时命中两块）、LLM 重复消费（上下文里大量信息重复，浪费 token）。所以限制 overlap 不超过 chunk_size 的 25%，检索后做语义去重或 MMR（Day 10 讲）。</p>
+<h3>7. 父子文档分块：小块检索，大块生成</h3>
+<p>父子块是兼顾检索精度与生成完整性的常用结构：<strong>子块</strong>小，用于检索 Embedding；<strong>父块</strong>大，用于喂给 LLM。索引阶段只对子块写入向量，元数据里存 parent_id 与父块全文或存储路径；检索命中子块后，用 parent_id 取回父块全文拼进 Prompt；父块过长时可先摘要再送入。配合一个细节：<strong>每个 chunk 都带上父标题</strong>。用户问“3.2 节提到的算法复杂度是多少”，如果 chunk 里没有“3.2 节”的信息，检索就无法命中。实现方式有三种：标题锚点注入（解析时维护标题栈，正文前拼接标题链，如“第三章 &gt; 3.2 实验设置”）、元数据分离（标题路径存为 metadata，检索时过滤或加权）、层级分块（每个标题下的内容独立成块，超长再递归分割，子块仍带原标题）。</p>
+<h3>8. 专项分块：代码、表格、PDF 各有打法</h3>
+<p><strong>代码</strong>最佳实践是按语法结构（AST）分块，每个块对应一个函数、方法或类：AST 能精确识别函数边界、参数列表、内部逻辑块，还能提取函数签名与 docstring 作为块的元数据增强检索；超大函数仍需进一步切分。LangChain 的 PythonCodeTextSplitter 就是按代码结构切分的。注意代码分块的 overlap 通常设为 0——重叠的代码可能完全改变原有含义。<strong>表格</strong>用表头感知分块：按行拆块，每块包含表头 + 该行数据（示例 2 有代码），或整表 + 逐行的混合索引。<strong>PDF</strong>专项：页眉页脚过滤、双栏重排、表格跨页合并（检测表格特征跨页合并）、标题锚点保留。长章节的处理策略：层级递归（用子标题继续分割）、标题锚点保留、滑动窗口与结构混合（按段落自然边界切分，相邻块保留重叠的引导句）。</p>
+<h3>9. 分块评估：自动指标先行，人工抽样验收</h3>
+<p>评估框架是<strong>端到端 + 组件级</strong>结合。自动指标：<strong>Hit Rate@k</strong>（相关 chunk 是否在 Top-K 召回结果中，衡量检索覆盖率）、<strong>MRR</strong>（第一个相关 chunk 的排名倒数，衡量排序质量）、<strong>NDCG@k</strong>（考虑排序位置和相关性分数的综合指标），还可以用 Context Relevancy（检索块与标准答案的 token 重叠率）与 Faithfulness（答案是否忠于检索内容）。自动化流程：准备问答对测试集 → 用不同分块策略跑一遍 RAG → 用 RAGAS 等框架自动打分。人工评估做最终验收：随机抽 50 个 query，人工判断召回块是否包含答案（三档：完全包含、部分包含、不包含），或 A/B 对比两种策略的输出让专家盲选。关键结论：没有“最好”的分块，只有“最适合你的数据和查询分布”的分块，一定要用真实 query 做离线评估。</p>
+<div class="warn"><strong>容易踩的坑：</strong>源材料里的旧导入路径 <code>langchain.text_splitter</code> 已废弃，现行写法是 <code>langchain_text_splitters</code>（pip 安装 <code>langchain-text-splitters</code>）；语义分块的 <code>SemanticChunker</code> 来自实验包 <code>langchain_experimental</code>，不是核心包。照抄旧教程的导入路径，装上新版 LangChain 就会报 ImportError。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：清洗 + 中文递归分块（生产默认基线）</h3>
+<pre><code># pip install langchain-text-splitters
+import re
+import unicodedata
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+def normalize_text(s: str) -> str:
+    """基础清洗：统一编码、去零宽字符、合并多余空白"""
+    s = unicodedata.normalize("NFKC", s)
+    s = s.replace("\u200b", "")  # 零宽字符
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+text = """第一章 总则
+公司年假为 15 天，需提前两周申请。年假不可跨年累计。
+
+第二章 报销
+报销需提交发票原件，每月 5 号前提交。逾期不予受理。"""
+
+# 中文分隔符优先级：段落 > 换行 > 句子 > 分句 > 字符
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=60,
+    chunk_overlap=10,  # 约 17%，落在 10%-25% 经验区间
+    separators=["\n\n", "\n", "。", "！", "？", "；", "，", "、", ""],
+)
+for i, chunk in enumerate(splitter.split_text(normalize_text(text))):
+    print(f"--- 块 {i} ---\n{chunk}")</code></pre>
+<h3>示例 2：父子块 + 表格按行分块（纯 Python，可直接跑）</h3>
+<pre><code>from dataclasses import dataclass, field
+from typing import List
+
+@dataclass
+class ChildChunk:
+    child_id: str
+    parent_id: str
+    text: str  # 小块，用于 embedding 与检索
+
+@dataclass
+class ParentChunk:
+    parent_id: str
+    text: str  # 大块，检索命中子块后取回，用于生成
+    children: List[ChildChunk] = field(default_factory=list)
+
+# 父子块：索引时只对子块做 embedding，元数据带 parent_id
+parent = ParentChunk(parent_id="p1", text="第三章 报销制度：报销需提交发票原件，每月 5 号前提交，逾期不予受理。")
+parent.children = [
+    ChildChunk(child_id="c1", parent_id="p1", text="报销需提交发票原件"),
+    ChildChunk(child_id="c2", parent_id="p1", text="每月 5 号前提交，逾期不予受理"),
+]
+print("子块 c1 命中 -> 取回父块：", parent.text)
+
+# 表格按行分块：每块都带上表头，避免行数据脱离上下文
+def table_to_chunks(header, rows, table_name):
+    chunks = []
+    for idx, row in enumerate(rows, start=1):
+        chunks.append(f"表格: {table_name}\n表头: {' | '.join(header)}\n行{idx}: {' | '.join(row)}")
+    return chunks
+
+print(table_to_chunks(["姓名", "年假天数"], [["张三", "15"], ["李四", "10"]], "年假表")[0])</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来：把 chunk_size 改成 30 和 200 各跑一次，观察块变碎 / 变大时语义完整性的变化；再把 overlap 改成 30（50%），数一数块的数量涨了多少。<br>
+2. 拿一段你自己的 Markdown 文档（带两级标题），用 MarkdownHeaderTextSplitter 按标题分块，检查每个块的 metadata 里是否带上了父标题链。<br>
+3. 故意用旧导入 <code>from langchain.text_splitter import ...</code> 跑一次，记下报错信息——以后看到这条报错就知道是旧路径问题。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 为什么说“RAG 70% 的效果由分块决定”？</strong></p><button data-i="0">因为分块代码写起来最难</button><button data-i="1">因为 chunk 是检索的原子单位：切不好，语义碎片化或噪声过多，检索下限就低了，再强的 LLM 也救不回来</button><button data-i="2">因为分块决定了向量数据库选哪个产品</button><div class="ans">解析：选 B。检索是下限、生成是上限，而检索的原子单位就是 chunk。</div></div>
+<div class="q" data-answer="2"><p><strong>2. PDF 解析的四个坑不包括哪一项？</strong></p><button data-i="0">扫描件无文本层，必须 OCR；多栏、页眉页脚混入正文</button><button data-i="1">表格被拆成无序碎片；字体编码异常导致乱码</button><button data-i="2">PDF 文件太大，硬盘存不下</button><div class="ans">解析：选 C。四个坑是扫描件、多栏页眉页脚、表格拆碎、编码乱码；文件大小不是解析层面的坑。</div></div>
+<div class="q" data-answer="0"><p><strong>3. chunk_overlap 的经验值与上限是？</strong></p><button data-i="0">约 chunk_size 的 10%–25%，不超过 25%；过大导致存储膨胀、检索冗余、LLM 重复消费</button><button data-i="1">越大越好，50% 是最佳值</button><button data-i="2">永远设为 0，重叠没有任何好处</button><div class="ans">解析：选 A。overlap 防关键句被切断，但超过 25% 后副作用（存储翻倍、重复命中）就超过收益了。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 递归字符分割（RecursiveCharacterTextSplitter）的核心思路是？</strong></p><button data-i="0">按固定字符数一刀切</button><button data-i="1">按分隔符优先级递归切：先段落、再换行、再句子、再分句，尽量在自然边界断开</button><button data-i="2">先算 Embedding 相似度，骤降处断开</button><div class="ans">解析：选 B。选项 C 描述的是语义分块。递归分割是生产默认基线，中文要自定义加上中文标点分隔符。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 父子文档分块的正确做法是？</strong></p><button data-i="0">父块和子块都写入向量索引，各查各的</button><button data-i="1">只存父块，检索直接返回父块</button><button data-i="2">只对子块做 embedding 并存 parent_id，检索命中子块后取回父块全文喂给 LLM</button><div class="ans">解析：选 C。子块小、检索精度高；父块大、生成上下文完整，两者通过 parent_id 关联。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 评估分块策略好不好，正确的做法是？</strong></p><button data-i="0">自动指标（Hit Rate、MRR、NDCG）先行，再用真实 query 做人工抽样验收，没有放之四海皆准的最好分块</button><button data-i="1">只看块的数量，块越多越好</button><button data-i="2">只看 Embedding 模型，模型越强分块越不重要</button><div class="ans">解析：选 A。分块评估是“自动指标 + 人工抽样”，用真实 query 说话；块数和模型强度都不能代替评估。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：固定长度分块怎么实现？重叠窗口设多大？</summary><p>按字符数或 token 数切分，配合 chunk_overlap 让相邻块共享部分内容，缓解边界信息断裂。经验值：overlap 为 chunk_size 的 10%–25%，512 token 的块对应 overlap 50–128 token，原则是重叠长度不小于关键句的平均长度（中文约 20–40 字符）。中文按字符切容易打乱词边界，建议按词边界对齐或按 token 切。</p></details>
+<details><summary>Q2：递归分块的分隔符优先级怎么设计？中文和英文有什么区别？</summary><p>从粗到细递归尝试：段落边界（\n\n）&gt; 换行符（\n）&gt; 句子边界（。！？；）&gt; 分句（，、）&gt; 字符。英文句子分隔符是“. ! ?”后跟空格，还要避开 Mr.、Dr. 这类缩写；中文用“。！？；”无需空格。LangChain 的 RecursiveCharacterTextSplitter 默认分隔符是英文向的，对中文效果一般，生产中要自定义加上中文标点。</p></details>
+<details><summary>Q3：延迟分块反转了什么顺序？存什么、什么时候切？</summary><p>传统是先分块再存向量；延迟分块是先存更细粒度的句子（含位置信息：文档 ID、段落 ID、句索引），查询时以命中的句子为中心，动态拉取前后 N 个句子组成上下文窗口。好处是不怕索引阶段 chunk size 选错、能自适应不同 query 的上下文需求；代价是查询延迟增加、存储与计算要求更高。</p></details>
+<details><summary>Q4：chunk_overlap 太大会有什么副作用？重叠部分会被重复检索吗？</summary><p>会。同一句子出现在相邻两块中，Embedding 几乎相同，query 会同时命中两块。副作用有三：存储膨胀（overlap 占 50% 时存储量翻倍）、检索冗余（结果去重负担）、LLM 重复消费（浪费 token 且过度关注重复内容）。解决：限制 overlap 不超过 25%，检索后语义去重或 MMR，或用父子文档策略。</p></details>
+<details><summary>Q5：代码文件怎么分块？AST 有用吗？</summary><p>最佳实践是按语法结构（AST）分块，每个块对应一个函数、方法或类。AST 能精确识别函数边界、参数列表、内部逻辑块，还能提取函数签名与 docstring 作为块的元数据增强检索；也可以按依赖图组织，检索到函数定义后自动拉取其调用的子函数。注意代码分块的 overlap 通常设为 0，重叠的代码可能完全改变原有含义。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>分块策略上线前一定要用真实 query 跑离线评估：同一批文档、同一批问题，对比固定长度、递归、语义三种策略的 Hit Rate@5，再结合耗时定最终方案。真实项目里经常是递归分割胜出——不是因为它指标最高，而是性价比最优。另外，解析阶段多花一天做抽检（随机抽 20 页看页眉页脚、双栏、表格有没有乱），比上线后返工一周便宜得多。</p>
+<p><strong>简历讲法：</strong>别写“会用 LangChain 分块”，写“针对中文手册定制递归分块分隔符（段落 → 句子 → 分句），overlap 取 chunk_size 的 15%，父子块结构兼顾检索精度与生成完整性；离线用 Hit Rate@5 对比三种策略后定案”。前者是名词，后者是可追问的动手过程。</p>
+<p><strong>明日预告：</strong>Day 9 讲 Embedding 与向量库：模型选型、微调与 ANN——文字怎么变成向量，余弦还是欧氏，FAISS、Milvus、Chroma 怎么选。</p>
+</div>
+<div class="nav"><span><a href="day07.html">← Day 7</a></span><span><a href="day09.html">Day 9 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

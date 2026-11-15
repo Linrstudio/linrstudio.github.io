@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 2：推理与执行范式：CoT、ReAct、Plan-and-Execute | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 2 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 2：推理与执行范式：CoT、ReAct、Plan-and-Execute</h1>
+<p>Day 1 说 Agent 是“感知—思考—行动”的闭环，今天问一个更具体的问题：思考和行动到底按什么节奏配合？三种经典范式给出三种答案：CoT 只想不动手，ReAct 边想边做，Plan-and-Execute 先想好全局再动手。这三种范式不是三选一的竞争关系，而是 Agent 工具箱里的三把尺子——选哪把，看任务是纯推理、强交互，还是强流程。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 190" width="100%" role="img" aria-label="三范式对比：CoT 一步推理直达答案；ReAct 在 Thought Action Observation 间循环；Plan-and-Execute 先规划再执行，失败时重规划">
+<text x="20" y="24" font-size="13" font-weight="bold" fill="#222">CoT：只想</text>
+<rect x="20" y="35" width="90" height="40" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="65" y="60" text-anchor="middle" font-size="12" fill="#222">逐步推理</text>
+<line x1="110" y1="55" x2="150" y2="55" stroke="#0b62d6" stroke-width="2"/><polygon points="150,55 138,49 138,61" fill="#0b62d6"/>
+<rect x="150" y="35" width="90" height="40" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="195" y="60" text-anchor="middle" font-size="12" fill="#222">最终答案</text>
+<text x="280" y="24" font-size="13" font-weight="bold" fill="#222">ReAct：边想边做</text>
+<rect x="280" y="35" width="90" height="40" rx="8" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="325" y="60" text-anchor="middle" font-size="12" fill="#222">Thought</text>
+<line x1="370" y1="55" x2="405" y2="55" stroke="#22a35a" stroke-width="2"/><polygon points="405,55 393,49 393,61" fill="#22a35a"/>
+<rect x="405" y="35" width="90" height="40" rx="8" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="450" y="60" text-anchor="middle" font-size="12" fill="#222">Action</text>
+<line x1="495" y1="55" x2="530" y2="55" stroke="#22a35a" stroke-width="2"/><polygon points="530,55 518,49 518,61" fill="#22a35a"/>
+<rect x="530" y="35" width="110" height="40" rx="8" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="585" y="60" text-anchor="middle" font-size="12" fill="#222">Observation</text>
+<path d="M 585 75 C 585 100, 325 100, 325 75" fill="none" stroke="#22a35a" stroke-width="2" stroke-dasharray="5,4"/><polygon points="325,75 319,87 331,87" fill="#22a35a"/>
+<text x="455" y="105" text-anchor="middle" font-size="12" fill="#555">循环直到 Final Answer</text>
+<text x="20" y="145" font-size="13" font-weight="bold" fill="#222">Plan-and-Execute：先想好再做</text>
+<rect x="20" y="155" width="110" height="30" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="75" y="175" text-anchor="middle" font-size="12" fill="#222">Planner 规划</text>
+<line x1="130" y1="170" x2="170" y2="170" stroke="#ca8a04" stroke-width="2"/><polygon points="170,170 158,164 158,176" fill="#ca8a04"/>
+<rect x="170" y="155" width="130" height="30" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="235" y="175" text-anchor="middle" font-size="12" fill="#222">Executor 逐步执行</text>
+<line x1="300" y1="170" x2="340" y2="170" stroke="#ca8a04" stroke-width="2"/><polygon points="340,170 328,164 328,176" fill="#ca8a04"/>
+<rect x="340" y="155" width="130" height="30" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/><text x="405" y="175" text-anchor="middle" font-size="12" fill="#222">失败 → Re-planning</text>
+</svg>
+<h3>1. CoT（Chain-of-Thought）：纯推理，不动手</h3>
+<p>CoT 让模型在给出最终答案前，显式写出中间推理步骤。通过增加“推理 token”，模型在潜在空间中更易进行多步分解——相当于把单跳预测拆成多跳，对多步推理、数学、逻辑题提升明显。代价是更长输出、更高延迟与成本，且有时会出现“看似合理但错误”的推理链。三种常见形态：<strong>Zero-shot CoT</strong>，不手写示例，只在问题末尾加一句触发语，如英文“Let's think step by step”或中文“请逐步推理”；<strong>Manual CoT</strong>，在 Few-shot 里直接写出“推理过程 + 答案”，模型模仿该模式；<strong>Auto-CoT</strong>，用程序采样问题、由模型生成多条推理链，再筛选高质量链作为示例，减少人工写 CoT 的成本。CoT 在 Agent 里常用于规划、工具选择、异常处理：先让模型写出“当前状态、目标、下一步动作理由”，再执行工具，降低盲目调用。生产环境可对用户隐藏推理链，仅内部记录，对外只给结论，避免泄露敏感中间信息。</p>
+<h3>2. ReAct：推理与行动交替，工具结果纠错</h3>
+<p>ReAct 全称 Reasoning + Acting：一个会做题的学生，不是一口气写完答案，而是边想边做——先在心里说一句“我接下来要干什么”（推理），然后真的去查资料、用计算器、调 API（行动），看到结果后再继续想下一步。模型在文本里显式交替写出 <strong>Thought</strong>（为什么要这么做、下一步选什么工具、预期看到什么）、<strong>Action</strong>（调用某个工具并给出参数）、<strong>Observation</strong>（环境/工具返回的结果），循环多次直到 Final Answer。一句话：<strong>ReAct = 把“思考过程”和“工具使用”写进同一条轨迹里，让推理可监督、可纠错、可复现</strong>。CoT 让模型“更会想”，ReAct 让模型“在想的同时能动手，并用真实结果纠正自己”——单轮问答时模型容易幻觉事实，ReAct 通过行动把模型锚定在外部证据上。显式 Thought 有三类价值：可解释性（便于人类审计）、可调试性（定位哪一步选错工具）、学习信号（可做监督微调或评估中间步骤质量）。</p>
+<p><strong>模板一：经典英文 Thought / Action / Action Input 模板。</strong>业界常用英文工具名，中文任务可把指令改为中文：</p>
+<pre><code>Question: the input question you must answer
+Thought: think step by step about what you should do next
+Action: the action to take, must be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat)
+Thought: I now know the final answer
+Final Answer: the final answer to the original question</code></pre>
+<p>也有不少论文与开源实现用单段 Action 行风格：<code>Action: Search[query]</code>。设计要点：工具清单与参数格式要写清，减少模型胡写工具名；强调“Observation 由系统填充”，避免模型在提示里自己续写假 Observation；给 1～3 个完整轨迹 Few-shot 示例，能显著提高格式遵从率。</p>
+<p><strong>模板二：JSON 工具调用模板（中文任务常用）。</strong>每轮先输出 Thought（一两句话说明为什么采取下一步），然后输出 Action：严格为 JSON 对象 <code>{"tool": "工具名", "input": {...}}</code>；若不需要工具，输出 <code>{"tool": "finish", "input": {"answer": "给用户的最终自然语言答案"}}</code>。收到 Observation 后继续循环，直到用 finish 结束。JSON 模板的优势是程序解析更稳健，代价是需要模型严格遵守 JSON 格式。解析要点：Thought / Action / Observation 通常用固定前缀或结构化格式便于程序解析；<strong>Observation 只能来自工具，不能由模型自己编造</strong>（工程上要校验）；停止条件是出现 Final Answer、步数上限，或检测到重复无效循环。</p>
+<p>ReAct 的优点是可解释（轨迹可读，便于调试与评测中间步骤）、接地（通过工具把答案锚定在可验证数据上）、通用（与具体工具解耦，易于替换搜索/代码/SQL 等）。缺点是多轮调用成本高、延迟大；格式脆弱，模型若偏离模板需要解析器与重试策略；规划能力有限——逐步贪心，复杂任务上可能缺“全局最优计划”。</p>
+<h3>3. Plan-and-Execute：先全局规划，再分步执行</h3>
+<p>Plan-and-Execute 是两阶段：先制定计划（Planner），再逐步执行（Executor）。像旅行前先列行程单，再按天去玩；执行中若发现“景点关门”，再改行程（Re-planning）。与 ReAct 的差别可以记成：<strong>ReAct 是“走一步看一步”，Plan-and-Execute 先有一张“总蓝图”再落地</strong>，适合步骤多、依赖关系清晰的任务。<strong>Planner</strong> 的输入是用户目标、约束（时间/预算/格式）、当前已知上下文，输出是结构化计划（步骤列表、每步子目标、依赖、所需工具类型），技巧是计划粒度适中——过细易脆，过粗难执行。<strong>Executor</strong> 逐步骤执行（可调用工具或子 Agent），更新状态，每一步可选用不同工具；Executor 内部可再接 ReAct 或子 Agent。先制定完整计划再按计划执行，比 ReAct 更适合需要全局最优的任务。</p>
+<p><strong>重规划（Re-planning）机制</strong>是这个范式的关键。触发条件常见有：工具失败、返回空、超时；Observation 与假设冲突；新信息使原计划步骤多余或顺序错误。做法分两种：<strong>局部修复</strong>，只替换失败步骤之后的子计划；<strong>全局重规划</strong>，回到目标重新生成计划（成本高但更稳）。重规划会“计划抖动”——频繁重规划让执行轨迹不稳定，缓解方式包括限制重规划次数、局部重规划优先、在 state 中保留已验证事实、对计划变更加一致性检查（新旧计划差异说明）。最大风险是错误计划污染全局，缓解靠可验证子步骤、重规划、强 Planner 约束输出与执行期监控。</p>
+<h3>4. 三者选型对比</h3>
+<table>
+<tr><th>维度</th><th>CoT</th><th>ReAct</th><th>Plan-and-Execute</th></tr>
+<tr><td>是否有外部环境</td><td>通常无</td><td>有（工具 / Observation）</td><td>有（执行阶段调工具）</td></tr>
+<tr><td>规划</td><td>隐式、一次性推理链</td><td>隐式、逐步贪心</td><td>显式、先全局后局部</td></tr>
+<tr><td>纠错方式</td><td>主要靠模型自省</td><td>主要靠外部反馈</td><td>重规划（局部 / 全局）</td></tr>
+<tr><td>成本</td><td>低（通常单次调用）</td><td>步数多时可很高</td><td>规划一次可能省执行盲目性</td></tr>
+<tr><td>典型目标</td><td>提升推理深度</td><td>推理 + 行动闭环</td><td>多步骤可审计交付</td></tr>
+</table>
+<p><strong>选型口诀：</strong>纯推理题用 CoT；需要调用工具、检索信息、环境反馈关键、路径不确定的用 ReAct；任务可分解、流程强、需要可审计的计划书的用 Plan-and-Execute。复杂系统常混合：Planner 先出路线图，Executor 内部每步用 ReAct 执行。</p>
+<div class="warn"><strong>容易踩的坑：</strong>ReAct 轨迹里的 Observation 必须由执行器生成，模型只负责 Thought / Action——一旦模型自己编造 Observation，就会得到“看似合理但错误”的答案，轨迹再漂亮也没用。工程上要校验 Observation 来源，并给解析失败准备重试策略。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：简化版 ReAct 循环（离线可跑，假模型 + 真计算器工具）</h3>
+<pre><code>from dataclasses import dataclass
+from typing import Callable, Dict, List, Tuple
+
+@dataclass
+class Tool:
+    name: str
+    run: Callable[[str], str]
+
+
+def parse_action(text: str) -> Tuple[str | None, str | None]:
+    """极简解析：生产环境请用更稳健的正则 / JSON。"""
+    action = action_input = None
+    for line in text.splitlines():
+        if line.startswith("Action:"):
+            action = line.split("Action:", 1)[1].strip()
+        if line.startswith("Action Input:"):
+            action_input = line.split("Action Input:", 1)[1].strip()
+    return action, action_input
+
+
+def react_loop(question, tools, llm, max_steps=6):
+    history: List[Tuple[str, str, str]] = []
+    for _ in range(max_steps):
+        out = llm(question, history)
+        if "Final Answer:" in out:
+            return out.split("Final Answer:", 1)[1].strip()
+        action, action_input = parse_action(out)
+        if not action or action not in tools:
+            obs = f"ERROR: invalid Action. Must be one of {list(tools.keys())}."
+        else:
+            obs = tools[action].run(action_input or "")  # Observation 只来自工具
+        history.append(("", f"{action}[{action_input}]", obs))
+    return "Failed: max steps exceeded."
+
+
+def fake_llm(question, history):
+    """假模型：第一轮调计算器，第二轮给最终答案。"""
+    if not history:
+        return "Thought: I need to add numbers.\nAction: calculator\nAction Input: 21+21\n"
+    return f"Final Answer: 21+21 = {history[0][2]}"
+
+
+tools = {"calculator": Tool("calculator", lambda s: str(eval(s)))}
+print(react_loop("What is 21+21?", tools, fake_llm))
+# 21+21 = 42</code></pre>
+<h3>示例 2：极简 Planner + Executor（含重规划，离线可跑）</h3>
+<pre><code>from typing import Any, Dict, List
+
+
+def plan(task: str, llm) -> List[str]:
+    prompt = f"Break the task into concrete steps. Return ONE step per line.\nTask: {task}"
+    text = llm(prompt)
+    return [s.strip("- ").strip() for s in text.splitlines() if s.strip()]
+
+
+def execute_step(step: str, state: Dict[str, Any]) -> str:
+    """单步执行器：这里用确定性逻辑演示，真实场景可接工具或 ReAct。"""
+    if step == "拉取销售数据":
+        raise RuntimeError("数据源超时")  # 故意制造一次失败，触发重规划
+    return f"完成：{step}"
+
+
+def plan_and_execute(task: str, llm, max_replans: int = 2) -> str:
+    steps = plan(task, llm)
+    state: Dict[str, Any] = {}
+    for _ in range(max_replans + 1):
+        for i, st in enumerate(steps):
+            try:
+                state[f"step_{i}"] = execute_step(st, state)
+            except Exception as e:
+                # 触发重规划：把失败信息喂回规划器，生成新计划
+                steps = plan(f"{task}\nFailed step: {st}\nError: {e}\n请给出替代方案。", llm)
+                break
+        else:
+            return f"最终结果：{state}"
+    return "Failed after replanning."
+
+
+def fake_llm(prompt: str) -> str:
+    if "替代方案" in prompt:
+        return "- 从本地缓存拉取销售数据\n- 计算同比\n- 写成摘要"
+    return "- 拉取销售数据\n- 计算同比\n- 写成摘要"
+
+
+print(plan_and_execute("生成上季度销售报告", fake_llm))
+# 最终结果：{'step_0': '完成：从本地缓存拉取销售数据', 'step_1': '完成：计算同比', 'step_2': '完成：写成摘要'}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再加一个 <code>search</code> 假工具：让假模型先搜索、再计算、最后回答，观察 Thought / Action / Observation 轨迹如何变长。<br>
+2. 故意让假模型返回格式错误的输出（比如漏掉 <code>Action:</code> 行），看看解析器返回什么 Observation——然后给循环加一层“解析失败时把错误提示写回轨迹、让模型重试”的保护。<br>
+3. 把示例 2 的 <code>max_replans</code> 改成 0 再跑，确认失败后直接返回什么——体会“重规划次数上限”为什么是防抖动的必要护栏。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. CoT 与 ReAct 的本质区别是？</strong></p><button data-i="0">CoT 更贵，ReAct 更便宜</button><button data-i="1">CoT 只在模型内部展开推理链，不强制与外部环境交互；ReAct 把推理与可执行行动绑定，每步都有真实 Observation 反馈</button><button data-i="2">CoT 能调工具，ReAct 不能</button><div class="ans">解析：选 B。CoT 让模型“更会想”，ReAct 让模型“在想的同时能动手，并用真实结果纠正自己”。</div></div>
+<div class="q" data-answer="0"><p><strong>2. ReAct 轨迹中，哪一部分必须由系统生成？为什么？</strong></p><button data-i="0">Observation 必须由工具/环境生成，防止模型伪造证据导致看似合理但错误的答案</button><button data-i="1">Thought 必须由系统生成，防止模型乱想</button><button data-i="2">Action 必须由系统生成，防止模型乱调工具</button><div class="ans">解析：选 A。模型只负责 Thought / Action，Observation 只能来自工具，工程上要校验来源。</div></div>
+<div class="q" data-answer="2"><p><strong>3. ReAct 为什么要显式写出 Thought？</strong></p><button data-i="0">只是为了让输出更长</button><button data-i="1">为了多消耗 Token</button><button data-i="2">可解释性（便于审计）、可调试性（定位哪步选错工具）、学习信号（可做监督微调或评估中间步骤）</button><div class="ans">解析：选 C。Thought 也帮助模型在下一步更稳定地选择 Action。</div></div>
+<div class="q" data-answer="1"><p><strong>4. Plan-and-Execute 相比 ReAct 什么时候更占优？</strong></p><button data-i="0">需要频繁和环境交互探索时</button><button data-i="1">任务步骤多、结构清晰、需要全局分解时，Planner 先给出路线图能减少短视</button><button data-i="2">永远更占优，ReAct 可以淘汰了</button><div class="ans">解析：选 B。ReAct 更擅长动态工具交互、逐步探索；两者是互补关系。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 重规划的两种做法是？</strong></p><button data-i="0">局部修复（只替换失败步骤之后的子计划）与全局重规划（回到目标重新生成计划）</button><button data-i="1">向前规划与向后规划</button><button data-i="2">人工重规划与自动重规划</button><div class="ans">解析：选 A。全局重规划成本高但更稳；局部修复优先可减少计划抖动。</div></div>
+<div class="q" data-answer="2"><p><strong>6. Zero-shot CoT 的典型触发方式是？</strong></p><button data-i="0">给 10 个手写推理示例</button><button data-i="1">微调模型学会推理</button><button data-i="2">不给示例，只在问题末尾加一句“Let's think step by step”或“请逐步推理”</button><div class="ans">解析：选 C。Zero-shot 不手写示例推理过程，只靠触发语让模型展开中间步骤。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：ReAct 和普通 CoT 提示有什么本质区别？</summary><p>普通 CoT 只在模型内部展开推理链，不强制与外部环境交互；ReAct 把推理与可执行行动绑定，每一步行动后都有真实 Observation 反馈，从而用工具结果约束生成，降低闭卷幻觉。</p></details>
+<details><summary>Q2：Plan-and-Solve / Plan-and-Execute 模式是什么？比 ReAct 好在哪里？</summary><p>先制定完整计划，再按计划执行；ReAct 是边做边想。Plan-and-Execute 更适合需要全局最优的任务：步骤多、结构清晰、需要可审计的计划书时，Planner 先给出路线图能减少短视。代价是计划错误会波及全局，需要重规划机制兜底。</p></details>
+<details><summary>Q3：Re-planning 会不会导致“计划抖动”？怎么缓解？</summary><p>会。频繁重规划可能让执行轨迹不稳定。缓解方式包括：限制重规划次数、局部重规划优先、在 state 中保留已验证事实、对计划变更加一致性检查（新旧计划差异说明）。</p></details>
+<details><summary>Q4：ReAct Prompt 为什么要给 Few-shot 示例？</summary><p>提升模型对固定格式的遵从度，降低解析失败率，稳定工具调用。给 1～3 个完整轨迹示例效果就很明显，示例要覆盖“工具清单与参数格式”，并强调 Observation 由系统填充。</p></details>
+<details><summary>Q5：你如何为一个企业场景选择 ReAct vs Plan-and-Execute？</summary><p>看任务是否强流程、是否需要可审计计划书、是否允许前期规划成本。需要强工具交互与动态环境用 ReAct；强分解与多步骤交付用 Plan-and-Execute；复杂系统常混合——Planner 出路线图，Executor 内部每步用 ReAct。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>ReAct 落地最容易翻车的不是推理质量，而是格式解析与 Observation 校验：解析失败要重试、Observation 必须来自执行器、步数上限必须有硬编码。Plan-and-Execute 落地最容易翻车的是计划抖动：重规划次数上限与局部修复优先，写进代码里别只写在文档里。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 ReAct”，写“用 ReAct 循环做调研 Agent：Thought/Action/Observation 轨迹可审计，Observation 由执行器生成防伪造，解析失败自动重试 + 最大步数兜底；多步骤交付场景改用 Planner-Executor，先出可审计计划再执行，失败局部重规划”。前者是名词，后者是可追问的工程取舍。</p>
+<p><strong>明日预告：</strong>Day 3 讲反思与搜索：Reflexion、LATS、自一致性——做完不等于结束，Agent 怎样从错误里学教训、怎样在多条路径里搜索最优解。</p>
+</div>
+<div class="nav"><span><a href="day01.html">← Day 1</a></span><span><a href="day03.html">Day 3 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

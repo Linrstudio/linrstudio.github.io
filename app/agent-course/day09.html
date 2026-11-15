@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 9：Embedding 与向量库：模型选型、微调与 ANN | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 9 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 9：Embedding 与向量库：模型选型、微调与 ANN</h1>
+<p>Day 8 我们把文档切成了可检索的块。今天回答下一个问题：这些块怎么变成机器能比大小的东西？答案是 Embedding——把文本映射成固定维度的稠密向量，语义相近的文本在向量空间里距离更近。选哪个模型、多少维度、要不要微调、向量存哪、怎么搜得快，这五个决定基本就是 RAG 检索层的一半工作量。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 120" width="100%" role="img" aria-label="文本经 Embedding 模型变成稠密向量，存入向量库的 ANN 索引，查询时按相似度返回 Top-K">
+<rect x="8" y="35" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="60" y="64" text-anchor="middle" font-size="13" fill="#222">文本块</text>
+<line x1="112" y1="59" x2="138" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="138,59 126,53 126,65" fill="#0b62d6"/>
+<rect x="138" y="35" width="130" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="203" y="64" text-anchor="middle" font-size="13" fill="#222">Embedding 模型</text>
+<line x1="268" y1="59" x2="294" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="294,59 282,53 282,65" fill="#0b62d6"/>
+<rect x="294" y="35" width="112" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="350" y="64" text-anchor="middle" font-size="13" fill="#222">稠密向量</text>
+<line x1="406" y1="59" x2="432" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="432,59 420,53 420,65" fill="#0b62d6"/>
+<rect x="432" y="35" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="502" y="64" text-anchor="middle" font-size="13" fill="#222">向量库 ANN 索引</text>
+<line x1="572" y1="59" x2="598" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="598,59 586,53 586,65" fill="#0b62d6"/>
+<rect x="598" y="35" width="122" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="659" y="64" text-anchor="middle" font-size="13" fill="#222">Top-K 召回</text>
+<text x="364" y="112" text-anchor="middle" font-size="13" fill="#666">查询走同一条路：编码 → 在索引里找最近邻 → 按余弦相似度排序</text>
+</svg>
+<h3>1. Embedding 机制：文本变成向量，语义变成距离</h3>
+<p>Embedding 把离散文本映射为<strong>固定维度的稠密向量</strong>：每个维度都是一个浮点数，整条向量就是这段文本在语义空间里的坐标。语义相近的文本，坐标就离得近。比较两个向量常用<strong>余弦相似度</strong>或内积；向量先做归一化的话，余弦相似度就等于点积，计算更便宜。训练目标多为<strong>对比学习</strong>：同义句拉近、无关句推远——模型不是在“理解”文本，而是在学习一种让相似文本聚到一起的坐标系。</p>
+<h3>2. 模型选型：OpenAI、BGE、M3E，看语言、隐私、成本</h3>
+<p>先给结论：<strong>效果优先 + 不差钱</strong> → OpenAI <code>text-embedding-3</code>（small 1536 维或 large 3072 维）；<strong>中文场景 + 想自己调</strong> → BGE（如 bge-large-zh-v1.5）或 M3E；<strong>追求速度 + 内存敏感</strong> → M3E（384 维，体积小）。Jina 的 jina-embeddings 在长文本、多语言场景有优势。具体挑的时候看三件事：<strong>语言与领域</strong>（中文优先中文强化模型，医疗/法律可看领域微调版）、<strong>数据隐私与部署</strong>（文本能不能出海、云端 API 还是私有化）、<strong>推理成本</strong>（API 费用 vs 本地 GPU）。另外注意序列长度：长文档要么用更长上下文的 embedding 模型，要么先分段再聚合。一个简单原则：先拿 BGE 跑个 baseline，速度慢就换 M3E，效果不满足再换 OpenAI。模型名与维度以官方最新文档为准。</p>
+<h3>3. 维度取舍与维度诅咒：384 维 vs 1024 维</h3>
+<p>维度越高越好吗？不一定。高维度表达力更强，但招来两个麻烦：<strong>计算慢</strong>——向量点积复杂度 O(n)，1024 维比 384 维慢了近 3 倍；<strong>过拟合风险</strong>——小数据集上高维向量容易记住噪音而非语义。384 维像瑞士军刀，日常够用；1024 维像修理厂全套工具，修飞机时很香，修自行车反而翻半天找不到合适的。什么时候上高维？<strong>数据量大（百万级以上）、细粒度区分要求高</strong>，比如法律条款检索要区分“故意伤害”和“过失伤害”。普通客服问答，384 维完全够。维度诅咒在 RAG 里有三副面孔：<strong>中心偏移</strong>——不同文档的向量都聚在球面上，余弦相似度分布变得非常窄（比如 0.82 到 0.87 之间），阈值很难调；<strong>存储膨胀</strong>——1024 维 float32 向量是 4KB/条，1000 万条就是 40GB，再加索引还要翻倍；<strong>ANN 索引退化</strong>——高维下 HNSW 等图索引的召回率会掉，经验阈值是超过 500 维就要换 IVF 或压缩。缓解办法：PCA 或 AutoEncoder 降维（实验表明 512 维降到 256 维，检索精度只降不到 1%）、量化压缩（int8 或二值化）、对业务场景做“有效维度”测试——随机抽样 query，看相似度分布是否合理分离。</p>
+<h3>4. 对比学习微调：三元组 + InfoNCE</h3>
+<p>垂直领域需要微调吗？需要。通用 Embedding 在医学术语、法律条文、代码等专业场景下会“偏科”。三种主流微调方式：<strong>对比学习</strong>（正负例对，效果最好、需要标注）、<strong>SimCSE</strong>（无监督 Dropout，省事、效果一般）、<strong>指令微调</strong>（加任务前缀，灵活、多任务）。实际操作最推荐对比学习：构造 <code>(query, positive_doc, negative_doc)</code> 三元组，用 <strong>InfoNCE loss</strong> 拉近正例、推远负例。负例可以来自 BM25 召回的错误文档，或同 batch 内其他 query 的正例（in-batch negative）。一个小窍门：不要把所有领域数据混着微调，按业务场景拆分（比如“发热问诊”和“药品说明书检索”分开），效果更好。</p>
+<h3>5. 负难样本挖掘：难例决定微调的上限</h3>
+<p>负例太简单，模型学不到东西；负例太难到是假正例，模型反而学歪。五种常见策略：<strong>随机采样</strong>——均匀随机抽文档当负例，问题是太简单，梯度均值接近零，模型不易收敛；<strong>Top-K 负例采样</strong>——用稠密检索模型打分，取 Top-K 当负例，保证是模型分不清的难例，但很可能把潜在正例误判为负例（假负例），导致梯度方差很大、训练不稳定；<strong>SimANS 困惑负样本采样</strong>——采与正例语义相似度接近的负例：与 query 无关的给低分（信息量不足），与 query 很可能相关的也给低分（可能是假负例），与正例相似度接近的给高分——同时具有较大梯度均值和较小梯度方差；<strong>批内负采样</strong>——同一个 batch 里其他问题的文档正例当作当前问题的负例，想要效果好需要比较大的 batch size，且同一 batch 里最好只放同一种任务的样本（否则模型会偷懒按任务前缀区分正负例）；<strong>同文章采样</strong>——正例所在文章的其他片段当难负例，至少同主题、比随机难区分。另外还有 LLM 辅助生成软标签再蒸馏的思路（bge2 提出）：让 LLM 判断每个候选片段对生成标准答案的贡献，贡献越大优化权重越大，但打标成本高、很多场景拿不到标准答案。</p>
+<h3>6. 对称 vs 非对称嵌入与双编码器</h3>
+<p><strong>对称嵌入</strong>：query 和 doc 的语义结构相似，比如“找跟我这句话意思相近的句子”——两个短文本。<strong>非对称嵌入</strong>：query 短、doc 长，比如用户搜“怎么退款”，对应的是商品售后条款长文。Query 和 Document 能用同一个模型吗？可以，但不是最优。非对称场景下训练时通常会做<strong>双编码器（dual encoder）</strong>：两个模型参数不同但结构相同，一个编 query、一个编 doc，再跨编码器比较。硬要共享参数也能跑，但检索精度会掉 3–5 个百分点。</p>
+<h3>7. ColBERT 晚交互与 SPLADE 稀疏向量</h3>
+<p>普通双塔是<strong>早融合</strong>：query 和 doc 各自压缩成一个全局向量，最后点积，信息在压缩里丢了。<strong>ColBERT 的晚交互（late interaction）</strong>：query 的每个 token 向量和 doc 的每个 token 向量分别算相似度，再取 MaxSim 求和——保留词级别的匹配信息，又不至于像交叉编码器那样 O(n²) 复杂度。优势：比交叉编码器快 10–100 倍（doc 向量可预计算），比双塔准确率高 3–5 个百分点，尤其在细粒度匹配上。代价是存储开销大（每个 doc 保存 token 级向量而非一个向量），用 ColBERT-v2 能压缩到原大小的 1/10。<strong>SPLADE</strong> 走另一条路：生成<strong>稀疏向量</strong>（大部分维度为 0），每个维度对应一个词项或词组。优势是可解释性强（哪些词贡献了匹配一目了然）、可结合倒排索引加速、对低频词友好（不会像稠密向量那样被平滑掉）。代价是域外泛化较差、Out-of-vocab 词可能漏掉。做法律文书检索时，稀疏向量能准确匹配“故意杀人”这个完整短语，稠密向量可能拆成“故意”+“杀人”然后加权搞混。</p>
+<h3>8. 向量库选型：FAISS、Milvus、Pinecone、Chroma、Qdrant</h3>
+<table><tr><th>产品</th><th>特点</th><th>适用场景</th></tr>
+<tr><td><strong>FAISS</strong>（Meta）</td><td>单机库，非完整数据库；极致性能，研究向</td><td>原型、离线实验、嵌入现有服务</td></tr>
+<tr><td><strong>Milvus</strong></td><td>云原生、分布式、可扩展至百亿级</td><td>大规模生产、需要分区与多副本</td></tr>
+<tr><td><strong>Pinecone</strong></td><td>全托管 SaaS，零运维</td><td>快速上线、无运维团队</td></tr>
+<tr><td><strong>Chroma</strong></td><td>轻量、易上手</td><td>原型、小项目</td></tr>
+<tr><td><strong>Qdrant</strong></td><td>Rust 实现、过滤丰富、性能强</td><td>自托管生产、复杂过滤</td></tr>
+<tr><td><strong>Weaviate</strong></td><td>GraphQL API、内置模块</td><td>需要图式查询与生态集成</td></tr></table>
+<p>面试常问：FAISS 和 Milvus 本质区别？FAISS 是 <strong>ANN 算法库</strong>，需自建存储、服务、容灾；Milvus 是<strong>向量数据库系统</strong>，提供分布式存储、运维能力与数据管理接口。</p>
+<h3>9. ANN 算法：HNSW、IVF、PQ 与参数取舍</h3>
+<p>暴力精确检索在高维下不可行，向量库用 <strong>ANN（近似最近邻）</strong>换略微精度换数量级加速。<strong>HNSW（分层导航小世界图）</strong>：图索引，查询延迟低、召回高，内存占用偏高；<strong>IVF（倒排文件）</strong>：聚类划分桶，查询只搜部分桶，需要离线训练，适合大规模；<strong>PQ（乘积量化）</strong>：向量压缩，省内存、加速距离计算，有损、精度略降。取舍：数据量中等、追求低延迟高召回、内存可接受时优先 HNSW；数据量极大、内存紧张、可接受离线训练与调参时考虑 IVF（常与 PQ 组合成 IVF_PQ）。实际要在召回率、QPS、内存、建索引时间上做压测。HNSW 的 <code>efSearch</code> 调大：查询时访问更多邻居，<strong>召回上升、延迟上升</strong>，需在精度与 SLA 间折中。强过滤场景选对元数据索引友好的实现（Qdrant、Milvus 过滤能力强）；要磁盘级大规模可看 DiskANN 类方案（视产品支持）。</p>
+<div class="warn"><strong>工程细节（容易踩的坑）：</strong>Embedding 算太慢怎么办？有效排序是<strong>缓存 &gt; 批处理 &gt; GPU 加速</strong>。缓存命中率高了速度提升 100 倍以上，适合重复查询多的场景（LRU 或 Redis，注意失效策略）；批处理时 GPU 一次处理 32 条比逐条快 10 倍，关键是把变长文本 padding 到等长，别让 GPU 空转；单条推理 GPU 其实没比 CPU 快多少（受限于内存拷贝开销），只有 batch size ≥ 16 时优势才明显。模型加载后先跑一次假数据预热，把 CUDA 内核启动开销抹掉。文档更新后：全量重算慢但一致性好，适合每天一次夜间更新；增量更新只处理新增和修改的文档，删除要记录 ID 防止残留。增量有个坑：旧 Embedding 和新算的可能分布不一致，解决办法是定期（比如每周）全量重算一次，增量只在中间顶。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：本地 BGE 编码 + 余弦相似度 Top-K（sentence-transformers）</h3>
+<pre><code># pip install sentence-transformers numpy
+# 首次运行会下载模型（约 1GB），请保证网络通畅；模型名以官方最新文档为准
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("BAAI/bge-large-zh-v1.5")
+docs = ["公司年假为 15 天，入职满一年可休", "报销应提交发票原件", "年假申请需提前一周提交"]
+emb = model.encode(docs, normalize_embeddings=True)  # 归一化后余弦=点积
+
+q = model.encode(["年假多少天？"], normalize_embeddings=True)[0]
+scores = emb @ q  # 点积即余弦相似度
+top = np.argsort(scores)[::-1][:2]
+for i in top:
+    print(f"{scores[i]:.3f}  {docs[i]}")</code></pre>
+<h3>示例 2：FAISS 索引——精确检索 vs HNSW（ANN）</h3>
+<pre><code># pip install faiss-cpu numpy sentence-transformers
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("BAAI/bge-small-zh-v1.5")
+texts = ["条款A：年假 15 天", "条款B：报销需发票", "无关内容C：食堂菜单"]
+emb = model.encode(texts, normalize_embeddings=True).astype("float32")
+dim = emb.shape[1]
+
+# 精确检索：IndexFlatIP，归一化后内积=余弦相似度，适合小数据
+flat = faiss.IndexFlatIP(dim)
+flat.add(emb)
+
+# ANN 检索：HNSW 图索引，M=32 控制每节点邻居数，efSearch 越大召回越高、延迟越高
+hnsw = faiss.IndexHNSWFlat(dim, 32)
+hnsw.hnsw.efSearch = 64
+hnsw.add(emb)
+
+q = model.encode(["和A相关的查询"], normalize_embeddings=True).astype("float32")
+D, I = hnsw.search(q, k=2)
+print("scores:", D, "indices:", I)
+
+# 注：Pinecone 现行写法（v3 起旧的 pinecone.init 已移除）：
+# from pinecone import Pinecone
+# pc = Pinecone(api_key="YOUR_API_KEY")  # 不要把真实 Key 写进代码，用环境变量
+# index = pc.Index("my-index")</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑通示例 1，把 query 换成“怎么报销”，看看 Top-1 是不是报销那条；再换成一个专有名词 query（如某个编号），观察向量检索是否还准——这就是 Day 10 要讲的短板。<br>
+2. 在示例 2 里把 <code>efSearch</code> 从 64 改成 8，再改成 200，对比返回结果与耗时（数据量小看不出差别是正常的，理解参数方向即可）。<br>
+3. 试着用 <code>model.encode</code> 编码一对同义词和一对反义词，算余弦相似度：同义词是不是明显更高？如果反义词也很高，想想为什么（提示：它们常出现在相似上下文里）。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 向量做过归一化之后，余弦相似度等于什么？</strong></p><button data-i="0">欧氏距离</button><button data-i="1">点积（内积）</button><button data-i="2">曼哈顿距离</button><div class="ans">解析：选 B。归一化后向量长度为 1，余弦相似度就等于点积，计算更便宜。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 中文场景、想自己部署和微调，优先选哪个系列？</strong></p><button data-i="0">BGE 或 M3E（中文开源、可本地部署）</button><button data-i="1">只用 OpenAI API</button><button data-i="2">随便哪个都一样</button><div class="ans">解析：选 A。BGE 中文检索强、M3E 轻量（384 维），都能本地部署；OpenAI 效果好但要 API 费用且文本要出海。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 维度诅咒在 RAG 里的一种表现是？</strong></p><button data-i="0">向量越长检索越快</button><button data-i="1">低维向量更容易过拟合</button><button data-i="2">不同文档的向量都聚在球面上，余弦相似度分布变得很窄，阈值难调</button><div class="ans">解析：选 C。这叫中心偏移；另外两个表现是存储膨胀和 ANN 索引退化。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 对比学习微调 Embedding 的三元组是？</strong></p><button data-i="0">（query, query, doc）</button><button data-i="1">（query, positive_doc, negative_doc），用 InfoNCE 拉近正例、推远负例</button><button data-i="2">（doc, doc, doc）</button><div class="ans">解析：选 B。负例可来自 BM25 召回的错误文档，或同 batch 内其他 query 的正例。</div></div>
+<div class="q" data-answer="0"><p><strong>5. Top-K 负例采样最大的风险是？</strong></p><button data-i="0">把潜在正例误判为负例（假负例），导致梯度方差大、训练不稳定</button><button data-i="1">负例太简单，梯度接近零</button><button data-i="2">采样速度太慢</button><div class="ans">解析：选 A。太简单是随机采样的毛病；SimANS 专门挑与正例相似度接近的困惑负例来避开这两个极端。</div></div>
+<div class="q" data-answer="2"><p><strong>6. FAISS 和 Milvus 的本质区别是？</strong></p><button data-i="0">FAISS 是数据库，Milvus 是算法库</button><button data-i="1">两者完全一样</button><button data-i="2">FAISS 是 ANN 算法库，需自建存储、服务、容灾；Milvus 是向量数据库系统</button><div class="ans">解析：选 C。FAISS 适合原型与离线实验；Milvus 提供分布式存储、运维能力与数据管理接口，适合大规模生产。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Embedding 模型怎么选？OpenAI、BGE、M3E 各适合什么？</summary><p>看三件事：语言与领域、数据隐私与部署、推理成本。效果优先 + 不差钱选 OpenAI text-embedding-3；中文场景 + 想自己调选 BGE 或 M3E；追求速度 + 内存敏感选 M3E（384 维）。实用原则：先拿 BGE 跑 baseline，慢就换 M3E，效果不够再换 OpenAI。模型名与维度以官方最新文档为准。</p></details>
+<details><summary>Q2：维度越高越好吗？1024 维 vs 384 维怎么选？</summary><p>不一定。1024 维表达力更强，但点积复杂度 O(n) 让它慢近 3 倍，小数据集上还容易过拟合；维度诅咒还会带来中心偏移（相似度分布变窄、阈值难调）、存储膨胀（1024 维 float32 是 4KB/条）和 ANN 退化。数据量大（百万级以上）、细粒度区分要求高时上高维；普通客服问答 384 维完全够。缓解办法：PCA/AutoEncoder 降维、量化压缩。</p></details>
+<details><summary>Q3：对称嵌入 vs 非对称嵌入，Query 和 Document 能用同一个模型吗？</summary><p>对称是短 query 对短文本，非对称是短 query 对长文档。可以用同一个模型，但不是最优：非对称场景通常做双编码器，两个模型参数不同但结构相同，一个编 query、一个编 doc。硬共享参数能跑，但检索精度会掉 3–5 个百分点。</p></details>
+<details><summary>Q4：ColBERT 的“晚交互”是什么？比普通双塔好在哪里？</summary><p>普通双塔是早融合：query 和 doc 各压成一个全局向量再点积，信息在压缩里丢了。ColBERT 是晚交互：query 每个 token 向量和 doc 每个 token 向量分别算相似度，再 MaxSim 求和。比交叉编码器快 10–100 倍（doc 向量可预计算），比双塔准 3–5 个百分点，尤其细粒度匹配。代价是存储开销大，ColBERT-v2 能压缩到原大小的 1/10。</p></details>
+<details><summary>Q5：HNSW 与 IVF 如何取舍？efSearch 调大有什么效果？</summary><p>数据量中等、追求低延迟高召回、内存可接受时优先 HNSW；数据量极大、内存紧张、可接受离线训练与调参时考虑 IVF（常与 PQ 组合）。实际要在召回率、QPS、内存、建索引时间上做压测。efSearch 调大：查询时访问更多邻居，召回上升、延迟上升，需在精度与 SLA 间折中。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>换模型之前先测召回@K 与端到端问答，别凭感觉换；Embedding 算得慢先上缓存（命中率高了速度提升 100 倍以上），再谈批处理与 GPU；文档增量更新后记得定期（比如每周）全量重算一次，避免新旧向量分布不一致。</p>
+<p><strong>简历讲法：</strong>别写“会用向量数据库”，写“中文客服知识库用 BGE-large-zh 做 Embedding、FAISS HNSW 索引，针对领域术语用三元组 + InfoNCE 微调，负例用 Top-K 挖掘 + SimANS 过滤假负例，召回@10 从 X 提升到 Y”。前者是名词，后者是可追问的动手过程（数字填你自己的实测值）。</p>
+<p><strong>明日预告：</strong>Day 10 讲检索与重排：向量检索 vs BM25、混合检索与 RRF、查询改写与 HyDE、重排与 MMR——向量有了，怎么把最对的那几条捞出来。</p>
+</div>
+<div class="nav"><span><a href="day08.html">← Day 8</a></span><span><a href="day10.html">Day 10 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

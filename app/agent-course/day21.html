@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 21：Loop 生产与实战：失败模式、治理与十个案例 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 21 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 21：Loop 生产与实战：失败模式、治理与十个案例</h1>
+<p>前面四课把 Loop 的零件都讲齐了：导论、循环控制、状态与并行、可观测性与成本。今天把它们拼成一台能上生产线的机器：生产环境里 Loop 会以哪些传统系统没有的方式翻车？上线前要过哪六层测试？人应该站在哪个位置把关？最后用十个实战案例收尾——每个案例都是一条“触发器→上下文→执行→验证→循环→终止→输出”的完整链路。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="生产 Loop 闭环：触发器启动执行，验证通过输出，验证失败反馈再循环，超限或高风险时熔断转人工介入">
+<rect x="10" y="60" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="65" y="89" text-anchor="middle" font-size="13" fill="#222">触发器</text>
+<line x1="120" y1="84" x2="155" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="155,84 143,78 143,90" fill="#0b62d6"/>
+<rect x="155" y="60" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="210" y="89" text-anchor="middle" font-size="13" fill="#222">执行</text>
+<line x1="265" y1="84" x2="300" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="300,84 288,78 288,90" fill="#0b62d6"/>
+<rect x="300" y="60" width="110" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="355" y="89" text-anchor="middle" font-size="13" fill="#222">验证</text>
+<line x1="410" y1="84" x2="445" y2="84" stroke="#0b62d6" stroke-width="2"/><polygon points="445,84 433,78 433,90" fill="#0b62d6"/>
+<rect x="445" y="60" width="110" height="48" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="500" y="89" text-anchor="middle" font-size="13" fill="#222">输出 / 提 PR</text>
+<rect x="580" y="60" width="138" height="48" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="649" y="89" text-anchor="middle" font-size="13" fill="#222">熔断 → 人工介入</text>
+<path d="M 355 108 L 355 140 L 210 140 L 210 108" fill="none" stroke="#0b62d6" stroke-width="2" stroke-dasharray="5,4"/><polygon points="210,108 204,120 216,120" fill="#0b62d6"/>
+<text x="282" y="135" text-anchor="middle" font-size="12" fill="#555">验证失败：反馈再循环</text>
+<path d="M 500 60 L 500 30 L 649 30 L 649 60" fill="none" stroke="#d99a00" stroke-width="2" stroke-dasharray="5,4"/><polygon points="649,60 643,48 655,48" fill="#d99a00"/>
+<text x="575" y="22" text-anchor="middle" font-size="12" fill="#555">超限 / 高风险 / 低置信度</text>
+</svg>
+
+<h3>1. 先分清：个人提效 vs 企业生产，目标根本不同</h3>
+<p>个人使用 AI 编程关注的是<strong>效率</strong>——一天写出更多代码、一个周末做出一个产品。而企业关注的是<strong>可控性</strong>——交付链路是否可控、风险是否可追溯、权限是否清晰、知识是否沉淀、成本是否可预算。一名工程师用 AI 提效 30%，不必然意味着团队交付效率提升 30%——更多代码可能带来更重的 Review 压力。Loop Engineering 本质上是在讨论一个更大的问题：当 Agent 具备持续循环执行任务的能力后，组织是否有能力重新设计自己的生产流程。面试时这句话可以直接当收尾金句。</p>
+
+<h3>2. 生产环境五大独特失败模式：传统系统没有的新死法</h3>
+<p>当 Agent 开始在生产环境自主运行，出现了传统系统没有的失败模式：<strong>① 无限循环</strong>——Agent 反复执行相同操作直到烧光 Token；<strong>② 误触生产数据库</strong>——Agent 调用了不应该调用的工具；<strong>③ 工具调用空转</strong>——调用 12 次工具却一无所获；<strong>④ 级联错误</strong>——一个 Agent 的错误被其他 Agent 放大；<strong>⑤ 状态漂移</strong>——长时间运行后状态与预期越来越远。注意②和③的区别：②是“做了不该做的事”，③是“做了很多事但等于没做”——前者是安全事故，后者是成本事故。</p>
+
+<h3>3. 上线前六层测试：没过完这六层，别放生产</h3>
+<p><strong>① 单元测试</strong>——每个组件（触发器、Skill 加载、连接器等）独立测试；<strong>② 集成测试</strong>——组件间协作测试；<strong>③ 端到端测试</strong>——完整 Loop 在沙箱环境运行；<strong>④ 混沌测试</strong>——模拟各种故障（网络超时、API 报错、模型降级）；<strong>⑤ 压力测试</strong>——多 Loop 并行、长时运行；<strong>⑥ 回放测试</strong>——用历史真实任务验证。其中④和⑥最容易被漏掉：混沌测试是唯一能提前暴露“模型降级时 Loop 会不会失控”的手段，回放测试是唯一能用真实任务分布验证 Loop 的手段。</p>
+
+<h3>4. 人工介入流程：人站在哪几个关口</h3>
+<p><strong>触发条件</strong>有五类：达到最大迭代次数、检测到死循环、遇到不可恢复错误、高风险操作前、置信度低于阈值。<strong>介入方式</strong>：通过 Slack / 邮件通知、Web 控制台审批。<strong>恢复机制</strong>：人工介入后 Loop 能从断点继续（靠 Day 19 的状态持久化）。<strong>反馈闭环</strong>：人工判断结果反馈给系统，优化后续决策。</p>
+<p>风险分档沿用 Day 18 的三档原则：低风险操作全自动，无需人工；中风险操作自动执行但记录日志，事后可追溯；高风险操作必须人工确认才能继续。Loop 不是要完全取代人，而是让人的精力从“频繁下指令”转移到“设定目标和验收结果”。</p>
+
+<h3>5. 可治理性六维：组织敢不敢让你跑 Loop 的答卷</h3>
+<p><strong>① 权限治理</strong>——每个 Agent 能做什么、不能做什么；<strong>② 成本治理</strong>——预算上限、成本预警；<strong>③ 质量治理</strong>——输出质量标准、评估机制；<strong>④ 风险治理</strong>——危险操作拦截、操作审计；<strong>⑤ 知识治理</strong>——Skill 的版本管理和更新；<strong>⑥ 合规治理</strong>——符合组织规范和数据安全要求。面试时如果被问“企业落地 Loop 最难的是什么”，答“不是模型能力，是这六维治理”会显得很有生产经验。</p>
+
+<h3>6. 长期运行五大新问题及应对</h3>
+<p><strong>① 状态膨胀</strong>——上下文和记忆不断增长；<strong>② 模型漂移</strong>——LLM 的行为可能随时间变化；<strong>③ 外部依赖变化</strong>——工具 API 变更、数据源变化；<strong>④ 累积误差</strong>——小错误在循环中被放大；<strong>⑤ 疲劳退化</strong>——Agent 在长任务中可能“迷失”目标。应对策略：定期重置 / 压缩状态、健康检查、外部依赖版本锁定、人工定期审查。长期运行的 Loop 不是“搭完就不用管”，而是需要像养一台服务器一样持续运维。</p>
+
+<h3>7. 测试驱动模式：Loop 最经典的应用形态</h3>
+<p>流程只有四步，却是 Loop Engineering 的招牌案例：系统丢给大模型改代码 → 改完后自动运行单元测试 → 如果测试没过，把 Error 堆栈抓出来让大模型继续改 → 循环直到测试全部变绿，提交 PR。这个模式的关键是<strong>“有自动化的验证手段”</strong>——测试、类型检查、linter、构建脚本，随便哪个都行，但必须存在。没有自动化验证的 Loop，就像没有刹车的车：你永远不知道它什么时候算“完成”。</p>
+
+<h3>8. 十个实战案例速览：同一条链路，十种任务</h3>
+<p>十个案例都按“触发器 → 上下文 → 执行 → 验证 → 循环 → 终止 → 输出”讲。先展开两个最典型的，其余一句话带过，细节见下表。</p>
+<p><strong>展开一：代码修复 Loop。</strong>触发器是 CI 失败事件（GitHub hook）；上下文是项目 Skill（技术栈、规范）+ 失败日志和报错堆栈；执行是 Agent 分析报错、生成修复方案、提交修复；验证是重新运行 CI；循环是 CI 仍失败就把新报错反馈给 Agent；终止条件是 CI 通过、达到最大尝试次数（如 5 次）、人工介入；输出是通过则自动提交 PR，失败则通知人工。</p>
+<p><strong>展开二：数据分析 Loop。</strong>输入是用户提出分析需求（如“分析上月销售数据”）；规划是 Agent 将任务拆解为数据读取 → 异常清洗 → 统计分析 → 可视化 → 结论产出；执行是 Agent 写 Python 代码；验证是代码在沙箱中执行；反馈是执行失败则报错信息反馈给 Agent 修正；循环直到代码执行成功或达到最大尝试次数；输出是生成图表和分析报告。关键设计：代码执行沙箱、结构化输出。</p>
+<table>
+<tr><th>案例</th><th>一句话链路</th></tr>
+<tr><td>代码审查</td><td>新 PR 触发 → 读 diff 与规范 → 审查 Agent 出意见 → 评估 Agent 验质量 → PR 更新则重审 → 合并或关闭终止</td></tr>
+<tr><td>文档同步</td><td>PR 合并触发 → 识别变更模块 → RAG 定位受影响文档 → Agent 更新文档 → 验格式与一致性 → 提交文档 PR，需人工确认</td></tr>
+<tr><td>安全扫描</td><td>定时或 PR 触发 → 读安全策略与历史记录 → 扫描依赖、密钥、注入风险 → 评估 Agent 确认真实性 → 高风险自动建 Issue</td></tr>
+<tr><td>性能基准</td><td>合并后或定时触发 → 自动部署跑 Benchmark → 收集响应时间/吞吐/资源 → 与历史基准对比 → 下降超阈值告警，持续成趋势图</td></tr>
+<tr><td>知识库更新</td><td>新对话结束或新文档创建 → 提取 FAQ/最佳实践/踩坑记录 → 评估 Agent 验准确性与冲突 → 去重后写入记忆层并记日志</td></tr>
+<tr><td>多项目并行</td><td>中央调度器分任务 → 每项目独立 Worktree/Skill/记忆 → 按优先级分配资源 → 统一 Dashboard 监控 → 共享 MCP 连接器与模型池</td></tr>
+<tr><td>测试用例生成</td><td>PR 创建触发 → 分析变更识别测试点 → 生成用例 → 自动运行 → 失败时分辨是代码问题还是测试问题 → 通过后提交测试代码</td></tr>
+<tr><td>依赖更新</td><td>每周定时或漏洞告警 → 扫描可更新或有漏洞依赖 → 评估变更与兼容风险 → 隔离环境更新并跑测试 → 通过建 PR，失败记录并通知</td></tr>
+</table>
+<div class="warn"><strong>容易踩的坑：</strong>照搬案例时只抄“执行”部分，漏了“验证”和“终止”。十个案例里每一个的验证手段都不同（CI、沙箱执行、评估 Agent、Benchmark 对比、人工确认），终止条件也不同——抄执行不抄验证，Loop 在生产上就是一台没有刹车的机器。</div>
+
+<h3>9. 从零设计 Loop 系统：技术选型怎么答</h3>
+<p>面试开放题的标准答法是<strong>三层架构 + 核心组件 + 模型策略 + 可观测性</strong>。三层架构：Prompt 层用结构化 Prompt 模板，支持 Few-shot 和 Chain of Thought；Context 层用向量数据库做 RAG，用 Redis 做短期记忆缓存；Harness 层用 Pytest 做测试验证，用独立评估模型做质量把关。核心组件：触发器（cron + webhook）、Worktree 隔离、Skill 管理（Git 版本化）、MCP 连接器、子 Agent 编排、记忆层（PostgreSQL + 向量库）。模型策略：规划用强推理模型，执行用中端模型，评估可用不同模型甚至更便宜的模型（模型名以官方最新文档为准）。可观测性：结构化日志接入 ELK，指标接入 Prometheus / Grafana。</p>
+
+<h3>10. 好 Loop 六标准、五类不适合的任务、五大副作用</h3>
+<p><strong>好 Loop 六标准</strong>：有明确的终止条件、有自动验证机制、有状态管理、有错误恢复、有可观测性、成本可控。一句话：好 Loop 是“可终止、可验证、可观测、可恢复”的系统。坏 Loop 则反过来：没有终止条件、没有验证、没有状态、没有错误处理、没有监控、成本不可控。</p>
+<p><strong>五类不适合 Loop 的任务</strong>：一次性任务（搭建成本远高于直接写 Prompt）、创意性任务（需要人类直觉和审美，如 UI 设计、文案创作）、高不确定性任务（目标模糊、无法定义“完成”）、极低容错任务（医疗诊断、金融交易等不容许试错）、强依赖人工判断的任务（需要人类价值观判断）。Loop 最适合：高频、可验证、有明确完成标准的任务。</p>
+<p><strong>五大副作用</strong>：思维退化（开发者变成只会点“开始键”的人）、质量幻觉（Loop 跑得勤不代表产出质量高）、技术债务堆积（AI 生成的代码多了，Review 压力反而更重）、责任模糊（Loop 出了错，谁背锅？）、过度自动化（本应人工判断的决策被自动化了）。应对：保持人工审查节点、建立质量门槛、明确责任边界、定期人工复盘。</p>
+
+<h3>11. 工程师能力六变与凌晨 3 点 47 轮 Debug 六步法</h3>
+<p>能力要求从“写 Prompt”转向“设计系统”：<strong>① 系统思维</strong>——从关注单次对话到关注整个循环的稳定性；<strong>② 状态管理</strong>——理解如何在非确定性系统中管理状态；<strong>③ 异常设计</strong>——设计各种失败场景的恢复策略；<strong>④ 可观测性设计</strong>——让非确定性系统可被监控和调试；<strong>⑤ 成本意识</strong>——理解 Token 消耗和预算控制；<strong>⑥ 治理能力</strong>——设计权限、审计、合规机制。本质变化：从“AI 的使用者”变成了“AI 系统的架构师”。</p>
+<p>凌晨 3 点的经典考题——Loop 跑了 47 轮输出一堆问题代码，怎么 Debug？六步：<strong>① 状态重建</strong>——从持久化存储恢复第 47 轮的完整状态快照；<strong>② 逐轮回放</strong>——从第 1 轮开始逐轮回放，找到问题引入的轮次；<strong>③ 差异分析</strong>——对比第 N 轮和第 N-1 轮的状态差异，找出变化点；<strong>④ 输入重放</strong>——用相同的输入重新跑有问题的轮次，确认是否可复现；<strong>⑤ 日志分析</strong>——查看结构化日志，分析每轮的 Thought / Action / Observation；<strong>⑥ 人工介入</strong>——无法定位则保存完整状态并通知人工。根本解决之道是预防——更好的可观测性设计、更完善的异常检测、更早的熔断机制。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：测试驱动 Loop（改代码 → 跑测试 → 堆栈反馈 → 全绿提 PR）</h3>
+<pre><code>import subprocess, sys
+
+def run_tests():
+    """跑测试，返回 (是否全绿, 报错摘要)。这里用 py_compile 作最小验证。"""
+    r = subprocess.run([sys.executable, "-m", "py_compile", "main.py"],
+                       capture_output=True, text=True)
+    return r.returncode == 0, r.stderr.strip().splitlines()[-1] if r.stderr else ""
+
+def fake_agent_fix(error):
+    """模拟 Agent 根据报错修代码：真实项目里这里是调模型改文件。"""
+    print(f"  Agent 看到报错：{error}，正在修复……")
+    Path("main.py").write_text("def add(a, b):\n    return a + b\n",
+                               encoding="utf-8")
+
+from pathlib import Path
+Path("main.py").write_text("def add(a, b):\n    return a + \n",
+                           encoding="utf-8")  # 故意留一个语法错
+
+MAX_TRIES = 5
+for attempt in range(1, MAX_TRIES + 1):
+    ok, error = run_tests()
+    print(f"第 {attempt} 轮：测试 {'全绿' if ok else '失败'}")
+    if ok:
+        print("全部变绿 → 提交 PR"); break
+    fake_agent_fix(error)  # 把 Error 堆栈反馈给 Agent 继续改
+else:
+    print("达到最大尝试次数 → 通知人工介入")</code></pre>
+<h3>示例 2：人工审批关口 + 三档风险原则</h3>
+<pre><code>LOW_RISK = {"read_file", "run_tests", "search_code"}
+MEDIUM_RISK = {"edit_file", "create_pr"}
+HIGH_RISK = {"delete_data", "deploy_prod", "update_prod_config"}
+
+def risk_level(action):
+    if action in LOW_RISK: return "low"
+    if action in MEDIUM_RISK: return "medium"
+    return "high"  # 不在白名单里的动作默认高风险
+
+def human_approve(action):
+    """真实项目里这里是发 Slack / 邮件 / 控制台审批，这里用输入模拟。"""
+    ans = input(f"[人工审批] 高风险操作 {action}，是否放行？(y/n): ")
+    return ans.strip().lower() == "y"
+
+def run_action(action, auto_approve=False):
+    level = risk_level(action)
+    if level == "low":
+        print(f"{action}：低风险，全自动执行")
+    elif level == "medium":
+        print(f"{action}：中风险，自动执行并记录日志（事后可追溯）")
+    else:
+        ok = auto_approve or human_approve(action)
+        print(f"{action}：高风险，{'人工已确认，继续' if ok else '未确认，终止'}")
+        return ok
+    return True
+
+for a in ["read_file", "edit_file", "deploy_prod"]:
+    if not run_action(a, auto_approve=True):
+        print("Loop 暂停，等待人工决策"); break</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，确认第一轮失败、第二轮全绿；再把 <code>fake_agent_fix</code> 改成“修不好”（不写文件），观察达到 5 次后是否正确转人工。<br>
+2. 把示例 2 的 <code>auto_approve=True</code> 去掉，手动输入一次 <code>n</code>，确认高风险操作被拦住且 Loop 暂停。<br>
+3. 挑一个本课案例（建议代码审查或依赖更新），按“触发器→上下文→执行→验证→循环→终止→输出”七步写出你自己的设计，重点写清验证手段和终止条件。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 以下哪项不属于生产环境五大独特失败模式？</strong></p><button data-i="0">误触生产数据库</button><button data-i="1">级联错误</button><button data-i="2">磁盘空间不足</button><div class="ans">解析：选 C。五大是无限循环、误触生产库、工具空转、级联错误、状态漂移；磁盘不足是传统运维问题。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 上线前六层测试中，唯一用历史真实任务验证 Loop 的是？</strong></p><button data-i="0">回放测试</button><button data-i="1">单元测试</button><button data-i="2">压力测试</button><div class="ans">解析：选 A。回放测试用历史真实任务验证；混沌测试模拟故障；压力测试看多 Loop 并行与长时运行。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 以下哪项不是人工介入的触发条件？</strong></p><button data-i="0">置信度低于阈值</button><button data-i="1">Token 消耗低于预期</button><button data-i="2">高风险操作前</button><div class="ans">解析：选 B。触发条件是达到最大迭代次数、检测到死循环、不可恢复错误、高风险操作前、置信度低于阈值。</div></div>
+<div class="q" data-answer="2"><p><strong>4. 测试驱动模式的关键是什么？</strong></p><button data-i="0">用最强的模型改代码</button><button data-i="1">每轮都人工检查</button><button data-i="2">有自动化的验证手段（测试、类型检查、linter、构建脚本，至少一种）</button><div class="ans">解析：选 C。没有自动化验证，Loop 永远不知道什么时候算“完成”。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 好 Loop 的一句话标准是？</strong></p><button data-i="0">可终止、可验证、可观测、可恢复</button><button data-i="1">跑得越快越好</button><button data-i="2">用的模型越强越好</button><div class="ans">解析：选 A。六标准是明确终止条件、自动验证、状态管理、错误恢复、可观测性、成本可控。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 凌晨 3 点 47 轮问题代码，Debug 的第一步是？</strong></p><button data-i="0">立刻重跑整个 Loop</button><button data-i="1">状态重建：从持久化存储恢复第 47 轮的完整状态快照</button><button data-i="2">先把模型换成更强的</button><div class="ans">解析：选 B。六步是状态重建 → 逐轮回放 → 差异分析 → 输入重放 → 日志分析 → 人工介入；根本解决之道是预防。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：个人使用 AI 编程和企业在生产环境使用 Loop 有什么本质区别？</summary><p>个人关注效率——一天写更多代码；企业关注可控性——交付链路是否可控、风险是否可追溯、权限是否清晰、知识是否沉淀、成本是否可预算。一名工程师提效 30% 不必然等于团队提效 30%，更多代码可能带来更重的 Review 压力。Loop Engineering 本质上在问：组织是否有能力在 Agent 能持续循环执行后，重新设计自己的生产流程。</p></details>
+<details><summary>Q2：Loop 上线前需要做哪些测试？</summary><p>六层：单元测试（每个组件独立）、集成测试（组件间协作）、端到端测试（完整 Loop 在沙箱运行）、混沌测试（模拟网络超时、API 报错、模型降级）、压力测试（多 Loop 并行、长时运行）、回放测试（用历史真实任务验证）。其中混沌测试和回放测试最容易被漏掉，也最能提前暴露生产问题。</p></details>
+<details><summary>Q3：如何设计 Loop 的人工介入流程？</summary><p>触发条件五类：达到最大迭代次数、检测到死循环、不可恢复错误、高风险操作前、置信度低于阈值。介入方式是 Slack / 邮件通知或 Web 控制台审批。恢复机制是人工介入后能从断点继续。反馈闭环是人工判断结果反馈给系统优化后续决策。风险分三档：低风险全自动，中风险自动执行但记日志可追溯，高风险必须人工确认。</p></details>
+<details><summary>Q4：哪些任务不适合用 Loop？</summary><p>五类：一次性任务（搭建成本远高于写 Prompt）、创意性任务（需要人类直觉和审美）、高不确定性任务（目标模糊、无法定义完成）、极低容错任务（医疗、金融交易等不容许试错）、强依赖人工判断的任务（需要人类价值观判断）。Loop 最适合高频、可验证、有明确完成标准的任务。</p></details>
+<details><summary>Q5：Loop 在凌晨 3 点跑了 47 轮输出一堆问题代码，你怎么 Debug？</summary><p>六步：状态重建（恢复第 47 轮快照）、逐轮回放（找到问题引入的轮次）、差异分析（对比第 N 轮与第 N-1 轮状态）、输入重放（确认是否可复现）、日志分析（看每轮 Thought / Action / Observation）、人工介入（无法定位则保存状态通知人工）。根本解决之道是预防：更好的可观测性、更完善的异常检测、更早的熔断。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Loop 上生产线的真正门槛不是模型能力，是六层测试 + 六维治理 + 人工介入流程。面试时被问“落地 Loop 最难的是什么”，先答治理和测试，再谈模型，顺序对了，生产经验感就出来了。</p>
+<p><strong>简历讲法：</strong>别写“做过 Loop 项目”，写“设计 CI 失败自动修复 Loop：失败日志触发、5 次重试上限、全绿自动提 PR，失败转人工；上线前过六层测试（单元/集成/端到端/混沌/压力/回放）”。前者是名词，后者是可追问的完整链路。</p>
+<p><strong>明日预告：</strong>Day 22 是附录：大模型基础速通——Transformer、注意力变体、Tokenization、推理与采样、微调、对齐、量化、推理优化与选型，每节只讲核心结论与面试要点，最后复盘整门 22 课。</p>
+</div>
+<div class="nav"><span><a href="day20.html">← Day 20</a></span><span><a href="day22.html">Day 22 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

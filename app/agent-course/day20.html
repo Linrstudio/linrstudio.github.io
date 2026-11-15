@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 20：Loop 可观测性与成本：日志、走偏检测与预算 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 20 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 20：Loop 可观测性与成本：日志、走偏检测与预算</h1>
+<p>前三课你学会了怎么搭 Loop、怎么让它停下来、怎么让它断点续跑。今天回答一个更扎心的问题：Loop 在半夜自己跑了 47 轮，烧掉一堆 Token，输出一堆问题代码——你怎么知道它什么时候开始跑偏的？又怎么在它烧光预算之前拦住它？可观测性与成本控制，就是 Loop 从“能跑”到“敢放手跑”的分水岭。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="Loop 可观测性流水线：每轮日志经链路 ID 聚合，进入指标与走偏检测，最后触发预算熔断或告警">
+<rect x="10" y="45" width="150" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="85" y="69" text-anchor="middle" font-size="13" fill="#222">每轮结构化日志</text><text x="85" y="89" text-anchor="middle" font-size="12" fill="#555">轮次/工具/耗时/Token</text>
+<line x1="160" y1="73" x2="200" y2="73" stroke="#0b62d6" stroke-width="2"/><polygon points="200,73 188,67 188,79" fill="#0b62d6"/>
+<rect x="200" y="45" width="140" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="270" y="69" text-anchor="middle" font-size="13" fill="#222">链路 ID 聚合</text><text x="270" y="89" text-anchor="middle" font-size="12" fill="#555">一次执行一个 ID</text>
+<line x1="340" y1="73" x2="380" y2="73" stroke="#0b62d6" stroke-width="2"/><polygon points="380,73 368,67 368,79" fill="#0b62d6"/>
+<rect x="380" y="45" width="160" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="460" y="69" text-anchor="middle" font-size="13" fill="#222">指标 + 走偏检测</text><text x="460" y="89" text-anchor="middle" font-size="12" fill="#555">停滞/重复/低分/烧钱快</text>
+<line x1="540" y1="73" x2="580" y2="73" stroke="#0b62d6" stroke-width="2"/><polygon points="580,73 568,67 568,79" fill="#0b62d6"/>
+<rect x="580" y="45" width="138" height="56" rx="10" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="649" y="69" text-anchor="middle" font-size="13" fill="#222">熔断 / 告警</text><text x="649" y="89" text-anchor="middle" font-size="12" fill="#555">预算上限 / 人工介入</text>
+<text x="364" y="135" text-anchor="middle" font-size="13" fill="#555">状态快照定期落盘：出问题时能逐轮回放，而不是凭猜测 Debug</text>
+</svg>
+
+<h3>1. 为什么 Loop 难监控：非确定性链路的四重挑战</h3>
+<p>传统 APM 监控的是<strong>确定性请求链路</strong>：接口 A 调 B 调 C，路径是写死的，出问题按链路一节节查就行。Loop 的链路是<strong>动态生成的、非确定性的、跨多个 Agent 的</strong>，挑战有四点：</p>
+<p><strong>① 链路不可预测</strong>——同样一个任务，每次执行路径都不同，你没法预先画一张调用拓扑图；<strong>② 跨 Agent 追踪难</strong>——主 Agent 派生多个子 Agent，调用关系是运行时长出来的；<strong>③ 状态难以重建</strong>——Loop 跑了 47 轮后出了问题，很难回溯当时每一轮的状态；<strong>④ 缺乏成熟方案</strong>——源材料原话是“当下没有成熟的 Loop Observability 方案”（材料原话，以最新生态为准）。</p>
+<p>面试要点：先说清“确定性 vs 非确定性”这个根因，再展开四点，答法就比只背清单高一档。</p>
+
+<h3>2. 日志五要点：每轮记什么，怎么记才查得到</h3>
+<p><strong>① 每轮记录</strong>——轮次、输入、输出、工具调用、耗时、Token 消耗，一轮一行，缺一不可；<strong>② 状态快照</strong>——定期保存完整状态，便于问题复现；<strong>③ 结构化日志</strong>——JSON 格式，便于检索和分析，别写自由文本；<strong>④ 链路 ID</strong>——一次 Loop 执行分配唯一 ID，所有子 Agent 的日志都带上这个 ID，才能把散落的日志拼成一条链；<strong>⑤ 关键指标</strong>——轮数、成功率、平均耗时、Token 消耗趋势。</p>
+<p>状态快照应该包含六个字段：<strong>当前轮次</strong>、<strong>完整对话历史</strong>（所有 Thought / Action / Observation）、<strong>已完成的子任务列表</strong>、<strong>当前任务进度</strong>、<strong>中间产物</strong>（已生成的文件、数据）、<strong>元信息</strong>（开始时间、已耗 Token、已用时间）。快照是 Day 21 凌晨 3 点 Debug 六步法的地基——没有快照，47 轮的 Loop 根本没法逐轮回放。</p>
+
+<h3>3. 走偏检测四法：发现“已经在错误方向上努力了很久”</h3>
+<p>Loop 最贵的失败不是报错退出，而是<strong>静悄悄地在错误方向上努力</strong>：不报错、不卡死，就是不出成果，还在烧 Token。四种检测信号：</p>
+<p><strong>① 进度停滞检测</strong>——连续 N 轮没有实质性进展（没有文件修改、没有新信息）；<strong>② 重复行为检测</strong>——反复调用同一工具、输出相似内容；<strong>③ 质量阈值</strong>——评估 Agent 连续多轮给出低分；<strong>④ 预算消耗率</strong>——Token 消耗过快但产出有限。一旦检测到异常，应触发熔断或人工告警——检测本身不值钱，<strong>检测之后自动触发动作</strong>才值钱。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只看“有没有报错”来判断 Loop 健不健康。Loop 的典型死法恰恰是不报错：工具调用空转 12 次、每轮都在改同一个文件又改回去、评估分一直 3 分却还在跑。健康检查必须看进度、重复度、质量分和预算消耗率这四条信号，而不是只看错误日志。</div>
+
+<h3>4. 质量评估五维：一个 Loop 跑得好不好，怎么打分</h3>
+<table>
+<tr><th>维度</th><th>看什么</th></tr>
+<tr><td>成功率</td><td>Loop 完成任务的百分比</td></tr>
+<tr><td>效率</td><td>平均轮数、平均耗时、Token 消耗</td></tr>
+<tr><td>稳定性</td><td>异常终止率、死循环发生率</td></tr>
+<tr><td>质量</td><td>输出质量（由评估 Agent 或人工判断）</td></tr>
+<tr><td>成本效益</td><td>完成任务的平均成本 vs 人工完成成本</td></tr>
+</table>
+<p>注意最后一维：Loop 的终极裁判不是技术指标，而是<strong>比人工便宜多少</strong>。一个成功率 95% 但成本比人工还贵的 Loop，在生产上就是失败的。</p>
+
+<h3>5. 与现有监控系统集成：能借力，但别指望直接套用</h3>
+<p><strong>① 日志集成</strong>——结构化日志接入 ELK / Loki；<strong>② 指标集成</strong>——关键指标接入 Prometheus / Grafana；<strong>③ 追踪集成</strong>——接入 Jaeger / Zipkin（需要适配非确定性链路）；<strong>④ 告警集成</strong>——接入 PagerDuty / Slack。但要清醒：传统监控工具是为确定性系统设计的，直接套用在 Loop 上会有局限——链路 ID 和状态快照这两样东西，传统 APM 并不原生理解，得自己补。</p>
+
+<h3>6. 预算五维与成本可预算五项：钱花在哪，提前算清楚</h3>
+<p>预算控制要看五个维度：<strong>① Token 消耗</strong>——每轮调用大模型的输入 / 输出 Token 数；<strong>② 步数 / 轮数</strong>——Agent 最多执行多少步；<strong>③ 时间</strong>——单轮超时和总超时；<strong>④ 工具调用次数</strong>——尤其是调用外部 API 的次数（可能产生费用）；<strong>⑤ 子 Agent 数量</strong>——并行运行的子 Agent 数量限制。</p>
+<p>“成本可预算”要做到五项：<strong>成本构成清晰</strong>（Token 费用、API 调用费用、子 Agent 数量 × 轮数）、<strong>实时成本追踪</strong>（每轮结束后累计成本）、<strong>预算预警</strong>（成本达到阈值时告警）、<strong>硬性上限</strong>（成本超限时强制终止）、<strong>成本分摊</strong>（按项目 / 团队 / 任务维度统计成本）。成本控制的六条策略可以对照着记：模型路由、Token 优化、缓存策略、步数限制、早期终止、成本预警。</p>
+
+<h3>7. Token 优化六策：最直接的省钱手段</h3>
+<p><strong>① 历史压缩</strong>——用摘要替代完整历史；<strong>② 选择性上下文</strong>——只保留相关的历史片段；<strong>③ 结构化输出</strong>——用 JSON Schema 约束输出格式，减少冗余；<strong>④ Prompt 缓存</strong>——缓存不变的系统提示词；<strong>⑤ 模型选择</strong>——在保证质量的前提下用 Token 效率更高的模型；<strong>⑥ 减少轮数</strong>——通过更好的规划减少迭代次数。记住一个量级直觉：历史越长，每轮的输入 Token 越贵，压缩历史往往是性价比最高的一策。</p>
+
+<h3>8. 延迟优化六策与长尾延迟</h3>
+<p>延迟优化：<strong>① 减少轮数</strong>——用规划器一次性生成完整计划，减少每轮决策；<strong>② 并行执行</strong>——无依赖的任务并行处理；<strong>③ 模型降级</strong>——简单任务用轻量模型；<strong>④ Prompt 缓存</strong>——缓存系统提示词，减少重复传输；<strong>⑤ 流式输出</strong>——边生成边处理，减少等待时间；<strong>⑥ 本地化</strong>——尽可能用本地模型或边缘计算。</p>
+<p>长尾延迟（P99 特别慢的那几轮）通常由四点造成：LLM 推理时间波动、工具调用超时、上下文过长、循环次数过多。应对：设置单轮超时、用更快的模型处理简单轮次、限制最大轮数、异步处理非关键步骤。面试时答出“平均延迟好看没用，长尾延迟才是用户体感”会很加分。</p>
+
+<h3>9. 降级四级与启动预热</h3>
+<p>降级策略分四级，触发条件是成本超限、延迟超时、错误率过高：<strong>① 模型降级</strong>——高端模型不可用或用尽预算时切换到中端模型；<strong>② 功能降级</strong>——关闭非核心功能（如子 Agent 检查），只保证核心流程；<strong>③ 频率降级</strong>——从实时降到定时批处理；<strong>④ 人工接管</strong>——系统无法继续时，保存状态并通知人工。</p>
+<p>启动预热有必要，尤其在四处：<strong>Skill 加载</strong>（项目 Skill 可能需要从存储加载并预处理）、<strong>上下文构建</strong>（RAG 索引可能需要预热）、<strong>连接池</strong>（工具连接的连接池需要初始化）、<strong>模型缓存</strong>（系统提示词可以预计算并缓存）。预热让 Loop 从第一轮就高效运行，而不是第一轮全花在冷启动上。</p>
+
+<h3>10. ROI 框架与“值不值得搭 Loop”决策框架</h3>
+<p>ROI 评估框架：<strong>投入</strong> = 搭建时间 + 运行成本（Token + API）+ 维护成本；<strong>产出</strong> = 节省的人力时间 × 人力成本 + 质量提升价值；<strong>频次</strong>越高 ROI 越高；<strong>复杂度</strong>越高、越容易出错，Loop 的边际价值越高。一次性任务 ROI 为负，高频复杂任务 ROI 最高。</p>
+<p>启动成本 vs 运行成本的决策框架（面试高频，背下来）：<strong>一次性任务</strong>——不值得搭 Loop，写好 Prompt 即可；<strong>低频重复任务</strong>（每周几次）——可以搭简单 Loop；<strong>高频重复任务</strong>（每天多次）——值得投入搭建完整 Loop；<strong>持续运行任务</strong>（24/7）——必须搭 Loop，成本摊薄最明显。Loop 的搭建成本是靠多次运行摊回来的，频次是唯一的摊薄杠杆。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：结构化日志 + 链路 ID + 状态快照（JSONL 落盘）</h3>
+<pre><code>import json, time, uuid
+from pathlib import Path
+
+class LoopTracer:
+    """最小可用的 Loop 追踪器：每轮记一条 JSON 日志，定期存状态快照。"""
+
+    def __init__(self, log_path="loop_trace.jsonl"):
+        self.trace_id = str(uuid.uuid4())[:8]  # 一次执行一个链路 ID
+        self.log_path = Path(log_path)
+        self.round = 0
+        self.total_tokens = 0
+        self.history = []  # 完整 Thought/Action/Observation 历史
+
+    def log_round(self, thought, action, observation, tokens, seconds):
+        self.round += 1
+        self.total_tokens += tokens
+        self.history.append({"thought": thought, "action": action,
+                             "observation": observation})
+        record = {"trace_id": self.trace_id, "round": self.round,
+                  "action": action, "tokens": tokens,
+                  "seconds": round(seconds, 2),
+                  "total_tokens": self.total_tokens}
+        with self.log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    def snapshot(self, done_tasks, progress, artifacts):
+        """状态快照：轮次 / 历史 / 已完成任务 / 进度 / 中间产物 / 元信息。"""
+        snap = {"trace_id": self.trace_id, "round": self.round,
+                "history": self.history, "done_tasks": done_tasks,
+                "progress": progress, "artifacts": artifacts,
+                "total_tokens": self.total_tokens,
+                "saved_at": time.strftime("%Y-%m-%d %H:%M:%S")}
+        Path(f"snapshot_{self.trace_id}.json").write_text(
+            json.dumps(snap, ensure_ascii=False, indent=2), encoding="utf-8")
+        return snap
+
+tracer = LoopTracer()
+tracer.log_round("先读报错", "read_log", "TypeError: 第 12 行", 1200, 1.8)
+tracer.log_round("修复类型", "edit_file", "已修改 main.py", 2400, 2.5)
+tracer.snapshot(["读报错"], "修复中", ["main.py"])
+print("trace_id:", tracer.trace_id, "| total_tokens:", tracer.total_tokens)</code></pre>
+<h3>示例 2：预算守卫 + 走偏检测（跑偏了自动熔断）</h3>
+<pre><code>import time
+
+class BudgetGuard:
+    """预算五维里的三维：Token 上限、最大轮数、总超时。超了就停。"""
+
+    def __init__(self, max_tokens=20000, max_rounds=10, max_seconds=600):
+        self.max_tokens, self.max_rounds = max_tokens, max_rounds
+        self.max_seconds, self.start = max_seconds, time.time()
+        self.tokens, self.rounds = 0, 0
+
+    def check(self, tokens_used):
+        self.tokens += tokens_used
+        self.rounds += 1
+        if self.tokens > self.max_tokens:
+            return False, "Token 超限"
+        if self.rounds > self.max_rounds:
+            return False, "轮数超限"
+        if time.time() - self.start > self.max_seconds:
+            return False, "总超时"
+        return True, "ok"
+
+
+class DriftDetector:
+    """走偏检测四法中的两法：重复行为 + 进度停滞。"""
+
+    def __init__(self, repeat_limit=3, stall_limit=3):
+        self.recent_actions, self.stall = [], 0
+        self.repeat_limit, self.stall_limit = repeat_limit, stall_limit
+
+    def check(self, action, made_progress):
+        self.recent_actions.append(action)
+        self.stall = 0 if made_progress else self.stall + 1
+        if len(self.recent_actions) >= self.repeat_limit and \
+                len(set(self.recent_actions[-self.repeat_limit:])) == 1:
+            return False, f"重复行为：连续 {self.repeat_limit} 次 {action}"
+        if self.stall >= self.stall_limit:
+            return False, f"进度停滞：连续 {self.stall_limit} 轮无进展"
+        return True, "ok"
+
+
+guard, drift = BudgetGuard(max_tokens=5000, max_rounds=6), DriftDetector()
+for action, progressed, tokens in [("read_log", True, 800),
+                                   ("edit_file", True, 1200),
+                                   ("run_tests", False, 900),
+                                   ("run_tests", False, 900),
+                                   ("run_tests", False, 900)]:
+    ok, msg = guard.check(tokens)
+    ok2, msg2 = drift.check(action, progressed)
+    print(f"轮次 {guard.rounds}: guard={msg} | drift={msg2}")
+    if not (ok and ok2):
+        print("熔断：停止循环，转人工介入"); break</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，打开生成的 <code>loop_trace.jsonl</code> 和快照文件，确认每条日志都带同一个 <code>trace_id</code>。<br>
+2. 给示例 2 的 <code>DriftDetector</code> 加上另外两法：质量阈值（连续多轮评估分低于阈值）和预算消耗率（Token 消耗过快但产出有限），各写一个判断分支。<br>
+3. 给 <code>BudgetGuard</code> 加一个 80% 预算预警：达到阈值时先打印警告、只在 100% 时才返回 False，对应“预算预警 + 硬性上限”两项。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Loop 可观测性最大的挑战根源是什么？</strong></p><button data-i="0">日志量太大，存不下</button><button data-i="1">链路是动态生成的、非确定性的、跨多个 Agent 的，传统 APM 监控的是确定性链路</button><button data-i="2">模型 API 不提供日志接口</button><div class="ans">解析：选 B。链路不可预测、跨 Agent 追踪难、状态难重建，都是非确定性带来的。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 日志设计五要点中，“一次 Loop 执行分配唯一 ID，所有子 Agent 日志都带上它”指的是？</strong></p><button data-i="0">状态快照</button><button data-i="1">结构化日志</button><button data-i="2">链路 ID</button><div class="ans">解析：选 C。链路 ID 是把散落在各子 Agent 的日志拼成一条链的唯一办法。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 以下哪项不属于走偏检测四法？</strong></p><button data-i="0">检查代码是否通过 lint</button><button data-i="1">进度停滞检测</button><button data-i="2">预算消耗率</button><div class="ans">解析：选 A。四法是进度停滞、重复行为、质量阈值、预算消耗率；lint 是验证手段，不是走偏信号。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 预算控制五维中，唯一和“并行规模”直接相关的维度是？</strong></p><button data-i="0">时间</button><button data-i="1">子 Agent 数量</button><button data-i="2">工具调用次数</button><div class="ans">解析：选 B。五维是 Token 消耗、步数/轮数、时间、工具调用次数、子 Agent 数量。</div></div>
+<div class="q" data-answer="2"><p><strong>5. Token 优化六策中，性价比通常最高的一策是？</strong></p><button data-i="0">换更贵的模型</button><button data-i="1">把所有历史都塞进上下文</button><button data-i="2">历史压缩：用摘要替代完整历史</button><div class="ans">解析：选 C。历史越长每轮输入 Token 越贵，压缩历史直接砍掉最大头。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 按启动 vs 运行成本决策框架，一次性任务应该怎么做？</strong></p><button data-i="0">不值得搭 Loop，写好 Prompt 即可</button><button data-i="1">必须搭完整 Loop</button><button data-i="2">搭简单 Loop 再慢慢完善</button><div class="ans">解析：选 A。Loop 的搭建成本靠多次运行摊回，一次性任务 ROI 为负；低频搭简单 Loop、高频搭完整 Loop、24/7 必须搭 Loop。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Loop 的可观测性面临哪些挑战？</summary><p>传统 APM 监控确定性请求链路，Loop 的链路是动态生成的、非确定性的、跨多个 Agent 的。挑战有四：链路不可预测，每次执行路径不同；跨 Agent 追踪难，子 Agent 间调用关系复杂；状态难以重建，跑了 47 轮后很难回溯当时状态；源材料还提到当下没有成熟的 Loop Observability 方案（材料原话，以最新生态为准）。</p></details>
+<details><summary>Q2：如何设计 Loop 的日志和追踪系统？</summary><p>五要点：每轮记录轮次、输入、输出、工具调用、耗时、Token 消耗；状态快照定期保存完整状态便于复现；结构化日志用 JSON 便于检索；链路 ID——一次执行一个唯一 ID，所有子 Agent 日志都带上；关键指标包括轮数、成功率、平均耗时、Token 消耗趋势。状态快照要含轮次、完整对话历史、已完成子任务、当前进度、中间产物和元信息六项。</p></details>
+<details><summary>Q3：Loop 运行中如何发现“已经在错误方向上努力了很久”？</summary><p>四法：进度停滞检测（连续 N 轮无实质进展）；重复行为检测（反复调同一工具、输出相似内容）；质量阈值（评估 Agent 连续多轮低分）；预算消耗率（Token 消耗过快但产出有限）。检测到异常后要触发熔断或人工告警——只检测不动作等于没检测。</p></details>
+<details><summary>Q4：成本可预算如何实现？Token 消耗怎么优化？</summary><p>成本可预算五项：成本构成清晰、实时成本追踪、预算预警、硬性上限、成本分摊。Token 优化六策：历史压缩、选择性上下文、结构化输出、Prompt 缓存、模型选择、减少轮数。其中历史压缩性价比最高，因为历史越长每轮输入 Token 越贵。</p></details>
+<details><summary>Q5：什么任务值得搭 Loop，什么不值得？</summary><p>看频次摊薄：一次性任务不值得，写好 Prompt 即可；低频重复（每周几次）可搭简单 Loop；高频重复（每天多次）值得搭完整 Loop；持续运行（24/7）必须搭 Loop。ROI 框架是：投入 = 搭建时间 + 运行成本 + 维护成本，产出 = 节省人力时间 × 人力成本 + 质量提升价值，频次越高、任务越复杂越容易出错，ROI 越高。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>Loop 上线第一天，先把三样东西接好再谈别的：结构化日志 + 链路 ID、预算硬上限、走偏检测的熔断动作。没有这三样，Loop 在生产上跑就是裸奔——出问题你既不知道它跑偏了，也拦不住它烧钱。</p>
+<p><strong>简历讲法：</strong>别写“负责 Loop 监控”，写“给 Loop 接了结构化日志与链路 ID追踪：每轮记录 Token 与耗时、定期存状态快照，上线走偏检测（停滞/重复/低分/预算消耗率）触发熔断，成本超限自动终止”。前者是名词，后者是可追问的工程动作。</p>
+<p><strong>明日预告：</strong>Day 21 讲 Loop 生产与实战：生产环境五大独特失败模式、上线前六层测试、人工介入流程、从零设计 Loop 的技术选型，以及十个实战案例速览。</p>
+</div>
+<div class="nav"><span><a href="day19.html">← Day 19</a></span><span><a href="day21.html">Day 21 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

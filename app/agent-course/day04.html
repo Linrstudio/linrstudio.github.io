@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4：编排框架：LangChain Agent 与 LangGraph 状态机 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 4 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 4：编排框架：LangChain Agent 与 LangGraph 状态机</h1>
+<p>Day 2、Day 3 讲的是推理范式——ReAct、Plan-and-Execute、Reflexion、LATS，那是 Agent「怎么想」。今天讲的是工程落地——LangChain Agent 与 LangGraph，那是 Agent「怎么跑起来」。一句话分清两者：LangChain Agent 是一套现成的工具调用循环，拿来就能用；LangGraph 是把工作流画成一张图，流程越复杂越能看出它的好。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 210" width="100%" role="img" aria-label="LangGraph 条件边示意图：planner 按状态路由到 exec 或 human，exec 失败可回环到 planner">
+<rect x="20" y="20" width="120" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="80" y="47" text-anchor="middle" font-size="13" fill="#222">START</text>
+<line x1="140" y1="42" x2="196" y2="42" stroke="#0b62d6" stroke-width="2"/><polygon points="196,42 184,36 184,48" fill="#0b62d6"/>
+<rect x="196" y="20" width="140" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="266" y="47" text-anchor="middle" font-size="13" fill="#222">planner 节点</text>
+<line x1="336" y1="42" x2="392" y2="42" stroke="#0b62d6" stroke-width="2"/><polygon points="392,42 380,36 380,48" fill="#0b62d6"/>
+<rect x="392" y="20" width="140" height="44" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="2"/><text x="462" y="47" text-anchor="middle" font-size="13" fill="#222">条件边：路由</text>
+<line x1="462" y1="64" x2="462" y2="108" stroke="#d97706" stroke-width="2"/><polygon points="462,108 456,96 468,96" fill="#d97706"/>
+<rect x="392" y="108" width="140" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="462" y="135" text-anchor="middle" font-size="13" fill="#222">exec 节点</text>
+<line x1="392" y1="130" x2="240" y2="130" stroke="#0b62d6" stroke-width="2"/><polygon points="240,130 252,124 252,136" fill="#0b62d6"/>
+<rect x="100" y="108" width="140" height="44" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="170" y="135" text-anchor="middle" font-size="13" fill="#222">human 节点</text>
+<line x1="170" y1="152" x2="170" y2="178" stroke="#0b62d6" stroke-width="2"/><polygon points="170,178 164,166 176,166" fill="#0b62d6"/>
+<rect x="110" y="178" width="120" height="30" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="170" y="198" text-anchor="middle" font-size="13" fill="#222">END</text>
+<text x="560" y="47" font-size="13" fill="#222">按状态决定下一步：</text>
+<text x="560" y="67" font-size="13" fill="#222">需审核 → human</text>
+<text x="560" y="87" font-size="13" fill="#222">可执行 → exec</text>
+<text x="560" y="135" font-size="13" fill="#222">失败 → 回环到 planner</text>
+</svg>
+<h3>1. 先分清：推理范式与编排框架不是一回事</h3>
+<p>ReAct、Plan-and-Execute 是<strong>策略</strong>：Agent 每一步先想还是先做、要不要反思、要不要搜多条路。LangChain Agent、LangGraph 是<strong>工程落地方式</strong>：策略定好了，用什么代码把它跑起来、跑稳、跑出可观测的轨迹。面试时把这两层说清，比背 API 名重要得多。</p>
+<h3>2. LangChain Agent 的现代写法：create_agent</h3>
+<p>LangChain 把 LLM、提示模板、工具、记忆、解析器拼成可运行程序。Agent 在这里指：由 LLM 决定下一步调用哪个工具的循环执行体。LangChain 1.x 的现代入口是 <code>create_agent</code>：</p>
+<pre><code>from langchain.agents import create_agent
+
+agent = create_agent(model, tools, system_prompt="...")
+result = agent.invoke({"messages": [{"role": "user", "content": "帮我算 21+21"}]})</code></pre>
+<p>它跑的循环和你 Day 2 手写过的 ReAct 循环本质上是同一个：<strong>模型决策 → 工具执行 → 结果回填 → 再决策</strong>，直到模型给出最终答案，或者触到最大迭代次数。框架替你标准化了三件事：迭代限制、解析错误处理、中间消息结构，你只需要操心工具和提示词。</p>
+<h3>3. 旧写法已废弃：AgentExecutor 与 create_react_agent</h3>
+<p>很多旧教程、旧面试题里会出现 <code>AgentExecutor</code>：它就是上面那个循环的旧版执行器。但在 LangChain 1.x 里 <strong>AgentExecutor 已被删除</strong>，不要再写；<code>create_react_agent</code> 也已 deprecated，同样不要用。新代码统一用 <code>create_agent</code>。面试时如果对方问起 AgentExecutor，答它的循环本质即可，再补一句“1.x 已废弃，现用 create_agent”——这比背旧 API 更能证明你跟得上版本。具体 API 以官方最新文档为准。</p>
+<h3>4. 工具描述是 Agent 的接口设计</h3>
+<p>Agent 靠工具的描述（name、description、参数 schema）做两件事：<strong>选哪个工具</strong>、<strong>怎么填参数</strong>。描述不清，模型就会错选工具或幻觉参数。好的描述要包含：用途、输入输出、边界条件、示例。记住一句话：工具描述就是 LLM 与你的代码之间的接口文档，写工具时先写描述，再写实现。</p>
+<h3>5. LangGraph 状态机：把工作流画成图</h3>
+<p>如果把 LangChain Agent 看成“一套默认的循环”，LangGraph 就是把 Agent 工作流画成一张图：<strong>节点</strong>是处理步骤（调用模型、调工具、审核），<strong>边</strong>是流转关系。复杂业务往往需要分支、循环、人工确认——用图更直观。三个零件和 LangGraph 课里讲的一致：</p>
+<ul>
+<li><strong>节点（Node）</strong>：一个函数，读共享状态，返回对状态的部分更新。</li>
+<li><strong>边（Edge）</strong>：A → B，表示执行完 A 后执行 B。</li>
+<li><strong>条件边（Conditional Edge）</strong>：根据当前状态决定下一步去哪个节点，例如失败去修复、需要审核去 human 节点、否则继续执行。</li>
+</ul>
+<h3>6. 共享状态与 reducer 合并</h3>
+<p>状态通常用 <code>TypedDict</code> 定义 schema，全图共享。节点函数只返回它改了的那一部分更新，图按 reducer 把更新合并进旧状态。设计状态时要谨慎：多个节点写同一字段可能冲突，需要 schema 约束、明确每个节点的写入职责，并选好归约策略——是<strong>追加（append）</strong>还是<strong>替换（replace）</strong>。消息列表一般追加，路由标记一般替换。</p>
+<h3>7. 两者选型对比</h3>
+<table>
+<tr><th>维度</th><th>LangChain Agent（create_agent）</th><th>LangGraph</th></tr>
+<tr><td>控制流</td><td>偏固定循环：决策 → 工具 → 回填</td><td>显式图：分支、循环、回环更自然</td></tr>
+<tr><td>可观测性</td><td>日志为主</td><td>结构化的节点轨迹，每步状态可导出</td></tr>
+<tr><td>人机协同</td><td>需要额外封装</td><td>容易加 human 审核节点</td></tr>
+<tr><td>适用</td><td>标准工具 Agent，快速落地</td><td>复杂业务流程：审查、重试拓扑、并行任务</td></tr>
+</table>
+<p>选型口诀：流程是“单一工具循环”就用 create_agent，别过度设计；流程出现<strong>多阶段流水线、条件路由、回环修复、人工审核、并行任务</strong>中的任何一个，就该上 LangGraph。多 Agent 框架（AutoGen、CrewAI 等）是另一个话题，留给 Day 16。</p>
+<div class="warn"><strong>容易踩的坑：</strong>一是工具描述写得像内部变量名（比如“tool1：处理数据”），模型根本选不对；二是 LangGraph 节点返回整个新状态，把别的字段覆盖掉——节点只返回它改的那一部分。其余的坑（步数上限、解析失败）框架都替你兜了底，但这两个坑框架兜不住。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：create_agent 跑一个带工具的 Agent（LangChain 1.x 现代写法）</h3>
+<pre><code>from langchain.agents import create_agent
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+
+# 工具描述就是接口文档：用途、输入、边界都要写清
+@tool
+def add(a: float, b: float) -> float:
+    """计算两个数的和。输入两个数字，返回它们的和。"""
+    return a + b
+
+@tool
+def get_weather(city: str) -> str:
+    """查询指定城市的当前天气。输入城市名，返回天气简述。"""
+    return f"{city}：多云，22°C，降水概率 30%"
+
+model = ChatOpenAI(model="gpt-4o-mini")  # 需配置 API Key 环境变量
+agent = create_agent(
+    model,
+    tools=[add, get_weather],
+    system_prompt="你是一个助手。需要计算或查天气时调用工具，不要自己编数字。",
+)
+result = agent.invoke({"messages": [{"role": "user", "content": "上海天气怎么样？顺便算 21+21"}]})
+print(result["messages"][-1].content)</code></pre>
+<h3>示例 2：LangGraph 状态机——条件边路由 + 失败回环（不用真实模型也能跑）</h3>
+<pre><code>from typing import TypedDict, Literal
+from langgraph.graph import StateGraph, START, END
+
+class AgentState(TypedDict):
+    task: str
+    notes: str
+    route: str  # exec / human / end
+
+def planner(state: AgentState):
+    # 节点只返回它改的那一部分更新
+    needs_review = "合同" in state["task"]
+    return {"notes": "已出计划", "route": "human" if needs_review else "exec"}
+
+def exec_node(state: AgentState):
+    return {"notes": state["notes"] + " | 已执行", "route": "end"}
+
+def human_node(state: AgentState):
+    return {"notes": state["notes"] + " | 人工已审核", "route": "end"}
+
+def route_fn(state: AgentState) -> Literal["exec", "human"]:
+    return "human" if state["route"] == "human" else "exec"
+
+graph = StateGraph(AgentState)
+graph.add_node("planner", planner)
+graph.add_node("exec", exec_node)
+graph.add_node("human", human_node)
+graph.add_edge(START, "planner")
+# 条件边：按状态决定下一步去哪个节点
+graph.add_conditional_edges("planner", route_fn, {"exec": "exec", "human": "human"})
+graph.add_edge("exec", END)
+graph.add_edge("human", END)
+app = graph.compile()
+
+print(app.invoke({"task": "审阅合同", "notes": "", "route": ""}))
+# route 走 human：{'task': '审阅合同', 'notes': '已出计划 | 人工已审核', 'route': 'end'}
+print(app.invoke({"task": "查天气", "notes": "", "route": ""}))
+# route 走 exec：{'task': '查天气', 'notes': '已出计划 | 已执行', 'route': 'end'}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 2 跑起来，再加一条回环边：exec 节点执行失败时（用 task 里含“失败”模拟）route 回 planner，最多重试 2 次——在状态里加一个 retries 计数器。<br>
+2. 把示例 1 的 get_weather 换成你自己的工具（比如查汇率、读文件），先写工具描述，再写实现，体会描述不清时模型会怎么选错。<br>
+3. 对照 Day 2 手写的 ReAct 循环，列出 create_agent 替你省掉的三个环节：迭代限制、解析错误处理、中间消息结构。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. LangChain 1.x 创建 Agent 的现代入口是？</strong></p><button data-i="0">from langchain.agents import create_agent</button><button data-i="1">AgentExecutor</button><button data-i="2">create_react_agent</button><div class="ans">解析：选 A。AgentExecutor 在 1.x 已删除，create_react_agent 已 deprecated，新代码统一用 create_agent。</div></div>
+<div class="q" data-answer="2"><p><strong>2. create_agent 跑的循环本质是什么？</strong></p><button data-i="0">模型一次输出最终答案，不调工具</button><button data-i="1">工具先跑，模型只做总结</button><button data-i="2">模型决策 → 工具执行 → 结果回填 → 再决策，直到最终答案或步数上限</button><div class="ans">解析：选 C。这就是 Day 2 手写 ReAct 循环的工程版，框架还标准化了迭代限制、解析错误处理和中间消息结构。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 工具描述为什么重要？</strong></p><button data-i="0">只是给人类看的注释，不影响运行</button><button data-i="1">模型靠描述做工具选择与填参，描述不清会错选工具或幻觉参数</button><button data-i="2">描述越短模型跑得越快</button><div class="ans">解析：选 B。工具描述是 LLM 与你的代码之间的接口文档，要包含用途、输入输出、边界条件、示例。</div></div>
+<div class="q" data-answer="0"><p><strong>4. LangGraph 里节点函数应该返回什么？</strong></p><button data-i="0">只返回它改了的那一部分更新，图按 reducer 合并进旧状态</button><button data-i="1">整个新状态</button><button data-i="2">下一个节点的函数对象</button><div class="ans">解析：选 A。返回整个新状态会把别的字段覆盖掉；消息列表一般追加，路由标记一般替换。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 条件边（Conditional Edge）是干嘛的？</strong></p><button data-i="0">给边加上颜色，方便画图</button><button data-i="1">让图跑得更快</button><button data-i="2">根据当前状态决定下一步去哪个节点，例如失败去修复、需审核去 human 节点</button><div class="ans">解析：选 C。条件边是 LangGraph 处理分支、重试、人工审核的关键机制。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 什么时候该选 LangGraph 而不是 create_agent？</strong></p><button data-i="0">任何时候，LangGraph 永远更好</button><button data-i="1">流程出现多阶段流水线、条件路由、回环修复、人工审核、并行任务时</button><button data-i="2">只需要一个工具、一次调用时</button><div class="ans">解析：选 B。单一工具循环用 create_agent 就够了，别过度设计；流程一复杂，图编排的可维护性和可观测性才显出优势。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：create_agent 的循环是怎么跑的？</summary><p>模型决策 → 工具执行 → 结果回填 → 再决策：模型先决定要不要调工具、调哪个；有工具调用就执行，把结果以 tool 消息回填进上下文；再由模型决定下一步。直到模型给出最终答案，或者触到最大迭代次数。框架标准化了迭代限制、解析错误处理和中间消息结构，开发者专注工具与提示词。</p></details>
+<details><summary>Q2：AgentExecutor 是什么？现在还能用吗？</summary><p>AgentExecutor 是 LangChain 旧版里驱动“决策 → 工具 → 回填”循环的执行器。但在 LangChain 1.x 里它已被删除，create_react_agent 也已 deprecated，现在统一用 create_agent。面试时答出循环本质，再点明版本变迁即可；具体 API 以官方最新文档为准。</p></details>
+<details><summary>Q3：什么时候选 LangGraph 而不是 LangChain Agent？</summary><p>当流程不是单一工具循环，而是需要多阶段流水线、条件路由、回环修复、人工审核节点、并行任务时，用图编排更清晰可维护。标准工具 Agent 用 create_agent 快速落地即可，图会增加不必要的复杂度。</p></details>
+<details><summary>Q4：LangGraph 的状态更新为什么要谨慎设计？</summary><p>多节点写入同一字段可能冲突。需要 schema 约束（TypedDict）、明确每个节点的写入职责、选好归约策略：消息列表一般追加（append），路由标记一般替换（replace）。节点只返回它改的那一部分更新，返回整个新状态会覆盖别的字段。</p></details>
+<details><summary>Q5：LangGraph 的条件边解决什么业务问题？</summary><p>根据中间状态动态路由：工具失败时回环重试、敏感操作走人工审核节点、不同客户等级走不同流程、执行结果不达标时回到规划节点重做。没有条件边，这些分支只能写在节点函数里的 if/else 中，流程就看不见了。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>工具描述要当接口文档来评审，写完让同事只看描述猜“这个工具是干嘛的、参数怎么填”，猜不对就重写。LangGraph 上线前先画图：节点、边、状态字段列一张表，画不出来就别写代码——流程想不清楚，代码只会更乱。</p>
+<p><strong>简历讲法：</strong>别写“会用 LangChain/LangGraph”，写“用 create_agent 落地标准工具 Agent（模型决策—工具执行—结果回填循环）；复杂审核流程改用 LangGraph 状态机，条件边做失败重试与人工审核路由，节点轨迹可观测”。前者是名词，后者是可追问的选型过程。</p>
+<p><strong>明日预告：</strong>Day 5 讲 Prompt 工程基础：Prompt 为什么能决定同一模型的表现上限、五段结构、四条设计原则，以及 Zero/One/Few-shot 与动态 Few-shot。</p>
+</div>
+<div class="nav"><span><a href="day03.html">← Day 3</a></span><span><a href="day05.html">Day 5 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

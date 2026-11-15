@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 13：工具调用与 MCP：Function Calling 全流程与协议 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 13 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 13：工具调用与 MCP：Function Calling 全流程与协议</h1>
+<p>前面十二课，Agent 还停留在“脑子里想”：推理、检索、规划，都是在模型内部完成。从今天起，Agent 长出了“手”——它能查实时天气、算表达式、读数据库、调外部 API。这只手的名字叫 Function Calling：模型只负责决策“调哪个工具、传什么参数”，真正执行的是你的应用代码。今天把这个全流程跑通，再认识让工具可以跨产品复用的 MCP 协议。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="Function Calling 四步流程：用户提问，模型返回 tool_calls，应用执行函数，tool 消息回填，模型作答">
+<rect x="6" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="68" y="55" text-anchor="middle" font-size="12" fill="#222">用户提问</text><text x="68" y="72" text-anchor="middle" font-size="12" fill="#222">+ tools 定义</text>
+<line x1="130" y1="59" x2="154" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="154,59 142,53 142,65" fill="#0b62d6"/>
+<rect x="154" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="216" y="55" text-anchor="middle" font-size="12" fill="#222">模型返回</text><text x="216" y="72" text-anchor="middle" font-size="12" fill="#222">tool_calls</text>
+<line x1="278" y1="59" x2="302" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="302,59 290,53 290,65" fill="#0b62d6"/>
+<rect x="302" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="55" text-anchor="middle" font-size="12" fill="#222">应用执行</text><text x="364" y="72" text-anchor="middle" font-size="12" fill="#222">真实函数</text>
+<line x1="426" y1="59" x2="450" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="450,59 438,53 438,65" fill="#0b62d6"/>
+<rect x="450" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="512" y="55" text-anchor="middle" font-size="12" fill="#222">tool 消息回填</text><text x="512" y="72" text-anchor="middle" font-size="12" fill="#222">带 tool_call_id</text>
+<line x1="574" y1="59" x2="598" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="598,59 586,53 586,65" fill="#0b62d6"/>
+<rect x="598" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="660" y="55" text-anchor="middle" font-size="12" fill="#222">模型综合</text><text x="660" y="72" text-anchor="middle" font-size="12" fill="#222">结果作答</text>
+<text x="364" y="115" text-anchor="middle" font-size="13" fill="#222">模型不再返回 tool_calls 就结束；多轮调用要设轮次上限，防死循环</text>
+</svg>
+<h3>1. Function Calling 是什么：模型只决策，应用来执行</h3>
+<p>Function Calling（函数调用）指：大模型在生成回复时，不是直接输出最终答案，而是先输出“要调用哪个外部函数、用什么参数”的结构化指令；宿主程序（你的 Python 服务）真正执行该函数，再把结果喂回模型，形成多轮对话闭环。这样模型可以查实时数据、算复杂表达式、操作数据库，突破“仅靠训练记忆回答”的限制。</p>
+<p>记住分工线：<strong>模型不直接执行代码</strong>，执行权在应用层。这条线的好处是安全：鉴权、审计、限流都能放在你自己的代码里做，而不是寄希望于模型自觉。和“让模型在纯文本里写一句 call foo(1,2)”相比，Function Calling 用机器可解析的 JSON 结构化格式，框架能自动解析与校验，不用从闲聊文本里抠指令。</p>
+<p>一个常被问到的区分：<strong>Function Calling 是 OpenAI 的命名，强调“函数”；Tool Calling 是行业通用术语</strong>，范围更广，可以包含 API、数据库查询、代码执行等。面试时两个词可以互换着说，但要知道这个来历。</p>
+<h3>2. OpenAI 四步流程：一次完整的工具调用长什么样</h3>
+<p>以 OpenAI Chat Completions 为例，完整一轮是四步：</p>
+<p><strong>第一步，首轮请求</strong>：把 <code>system</code> + <code>user</code> + <code>tools</code>（函数元数据数组）一起发给模型；模型可能返回带 <code>tool_calls</code> 的 <code>assistant</code> 消息。每一项 <code>tool_calls</code> 包含 <code>id</code>、<code>function.name</code>、<code>function.arguments</code>（JSON 字符串）。</p>
+<p><strong>第二步，应用执行</strong>：你的代码按 <code>name</code> 路由到 Python 函数，把 <code>arguments</code> 反序列化后调用。</p>
+<p><strong>第三步，次轮回填</strong>：把每条工具结果作为 <code>role=tool</code> 的消息追加到对话里，再次请求模型生成面向用户的自然语言答案。</p>
+<p><strong>第四步，循环直到收尾</strong>：模型可能还要再调一轮工具（先查列表再查详情），直到它不再请求工具，或者达到你设的轮次上限。</p>
+<p>三个细节决定这套流程能不能在生产跑：<strong>tool_call_id 对应</strong>——每条 <code>tool</code> 消息必须带上与某次 <code>tool_calls</code> 条目相同的 <code>id</code>，多并行调用时才不错配；<strong>并行调用</strong>——模型一次返回多个 <code>tool_calls</code> 时可以并行执行，但要注意线程安全与写操作的副作用；<strong>流式分片拼接</strong>——流式响应里 <code>tool_calls</code> 可能分片到达，<code>arguments</code> 需要增量拼接，拼完整才能 <code>json.loads</code>。</p>
+<h3>3. tool_choice：四种控制方式</h3>
+<p><code>tool_choice</code> 控制模型“要不要调工具”：<code>auto</code> 由模型自己决定；<code>none</code> 禁止调用工具；<code>required</code> 强制至少调用一次；也可以指定某个 <code>function</code>，强制调用那一个工具。典型用途是调试、合规场景（必须走某工具）或 A/B 对照。默认值一般是 <code>auto</code>，但“必须查库才能回答”的场景下，用 <code>required</code> 能拦住模型凭记忆编答案。</p>
+<h3>4. JSON Schema：参数描述的规矩</h3>
+<p>每个可调用函数在 API 里描述为：<code>type: function</code>，<code>function.name</code>（唯一标识），<code>function.description</code>（给模型看的自然语言说明），<code>function.parameters</code>（符合 JSON Schema 的对象，描述参数类型、是否必填、枚举等）。</p>
+<p>用 JSON Schema 有三个好处：<strong>跨语言标准</strong>，各 SDK 统一；<strong>可自动校验</strong>，运行时用 <code>jsonschema</code> 库就能拦住脏参数；<strong>给模型当字段说明</strong>，减少胡编参数名。必填字段用 <code>required: ["a", "b"]</code> 表示，同时在 <code>properties</code> 里声明各字段 <code>type</code>。复杂结构可用 <code>object</code>、<code>array</code>、<code>enum</code>、<code>oneOf</code>，但 Schema 过于复杂会增加模型填错概率，不如拆成多个小函数。Schema 过长还会占 token，这是 Day 14 工具路由要解决的问题之一。</p>
+<h3>5. 模型怎么选工具：概率，不是 if-else</h3>
+<p>模型并没有运行一个真正的 if-else 规则引擎。它是基于训练与对齐后，在看到用户意图加工具描述时，输出概率最高的结构化动作——等价于在“续写”空间里，工具描述把某些 token 序列（函数名、JSON 参数）的概率抬高了。</p>
+<p>这意味着三件事：<strong>描述质量决定区分度</strong>，两个工具功能重叠时模型容易混淆；<strong>用户表述触发语义匹配</strong>，比如“明天天气”更可能触发 <code>get_weather</code>；<strong>系统提示可以约束</strong>，比如“涉及计算必须用 <code>calculate</code>”。部分实现还会做两阶段：先用小模型或分类器选工具，再让大模型填参——这就是 Day 14 的工具路由。</p>
+<p>模型选错工具怎么办？工程上的标准答案是五条：优化 <code>description</code> 与示例边界；用工具路由缩小候选集；执行前做规则校验或二次确认；对高风险操作要求人类确认；记录 bad case 做 prompt 迭代。底线是：<strong>不能假设模型 100% 正确</strong>。</p>
+<h3>6. 参数校验四层：脏参数进不了业务</h3>
+<p>参数提取是把 <code>tool_calls[].function.arguments</code> 的 JSON 字符串 <code>json.loads</code> 出来；校验要分四层做：</p>
+<p><strong>语法层</strong>：<code>json.loads</code> 能不能解析——模型可能输出不完整 JSON（流式截断）或多余字段；<strong>结构层</strong>：<code>jsonschema.validate</code> 校验类型、范围、枚举，服务端可用 <code>additionalProperties: false</code> 并剥离未知键；<strong>语义层</strong>：业务函数校验，比如用户 ID 是否存在、日期是否合理，数字和日期还要做规范化（时区）；<strong>安全层</strong>：鉴权与输入清洗（Day 14 展开）。校验失败的策略：把错误信息返回给模型“请重试”，或降级为只读工具。</p>
+<h3>7. 工具描述与返回值：写给模型看的说明书</h3>
+<p>在应用内部，一个 Tool 等于可执行能力单元：名称、描述、参数规范、处理函数。注册就是在 Agent 启动时把工具对象加入注册表（字典或列表），运行时由路由器或模型选择并派发。Tool 和普通 Python 函数的区别在于多了<strong>面向模型的元数据</strong>（描述、Schema）和<strong>统一执行接口</strong>（日志、超时、权限）。</p>
+<p><code>description</code> 是模型判断是否调用、如何填参的主要依据，要写五样东西：<strong>功能一句话、何时用、何时不要用、参数含义与格式、返回值语义</strong>（如果影响后续推理）。“何时不要用”尤其重要——它减少误触发，在工具功能重叠时是线上质量的关键。两个工具描述语义重叠时，要加一句“优先使用 A 当……，否则 B”。描述太长怎么办？分层：核心描述保持短，细节放 <code>parameter.description</code>，超大工具集用路由先筛选。</p>
+<p>返回值同样有规矩：工具结果会作为 <code>tool</code> 消息进入上下文，要<strong>稳定、可解析</strong>，优先 JSON 字符串，错误用统一结构 <code>{"error": "..."}</code>，便于模型纠错。超大结果不能直接塞——比如工具返回 10MB 日志，正确做法是截断加摘要、写入对象存储返回链接、提供 <code>grep_in_log</code> 这类缩小工具，或者向量索引只检索相关片段。二进制内容要转成文本描述或 URL，不要直接塞原始字节。</p>
+<h3>8. 工具冲突三类：语义、并发、依赖</h3>
+<p>工具一多，冲突就来了。源材料把冲突分成三类，每类有固定的解法：</p>
+<p><strong>语义冲突</strong>：两个工具都能完成同一件事。本质是功能重叠，解法是为每个工具预先配置优先级（业务重要性）和历史成功率（可靠性），冲突时计算加权得分，动态选择最优工具。</p>
+<p><strong>并发冲突</strong>：同时调用写操作。写操作必须互斥，解法是加锁或队列化：加锁适合短时间操作，队列化适合长耗时或需要顺序保证的场景，两者可以结合实现幂等控制。</p>
+<p><strong>依赖冲突</strong>：B 依赖 A 的结果。解法是把工具调用建模为 DAG（有向无环图）：节点是工具调用，边是数据依赖，<strong>拓扑排序</strong>确保所有依赖在前置任务完成后才执行，避免“等待死锁”或“结果缺失”。DAG 与拓扑排序是 Day 14 编排部分的核心，面试高频。</p>
+<p>三类冲突之上是统一的管理方式：<strong>工具注册中心（Tool Registry）</strong>——每个工具有唯一 ID、名称、描述、参数 Schema、优先级，注册、发现、冲突处理都在这里收口。</p>
+<h3>9. MCP 协议：工具的“USB-C”</h3>
+<p>MCP（Model Context Protocol）是由 Anthropic 推动的开放标准，用于在 AI 应用（Host）与外部数据源或工具（MCP Server）之间建立统一、可插拔的通信方式。可以理解为“AI 侧的 USB-C”：一次实现 Server，多个客户端（桌面应用、IDE、自研 Agent）可复用。协议定义了能力发现、资源读取、工具调用、提示模板等消息格式与生命周期，目标是把“每个产品各写一套插件”变成“标准协议加多实现”。</p>
+<p>核心组件有三个：<strong>MCP Server</strong>——暴露工具、资源、提示的实现进程（比如连接 GitHub、数据库）；<strong>MCP Client</strong>——运行在 Host 内，与 Server 建立会话，转发模型侧请求与结果，并把 Server 的工具映射为模型可用的工具列表（与 Function Calling 衔接）；<strong>Transport</strong>——传输层，常见 <strong>stdio</strong>（子进程标准输入输出，适合本地子进程）与 <strong>HTTP/SSE</strong>（适合远程服务）。</p>
+<p>MCP 和 Function Calling 不是替代关系，而是<strong>互补</strong>：Function Calling 解决“模型怎么表达调用”，是单次 API 层面的能力；MCP 解决“工具能力怎么暴露与连接”，是系统级协议。Host 常常把 MCP 工具转成 FC 的 <code>tools</code> 定义给模型——模型侧用 FC，工具侧来自 MCP。OpenAI 场景下你手写 <code>run_tool</code>；MCP 下 Client 把远端或子进程 Server 的工具列表拉平，调用时按协议发 RPC，结果再转成 <code>tool</code> 消息。Host 逻辑你还是要写，但工具实现可以独立进程、独立语言，工具崩溃也不拖垮主进程。</p>
+<pre><code># 需要: pip install mcp
+# 以下为概念示例，包名与 API 请以官方文档为准
+
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    FastMCP = None  # 环境未安装时仅作结构说明
+
+if FastMCP:
+    mcp = FastMCP("demo")
+
+    @mcp.tool()
+    def add(a: int, b: int) -> int:
+        """返回两个整数之和。"""
+        return a + b
+
+    # 通常以 mcp.run(transport="stdio") 由 Host 拉起子进程</code></pre>
+<p>不用 FastMCP 也可以手写 Server 加 stdio，核心是三件事：声明工具列表、处理 <code>tools/call</code> 类请求、返回结构化内容。面试讲清“进程边界加 JSON-RPC 风格消息”就能得分。注意区分：OpenAPI 面向通用 HTTP 客户端；MCP 面向 AI Host 与模型工具循环，带会话、资源、提示等 AI 原生语义。</p>
+<p>企业为什么愿意接 MCP，而不是每个业务线自己写 Function？四个价值：<strong>治理</strong>——工具集中在 Server，便于审计、版本与权限；<strong>复用</strong>——数据中台、工单、内部 Wiki 各做一个 Server，多产品接入；<strong>安全边界</strong>——敏感系统只对内网 Server 开放，模型不直连数据库；<strong>合规</strong>——在 Server 侧落日志与审批，比散落在每个 Agent 代码里更可控。换句话说：降低重复建设、统一安全与观测、加快试点（换模型不换工具链）、利于平台组与业务组分工。</p>
+<div class="warn"><strong>容易踩的坑：</strong>一是以为模型在“执行”代码——模型只输出调用意图，执行、鉴权、审计全在你这边，安全责任推不给模型；二是把密钥或敏感信息放进工具描述或返回值——描述会进模型上下文，返回值也会，密钥一旦进去就等于泄露；三是忘记轮次上限——多轮工具调用没有上限，逻辑一错就是无限循环烧 token。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：OpenAI Function Calling 四步循环（源材料 §1.6 精简版）</h3>
+<pre><code>import json
+from openai import OpenAI
+
+# 工具定义：name + description + parameters(JSON Schema)
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "查询指定城市在某日期的天气。用户只说「今天」时，请换算为具体日期再调用。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string", "description": "城市名，中文或英文"},
+                    "date": {"type": "string", "description": "日期 YYYY-MM-DD"},
+                },
+                "required": ["city"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
+
+def get_weather(city, date=None):
+    # 假实现：真实项目里对接天气 API
+    return {"city": city, "date": date or "today", "condition": "晴", "temp_c": 22}
+
+def run_tool(name, arguments):
+    # 第 1 层校验：语法层 json.loads；第 2 层可用 jsonschema.validate 做结构校验
+    args = json.loads(arguments or "{}")
+    if name == "get_weather":
+        return json.dumps(get_weather(**args), ensure_ascii=False)
+    raise ValueError(f"unknown tool: {name}")
+
+def chat_with_tools(user_message):
+    client = OpenAI()  # 需设置环境变量 OPENAI_API_KEY
+    messages = [
+        {"role": "system", "content": "你是助手，需要数据时调用工具，不要编造天气。"},
+        {"role": "user", "content": user_message},
+    ]
+    for _ in range(5):  # 轮次上限：防死循环
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+        )
+        msg = resp.choices[0].message
+        messages.append(msg.model_dump())
+        if not msg.tool_calls:
+            return msg.content or ""
+        for tc in msg.tool_calls:  # 多个 tool_calls 可并行执行
+            try:
+                result = run_tool(tc.function.name, tc.function.arguments)
+            except Exception as e:
+                result = json.dumps({"error": str(e)}, ensure_ascii=False)
+            # tool 消息必须带 tool_call_id，与某次 tool_calls 条目一一对应
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
+    return "超过最大工具调用轮次"
+
+if __name__ == "__main__":
+    print(chat_with_tools("北京明天天气怎么样？"))</code></pre>
+<p>模型名以官方最新文档为准。注意三处：循环上限 5 轮、<code>tool_call_id</code> 对应、错误也用统一的 <code>{"error": ...}</code> 结构回填给模型，让它有机会纠错重试。</p>
+<h3>示例 2：LangChain 1.x 里定义工具（@tool + create_agent）</h3>
+<pre><code>from typing import Literal
+from langchain_core.tools import tool
+
+@tool
+def search_product(
+    query: str,
+    category: Literal["book", "electronics", ""] = "",
+) -> str:
+    """在电商站内搜索商品。用户要找商品、比价、看库存时用；不要用于闲聊。
+
+    Args:
+        query: 搜索关键词
+        category: 可选类目过滤，不知道则留空
+    """
+    return f"[dummy] results for {query!r} in {category or 'all'}"
+
+# 不接模型也能跑：直接调用工具验证逻辑
+print(search_product.invoke({"query": "降噪耳机"}))
+
+# 接入 Agent（LangChain 1.x）：用 create_agent
+# 注意：源材料注释里的 create_react_agent 是旧写法，已 deprecated，不要再用；
+# AgentExecutor 在 1.x 已删除，也不要用。
+from langchain.agents import create_agent
+
+# agent = create_agent(llm, tools=[search_product])
+# 其中 llm 是你初始化好的聊天模型；包名与 API 请以官方文档为准</code></pre>
+<p><code>@tool</code> 会从函数签名推断参数 Schema、从 docstring 推断描述，开发快；需要复杂 Schema 或自定义校验时，改用 <code>StructuredTool</code> 更可控。docstring 里那句“不要用于闲聊”不是客套——它就是第 7 节说的“何时不要用”，直接决定模型会不会误触发。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑通示例 1，再把 <code>get_weather</code> 换成你自己的工具（比如查快递、查汇率的假实现），description 里写清“何时用、何时不要用”。<br>
+2. 把 <code>tool_choice</code> 改成 <code>"none"</code> 再问一次天气，对比模型回答有什么不同；再改成 <code>"required"</code> 看效果。<br>
+3. 故意在 <code>run_tool</code> 里去掉异常处理，传一段坏 JSON（比如 <code>"{bad"</code>）看看会发生什么，再把校验加回去——体会四层校验里语法层的作用。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Function Calling 里，真正执行函数的是谁？</strong></p><button data-i="0">大模型自己执行</button><button data-i="1">宿主应用（你的 Python 服务）解析 tool_calls 后执行</button><button data-i="2">MCP Server 自动执行</button><div class="ans">解析：选 B。模型只负责决策与参数，执行权在应用层，这样便于鉴权、审计、限流。</div></div>
+<div class="q" data-answer="2"><p><strong>2. tool_call_id 是干嘛的？</strong></p><button data-i="0">给工具调用计费用的编号</button><button data-i="1">模型的会话 ID</button><button data-i="2">把每条 tool 结果与某次 tool_calls 中的条目一一对应，支持并行多个调用不错配</button><div class="ans">解析：选 C。每条 role=tool 的消息必须带上与某次 tool_calls 条目相同的 id。</div></div>
+<div class="q" data-answer="0"><p><strong>3. tool_choice 四个值里，哪一个强制模型至少调用一次工具？</strong></p><button data-i="0">required</button><button data-i="1">auto</button><button data-i="2">none</button><div class="ans">解析：选 A。auto 由模型决定，none 禁止工具，required 强制至少一次，还可以指定某个 function 强制调用。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 模型是怎么决定调用哪个工具的？</strong></p><button data-i="0">运行内置的 if-else 规则引擎逐条匹配</button><button data-i="1">基于训练与对齐，工具描述把某些 token 序列（函数名、JSON 参数）的概率抬高，输出概率最高的结构化动作</button><button data-i="2">随机选一个工具再由应用纠正</button><div class="ans">解析：选 B。所以描述质量决定区分度，两个工具功能重叠时模型容易混淆。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 参数校验的四层，正确的顺序是？</strong></p><button data-i="0">安全层 → 语义层 → 结构层 → 语法层</button><button data-i="1">结构层 → 语法层 → 安全层 → 语义层</button><button data-i="2">语法层 json.loads → 结构层 jsonschema → 语义层业务校验 → 安全层鉴权与清洗</button><div class="ans">解析：选 C。先解析得了，再对得了结构，再合业务语义，最后过安全关。</div></div>
+<div class="q" data-answer="0"><p><strong>6. MCP 与 Function Calling 是什么关系？</strong></p><button data-i="0">互补：FC 是模型侧表达调用，MCP 是工具侧暴露与连接；Host 常把 MCP 工具映射为 FC 的 tools</button><button data-i="1">替代：有了 MCP 就不需要 FC 了</button><button data-i="2">没有关系，是两个互不相干的技术</button><div class="ans">解析：选 A。FC 解决“模型怎么表达调用”，MCP 解决“工具能力怎么暴露与连接”，二者常一起出现。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：OpenAI 的 Function Calling 大致流程是什么？</summary><p>客户端把工具定义（名称、描述、参数 JSON Schema）随对话发给 API；模型在需要时返回 tool_calls；宿主解析并执行真实函数；将结果以 tool 角色消息（带 tool_call_id）写回并再次调用 API；直到模型不再请求工具或达到轮次上限。核心是“模型只负责决策与参数，执行在应用侧”。</p></details>
+<details><summary>Q2：为什么用 JSON Schema 描述参数？</summary><p>三方面：跨语言标准，各 SDK 统一；可自动校验，避免脏参数进业务；作为模型的字段说明，减少胡编参数名。缺点是 Schema 过长会占 token，需要精简描述或上工具路由（Day 14）。</p></details>
+<details><summary>Q3：模型选错工具怎么办？</summary><p>五条：优化 description 与示例边界；用工具路由缩小候选集；执行前做规则校验或二次确认；对高风险操作要求人类确认；记录 bad case 做 prompt 迭代。不能假设模型 100% 正确。</p></details>
+<details><summary>Q4：多个工具冲突了怎么处理？</summary><p>分三类：语义冲突（两个工具都能做同一件事），按优先级加历史成功率算加权得分选最优；并发冲突（同时调写操作），加锁或队列化保证互斥；依赖冲突（B 依赖 A 的结果），构建工具依赖 DAG，拓扑排序顺序执行。之上用工具注册中心统一管理。</p></details>
+<details><summary>Q5：MCP 是什么？企业为什么愿意接 MCP？</summary><p>MCP 是 Anthropic 推动的开放标准，让 AI 应用与外部数据源、工具之间统一、可插拔地通信，像“AI 侧的 USB-C”。它和 FC 是互补关系：FC 是模型侧表达，MCP 是工具侧连接。企业愿意接是因为降低重复建设、统一安全与观测（工具集中在 Server 便于审计、版本与权限）、加快试点（换模型不换工具链）、利于平台组与业务组分工，而且敏感系统只对内网 Server 开放，模型不直连数据库。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>工具描述是线上质量的第一道防线——先写描述、再写实现，描述里写清“何时用、何时不要用”。上线后把选错工具的 bad case 回流，迭代描述比换模型便宜得多。敏感操作默认走人在回路，不要让模型一次调用就删库、转账、对外发邮件。</p>
+<p><strong>简历讲法：</strong>别写“会用 Function Calling”，写“实现 OpenAI FC 四步循环：tool_calls 解析、tool_call_id 对齐并行结果、JSON Schema 四层参数校验、5 轮上限防死循环；并把内部工具以 MCP Server 暴露，供多个 Host 复用”。前者是名词，后者是可追问的动手过程。</p>
+<p><strong>明日预告：</strong>Day 14 讲工具路由、编排与工具安全：工具从几个变成几十上百个时怎么选、调用之间有依赖时怎么排、以及六种常见工具的安全实现。</p>
+</div>
+<div class="nav"><span><a href="day12.html">← Day 12</a></span><span><a href="day14.html">Day 14 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

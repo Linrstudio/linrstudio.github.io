@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 实战课：从 RAG 到 Loop Engineering</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:12px 0}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.done{color:#0a7a42;font-weight:bold} .soon{color:#888}
+ol{padding-left:20px} li{margin:8px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<h1>Agent 实战课：从 RAG 到 Loop Engineering</h1>
+<p><span class="tag">RAG · Agent · Loop Engineering</span> <span class="tag">每天一课</span></p>
+<p>这门课把两个公开面试知识库（km1994/AIGC-Interview-Book 的 RAG、Loop Engineering 与 Agent 部分，bcefghj/ai-agent-interview-guide 的面试八股文）整理成 22 天的课：问答体拆开重组成可教的课，先讲清概念与为什么，再给可跑的代码，最后落到面试题与简历讲法。两个库重叠的主题（ReAct、MCP、工具安全、记忆与 RAG、规划器-执行器等）只在一课主讲，其余课交叉引用，不重复讲。目标岗是 <strong>AI 应用落地 / Agent 前端 / Agent 工具链</strong>，不对标 LLM 基建岗；大模型基础只作附录速通。</p>
+<div class="note">
+<p><strong>学习路线</strong><br>
+Agent 基础篇：Day 1 Agent 是什么 → Day 2 推理与执行范式 → Day 3 反思与搜索 → Day 4 编排框架<br>
+Prompt 工程篇：Day 5 Prompt 基础 → Day 6 结构化输出与 Prompt 安全<br>
+RAG 篇：Day 7 RAG 基础 → Day 8 解析与分块 → Day 9 Embedding 与向量库 → Day 10 检索与重排 → Day 11 进阶架构 → Day 12 失败、评测与生产<br>
+工具与记忆篇：Day 13 工具调用与 MCP → Day 14 路由、编排与安全 → Day 15 记忆系统<br>
+多 Agent 篇：Day 16 多智能体系统<br>
+Loop Engineering 篇：Day 17 导论 → Day 18 循环控制与可靠性 → Day 19 状态、记忆与并行 → Day 20 可观测性与成本 → Day 21 生产与实战<br>
+附录：Day 22 大模型基础速通</p>
+<p><strong>22 课已建完（22 天完结）。</strong>先从 Day 1 开始，不用跳着看；有基础的可以直接从 Day 7（RAG 篇）或 Day 17（Loop 篇）开始。</p>
+</div>
+<div class="card">
+<p><strong>相关课程：</strong><a href="../langchain-course/index.html">LangChain 30 天实战课 →</a> <a href="../langgraph-course/index.html">LangGraph 14 天实战课 →</a><br>
+链、提示词、工具调用、记忆、RAG、Mini Cursor、Multi-Agent 与 MCP，以及图、状态、Checkpoint、用户之声 Agent 实战。</p>
+</div>
+
+<h2>22 天课表</h2>
+<ol>
+<li><a href="day01.html"><strong>Day 1：Agent 是什么：定义、组成与分类</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day02.html"><strong>Day 2：推理与执行范式：CoT、ReAct、Plan-and-Execute</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day03.html"><strong>Day 3：反思与搜索：Reflexion、LATS、自一致性</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day04.html"><strong>Day 4：编排框架：LangChain Agent 与 LangGraph 状态机</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day05.html"><strong>Day 5：Prompt 工程基础：结构、原则与 Few-shot</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day06.html"><strong>Day 6：结构化输出、System Prompt 与 Prompt 安全</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day07.html"><strong>Day 7：RAG 基础：为什么需要 RAG 与完整 Pipeline</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day08.html"><strong>Day 8：文档解析与分块：从 PDF 到可检索的块</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day09.html"><strong>Day 9：Embedding 与向量库：模型选型、微调与 ANN</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day10.html"><strong>Day 10：检索与重排：混合检索、RRF、查询改写与重排</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day11.html"><strong>Day 11：RAG 进阶架构：Self-RAG、Agentic RAG 与 GraphRAG</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day12.html"><strong>Day 12：RAG 失败、评测与生产：十二痛点、RAGAS 与上线</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day13.html"><strong>Day 13：工具调用与 MCP：Function Calling 全流程与协议</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day14.html"><strong>Day 14：工具路由、编排与工具安全</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day15.html"><strong>Day 15：记忆系统：短期、长期、三因子检索与高级框架</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day16.html"><strong>Day 16：多智能体系统：协作模式、通信、冲突与框架</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day17.html"><strong>Day 17：Loop Engineering 导论：从 Prompt 到 Loop</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day18.html"><strong>Day 18：循环控制与可靠性：终止、收敛、防死循环与错误恢复</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day19.html"><strong>Day 19：状态、记忆与并行：Worktree、断点续传与协作模式</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day20.html"><strong>Day 20：Loop 可观测性与成本：日志、走偏检测与预算</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day21.html"><strong>Day 21：Loop 生产与实战：失败模式、治理与十个案例</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day22.html"><strong>Day 22：附录：大模型基础速通</strong></a> <span class="done">● 已上线</span></li>
+</ol>
+
+<h2>每课的固定结构</h2>
+<div class="card">
+<p>1. <strong>核心解释</strong>：先讲概念和一张心智地图，不堆 API。<br>
+2. <strong>代码示例</strong>：能直接跑的最小代码，关键行有注释。<br>
+3. <strong>小测验</strong>：当页可点、可判分，答完再看解析。<br>
+4. <strong>面试题与答案</strong>：按“面试官想听的点”写，不是背诵版。<br>
+5. <strong>加分项</strong>：生产视角、上线视角、简历讲法。</p>
+</div>
+<p class="note">来源说明：内容整理自两个公开面试知识库，问答体已重组为课程体；源材料里已废弃的 API（如 AgentExecutor、ConversationSummaryMemory、旧版 LangChain 导入路径）已按现代写法重写并标注；有年代感的模型名与榜单结论保留原意，课内注明“以官方最新文档为准”。</p>
+<p><a href="day01.html">→ 开始 Day 1 →</a></p>
+</body>
+</html>

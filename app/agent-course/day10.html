@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 10：检索与重排：混合检索、RRF、查询改写与重排 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 10 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 10：检索与重排：混合检索、RRF、查询改写与重排</h1>
+<p>Day 9 我们把文档变成了向量、存进了索引。今天讲查询进来之后发生的事：怎么把最对的那几条捞出来。单路向量检索有个短板——它懂语义，却对专有名词和编号不敏感。所以生产里的检索从来不是一条路：向量路 + 关键词路多路召回，再融合、再重排，最后只把 Top-N 交给大模型。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 120" width="100%" role="img" aria-label="查询经改写生成多路查询，分别走向量检索与 BM25 检索，经 RRF 融合后重排，取 Top-N 交给大模型生成">
+<rect x="8" y="35" width="104" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="60" y="64" text-anchor="middle" font-size="13" fill="#222">用户 Query</text>
+<line x1="112" y1="59" x2="138" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="138,59 126,53 126,65" fill="#0b62d6"/>
+<rect x="138" y="35" width="130" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="203" y="64" text-anchor="middle" font-size="13" fill="#222">向量 + BM25</text>
+<line x1="268" y1="59" x2="294" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="294,59 282,53 282,65" fill="#0b62d6"/>
+<rect x="294" y="35" width="112" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="350" y="64" text-anchor="middle" font-size="13" fill="#222">RRF 融合</text>
+<line x1="406" y1="59" x2="432" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="432,59 420,53 420,65" fill="#0b62d6"/>
+<rect x="432" y="35" width="140" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="502" y="64" text-anchor="middle" font-size="13" fill="#222">Cross-Encoder 重排</text>
+<line x1="572" y1="59" x2="598" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="598,59 586,53 586,65" fill="#0b62d6"/>
+<rect x="598" y="35" width="122" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="659" y="64" text-anchor="middle" font-size="13" fill="#222">Top-N → 生成</text>
+<text x="364" y="112" text-anchor="middle" font-size="13" fill="#666">改写 / HyDE / 多查询在前扩召回，重排在后提精度</text>
+</svg>
+<h3>1. 向量检索 vs BM25：语义强，精确匹配弱</h3>
+<p><strong>向量检索</strong>是把 query 和文档块 embedding 后做 Top-K 最近邻，强在语义相似度。<strong>短板</strong>是专有名词、型号、编号等精确匹配不如关键词检索。<strong>BM25</strong> 是经典的词频-逆文档频率加权排序函数，擅长精确词匹配。想象搜一个有数百万商品的向量库，query 是“阿迪达斯参考 XYZ 运动鞋白色”：向量检索返回的都是白色阿迪达斯运动鞋，却没有一个匹配确切的 XYZ 编号——这个结果用户不能接受。反过来，纯关键词检索又不懂“咋办”和“处理流程”是同一个意思。两路各有所短，所以要混合。</p>
+<h3>2. 混合检索与分数融合：先归一化，再加权</h3>
+<p><strong>混合检索（Hybrid Search）</strong>把 BM25 分数 + 向量分数线性加权或归一化后融合，兼顾语义与字面。直接相加有个坑：两路分数的量纲和分布完全不同，向量相似度在 0.8 附近扎堆，BM25 分数可能从几到几十。正确做法是先做 <strong>min-max 归一化</strong>把两路分数都压到 0–1，再用权重 <code>alpha</code> 加权：<code>alpha * 向量分 + (1 - alpha) * BM25 分</code>。alpha 往哪边偏，取决于你的场景更怕漏语义还是更怕漏精确词——技术文档与电商场景通常要给 BM25 留足权重。</p>
+<h3>3. RRF：不看分数，看排名</h3>
+<p><strong>RRF（Reciprocal Rank Fusion，倒数排名融合）</strong>不依赖原始分数的尺度，只融合多路检索的<strong>排名</strong>：RRF(d) = Σ 1 / (k + rank)，常取 <strong>k = 60</strong>。一个文档在某路排第 1，得 1/61；排第 10，得 1/70；多路得分相加再排序。为什么用排名而不用分数？因为各路检索的分数常常不可比——一路是相似度、一路是概率、一路干脆只有排名。RRF 更稳健，而且少调参（经典 k=60）。<strong>适用条件</strong>：当两路分数量纲一致或已可靠归一化时，加权融合直观可调；当分数不可比时，RRF 更稳。RRF 由滑铁卢大学与谷歌合作提出，作者的说法是“产生的结果比任何单个系统更好，也比标准重排方法更好”。</p>
+<h3>4. 查询改写：对齐术语，但别让 LLM 篡改实体</h3>
+<p>用户的问题常常很口语、很模糊（“咋办”），而文档是书面语（“处理流程”）——口语与文档书面语不一致会拖累向量召回。<strong>查询改写</strong>把原始问句改写成更易被检索匹配的形式，或生成多条查询变体做多路召回。策略有<strong>同义扩展、拆问句、补全主语</strong>，也可用 LLM 生成“检索友好”的 query 变体。但改写会引入噪声：<strong>LLM 可能篡改实体或添加未提及的条件</strong>。对策有四条：<strong>保留原 Query 同时检索</strong>再融合（避免改写跑偏，这是最重要的一条）、多路检索 + RRF、重排、引用校验；高敏场景优先用人工词表 + 模板，而不是 LLM 自由改写。</p>
+<h3>5. HyDE：先让 LLM 写个“假答案”，再拿它去检索</h3>
+<p><strong>HyDE（假设文档嵌入）</strong>的思路是：让 LLM 根据用户 query 生成 k 个“假答案”（采样模式，保证 k 个不一样），再把 k 个假答案和用户 query 的向量取平均，用融合向量去召回。假答案的内容很可能有知识性错误——如果模型能答对，也就不需要召回了——但不要紧，我们只是想借 LLM 理解用户问题，生成一些“看起来还不错”的答案模式。融合向量既有用户问题的信息，也有想要答案的模式信息，能拉近查询与文档在向量空间的距离，缓解查询与文档表述风格不一致。效果上有个关键结论：对<strong>没微调过的向量化模型（zero-shot 场景）</strong>，HyDE 很有用，且辅助 LLM 越大效果越好；但对<strong>微调过的向量化模型</strong>，如果用比较小的 LLM 生成假答案（小于 52B 参数量），HyDE 甚至会带来负面影响。所以 HyDE 非常依赖打辅助的 LLM 的能力。适合表述差距大、短查询难对齐长文档的场景；不适合强事实约束且模型易胡编的领域，除非加强校验与拒答。假答案可能引入错误主题，需重排与引用校验兜底。</p>
+<h3>6. Step-back：后退一步，先问背景原理</h3>
+<p><strong>Step-back Prompting</strong> 先让模型生成一个<strong>更抽象的、后退一步的问题</strong>（背景原理），再并行检索“具体问题 + 抽象问题”，合并上下文。原理是补充背景知识，减少只抓到细枝末节的可能。和 HyDE 的异同：二者都试图拉近查询与文档的语义距离；HyDE 用<strong>假想答案文档</strong>做 embedding，更激进（易引入虚构事实）；Step-back 用<strong>更抽象的问题</strong>再检索原理/背景类段落，相对克制（仍停留在问题空间）。实践中可并行检索后由重排裁决。</p>
+<h3>7. 子问题分解：多跳问题拆开查</h3>
+<p>对<strong>多跳、多条件</strong>问题，先由 LLM 或规则拆成<strong>子问题序列</strong>，对每个子问题检索，再拼接或图式合并证据。单句 embedding 难以覆盖“先 A 再 B”的复合语义，分解后每步检索更聚焦，类似多步检索增强。典型失败模式：<strong>分解错误</strong>（实体指代错）、<strong>子问题遗漏约束</strong>、<strong>合并时矛盾未检测</strong>——需要一致性检查与重排过滤无关块。和 Agent 多步检索的区别：子问题分解可以是固定模板或一次 LLM 调用；Agentic 更强调动态决定是否再检索，工具边界更宽。</p>
+<h3>8. FLARE：生成过程中主动召回</h3>
+<p>只在生成前召回一次，在长文本生成场景下效果往往不好：生成的文本越长，越可能扩展出和 query 相关性较弱的内容，模型没有这部分知识就容易幻觉。<strong>FLARE（主动检索增强生成）</strong>的思路是随着文本生成、多次从向量库中召回。被动的多次召回（每生成固定 n 个 token 召回一次、每生成一个完整句子召回一次、按子问题召回）不能保证“不需要召回时不召回、需要时触发”，FLARE 提出了两种更主动的策略。<strong>策略 1</strong>：用 prompt + 示例让模型在需要查知识时按格式输出主动召回标识 <code>[Search("模型自动提出的问题")]</code>，用模型生成的问题去召回，召回后把答案放进 prompt、去掉标识继续生成。缺陷是 LLM 不愿意生成标识（解决办法：对“[”对应的 logit 乘 2）、过于频繁的召回影响生成质量（刚召回后几个 token 内禁止生成“[”）、不微调很难靠 few-shot 让模型稳定输出这种模式。<strong>策略 2</strong>：基于 token 生成概率做置信度判断——每生成 64 个 token，用工具找到第一个完整句子当作“假答案”，如果其中任意 token 的概率低于阈值，就触发召回；低概率 token 很可能含错误信息，处理办法是丢掉低概率 token 再召回，或让大模型对置信度低的内容提问、用生成的问题去召回。注意策略 2 需要拿到每个 token 的生成概率，传统的 ChatGPT 接口是用不了的。</p>
+<h3>9. RAG-Fusion：多查询 + RRF，弥合“问的”和“想问的”</h3>
+<p><strong>RAG-Fusion</strong> 解决的是 RAG 的固有限制：单一查询可能无法完全捕捉用户感兴趣的全部范围，或者过于狭窄。工作流程是：用提示工程让 LLM 基于原始查询生成多个不同视角的查询（比如原始查询是“气候变化的影响”，生成的查询包括“气候变化的经济后果”“气候变化与公共健康”），每个查询各做一路检索，再用 <strong>RRF 融合</strong>多路排名，最后把重排后的文档和所有查询一起交给 LLM 生成答案。多查询的一个挑战是可能稀释用户的原始意图，缓解办法是在提示中指示模型更重视原始查询，保留原始查询作为防止误解的保障。优势是源材料更优质、更能捕捉用户意图、能处理复杂查询、甚至能自动纠正用户查询的拼写语法；挑战是输出可能过于冗长、多查询输入会挤压上下文窗口、以及操作用户查询带来的用户自主性与透明度问题——用户应当意识到自己的查询被调整了。</p>
+<h3>10. 重排：召回几十到几百，精排只留 Top-N</h3>
+<p>向量检索（Bi-Encoder）为速度对 query 和 doc <strong>独立编码</strong>，交互信息不足；<strong>Cross-Encoder</strong> 把 query 与 doc <strong>拼在一起</strong>打分，精度更高但慢，所以只能放在 Top-K 之后做小范围重排。标准流程：<strong>召回 Top-K（几十到几百）→ Cross-Encoder 精排取 Top-N（3–10）→ 再生成</strong>，平衡延迟与效果。为什么需要这一步？因为召回的前 K 个结果不一定按最相关的方式排序——最相关的块可能是第 5 或第 7 个，而不是第 1 或第 2 个。常用重排模型：Cohere Rerank API、BGE Reranker（如 bge-reranker-large，开源可本地部署）。还有个细节叫 LostInTheMiddle：大模型对上下文中间部分注意力较弱，所以有方案把最相关的文档重新定位到提示的开始和结束边缘。模型名以官方最新文档为准。</p>
+<h3>11. MMR：相关性与多样性的权衡</h3>
+<p>Top-K 经常几乎重复——五条都是同一段话的变体。<strong>MMR（最大边际相关性）</strong>在相关性与多样性间权衡：迭代选择与 query 相关、但与已选集合冗余度低的文档。公式：MMR = argmax_d [λ · sim(q,d) − (1−λ) · max<sub>s∈S</sub> sim(d,s)]，其中 S 是已选集合。<strong>λ 大偏相关，λ 小偏多样</strong>。λ=1 时退化为纯相关性排序；λ 往小调，选出来的文档覆盖面更广，但个别条目可能没那么相关。MMR 是贪心算法：每一步都选当前 MMR 得分最高的候选，选满 Top-K 为止。</p>
+<div class="warn"><strong>容易踩的坑：</strong>召回率低先别急着换模型、调参数，按这个顺序排查：<strong>知识库里有没有对应答案</strong>（没有就是覆盖问题）；有但没召回——是知识被切分切碎了（改切分方式），还是 query 和 doc 的特点没对上（字相关还是语义相关）？一个实用建议是先用关键词检索做召回，再用模型做精排。索引数据的质量决定答案质量：垃圾输入，垃圾输出——摄取前先清理特殊字符、奇怪编码、多余 HTML 标签，去重、删无关文档。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：RRF 多路排名融合 + 混合检索分数融合（纯 Python，可直接跑）</h3>
+<pre><code>from typing import Dict, List, Sequence
+
+def rrf_fuse(ranked_lists: Sequence[Sequence[str]], k: int = 60) -> List[tuple]:
+    """ranked_lists: 多路检索结果，每路为 doc_id 从优到劣的列表。"""
+    scores: Dict[str, float] = {}
+    for ranks in ranked_lists:
+        for rank, doc_id in enumerate(ranks, start=1):
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+vec_ids = ["d3", "d1", "d2"]    # 向量路 Top-3
+bm25_ids = ["d1", "d4", "d3"]  # BM25 路 Top-3
+print(rrf_fuse([vec_ids, bm25_ids]))
+# d1 两路都靠前，得分最高；d3 次之；d2、d4 只出现在一路
+
+# 混合检索分数融合：先 min-max 归一化，再 alpha 加权
+def min_max_norm(scores):
+    s_min, s_max = min(scores), max(scores)
+    if s_max == s_min:
+        return [1.0 for _ in scores]
+    return [(s - s_min) / (s_max - s_min) for s in scores]
+
+def hybrid_fuse(vec_scores, bm25_scores, alpha=0.5):
+    v = min_max_norm(vec_scores)
+    b = min_max_norm(bm25_scores)
+    return [alpha * vi + (1 - alpha) * bi for vi, bi in zip(v, b)]
+
+print(hybrid_fuse([0.87, 0.83, 0.81], [12.5, 3.1, 9.8], alpha=0.5))</code></pre>
+<h3>示例 2：MMR 贪心选择 + Cross-Encoder 重排</h3>
+<pre><code># pip install numpy sentence-transformers
+import numpy as np
+
+def mmr_select(query_vec, doc_vecs, top_k, lambda_mult=0.5):
+    """doc_vecs: shape (n, dim)，已归一化；lambda 大偏相关，小偏多样。"""
+    sim_to_q = doc_vecs @ query_vec
+    selected: list[int] = []
+    candidates = set(range(len(doc_vecs)))
+    while len(selected) < top_k and candidates:
+        best_idx, best_score = None, -1e9
+        for i in candidates:
+            redundant = 0.0
+            if selected:
+                redundant = max(float(doc_vecs[i] @ doc_vecs[j]) for j in selected)
+            score = lambda_mult * sim_to_q[i] - (1 - lambda_mult) * redundant
+            if score > best_score:
+                best_score, best_idx = score, i
+        selected.append(best_idx)
+        candidates.remove(best_idx)
+    return selected
+
+# 玩具数据：5 条文档向量，第 1、2 条几乎重复
+rng = np.random.default_rng(0)
+vecs = rng.normal(size=(5, 8))
+vecs[1] = vecs[0] + 0.01  # 故意造一对重复文档
+vecs = vecs / np.linalg.norm(vecs, axis=1, keepdims=True)
+q = rng.normal(size=8)
+q = q / np.linalg.norm(q)
+print("lambda=0.9（偏相关）:", mmr_select(q, vecs, top_k=3, lambda_mult=0.9))
+print("lambda=0.3（偏多样）:", mmr_select(q, vecs, top_k=3, lambda_mult=0.3))
+
+# Cross-Encoder 重排（首次运行会下载模型，模型名以官方最新文档为准）：
+# from sentence_transformers import CrossEncoder
+# cross = CrossEncoder("BAAI/bge-reranker-base")
+# query = "员工年假天数"
+# docs = ["本公司年假为15天...", "报销应提交发票原件..."]
+# scores = cross.predict([[query, d] for d in docs])
+# ranked = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
+# print(ranked)</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑通示例 1 的 RRF：把 <code>k</code> 从 60 改成 5 和 200，观察融合结果的变化——k 越小，排名靠前的优势越大。<br>
+2. 跑通示例 2 的 MMR：对比 lambda=0.9 和 0.3 的输出，那对几乎重复的文档是不是在偏多样时只留了一条？<br>
+3. 找一个你自己的问题，分别用原句和改写句（换个说法、补全主语）检索，看看召回结果有什么不同——体会查询改写为什么要保留原 Query 同时检索。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. 向量检索最大的短板是？</strong></p><button data-i="0">速度太慢</button><button data-i="1">不懂语义</button><button data-i="2">专有名词、型号、编号等精确匹配不如关键词检索</button><div class="ans">解析：选 C。向量懂语义但对精确词不敏感；BM25 擅长精确词匹配，两路混合才能互补。</div></div>
+<div class="q" data-answer="0"><p><strong>2. RRF 融合公式里 k 常取多少？RRF 适合什么情况？</strong></p><button data-i="0">k=60；各路分数不可比时，RRF 只看排名、更稳健</button><button data-i="1">k=1；分数可比时才用 RRF</button><button data-i="2">k=1000；RRF 只看分数不看排名</button><div class="ans">解析：选 A。RRF(d) = Σ 1/(k + rank)，经典 k=60；分数量纲一致或已可靠归一化时，加权融合更直观可调。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 查询改写最大的风险与对策是？</strong></p><button data-i="0">改写太慢；对策是不改写</button><button data-i="1">LLM 可能篡改实体或添加未提及的条件；对策是保留原 Query 同时检索再融合</button><button data-i="2">改写会让 query 变长；对策是截断</button><div class="ans">解析：选 B。其他对策还有多路检索 + RRF、重排、引用校验；高敏场景优先人工词表 + 模板。</div></div>
+<div class="q" data-answer="0"><p><strong>4. HyDE 的核心做法是？</strong></p><button data-i="0">让 LLM 先写假想的答案文档，再对假想文档做 embedding 去检索</button><button data-i="1">把 query 翻译成英文再检索</button><button data-i="2">把文档拆成更小的块再检索</button><div class="ans">解析：选 A。假答案可能含错，但它拉近了查询与文档在向量空间的距离；对微调过的向量模型 + 小 LLM 可能带来负收益。</div></div>
+<div class="q" data-answer="2"><p><strong>5. RAG-Fusion 的核心流程是？</strong></p><button data-i="0">只用 BM25 检索一次</button><button data-i="1">只用向量检索一次</button><button data-i="2">LLM 生成多个不同视角的查询，多路检索后用 RRF 融合，再重排生成</button><div class="ans">解析：选 C。关键是弥合“用户明确问的”和“意图问的”之间的差距，同时要在提示中重视原始查询，避免意图被稀释。</div></div>
+<div class="q" data-answer="1"><p><strong>6. 重排的标准流程是？</strong></p><button data-i="0">召回 Top-3 直接生成，不用重排</button><button data-i="1">召回 Top-K（几十到几百）→ Cross-Encoder 精排取 Top-N（3–10）→ 再生成</button><button data-i="2">先重排全部文档，再召回 Top-K</button><div class="ans">解析：选 B。Cross-Encoder 精度高但慢，只能放在小范围重排；Bi-Encoder 快、可 ANN，负责前面的大范围召回。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：为什么混合检索比单路向量更有效？</summary><p>向量捕获语义，但可能漏掉专有名词与编号；BM25 补精确匹配。二者融合提高鲁棒性，尤其在技术文档与电商场景。比如搜“阿迪达斯参考 XYZ 运动鞋白色”，向量路返回的都是白色阿迪达斯运动鞋，却没有一个匹配确切的 XYZ 编号。</p></details>
+<details><summary>Q2：RRF 与加权分数融合各适合什么？</summary><p>当两路分数量纲一致或已可靠归一化时，加权融合直观可调；当一路是排名、一路是概率、或分数不可比时，RRF 更稳，且少调参（经典 k=60）。RRF 不依赖原始分数尺度，只融合排名。</p></details>
+<details><summary>Q3：HyDE 适合什么场景？不适合什么？</summary><p>适合表述差距大、短查询难对齐长文档的场景；不适合强事实约束且模型易胡编的领域，除非加强校验与拒答。还有个关键结论：对没微调过的向量化模型（zero-shot），HyDE 很有用；对微调过的向量化模型，如果用比较小的 LLM（小于 52B 参数量）生成假答案，HyDE 甚至会带来负面影响——它非常依赖打辅助的 LLM 的能力。</p></details>
+<details><summary>Q4：Step-back Prompting 与 HyDE 有何异同？</summary><p>二者都试图拉近查询与文档的语义距离。HyDE 用假想答案文档做 embedding，更激进（易引入虚构事实）；Step-back 用更抽象的问题再检索原理/背景类段落，相对克制（仍停留在问题空间）。实践中可并行检索后由重排裁决。</p></details>
+<details><summary>Q5：MMR 是干嘛的？λ 怎么调？</summary><p>MMR（最大边际相关性）在相关性与多样性间权衡，避免 Top-K 几乎重复的段落。公式：MMR = argmax_d [λ · sim(q,d) − (1−λ) · max sim(d,s)]，S 是已选集合。λ 大偏相关，小偏多样；λ=1 时退化为纯相关性排序。实现是贪心算法，每步选当前 MMR 得分最高的候选。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>召回率低先按顺序排查：知识库里有没有答案 → 有没有被切分切碎 → query 和 doc 是字相关还是语义相关，别一上来就换模型。索引数据质量决定答案质量，摄取前先清理、去重、删无关文档；查询改写上线前务必保留原 Query 同时检索，高敏场景用人工词表 + 模板。</p>
+<p><strong>简历讲法：</strong>别写“做过 RAG 检索优化”，写“电商知识库检索从单路向量改为混合检索：向量路 + BM25 路经 RRF（k=60）融合，召回 Top-50 后用 BGE Reranker 精排取 Top-5，MMR 去重，精确型号 query 的召回率从 X 提升到 Y”。前者是名词，后者是可追问的动手过程（数字填你自己的实测值）。</p>
+<p><strong>明日预告：</strong>Day 11 讲 RAG 进阶架构：Self-RAG、Agentic RAG 与 GraphRAG——当检索本身需要反思、需要 Agent、需要图的时候，架构怎么演进。</p>
+</div>
+<div class="nav"><span><a href="day09.html">← Day 9</a></span><span><a href="day11.html">Day 11 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

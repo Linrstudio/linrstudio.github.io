@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 7：RAG 基础：为什么需要 RAG 与完整 Pipeline | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 7 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 7：RAG 基础：为什么需要 RAG 与完整 Pipeline</h1>
+<p>大模型再强，也有三件事做不好：不知道的事它会一本正经地编，训练之后发生的事它不知道，你公司的私域数据它更没见过。RAG（检索增强生成）就是给大模型外挂一个知识库，让它“先查资料，再回答问题”——把“猜”变成“查”。今天先把 RAG 的完整 Pipeline 跑通，Embedding、检索策略、重排各有专课（Day 9–10），这里只点到为止。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 210" width="100%" role="img" aria-label="RAG 完整流程：离线建索引与在线问答">
+<rect x="20" y="10" width="688" height="82" rx="10" fill="#f0f7ff" stroke="#0b62d6" stroke-width="1.5"/>
+<text x="36" y="32" font-size="13" font-weight="bold" fill="#0b62d6">离线阶段：把知识变成可检索的索引</text>
+<rect x="36" y="44" width="110" height="34" rx="8" fill="#fff" stroke="#0b62d6"/><text x="91" y="65" text-anchor="middle" font-size="12" fill="#222">原始文档</text>
+<line x1="146" y1="61" x2="166" y2="61" stroke="#0b62d6" stroke-width="2"/><polygon points="166,61 156,56 156,66" fill="#0b62d6"/>
+<rect x="166" y="44" width="110" height="34" rx="8" fill="#fff" stroke="#0b62d6"/><text x="221" y="65" text-anchor="middle" font-size="12" fill="#222">解析·分块</text>
+<line x1="276" y1="61" x2="296" y2="61" stroke="#0b62d6" stroke-width="2"/><polygon points="296,61 286,56 286,66" fill="#0b62d6"/>
+<rect x="296" y="44" width="110" height="34" rx="8" fill="#fff" stroke="#0b62d6"/><text x="351" y="65" text-anchor="middle" font-size="12" fill="#222">Embedding</text>
+<line x1="406" y1="61" x2="426" y2="61" stroke="#0b62d6" stroke-width="2"/><polygon points="426,61 416,56 416,66" fill="#0b62d6"/>
+<rect x="426" y="44" width="130" height="34" rx="8" fill="#fff" stroke="#0b62d6"/><text x="491" y="65" text-anchor="middle" font-size="12" fill="#222">向量数据库</text>
+<rect x="576" y="44" width="110" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6"/><text x="631" y="65" text-anchor="middle" font-size="12" fill="#222">索引就绪</text>
+<rect x="20" y="112" width="688" height="82" rx="10" fill="#f0fff4" stroke="#22a35a" stroke-width="1.5"/>
+<text x="36" y="134" font-size="13" font-weight="bold" fill="#15803d">在线阶段：提问时检索证据、约束生成</text>
+<rect x="36" y="146" width="110" height="34" rx="8" fill="#fff" stroke="#22a35a"/><text x="91" y="167" text-anchor="middle" font-size="12" fill="#222">用户提问</text>
+<line x1="146" y1="163" x2="166" y2="163" stroke="#22a35a" stroke-width="2"/><polygon points="166,163 156,158 156,168" fill="#22a35a"/>
+<rect x="166" y="146" width="110" height="34" rx="8" fill="#fff" stroke="#22a35a"/><text x="221" y="167" text-anchor="middle" font-size="12" fill="#222">检索 Top-K</text>
+<line x1="276" y1="163" x2="296" y2="163" stroke="#22a35a" stroke-width="2"/><polygon points="296,163 286,158 286,168" fill="#22a35a"/>
+<rect x="296" y="146" width="110" height="34" rx="8" fill="#fff" stroke="#22a35a"/><text x="351" y="167" text-anchor="middle" font-size="12" fill="#222">拼进 Prompt</text>
+<line x1="406" y1="163" x2="426" y2="163" stroke="#22a35a" stroke-width="2"/><polygon points="426,163 416,158 416,168" fill="#22a35a"/>
+<rect x="426" y="146" width="130" height="34" rx="8" fill="#fff" stroke="#22a35a"/><text x="491" y="167" text-anchor="middle" font-size="12" fill="#222">LLM 生成答案</text>
+<rect x="576" y="146" width="110" height="34" rx="8" fill="#dcfce7" stroke="#22a35a"/><text x="631" y="167" text-anchor="middle" font-size="12" fill="#222">带依据的答案</text>
+</svg>
+<h3>1. LLM 的三处短板：幻觉、时效、数据安全</h3>
+<p><strong>幻觉问题</strong>：大模型是按概率逐个 token 生成文本的，它分不清“自己学过的”和“没见过的”，不知道时也会编一个像真的答案。<strong>时效性问题</strong>：模型越大训练成本越高、周期越长，训练截止之后发生的事它天然不知道，比如“帮我推荐几部热映的电影”。<strong>数据安全问题</strong>：通用模型没有企业内部数据和用户数据，企业希望数据留在本地计算，只让在线模型做归纳。这三点有一个共同的根：模型的“记忆”全锁在参数里，改不了、查不了、也说不清来源。</p>
+<h3>2. RAG 是什么：先查资料，再回答</h3>
+<p>RAG（Retrieval-Augmented Generation，检索增强生成）指：大模型在回答问题之前，先从外部知识库中检索出最相关的片段，再把这些片段作为上下文一并输入模型，从而约束模型的输出依据。核心思想是<strong>把“记忆”从模型参数里搬到可更新的外部存储</strong>，生成时按需取用。它由两个模块组成：<strong>检索器（R）</strong>负责从知识库中找出最相关的前 K 个文档块；<strong>生成器（G）</strong>负责把检索到的信息转化成自然流畅的回答，并确保生成内容与检索到的信息保持一致。记住一条心法：<strong>RAG 不是让 LLM 变聪明，而是给它装了个“外挂硬盘”和“查资料的习惯”</strong>。</p>
+<h3>3. 完整 Pipeline：离线建索引，在线查了再答</h3>
+<p><strong>离线阶段</strong>负责把非结构化知识变成可检索的索引：加载文件 → 读取文本 → 清洗 → 文本分割（分块）→ 向量化（Embedding）→ 写入向量数据库并建索引。离线是一次性或增量做的，换文档就能秒级生效。<strong>在线阶段</strong>负责理解意图、检索、融合、约束生成：用户提问 → 问题向量化 → 在向量库中匹配最相似的 Top-K 个块 → 把匹配的文本作为上下文和问题一起拼进 Prompt → 提交给 LLM 生成回答。面试时能把这条线画出来，就已经超过大多数候选人。Pipeline 里每一步都有专课：解析与分块是 Day 8，Embedding 与向量库是 Day 9，检索与重排是 Day 10。</p>
+<h3>4. RAG vs 微调 vs 长上下文：不是三选一，是可组合</h3>
+<table>
+<tr><th>维度</th><th>RAG</th><th>微调（Fine-tuning）</th><th>长上下文</th></tr>
+<tr><td>知识更新</td><td>换文档就行，秒级生效</td><td>得重新训练，费钱费时</td><td>仍需把新内容放进上下文</td></tr>
+<tr><td>推理成本</td><td>检索 + 生成，略高</td><td>纯生成，低</td><td>长上下文推理贵、延迟高</td></tr>
+<tr><td>适合场景</td><td>知识经常变、需要可溯源</td><td>固定风格 / 任务、输出格式</td><td>单文档极长且需全局推理</td></tr>
+<tr><td>典型短板</td><td>检索失败则答案差</td><td>难频繁追新事实，易过拟合</td><td>注意力分散、“中间遗忘”</td></tr>
+</table>
+<p>选型口诀：<strong>知识型任务无脑 RAG，风格型任务（客服话术、代码格式化）微调更香</strong>。三者并非非此即彼，常见做法是 RAG 提供事实依据 + 轻量微调改善领域表达 + 长上下文处理单篇超长材料。长上下文是 RAG 的补充，不是替代——每次请求塞上百万 token 贵得离谱、延迟高，而且它给不出“答案来自第 3 页第 2 段”这样的溯源。</p>
+<h3>5. RAG 的好处与局限：先说好处，再认清天花板</h3>
+<p><strong>好处</strong>：可扩展（不必为每个任务重训整个模型，外挂知识库即可扩展知识）；准确可核实（引用信息来源，用户可以核实答案）；可控（知识可更新、可定制）；可解释（检索到的条目就是预测的来源参考）；及时（检索能识别最新信息）；定制（索引特定领域语料就得到专业知识支持）；安全（数据库的角色与安全控制比微调模型更明确地管理数据访问权限）。<strong>局限</strong>：检索效果依赖 Embedding 与检索算法，检索到无关信息反而会污染输出；大模型如何利用检索到的信息仍是黑盒，生成文本可能与检索信息冲突；对所有任务都无差别检索 K 个片段效率不高，还会拉长输入；若不做引用设计，答案仍无法精准查证事实。Day 12 会系统讲这十二个痛点与评测方法。</p>
+<div class="warn"><strong>容易踩的坑：</strong>RAG 不能完全消除幻觉。若检索错、块质量差、或模型忽略证据，仍可能幻觉。正确姿势是 Prompt 里写清“无法从已知信息中得到答案时就说不知道，不允许编造”，再配合检索、重排、引用约束与评估一起上——只堆 RAG 三个字母是防不住幻觉的。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：LCEL 最小 RAG（现代 LangChain 1.x 写法）</h3>
+<pre><code># pip install langchain langchain-openai langchain-community faiss-cpu
+from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# 离线阶段：分块 -> 向量化 -> 建索引
+docs = [Document(page_content="公司年假 15 天，需提前两周申请。报销需提交发票原件。")]
+splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
+chunks = splitter.split_documents(docs)
+vectorstore = FAISS.from_documents(chunks, OpenAIEmbeddings(model="text-embedding-3-small"))
+retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+
+# 在线阶段：检索到的 context + 问题拼进 Prompt，再由 LLM 生成
+prompt = ChatPromptTemplate.from_template(
+    "已知信息：\n{context}\n\n根据上述已知信息，简洁专业地回答问题。"
+    "如果无法从中得到答案，请说“根据已知信息无法回答该问题”，不允许编造。\n问题：{question}"
+)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+rag_chain = {"context": retriever, "question": RunnablePassthrough()} | prompt | llm | StrOutputParser()
+print(rag_chain.invoke("年假有多少天？"))</code></pre>
+<h3>示例 2：零 API Key 可跑的最小闭环（理解“先查再答”的逻辑）</h3>
+<pre><code># 不调任何模型接口，只用关键词重叠做检索，跑通“查 -> 拼 -> 答/拒答”全流程
+CHUNKS = [
+    "公司年假 15 天，需提前两周申请。",
+    "报销需提交发票原件，每月 5 号前提交。",
+    "考勤打卡时间为每天 9:00 前。",
+]
+
+def retrieve(query, chunks, top_k=2):
+    """最小检索器：按关键词重叠数排序（生产请换向量检索，见 Day 9-10）"""
+    scored = sorted(chunks, key=lambda c: len(set(query) &amp; set(c)), reverse=True)
+    return scored[:top_k]
+
+def answer(query):
+    context = retrieve(query, CHUNKS)
+    # 兜底：检索不到相关内容时，诚实拒答而不是编造
+    if not any(set(query) &amp; set(c) for c in context):
+        return "根据已知信息无法回答该问题"
+    prompt = f"已知信息：\n{context}\n\n问题：{query}\n请仅根据已知信息回答。"
+    return prompt  # 真实项目把 prompt 交给 LLM 生成答案
+
+print(answer("年假有多少天？"))
+print(answer("公司食堂在哪？"))  # 检索不到 -> 拒答</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 2 跑起来，改一个能命中“报销”的问题和一个命中不了的问题，确认拒答分支真的会触发。<br>
+2. 把示例 1 的知识库换成你自己的 3 段文本（比如某产品手册的摘录），问一个库里有、一个库里没有的问题，对比两次回答。<br>
+3. 不看图，凭记忆在纸上画出 RAG 的离线 / 在线两条线：离线四步（解析分块 → 向量化 → 建索引）、在线四步（提问 → 检索 Top-K → 拼 Prompt → 生成）。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. RAG 的全称与核心做法是？</strong></p><button data-i="0">Retrieval-Augmented Generation：先微调模型再回答</button><button data-i="1">Retrieval-Augmented Generation：先从外部知识库检索相关片段，再基于片段生成回答</button><button data-i="2">Retrieval-Augmented Generation：把全文塞进 Prompt 再回答</button><div class="ans">解析：选 B。RAG 是“先查资料，再回答问题”，检索器 + 生成器两个模块，核心是把记忆搬到可更新的外部存储。</div></div>
+<div class="q" data-answer="2"><p><strong>2. LLM 的三处短板不包括哪一项？</strong></p><button data-i="0">幻觉：不知道时也会一本正经地编</button><button data-i="1">时效：训练截止后的事不知道；数据安全：私域数据没见过</button><button data-i="2">算力不足：模型参数太少导致答不上问题</button><div class="ans">解析：选 C。幻觉、时效、数据安全是 RAG 要解决的三个问题；参数量不是 RAG 的出发点。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 离线阶段与在线阶段的分工是？</strong></p><button data-i="0">离线负责把知识变成可检索的索引（解析、分块、向量化、建索引）；在线负责提问、检索、拼 Prompt、生成</button><button data-i="1">离线负责回答问题，在线负责建索引</button><button data-i="2">离线和在线做的是同一件事，只是时间不同</button><div class="ans">解析：选 A。离线建索引、在线查了再答，是 RAG Pipeline 的基本分工。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 知识型任务（事实问答、手册客服）优先选什么？</strong></p><button data-i="0">微调，因为它能把知识训进参数</button><button data-i="1">RAG，因为知识经常变、需要可溯源，换文档就能秒级生效</button><button data-i="2">长上下文，因为它能把全部文档一次塞进模型</button><div class="ans">解析：选 B。知识型任务无脑 RAG；微调更适合风格与格式类任务；长上下文贵且有“中间遗忘”。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 长上下文 LLM 能取代 RAG 吗？</strong></p><button data-i="0">能，上下文够长就不需要检索了</button><button data-i="1">能，只要上下文窗口超过知识库大小</button><button data-i="2">不能：成本高、延迟高、知识更新慢、无法溯源，它是 RAG 的补充</button><div class="ans">解析：选 C。长上下文每次请求都要付全量 token 的钱，还给不出“答案来自第几页”的溯源。</div></div>
+<div class="q" data-answer="0"><p><strong>6. RAG 能完全消除幻觉吗？</strong></p><button data-i="0">不能：检索错、块质量差、模型忽略证据时仍可能幻觉，需要拒答约束与评估配合</button><button data-i="1">能：只要用了 RAG，模型就不会再编造</button><button data-i="2">能：只要 K 取得够大，幻觉就消失了</button><div class="ans">解析：选 A。RAG 是把“猜”变成“查”，大幅降低幻觉，但不是消除；检索失败或证据被忽略时仍会出错。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：请用一句话解释 RAG。</summary><p>RAG 是在生成前先从外部知识库检索相关证据，再把证据作为上下文交给大模型，以减少幻觉并支持实时更新的知识增强范式。一句话版本：让大模型“先查资料，再回答问题”。</p></details>
+<details><summary>Q2：为什么大模型需要外挂向量知识库？</summary><p>克服遗忘与幻觉、提升回答的准确性、权威性与时效性、覆盖通用模型没涉猎的小众领域、提高可控性与可解释性。模型的记忆锁在参数里，改不了也查不了来源；外挂知识库把记忆搬到可更新、可审计的外部存储。</p></details>
+<details><summary>Q3：RAG 的标准 Pipeline 分几步？</summary><p>离线四步：加载文件 → 文本分割 → 文本向量化 → 存入向量库建索引；在线四步：问句向量化 → 匹配最相似的 Top-K → 拼进 Prompt → LLM 生成回答。能画出这条线，面试就过关了一半。</p></details>
+<details><summary>Q4：RAG 和微调的根本区别在哪？各适用什么场景？</summary><p>RAG 是动态查外部知识库，换文档秒级生效，适合知识经常变、需要可溯源的场景；微调是把知识硬训进模型参数，重新训练费钱费时，适合固定风格、格式与任务。两者可组合：RAG 提供事实依据，轻量微调改善领域表达。</p></details>
+<details><summary>Q5：为什么 RAG 能减少幻觉？</summary><p>大模型瞎编是因为它不知道自己的认知边界，分不清“学过的”和“没见过的”。RAG 强行加了外挂知识库：生成前先查，库里有就照着说，没有就说不知道——把“猜”变成“查”。但注意它不能完全消除幻觉，检索错或模型忽略证据时仍会出错。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>先想清楚知识更新频率再选方案：每周都变的手册、政策、工单数据，用 RAG；一年不变的输出格式与口吻，用微调。RAG 上线第一天就要把“拒答”写进 Prompt——宁可说不知道，也别让模型拿着错误的检索结果一本正经地编。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 RAG”，写“搭建 RAG 问答：离线解析分块 + 向量化建索引，在线检索 Top-K 拼 Prompt 生成，Prompt 内置拒答约束；知识更新从重训改为换文档秒级生效”。前者是名词，后者是可追问的动手过程。</p>
+<p><strong>明日预告：</strong>Day 8 讲文档解析与分块：从 PDF 到可检索的块——PDF 四坑、OCR 流程、表格与图片处理、六种分块方法与 chunk size 经验值。</p>
+</div>
+<div class="nav"><span><a href="day06.html">← Day 6</a></span><span><a href="day08.html">Day 8 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

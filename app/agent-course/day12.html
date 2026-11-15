@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 12：RAG 失败、评测与生产：十二痛点、RAGAS 与上线 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 12 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 12：RAG 失败、评测与生产：十二痛点、RAGAS 与上线</h1>
+<p>前面五课把 RAG 从直线做到了带反思、带循环、带图的进阶架构。但 Demo 跑通离上线还差很远：真实系统会在十二个地方翻车——知识库里没有答案它却一本正经地编，答案在库里却检索不到，检索到了又没被用来生成。更关键的是，你得先有办法<strong>量出</strong>它有多差，才能证明你的优化真的有用。今天讲三件事：十二个痛点各怎么解，怎么评测（合成测试集 + RAGAS），以及上线时多租户、增量更新、缓存这些生产必备。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 190" width="100%" role="img" aria-label="RAG 失败定位漏斗：答案在库里吗、检索到了吗、排到前面了吗、生成用上了吗、格式对吗">
+<rect x="20" y="12" width="688" height="30" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="32" text-anchor="middle" font-size="13" fill="#222">第 1 问：答案在知识库里吗？——不在：痛点 1 内容缺失（拒答 + 补数据）</text>
+<rect x="60" y="50" width="608" height="30" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="70" text-anchor="middle" font-size="13" fill="#222">第 2 问：检索到了吗？——没召回：痛点 2、8（重排、调 chunk、清数据）</text>
+<rect x="100" y="88" width="528" height="30" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="364" y="108" text-anchor="middle" font-size="13" fill="#222">第 3 问：排到前面、进上下文了吗？——没有：痛点 3（检索策略、微调 embedding）</text>
+<rect x="140" y="126" width="448" height="30" rx="8" fill="#fff7e6" stroke="#d99a00" stroke-width="2"/><text x="364" y="146" text-anchor="middle" font-size="13" fill="#222">第 4 问：生成用上了吗？——没有：痛点 4、6、7（压缩、重排、查询优化）</text>
+<rect x="180" y="164" width="368" height="30" rx="8" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="364" y="184" text-anchor="middle" font-size="13" fill="#222">第 5 问：格式对吗？——不对：痛点 5（结构化输出、解析校验）</text>
+</svg>
+<p>先记住这张漏斗：出了坏答案，别急着换模型，从上往下逐层问——答案在库里吗？检索到了吗？排前面了吗？生成用上了吗？格式对吗？每一层对应不同的痛点和解法。下面十二个痛点，前七个来自论文《Seven Failure Points When Engineering a Retrieval Augmented Generation System》，后五个是开发中常见的额外痛点。</p>
+
+<h3>1. 十二痛点与解法（上）：检索与生成</h3>
+<table>
+<tr><th>痛点</th><th>症状</th><th>解法</th></tr>
+<tr><td>1. 内容缺失</td><td>答案不在库里，系统却给出貌似合理但错误的答案，而不是承认不知道</td><td>优化数据源（垃圾进、垃圾出）；提示词加“如果你无法确定答案，请表明你不知道”，鼓励模型表达不确定性</td></tr>
+<tr><td>2. 错过排名靠前的文档</td><td>答案在某个文档里，但它排名不够高，没能进给模型的那几条</td><td>先召回 Top 10 再重排取 Top 2；调 <code>chunk_size</code> 与 <code>top_k</code>（如 256/512/1024 × 1/2/5 做参数搜索，在测试集上以语义相似度打分选最优）</td></tr>
+<tr><td>3. 脱离上下文</td><td>文档检索到了，但整合时没被用来生成答案</td><td>优化检索策略（基础检索、高级检索、自动检索、知识图谱检索器、分层检索器）；微调开源 embedding 模型提升检索准确性</td></tr>
+<tr><td>4. 未能提取答案</td><td>上下文里有答案，但信息太多、干扰或矛盾太多，模型没提取出来</td><td>清理数据；提示压缩（压缩无关上下文、突出重要段落、减少总长度）；LongContextReorder——关键信息放上下文开头或结尾，解决“丢失在中间”</td></tr>
+<tr><td>5. 格式错误</td><td>要求表格或清单，模型没按格式输出</td><td>更精准的提示（明确指令、简化问题、给示例）；输出解析（格式化指南 + 对回答做解析校验）；结构化输出（Pydantic 模型 / JSON 模式）</td></tr>
+<tr><td>6. 特异性错误</td><td>回答过于含糊泛泛，缺少必要的细节</td><td>更高级的检索：从细节到全局的检索、围绕特定句子的检索、逐步深入的检索（小块定位、大块展开）</td></tr>
+<tr><td>7. 回答不全面</td><td>答案只对了一部分，缺细节——比如问“文档 A、B、C 都讨论了什么”，只答了其中一份</td><td>查询优化层：路由（明确问题涉及的工具子集）、查询改写（多种问法）、细分问题（大问题拆小问题分别查）、HyDE（先生成假设性文档再用它检索）</td></tr>
+</table>
+
+<h3>2. 十二痛点与解法（下）：数据、结构化与安全</h3>
+<table>
+<tr><th>痛点</th><th>症状</th><th>解法</th></tr>
+<tr><td>8. 数据处理能力</td><td>数据量大时处理慢、甚至系统崩溃</td><td>并行处理（文档处理流水线多 worker 并行，源材料称可提速多倍）；批量离线任务处理大批量</td></tr>
+<tr><td>9. 结构化数据查询</td><td>自然语言转 SQL 等结构化查询不准，表格多信息点问题答不好</td><td>Chain-of-Table（链式思考 + 表格逐步变换，每步给模型看新表格）；Mix Self-Consistency（文本推理与符号推理各采样多条路径，多数投票聚合）</td></tr>
+<tr><td>10. 复杂 PDF 提取</td><td>复杂表格在 PDF 里，简单检索拿不到</td><td>嵌入式表格检索：用版面分析工具解析出表格并组织成结构，再按问题取相关表格；PDF 可先转 HTML 再解析</td></tr>
+<tr><td>11. 备用模型</td><td>主模型限流或故障，服务直接挂掉</td><td>模型路由器/统一网关：按问题自动选最合适的模型，主模型故障时自动切备选；同一接口可接多个模型供应商，切换不用改代码</td></tr>
+<tr><td>12. LLM 安全</td><td>恶意输入操控、不安全输出、敏感信息泄露</td><td>输入输出双向审核：输入分类不过就拒绝，输出分类不过就改写或拒绝；内容分类模型（如 Llama Guard 类思路）判断是否安全并指出违反的规则类别</td></tr>
+</table>
+<div class="warn"><strong>年代提醒：</strong>源材料里的痛点解法大量用 LlamaIndex 旧 API 举例（如 <code>ServiceContext</code>、<code>LlamaPack</code>、<code>download_llama_pack</code>），这些 API 在后续版本里已经大变或废弃，<strong>不要直接抄那些旧代码</strong>。本课只讲思路，示例用现代写法或伪代码；要用某个框架时以官方最新文档为准。</div>
+
+<h3>3. 合成测试集：没有标注数据也能评测</h3>
+<p>评测需要一个数据集，四列：<code>question</code>（问题）、<code>ground_truths</code>（真实答案）、<code>answer</code>（RAG 预测的答案）、<code>contexts</code>（RAG 生成答案时用的上下文列表）。前两列是真实数据，后两列是跑 RAG 得到的预测数据。没有人工标注时可以<strong>合成</strong>：</p>
+<ol>
+<li>把知识库分块、嵌入、入库；</li>
+<li>随机选一个块作根上下文，再检索 K 个相似上下文拼成一个大上下文；</li>
+<li>用提示模板让 LLM 从这个大上下文生成若干个“问题 + 答案”对（要求：脱离上下文也看得懂、答案完全来自上下文、难度适中、不超过 10 个词、不用“提供的上下文”这种表述）；</li>
+<li>重复多次，换上下文生成不同问题；</li>
+<li>把这些问题跑一遍 RAG，收集预测答案与上下文，合成数据集就齐了。</li>
+</ol>
+<p>合成数据的偏差要心里有数：LLM 生成的问题可能偏简单、偏它“会问”的类型。生产里要补两类样本：从真实日志脱敏抽样的问题，以及<strong>拒答类</strong>（无答案、知识库外的问题）——只测“能答对”不测“该拒答”，评测就是自欺欺人。</p>
+
+<h3>4. 独立评估 vs 端到端评估</h3>
+<p>两种评估方法，回答不同的问题：</p>
+<ul>
+<li><strong>独立评估</strong>：分别评检索模块和生成模块。检索好不好（上下文精确度），生成好不好（答案相关性、忠实度），定位瓶颈在检索还是生成。</li>
+<li><strong>端到端评估</strong>：只评最终响应。无标签时评答案的准确性、相关性、无害性；有标签时评准确率（Accuracy）和精确匹配（EM）。</li>
+</ul>
+<p>为什么“只看最终答案对错”不够？模型可能<strong>猜对</strong>，也可能上下文不相关却仍生成了正确答案——只看对错会把运气当能力。必须同时评检索质量与忠实度，才能定位问题到底出在检索还是生成。</p>
+
+<h3>5. 关键指标：一张表记住</h3>
+<table>
+<tr><th>指标</th><th>评什么</th><th>怎么理解</th></tr>
+<tr><td>忠实度 Faithfulness</td><td>生成模块</td><td>答案是否可由检索上下文推出、不编造；0–1 分，高分代表与上下文一致</td></tr>
+<tr><td>答案相关性 Answer Relevancy</td><td>生成模块</td><td>答案与问题的相关性；不完整或冗余都会拉低分数；0–1 分</td></tr>
+<tr><td>答案正确性 Answer Correctness</td><td>生成模块</td><td>生成答案与基准答案的匹配程度；0–1 分</td></tr>
+<tr><td>上下文精确度 Context Precision</td><td>检索模块</td><td>相关条目是否都排在前面；0–1 分</td></tr>
+<tr><td>Hit Rate（命中率）</td><td>检索模块</td><td>Top-K 里有没有正确答案所在的文档</td></tr>
+<tr><td>MRR（平均排名倒数）</td><td>检索模块</td><td>第一个正确答案的排名的倒数的平均——排越前分越高</td></tr>
+<tr><td>NDCG（归一化折扣累积增益）</td><td>检索模块</td><td>考虑排名位置的加权得分，越靠前的相关结果权重越高，再归一化到 0–1</td></tr>
+</table>
+<p>三类关键指标可以概括为：答案的准确性、答案的相关性、上下文的相关性。另外 RGB 研究提出的四项基本能力也值得记：<strong>抗噪声能力、拒绝无效回答能力、信息综合能力、反事实稳健性</strong>——评测时可以按这四个维度设计用例。</p>
+
+<h3>6. 评估框架：RAGAS 与 ARES</h3>
+<p><strong>RAGAS</strong> 是基于 LLM 裁判的自动化评估框架，三个核心指标的算法原理：</p>
+<ul>
+<li><strong>忠实度</strong>：LLM 把答案拆成多个陈述，逐个检验是否与上下文一致，支持的陈述占比就是得分；</li>
+<li><strong>答案相关性</strong>：LLM 根据答案反推可能的问题，算这些问题与原始问题的相似度平均值；</li>
+<li><strong>上下文相关性</strong>：LLM 筛出与问题直接相关的句子，用它占上下文总句数的比例打分。</li>
+</ul>
+<p><strong>ARES</strong> 的目标也是自动化评估上下文相关性、答案忠实度、答案相关性，但它想降低评估成本：用少量人工标注数据 + 合成数据，微调轻量语言模型做“裁判”，再用预测驱动推理给出统计置信区间，对多个 RAG 系统做可靠排名。两个框架的共同提醒：<strong>裁判模型本身有偏差</strong>，要抽样人工复核，别把机器打分当真理。</p>
+
+<h3>7. 生产优化：上线前必须做的五件事</h3>
+<ul>
+<li><strong>多租户隔离</strong>：逻辑隔离用 <code>tenant_id</code> 元数据强制过滤；大客户用物理隔离（独立集群或命名空间）；按租户做配额与限流。多租户下最常见的安全事故是<strong>检索没带租户过滤导致跨租户数据泄露</strong>——必须在数据库层与查询层双重校验。</li>
+<li><strong>增量更新</strong>：文档变更要版本化，删除旧向量按 <code>doc_id</code>；大批量用离线任务重建分区索引，小批量实时 upsert；索引频繁更新时用版本号、双写切换、后台重建与灰度保持一致性。</li>
+<li><strong>缓存</strong>：Query 级缓存（相同问题直接返回答案，注意权限与 TTL）；Embedding 缓存（热门 query 的向量）；LLM 响应缓存（低敏场景缩短延迟）。缓存键必须带租户信息，否则缓存也会串租户。</li>
+<li><strong>Token 成本控制</strong>：控制检索条数与块长度；用更小的模型做摘要与路由；压缩检索结果（抽取句子级证据再喂给主模型）。</li>
+<li><strong>索引优化</strong>：HNSW 参数（M、efConstruction、efSearch）要在召回率、QPS、内存、建索引时间上做压测取舍——efSearch 调大，召回上升、延迟也上升；按租户、时间、产品线分段分区，减少搜索空间；定期重建与增量插入之间做权衡。</li>
+</ul>
+<p>索引数据质量同样是生产项：摄取前清理数据（去特殊字符、奇怪编码、多余 HTML 标签，去重、去无关文档），用元数据加一层结构化过滤（如按日期排序、按文档章节过滤），还可以把块与“它能回答的问题”一起索引，缓解查询与文档的表述不一致。记住：垃圾输入，垃圾输出。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：检索指标自己算（Hit Rate / MRR / NDCG，可跑）</h3>
+<p>不用等框架，先理解指标本身：给定每条问题的“相关文档 ID 集合”和检索返回的排名列表，三个指标都是几行代码。</p>
+<pre><code># 检索指标最小实现：Hit Rate / MRR / NDCG（纯 Python，可直接跑）
+import math
+
+def hit_rate(ranked_ids, relevant_ids, k=5):
+    """Top-K 里有没有命中相关文档"""
+    return 1.0 if set(ranked_ids[:k]) & set(relevant_ids) else 0.0
+
+def reciprocal_rank(ranked_ids, relevant_ids):
+    """第一个相关文档的排名倒数；没命中为 0"""
+    for i, doc_id in enumerate(ranked_ids, start=1):
+        if doc_id in relevant_ids:
+            return 1.0 / i
+    return 0.0
+
+def ndcg(ranked_ids, relevant_ids, k=5):
+    """NDCG：越靠前的相关结果权重越高，再除以理想排序的 DCG 归一化"""
+    def dcg(ids):
+        return sum(1.0 / math.log2(i + 2) for i, d in enumerate(ids[:k]) if d in relevant_ids)
+    ideal = dcg(sorted(ranked_ids, key=lambda d: d not in relevant_ids))
+    return dcg(ranked_ids) / ideal if ideal else 0.0
+
+# 演示：3 条问题，每条的检索排名与相关文档
+cases = [
+    (["d3", "d1", "d2"], {"d1"}),   # 相关文档排第 2
+    (["d5", "d6", "d7"], {"d5"}),   # 相关文档排第 1
+    (["d8", "d9", "d10"], {"d2"}),  # 没命中
+]
+hr = sum(hit_rate(r, rel) for r, rel in cases) / len(cases)
+mrr = sum(reciprocal_rank(r, rel) for r, rel in cases) / len(cases)
+nd = sum(ndcg(r, rel) for r, rel in cases) / len(cases)
+print(f"Hit Rate@5: {hr:.2f}  MRR: {mrr:.2f}  NDCG@5: {nd:.2f}")
+# Hit Rate@5: 0.67  MRR: 0.50  NDCG@5: 0.54
+# 解读：Hit Rate 只看有没有，MRR/NDCG 还看排得靠不靠前——
+# 所以“召回到了但排第 5”和“排第 1”在 Hit Rate 里一样，在 MRR 里差很多。</code></pre>
+
+<h3>示例 2：多租户隔离 + 增量更新 + 缓存（可跑，现代写法）</h3>
+<p>用内存版向量库演示生产三件套的控制流：检索强制带 <code>tenant_id</code> 过滤、按 <code>doc_id</code> 增量更新、Query 缓存的键带租户。生产里把内存列表换成真实向量库即可，过滤逻辑不变。</p>
+<pre><code># 生产三件套演示：tenant_id 强制过滤 + 按 doc_id 增量更新 + 带租户的查询缓存
+from dataclasses import dataclass, field
+
+@dataclass
+class Chunk:
+    doc_id: str
+    tenant_id: str
+    text: str
+    version: int = 1
+
+class TenantStore:
+    """演示版向量库：重点是过滤与更新逻辑，不是向量计算"""
+    def __init__(self):
+        self.chunks: list[Chunk] = []
+        self.cache: dict[tuple, list[str]] = {}  # 缓存键含 tenant_id
+
+    def upsert(self, chunk: Chunk):
+        """增量更新：同 doc_id + 同租户的旧版本先删再插"""
+        self.chunks = [c for c in self.chunks
+                       if not (c.doc_id == chunk.doc_id and c.tenant_id == chunk.tenant_id)]
+        self.chunks.append(chunk)
+        self.cache.clear()  # 数据变了，缓存失效
+
+    def search(self, query: str, tenant_id: str, k: int = 2):
+        """检索：强制租户过滤，查不到别人的数据；缓存键带租户"""
+        key = (tenant_id, query)
+        if key in self.cache:
+            return self.cache[key]  # 命中缓存
+        # 演示检索：关键词命中；生产换成向量相似度
+        pool = [c for c in self.chunks if c.tenant_id == tenant_id]
+        hits = sorted(pool, key=lambda c: sum(w in c.text for w in query),
+                      reverse=True)
+        result = [c.text for c in hits if sum(w in c.text for w in query) > 0][:k]
+        self.cache[key] = result
+        return result
+
+store = TenantStore()
+store.upsert(Chunk("d1", "tenant_a", "A 公司年假 15 天。"))
+store.upsert(Chunk("d1", "tenant_b", "B 公司年假 10 天。"))
+print(store.search("年假多少天", "tenant_a"))  # ['A 公司年假 15 天。']
+print(store.search("年假多少天", "tenant_b"))  # ['B 公司年假 10 天。']
+store.upsert(Chunk("d1", "tenant_a", "A 公司年假 20 天。", version=2))
+print(store.search("年假多少天", "tenant_a"))  # ['A 公司年假 20 天。']，旧版本已被替换
+print(store.search("年假多少天", "tenant_b"))  # ['B 公司年假 10 天。']，不受影响</code></pre>
+
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，改一行排名（把第一条的 d1 移到第 1 位），看 MRR 和 NDCG 怎么变，Hit Rate 变不变——体会三个指标的区别。<br>
+2. 在示例 2 里故意把 <code>search</code> 的租户过滤去掉，再跑一次，亲眼看一次跨租户泄露——然后把它改回来，并想想生产里“数据库层与查询层双重校验”分别指什么。<br>
+3. 拿你自己的一个 RAG 场景，用本课的漏斗定位一次真实坏答案：它卡在第几层？对应哪个痛点？写出解法和你会用什么指标验证它真的好了。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. 内容缺失（答案不在库里）时，最该先做的两件事是？</strong></p><button data-i="0">优化数据源 + 提示词鼓励模型说不知道</button><button data-i="1">换一个更大的模型</button><button data-i="2">把 top_k 调到 50</button><div class="ans">解析：选 A。答案不在库里，检索和生成再强也没用；先补数据，再让模型承认不确定，而不是一本正经地编。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 错过排名靠前的文档，推荐的解法是？</strong></p><button data-i="0">直接检索 Top 2，不重排</button><button data-i="1">先召回 Top 10，再重排取 Top 2；并调 chunk_size 与 top_k</button><button data-i="2">删掉向量库，全部用关键词检索</button><div class="ans">解析：选 B。宽召回 + 重排精选是标准解法，参数要在测试集上搜索验证，而不是凭感觉定。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 为什么“只看最终答案对错”不够？</strong></p><button data-i="0">因为答案对错很难判断</button><button data-i="1">因为端到端评估太慢</button><button data-i="2">模型可能猜对，也可能上下文不相关却仍生成正确答案；要同时评检索质量与忠实度才能定位瓶颈</button><div class="ans">解析：选 C。只看对错会把运气当能力，独立评估才能分清问题在检索还是生成。</div></div>
+<div class="q" data-answer="0"><p><strong>4. MRR 衡量的是什么？</strong></p><button data-i="0">第一个正确答案的排名的倒数的平均，排越前分越高</button><button data-i="1">答案与问题的相关性</button><button data-i="2">答案是否由上下文推出</button><div class="ans">解析：选 A。MRR 是检索指标；答案相关性是 Answer Relevancy，是否由上下文推出是忠实度。</div></div>
+<div class="q" data-answer="1"><p><strong>5. RAGAS 评估忠实度的方法是？</strong></p><button data-i="0">直接让人工逐条打分</button><button data-i="1">LLM 把答案拆成多个陈述，逐个检验是否与上下文一致，支持占比就是得分</button><button data-i="2">数答案的字数</button><div class="ans">解析：选 B。RAGAS 是基于 LLM 裁判的自动化框架，但裁判本身有偏差，要抽样人工复核。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 多租户下最常见的安全事故是什么？</strong></p><button data-i="0">缓存过期</button><button data-i="1">HNSW 参数没调好</button><button data-i="2">检索没带租户过滤，导致跨租户数据泄露</button><div class="ans">解析：选 C。必须用 tenant_id 强制过滤，并在数据库层与查询层双重校验；缓存键也要带租户。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：RAG 的十二个痛点里，前七个（论文里的）是哪七个？各用一句话说解法。</summary><p>内容缺失（补数据 + 提示词说不知道）；错过排名靠前的文档（宽召回 + 重排，调 chunk_size/top_k）；脱离上下文（优化检索策略、微调 embedding）；未能提取答案（清数据、提示压缩、关键信息放上下文两端）；格式错误（精准提示、输出解析、结构化输出）；特异性错误（细节到全局、围绕句子的高级检索）；回答不全面（查询优化：路由、改写、拆分、HyDE）。</p></details>
+<details><summary>Q2：没有标注数据，怎么构建 RAG 评测集？</summary><p>合成测试集：知识库分块入库 → 随机选块作根上下文 + K 个相似上下文拼大上下文 → 让 LLM 按模板生成“问题 + 答案”对 → 重复多次换上下文 → 跑 RAG 收集预测答案与上下文，得到 question / ground_truths / answer / contexts 四列。注意补真实日志脱敏问题和拒答类样本，合成数据可能偏简单。</p></details>
+<details><summary>Q3：独立评估和端到端评估有什么区别？</summary><p>独立评估分别评检索模块（上下文精确度等）和生成模块（答案相关性、忠实度），定位瓶颈在检索还是生成；端到端评估只评最终响应（无标签评准确性/相关性/无害性，有标签评准确率与精确匹配）。只看最终对错不够，因为模型可能猜对。</p></details>
+<details><summary>Q4：RAGAS 的三个核心指标是怎么算的？有什么局限？</summary><p>忠实度：LLM 把答案拆成陈述，逐个检验与上下文是否一致，支持占比即得分；答案相关性：LLM 按答案反推问题，算与原始问题的相似度均值；上下文相关性：LLM 筛出相关句子占上下文总句数的比例。局限：依赖裁判模型，有偏好与盲区，要抽样人工复核。</p></details>
+<details><summary>Q5：多租户 RAG 上线要注意什么？增量更新怎么做？</summary><p>多租户：tenant_id 元数据强制过滤（数据库层与查询层双重校验）、大客户物理隔离、按租户配额限流、缓存键带租户。增量更新：文档变更版本化，删除旧向量按 doc_id；大批量离线重建分区索引，小批量实时 upsert；用版本号、双写切换、后台重建与灰度保持一致性。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>上线前按这个顺序检查：评测集有没有拒答类样本（没有就先补）→ 检索有没有 tenant_id 过滤（没有就别上线）→ 有没有备用模型（主模型限流时服务不能挂）→ 增量更新会不会留下旧版本向量 → 缓存键带没带租户。这五项任何一项缺了，上线后都是事故。</p>
+<p><strong>简历讲法：</strong>别写“负责 RAG 系统评测与优化”，写“针对客服 RAG 的内容缺失问题，建了合成测试集（含 X 条拒答样本），用 RAGAS 评出忠实度基线 0.72；加拒答提示与宽召回重排后，忠实度到 0.88，Top-5 命中率提升 X 个点”。前者是职责描述，后者是“问题—方法—指标”的完整故事，面试官能一路追问下去。</p>
+<p><strong>明日预告：</strong>Day 13 讲工具调用与 MCP：Function Calling 全流程与协议——Agent 终于要动手调工具了。</p>
+</div>
+<div class="nav"><span><a href="day11.html">← Day 11</a></span><span><a href="day13.html">Day 13 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

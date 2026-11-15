@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 3：反思与搜索：Reflexion、LATS、自一致性 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 3 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 3：反思与搜索：Reflexion、LATS、自一致性</h1>
+<p>Day 2 的 ReAct 和 Plan-and-Execute 解决的是“怎么做”，今天解决的是“做错了怎么办、哪条路更好”。ReAct 一条路走到黑容易掉进局部最优，Plan-and-Execute 的计划错了会污染全局。三种补强手段各管一摊：Reflexion 让 Agent 做完复盘、带着教训重试；LATS 让 Agent 在决策树上多路探索再选最优；自一致性让模型多答几遍、少数服从多数。共同点是：都用额外计算换可靠性。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 200" width="100%" role="img" aria-label="Reflexion 循环：Actor 行动，Evaluator 评估，Reflector 写反思，反思进入记忆，下一轮 Actor 带着反思重试">
+<rect x="20" y="70" width="130" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="85" y="94" text-anchor="middle" font-size="13" fill="#222">Actor（行动）</text><text x="85" y="112" text-anchor="middle" font-size="12" fill="#555">生成行动 / 答案</text>
+<line x1="150" y1="98" x2="210" y2="98" stroke="#0b62d6" stroke-width="2"/><polygon points="210,98 198,92 198,104" fill="#0b62d6"/>
+<rect x="210" y="70" width="140" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="280" y="94" text-anchor="middle" font-size="13" fill="#222">Evaluator（评估）</text><text x="280" y="112" text-anchor="middle" font-size="12" fill="#555">对 / 错 · 评分 · 缺失项</text>
+<line x1="350" y1="98" x2="410" y2="98" stroke="#0b62d6" stroke-width="2"/><polygon points="410,98 398,92 398,104" fill="#0b62d6"/>
+<rect x="410" y="70" width="140" height="56" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="480" y="94" text-anchor="middle" font-size="13" fill="#222">Reflector（反思）</text><text x="480" y="112" text-anchor="middle" font-size="12" fill="#555">写反思文本</text>
+<line x1="550" y1="98" x2="600" y2="98" stroke="#0b62d6" stroke-width="2"/><polygon points="600,98 588,92 588,104" fill="#0b62d6"/>
+<rect x="600" y="70" width="108" height="56" rx="10" fill="#f0fdf4" stroke="#22a35a" stroke-width="2"/><text x="654" y="94" text-anchor="middle" font-size="13" fill="#222">反思记忆</text><text x="654" y="112" text-anchor="middle" font-size="12" fill="#555">可复用教训</text>
+<path d="M 654 126 C 654 175, 85 175, 85 126" fill="none" stroke="#22a35a" stroke-width="2" stroke-dasharray="5,4"/><polygon points="85,126 79,138 91,138" fill="#22a35a"/>
+<text x="364" y="190" text-anchor="middle" font-size="13" fill="#222">下一轮 Actor 带着反思重试：Act → Eval → Reflect → Retry，直到成功或达到最大尝试次数</text>
+<text x="364" y="30" text-anchor="middle" font-size="13" font-weight="bold" fill="#222">Reflexion：做完不等于结束，做错要写错题本</text>
+</svg>
+<h3>1. Reflexion：三角色分工与语言化反思复用</h3>
+<p>Reflexion 的核心是：<strong>做完不等于结束</strong>——还要评估做得好不好，把教训记下来，下次带着教训重试。像考试做错后写错题本，而不是盲目刷同一道题。它强调<strong>语言化反思</strong>（自然语言反思条目），而不是只改参数；反思作为记忆，影响后续尝试的策略。典型角色分工（概念上）：<strong>Actor</strong> 生成行动/答案（可接工具）；<strong>Evaluator</strong> 给反馈（对/错、评分、缺失项），来源可以是规则、更强模型、单元测试、外部工具验证，因任务而异；<strong>Reflector</strong> 根据反馈写反思文本，指出错误原因与改进策略。反思不是泛泛的“我要更仔细”，而是<strong>可执行</strong>的指导，例如“应先确认单位换算”“应先检索最新数据而非凭记忆”。</p>
+<p><strong>反思记忆的存储与使用：</strong>短期是同一任务多轮尝试中维护 <code>reflections: List[str]</code>；长期可写入向量库/键值库，按任务类型检索相似反思（进阶）。使用方式是每轮把反思拼进提示：任务 + “Past reflections” + 反思列表，Actor 在此基础上生成新输出，Evaluator 评分，Reflector 追加新反思，循环直到成功或达到最大尝试次数。和“让模型自己检查一遍”的区别是：自检往往是一次性的；Reflexion 把评估与反思<strong>显式化、结构化</strong>，并<strong>跨尝试复用</strong>反思文本，形成可累积的“策略记忆”，工程上更易控制与评测。适用场景是可验证任务（代码、数学、有测试用例的生成）、易犯系统性错误的任务（格式、约束、工具选择），以及预算允许多轮尝试的场景——反思会增加调用次数。反思太冗长时要限制条数与长度，合并相似反思，只保留高信息密度条目。</p>
+<h3>2. LATS：树搜索 + MCTS，把决策当树来搜</h3>
+<p>LATS（Language Agent Tree Search）把 Agent 的决策看成在<strong>树</strong>上搜索：每个节点是一种“状态/中间思路”，分支是不同行动。任务复杂、存在多条可能路径时，与其一次走到底，不如探索多条路，用评估函数判断哪条路更有希望。它常与<strong>蒙特卡洛树搜索（MCTS）</strong>思想结合：通过选择—扩展—模拟—回传，在探索与利用之间折中，把“语言推理”嵌进搜索节点。节点包含当前上下文、已执行动作历史、可选下一步；边是一次 Thought/Action 或一个子目标步骤；叶节点评估是否完成任务、奖励分数、是否需继续扩展。</p>
+<p><strong>MCTS 四步（面试版描述）：</strong>① <strong>Select（选择）</strong>：从根沿策略选到叶（UCB 等平衡探索/利用）；② <strong>Expand（扩展）</strong>：生成若干可能的下一步（语言分支），在 LATS 中常由 LLM 生成多个候选行动；③ <strong>Simulate / Rollout（模拟）</strong>：用启发式或模型快速评估结果潜力，可用更便宜模型或短 rollouts；④ <strong>Backpropagate（回传）</strong>：把评估回报回传到路径上的节点统计量。相比单次 ReAct，LATS 的成本主要来自多分支扩展与多次评估/模拟，换来的是更系统的探索，降低“一条路径走到黑”的局部最优风险，适合决策点多的任务，如策略游戏、规划 puzzle、代码修复（多方案补丁）、需要先提出多种假设再验证的研究型问题。和束搜索（Beam Search）的区别：Beam 偏序列生成；LATS / MCTS 更强调节点价值估计与探索策略（UCB）。工程难点是分支爆炸、评估器设计、延迟控制，需要强剪枝与缓存。</p>
+<h3>3. Self-Consistency：多条推理路径投票</h3>
+<p>Self-Consistency 对同一问题采样多条推理路径（不同温度或多候选），对最终答案做<strong>投票或一致性检查</strong>，选多数派或最可信路径。原理是用计算换可靠性：单条推理链可能在某一步走偏，多条链各自独立推理后投票，能把偶然错误稀释掉。工程实现上，对同一输入调用模型 N 次（temperature 大于 0），解析每次的 JSON 答案字段，对类别做多数投票；若平票，取平均 confidence 较高者或触发人工审核。它适合<strong>答案空间有限</strong>的任务（选择题、结构化结论、分类），对开放写作类“无唯一正确答案”的任务投票意义较小。Self-Consistency 与 CoT 经常结合：先用 CoT 生成多条推理链，再投票。</p>
+<h3>4. Self-Reflection 与 Self-Critique 模板，以及成本权衡</h3>
+<p><strong>Self-Reflection</strong> 让模型在初稿之后再生成一轮：检查错误、遗漏、与约束的一致性，并输出修订版或自检清单。相当于同一上下文内的二次采样，但角色从“生成者”切到“评审者”，对部分任务能降幻觉、补约束。<strong>双阶段模板</strong>：第一轮根据材料写答案；第二轮不要重复第一轮全文，仅输出“第一轮可能存在的问题（最多 3 条）”与“修订后的最终答案（若无需修订则说明‘保持原答案’）”。<strong>Self-Critique</strong> 更进一步，显式要求模型指出初版答案的问题列表（事实、逻辑、格式），再据此改写。模板结构是：材料 + 初版答案 + 任务（你是严格审稿人，只做两件事：列出可能存在的问题，最多 5 条，若没有明显问题写“未发现明显问题”；给出修订后的答案，若初版已足够好则原样重复并注明“维持不变”），输出两段，标题分别为“问题清单”“修订答案”。</p>
+<p><strong>成本权衡是这课的收尾考点。</strong>Self-Reflection 通常增加约一倍或更高的延迟与 Token；对高风险、高价值输出（医疗、法律、财务摘要）或格式极易错的场景值得，对低价值闲聊往往不值得。Reflexion 增加的是“尝试次数 × 每轮调用”，LATS 增加的是“分支数 × 评估次数”，Self-Consistency 增加的是“采样次数 N”。三者都是用计算换可靠性，选型时先问：这个任务的错误代价，值不值得付这份计算账单？Re-planning 与 Reflexion 都“改正错误”，区别是：Re-planning 偏计划结构的调整（下一步怎么走），Reflexion 偏策略/经验的语言化总结并跨轮复用。</p>
+<div class="warn"><strong>容易踩的坑：</strong>反思写得越长不等于越好。泛泛的“我要更仔细”对下一轮毫无帮助，反思必须可执行（“先确认单位换算”）。同时要限制反思条数与长度、合并相似反思，否则反思记忆会变成上下文里的噪声，反而拖垮下一轮。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：Reflexion 循环（离线可跑：Actor 第一次算错，带着反思第二次算对）</h3>
+<pre><code>def reflexion_loop(task, actor, evaluator, reflector, max_trials=3):
+    """Act → Eval → Reflect → Retry：反思作为记忆进入下一轮提示。"""
+    reflections: list[str] = []
+    out = ""
+    for _ in range(max_trials):
+        mem = "\n".join(f"- {r}" for r in reflections) or "(none)"
+        out = actor(f"Task: {task}\nReflections:\n{mem}\n")
+        score, feedback = evaluator(out)  # 例如 (0.0~1.0, str)
+        if score >= 0.9:
+            return out
+        r = reflector(f"Output:\n{out}\nFeedback:\n{feedback}\nWrite concise lessons.")
+        reflections.append(r)
+    return out
+
+
+def fake_actor(prompt):
+    """假 Actor：没反思时算错（漏了单位换算），有反思时算对。"""
+    if "单位换算" in prompt:
+        return "3 公里 = 3000 米，3000 米 ÷ 50 米/圈 = 60 圈"
+    return "3 ÷ 50 = 0.06 圈"
+
+
+def fake_evaluator(out):
+    return (1.0, "正确") if "60 圈" in out else (0.0, "单位错误：公里与米混用")
+
+
+def fake_reflector(prompt):
+    return "应先确认单位换算：公里转米再计算，不要直接拿公里除以米。"
+
+
+print(reflexion_loop("3 公里跑道，每圈 50 米，一共多少圈？",
+                     fake_actor, fake_evaluator, fake_reflector))
+# 3 公里 = 3000 米，3000 米 ÷ 50 米/圈 = 60 圈</code></pre>
+<h3>示例 2：Self-Consistency 多数投票（离线可跑，假模型采样 5 次取多数）</h3>
+<pre><code>from collections import Counter
+
+
+def self_consistency(question, llm, n=5):
+    """同一问题采样 N 条推理路径，对最终答案做多数投票。"""
+    answers = []
+    for _ in range(n):
+        out = llm(question)  # 真实场景：temperature > 0，多次调用
+        answer = out.split("最终答案：", 1)[1].strip()
+        answers.append(answer)
+    winner, votes = Counter(answers).most_common(1)[0]
+    return winner, votes, answers
+
+
+# 假模型：5 次采样里 4 次答对、1 次走偏，投票纠回正确结果
+_samples = iter(["最终答案：60 圈", "最终答案：0.06 圈",
+                 "最终答案：60 圈", "最终答案：60 圈", "最终答案：60 圈"])
+
+
+def fake_llm(question):
+    return next(_samples)
+
+
+winner, votes, all_answers = self_consistency("3 公里跑道每圈 50 米，多少圈？", fake_llm, n=5)
+print(f"投票结果：{winner}（{votes}/5 票），全部采样：{all_answers}")
+# 投票结果：60 圈（4/5 票），全部采样：['60 圈', '0.06 圈', '60 圈', '60 圈', '60 圈']</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，再把 <code>max_trials</code> 改成 1，确认 Actor 没机会反思时会直接返回错误答案——体会“尝试次数预算”就是 Reflexion 的可靠性开关。<br>
+2. 改写 <code>fake_reflector</code>，让它返回一句泛泛的反思（如“我要更仔细”），再把 <code>fake_actor</code> 的判断条件改成只认这句泛泛反思——观察：泛泛反思对纠错毫无帮助，反思必须可执行。<br>
+3. 把示例 2 的采样改成 2 对 2 平票（再加 1 次走偏采样，n=6），想想工程上平票时该怎么办：取平均 confidence 较高者，还是触发人工审核？把你的选择写成一行注释。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="0"><p><strong>1. Reflexion 的三角色分工是？</strong></p><button data-i="0">Actor 生成行动/答案，Evaluator 给反馈，Reflector 写反思文本</button><button data-i="1">Planner 做计划，Executor 执行，Reviewer 审核</button><button data-i="2">Searcher 检索，Writer 写作，Editor 编辑</button><div class="ans">解析：选 A。三角色对应循环的三步：行动 → 评估 → 反思，反思进入记忆供下一轮复用。</div></div>
+<div class="q" data-answer="1"><p><strong>2. Reflexion 的关键产出是什么？它如何提升下一轮？</strong></p><button data-i="0">更强的模型参数</button><button data-i="1">高质量反思文本；它作为记忆进入下一轮提示，指导 Actor 改变策略而非重复错误</button><button data-i="2">更多的工具调用次数</button><div class="ans">解析：选 B。反思是语言化的、可执行的策略记忆，不是参数更新。</div></div>
+<div class="q" data-answer="2"><p><strong>3. MCTS 四步的正确顺序是？</strong></p><button data-i="0">扩展 → 选择 → 回传 → 模拟</button><button data-i="1">模拟 → 选择 → 扩展 → 回传</button><button data-i="2">选择（Select）→ 扩展（Expand）→ 模拟（Simulate）→ 回传（Backpropagate）</button><div class="ans">解析：选 C。四步在探索与利用之间折中，UCB 等策略平衡两者。</div></div>
+<div class="q" data-answer="0"><p><strong>4. LATS 相比单次 ReAct，多在哪里成本？换来什么收益？</strong></p><button data-i="0">成本来自多分支扩展与多次评估/模拟，收益是更系统的探索，降低一条路径走到黑的局部最优风险</button><button data-i="1">成本来自更长的 Prompt，收益是更快的速度</button><button data-i="2">没有额外成本，纯收益</button><div class="ans">解析：选 A。LATS 适合决策点多的任务，工程难点是分支爆炸、评估器设计、延迟控制。</div></div>
+<div class="q" data-answer="1"><p><strong>5. Self-Consistency 适合什么任务？</strong></p><button data-i="0">长文创作类任务</button><button data-i="1">答案空间有限的任务，如选择题、结构化结论、分类</button><button data-i="2">所有任务都同样适合</button><div class="ans">解析：选 B。开放写作类“无唯一正确答案”的任务，投票意义较小。</div></div>
+<div class="q" data-answer="2"><p><strong>6. Re-planning 与 Reflexion 都“改正错误”，区别是什么？</strong></p><button data-i="0">两者完全相同</button><button data-i="1">Re-planning 改策略，Reflexion 改计划结构</button><button data-i="2">Re-planning 偏计划结构的调整（下一步怎么走），Reflexion 偏策略/经验的语言化总结并跨轮复用</button><div class="ans">解析：选 C。一个改“路怎么走”，一个改“下次怎么做才不犯同类错误”。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Reflexion 和“让模型自己检查一遍”有什么不同？</summary><p>自检往往是一次性的；Reflexion 把评估与反思显式化、结构化，并跨尝试复用反思文本，形成可累积的“策略记忆”。工程上更易控制与评测：反思条数、长度、复用方式都可以度量和调参。</p></details>
+<details><summary>Q2：LATS 与 ReAct 在“探索能力”上如何对比？</summary><p>ReAct 通常主路径贪心推进；LATS / MCTS 通过多分支搜索与价值回传更系统探索决策空间（成本更高）。ReAct 适合路径相对明确的任务，LATS 适合决策点多、存在多条可能路径的复杂任务。</p></details>
+<details><summary>Q3：Self-Reflection 会增加多少成本？值得吗？</summary><p>通常增加约一倍或更高的延迟与 Token；对高风险、高价值输出（医疗、法律、财务摘要）或格式极易错的场景值得；对低价值闲聊往往不值得。选型时先问错误代价是否值得付这份计算账单。</p></details>
+<details><summary>Q4：LATS 和束搜索（Beam Search）有什么区别？</summary><p>Beam 偏序列生成；LATS / MCTS 更强调节点价值估计与探索策略（UCB）。LATS 的节点是“状态/中间思路”，边是一次 Thought / Action，评估回报会回传到路径上的节点统计量。</p></details>
+<details><summary>Q5：Reflexion 的 Evaluator 从哪来？反思太冗长怎么办？</summary><p>Evaluator 来源因任务而异：规则、更强模型、单元测试、外部工具验证。反思冗长时限制条数与长度，合并相似反思，只保留高信息密度条目；反思必须可执行，泛泛的“我要更仔细”对下一轮毫无帮助。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>反思与搜索都是“用计算换可靠性”，上线前先算账：Reflexion 的账单是尝试次数 × 每轮调用，LATS 是分支数 × 评估次数，Self-Consistency 是采样次数 N。先给每种机制设硬预算（最大尝试次数、分支上限、采样数），再谈收益；没有预算的反思循环和没有步数上限的 ReAct 一样危险。</p>
+<p><strong>简历讲法：</strong>别写“了解 Reflexion”，写“给代码生成 Agent 加 Reflexion：Actor 出代码，单元测试做 Evaluator，失败时 Reflector 写可执行反思（如‘先确认单位换算’）进记忆重试，最多 3 轮；关键分类任务用 Self-Consistency 采样 5 次多数投票，平票触发人工审核”。前者是名词，后者是可追问的机制设计。</p>
+<p><strong>明日预告：</strong>Day 4 讲编排框架：LangChain Agent 与 LangGraph 状态机——把前三天的推理范式装进工程框架里，循环如何被标准化，图编排又在什么场景胜出。</p>
+</div>
+<div class="nav"><span><a href="day02.html">← Day 2</a></span><span><a href="day04.html">Day 4 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

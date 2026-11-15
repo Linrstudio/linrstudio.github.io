@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 15：记忆系统：短期、长期、三因子检索与高级框架 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 15 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 15：记忆系统：短期、长期、三因子检索与高级框架</h1>
+<p>没有记忆的 Agent 像金鱼：每次请求都像第一次见面，用户说过“不要用 Python”，三轮之后它就忘了。今天讲记忆系统——Agent 如何存储、组织、检索、更新信息：短期记忆管“当下这轮对话”，长期记忆管“跨会话的偏好与事实”，摘要负责压缩，三因子检索负责“下一轮该想起什么”，最后看高级框架与生产里的坑。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="记忆系统流程：短期记忆到摘要压缩到长期记忆到三因子检索再注入提示词">
+<rect x="8" y="40" width="128" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="72" y="62" text-anchor="middle" font-size="13" fill="#222">短期记忆</text><text x="72" y="80" text-anchor="middle" font-size="12" fill="#555">窗口 / Buffer</text>
+<line x1="136" y1="66" x2="150" y2="66" stroke="#0b62d6" stroke-width="2"/><polygon points="150,66 142,61 142,71" fill="#0b62d6"/>
+<rect x="150" y="40" width="128" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="214" y="62" text-anchor="middle" font-size="13" fill="#222">摘要压缩</text><text x="214" y="80" text-anchor="middle" font-size="12" fill="#555">增量 + 全量校准</text>
+<line x1="278" y1="66" x2="292" y2="66" stroke="#0b62d6" stroke-width="2"/><polygon points="292,66 284,61 284,71" fill="#0b62d6"/>
+<rect x="292" y="40" width="128" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="356" y="62" text-anchor="middle" font-size="13" fill="#222">长期记忆</text><text x="356" y="80" text-anchor="middle" font-size="12" fill="#555">向量库 + 元数据</text>
+<line x1="420" y1="66" x2="434" y2="66" stroke="#0b62d6" stroke-width="2"/><polygon points="434,66 426,61 426,71" fill="#0b62d6"/>
+<rect x="434" y="40" width="128" height="52" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="498" y="62" text-anchor="middle" font-size="13" fill="#222">三因子检索</text><text x="498" y="80" text-anchor="middle" font-size="12" fill="#555">相关 × 近期 × 重要</text>
+<line x1="562" y1="66" x2="576" y2="66" stroke="#0b62d6" stroke-width="2"/><polygon points="576,66 568,61 568,71" fill="#0b62d6"/>
+<rect x="576" y="40" width="128" height="52" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="640" y="62" text-anchor="middle" font-size="13" fill="#222">注入 Prompt</text><text x="640" y="80" text-anchor="middle" font-size="12" fill="#555">按需加载</text>
+<text x="364" y="128" text-anchor="middle" font-size="13" fill="#222">记忆 ≠ 只找文档：还要管时间线、重要性、用户维度与写入策略</text>
+</svg>
+<h3>1. 记忆是什么：与 RAG 的关系</h3>
+<p>记忆是 Agent <strong>跨请求持久或半持久的状态</strong>：存储、组织、检索、更新信息的一整套机制。单次请求的 prompt 是瞬时输入，记忆是可以被策略性地注入 prompt、工具参数或规划模块的状态。没有记忆，Agent 只能做“无状态函数调用”：多轮对话前后矛盾、长任务断链、偏好每次重问。</p>
+<p>记忆和 RAG 是什么关系？<strong>长期记忆常与向量检索结合，但 RAG 只是长期记忆的一种实现路径。</strong>完整的记忆系统还强调四样 RAG 不管的东西：<strong>时间线</strong>（这条记忆是什么时候的）、<strong>重要性</strong>（哪条更值得留）、<strong>用户维度</strong>（这是谁的记忆）、<strong>写入策略</strong>（什么值得存、什么该忘）。面试时被问“用 RAG 算不算记忆”，就按这个口径答。</p>
+<p>人类记忆的类比能帮你划分模块职责：感觉记忆（极短、未加工）对应原始输入缓存；短期记忆（容量小、可主动操作）对应对话上下文与 ReAct 轨迹里的 scratchpad；长期记忆（持久、需巩固）对应向量库、用户画像表、知识图谱、会话摘要归档。类比不能硬套——计算机没有神经可塑性，“巩固、遗忘、冲突解决”都要工程上显式实现。</p>
+<h3>2. 短期记忆：窗口与 Token 预算</h3>
+<p>短期记忆是当前会话内模型能直接“看到”的信息，受 Token 上限与延迟约束。两种基本做法：<strong>Conversation Buffer</strong>（多轮消息按时间顺序全量拼接，保真度高，但越长越贵、越慢、越易注意力分散）；<strong>滑动窗口</strong>（只保留最近 k 轮或最近 n 个 Token，成本可控，但可能丢掉写在很前面的关键约束，比如“不要用 Python”）。取舍的关键是：任务是否强依赖“很久以前的一条约束”——是的话，纯窗口必须配合摘要或长期记忆检索，也可以先“关键句提取”把硬约束抽进画像，再对对话做窗口截断。</p>
+<p>Token 预算分配建议顺序：<strong>system 指令 &gt; 安全/策略 &gt; 工具定义（若必须）&gt; 高优先级记忆（用户偏好/任务状态）&gt; 近期对话 &gt; 其他</strong>，并预留 <strong>10%～20%</strong> 给模型输出与格式冗余。长工具返回要压缩、引用 ID、存外部，而不是全文塞入。工具 schema 特别长时：工具分层（核心工具常驻 + 动态加载）、摘要版 schema、或工具路由先选子集再展开。还要记住长上下文的“中间遗忘”现象：模型对长上下文中间部分的关注会变弱。</p>
+<h3>3. 长期记忆：向量库 + 元数据</h3>
+<p>长期记忆用于跨会话保留信息，典型实现是“<strong>向量数据库 + 元数据</strong>”：记忆文本向量化，同时存 <code>user_id</code>、<code>timestamp</code>、<code>type</code>、<code>source</code> 等元数据；检索时查询向量找 Top-K，再按用户隔离、时间范围、类型过滤，注入 prompt。</p>
+<p><strong>CRUD：</strong>存——批量 embedding 写入；检——相似度 + 过滤 + 可选重排；更——常见是“删旧插新”或版本字段，纯向量库若无主键管理需要业务层 ID；删——按用户注销、过期策略、显式“忘记”指令执行硬删除或 tombstone。<strong>重要性评分</strong>来源有三：规则（关键词加权）、模型打分（LLM 输出 1～10 重要性，需 JSON 约束与校验）、用户反馈（点赞/纠正）。</p>
+<p><strong>衰减机制：</strong>越久未使用、越低相关的记忆应降权或归档。时间衰减常用指数形式 <code>exp(−λΔt)</code>（λ 越大遗忘越快），配合<strong>访问强化</strong>（被召回则提升最近访问时间权重）与<strong>睡眠巩固</strong>（离线任务把零散记忆合并成更高层摘要）。衰减会不会误删重要但很久不用的信息？会。缓解办法：分离冷存储与热索引，对高重要/用户固定的记忆降低衰减速度，支持用户“钉住”偏好；强合规场景衰减更偏归档而非物理删除，并保留审计日志与用户导出/删除能力。</p>
+<h3>4. 会话摘要与压缩：增量在线 + 定期全量校准</h3>
+<p>对话变长后成本高、延迟高、模型更容易漏看中间约束。摘要把信息搬到更短载体，配合长期记忆检索，实现“短上下文 + 广记忆”。只用向量检索不做摘要可以吗？可以，但你会失去低成本的全局叙事（任务阶段、未决事项）：摘要擅长提供“主线”，向量擅长提供“细节证据”，最佳实践是两者并存。</p>
+<table><tr><th>类型</th><th>做法</th><th>优点</th><th>缺点</th></tr><tr><td>增量摘要</td><td>新消息来了，把“旧摘要 + 新片段”再摘要</td><td>省算力与成本</td><td>可能误差累积、早期细节被吞</td></tr><tr><td>全量摘要</td><td>定期对完整对话重摘要</td><td>更一致</td><td>成本高、对话极长时仍可能触顶</td></tr></table>
+<p>工程上常见：<strong>增量在线 + 定期全量校准</strong>。缓解误差累积还有三招：摘要中保留关键事实清单（姓名、日期、硬约束）；对摘要做一致性检查（另一个小模型挑错）；让用户可编辑“长期事实”。分层策略是：硬约束进结构化槽位，软偏好进摘要，细节进向量库按需检索。</p>
+<div class="warn"><strong>旧写法已废弃：</strong>源材料里的 <code>ConversationSummaryMemory</code> 在新版 LangChain 中已 deprecated，不要在新代码里用。现代写法是 <code>MessagesPlaceholder</code> + 显式 summarize 链（自己控制何时触发摘要、摘要模板长什么样），或迁移到 LangGraph 状态里的 <code>summary</code> 字段。面试时这样说，说明你跟得上版本变化。</div>
+<h3>5. 情景记忆 vs 语义记忆</h3>
+<p><strong>情景记忆（Episodic）</strong>是具体事件：时间、地点、参与者、发生了什么，例如“昨天下午用户让我把报表改成 PDF”。<strong>语义记忆（Semantic）</strong>是一般性知识：概念、事实、规则，例如“公司退货政策是 7 天”。多条情景可抽象成语义（归纳），语义在具体任务中落地为情景（实例化）。</p>
+<p>为什么要区分存储？因为<strong>更新频率、隐私级别、检索特征</strong>不同：情景更个人化、更时间敏感；语义更共享、更稳定。区分后可做不同保留策略（情景更易过期）、不同权限（情景的用户隔离更严格），并减少把“一次性事件”误当“长期规则”。实现上是分表模型：<code>EpisodicRecord(ts, actors, text, embedding_id)</code> vs <code>SemanticFact(key, value, source, confidence)</code>；检索时情景偏时间邻近 + 事件相似，语义偏概念相似 + 权威来源；意图路由上，“上次”“刚才”这类问法走情景库，其余走语义库。</p>
+<h3>6. 检索策略：三路召回 + 三因子公式</h3>
+<p>检索策略决定“下一轮生成之前，从记忆池里取什么”。单一策略往往不够，典型 pipeline 是：<strong>三路召回（时间 / 向量 / 关键词）→ 去重 → 重排 → Token 截断注入</strong>。去重可用语义去重（相似度阈值）或 canonical key（实体对齐），但要防误删相似但不同的约束——用阈值 + 冲突检测，矛盾时触发二次 LLM 仲裁。只做强相关性检索会漏掉仍然有效但表述不相似的硬约束，也会过度偏向“像”但错误的片段，需要时间与重要性补足。</p>
+<p>斯坦福 Generative Agents 论文提出的三因子思想是面试高频点：检索时综合<strong>相关性（relevance）</strong>、<strong>近期性（recency）</strong>、<strong>重要性（importance）</strong>，每项归一化后加权：</p>
+<p><code>score(m | q) = w_rel·相关性 + w_rec·近期性 + w_imp·重要性</code></p>
+<p>相关性是查询与记忆的向量相似度映射到 [0,1]；近期性随距离上次发生/访问时间增大而下降（常用指数衰减）；重要性由模型或规则给出并归一化。权重需调参，也可用乘法形式强调“必须同时满足”；三路召回的融合可用 RRF（倒数排名融合）或统一打分后线性加权 / Learning to Rank，线上要 AB 测试权重。</p>
+<h3>7. 高级框架：MemGPT、MemOS、Mem0 与记忆图谱</h3>
+<p>当对话与工具轨迹变复杂，会出现“上下文装不下、长期记忆难组织”的问题，业界提出了更接近操作系统的记忆架构。<strong>MemGPT</strong> 把 LLM 上下文当作“有限 RAM”，把外部存储当作“磁盘”，通过<strong>分页/换入换出</strong>与事件驱动控制信息进出上下文：上下文将满时，控制逻辑决定把哪些内容外溢到外部归档，需要时再加载回来。这与“每次提问都做一次相似度检索”的被动 RAG 不同，更强调对记忆载体的<strong>主动管理</strong>——这也是它和简单 RAG 的本质区别。<strong>MemOS</strong> 是“记忆操作系统”式架构：把记忆拆成多层（瞬时上下文、会话工作区、用户级长期存储、共享知识），由调度器决定读写路径与配额，与 MemGPT 同属“分层 + 调度”一脉。<strong>Mem0</strong> 是面向应用的<strong>记忆层中间件</strong>：把“从对话中抽取可复用记忆 → 更新 → 检索”做成可集成组件，常与向量检索、图结构、用户画像组合使用；它管抽取与存储管线，MemGPT 管上下文与外存之间的搬运策略，两者可互补。</p>
+<p>另外两个方向：<strong>反思与整合</strong>——周期性让模型回顾轨迹生成更高层见解（反思），把多条低层记录合并成稳定条目（整合），减少冗余与冲突；<strong>记忆图谱</strong>——实体—关系—实体存储，检索用图遍历 + 向量，强在多跳推理与结构化关系，弱在构建成本高、实体对齐难，对非结构化闲聊未必划算。</p>
+<h3>8. 生产挑战：隔离、一致性、隐私与重嵌入</h3>
+<p>从 Demo 到生产，记忆系统要面对多租户、持久化、并发一致性、隐私合规、性能与成本。<strong>多租户隔离</strong>是硬性要求：<code>user_id</code> / <code>tenant_id</code> 过滤必须贯穿写入与检索，向量库元数据过滤要默认开启——最常见的生产事故就是检索忘记加租户条件导致串数据。<strong>一致性</strong>：摘要与向量库条目冲突、重复记忆、旧偏好未删除，靠主键、版本号、合并策略、定期对账任务缓解；写路径上先写业务主库拿 <code>memory_id</code>，再异步写向量，失败重试 + 对账比对条目数与哈希。<strong>隐私与安全</strong>：只存必要字段，敏感信息加密或 token 化，支持删除（被遗忘权）；检索到的记忆可能含恶意内容，需要清洗与信任分级，还要红队测试诱导模型保存恶意指令。<strong>Embedding 模型升级</strong>后旧向量与新向量不在同一空间、不可混比，做法是双写期（新旧模型并行写）、离线全量重嵌入、检索时标明 <code>embedding_model_version</code>，查询与库版本一致。</p>
+<div class="warn"><strong>容易踩的坑：</strong>长期记忆用向量库很方便，但“相似 ≠ 正确”：它会召回到表面相近的噪声，账号、订单号这类精确匹配更适合关键字/关系库。生产里长期记忆的标准姿势是混合检索（BM25 + 向量）+ 重排，而不是纯向量检索。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：滑动窗口 + Token 预算（短期记忆）</h3>
+<pre><code>from dataclasses import dataclass
+from typing import List, Dict, Literal
+import tiktoken
+
+Role = Literal["system", "user", "assistant"]
+
+@dataclass
+class ChatMessage:
+    role: Role
+    content: str
+
+class WindowedConversationMemory:
+    """滑动窗口 + Token 预算：先限条数，再按预算从尾部保留。"""
+
+    def __init__(self, model: str = "gpt-4o", max_tokens: int = 3000,
+                 window_messages: int = 20):
+        self.max_tokens = max_tokens
+        self.window_messages = window_messages
+        self.enc = tiktoken.encoding_for_model(model)
+        self.messages: List[ChatMessage] = []
+
+    def add(self, role: Role, content: str) -> None:
+        self.messages.append(ChatMessage(role=role, content=content))
+        if len(self.messages) > self.window_messages:
+            self.messages = self.messages[-self.window_messages:]
+        self._shrink_to_budget()
+
+    def _count_tokens(self, messages: List[ChatMessage]) -> int:
+        text = "\n".join(f"{m.role}: {m.content}" for m in messages)
+        return len(self.enc.encode(text))
+
+    def _shrink_to_budget(self) -> None:
+        while self.messages and self._count_tokens(self.messages) > self.max_tokens:
+            self.messages.pop(0)  # 丢最早一条；生产可优先丢大 tool payload
+
+    def as_openai_messages(self) -> List[Dict[str, str]]:
+        return [{"role": m.role, "content": m.content} for m in self.messages]
+
+
+mem = WindowedConversationMemory(max_tokens=256)
+mem.add("system", "你是助手，回答尽量简洁。")
+mem.add("user", "我叫阿明。")
+mem.add("assistant", "好的，阿明。")
+print(mem.as_openai_messages())
+print("tokens ~=", mem._count_tokens(mem.messages))</code></pre>
+<p>注：示例中的模型名（如 gpt-4o）保留源材料原意，实际使用以官方最新文档为准。</p>
+<h3>示例 2：长期记忆 + 三因子检索（向量 + 元数据 + 衰减）</h3>
+<pre><code>import hashlib
+import math
+import time
+from dataclasses import dataclass
+from typing import Dict, List
+
+def fake_embed(text: str, dim: int = 8) -> List[float]:
+    """演示用确定性伪向量；真实项目请调用 embedding 模型。"""
+    h = hashlib.sha256(text.encode("utf-8")).digest()
+    vec = [((h[i % len(h)] + i) % 97) / 97.0 for i in range(dim)]
+    norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+    return [x / norm for x in vec]
+
+def cosine_sim(a: List[float], b: List[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
+@dataclass
+class MemoryItem:
+    id: str
+    user_id: str
+    text: str
+    vector: List[float]
+    importance: float  # 0~1
+    last_accessed: float
+
+class LongTermMemoryStore:
+    """长期记忆：向量 + 元数据 + 三因子检索。"""
+
+    def __init__(self, decay_lambda: float = 2e-7):
+        self.decay_lambda = decay_lambda
+        self.items: Dict[str, MemoryItem] = {}
+
+    def add(self, user_id: str, text: str, importance: float = 0.5) -> str:
+        mem_id = hashlib.md5(f"{user_id}:{text}:{time.time()}".encode()).hexdigest()[:12]
+        now = time.time()
+        self.items[mem_id] = MemoryItem(mem_id, user_id, text,
+                                        fake_embed(text), importance, now)
+        return mem_id
+
+    def delete(self, mem_id: str) -> None:
+        self.items.pop(mem_id, None)  # 被遗忘权：显式删除入口
+
+    def search(self, user_id: str, query: str, top_k: int = 5):
+        q = fake_embed(query)
+        now = time.time()
+        scored = []
+        for it in self.items.values():
+            if it.user_id != user_id:
+                continue  # 租户隔离：检索必须带 user_id 过滤
+            rel = cosine_sim(q, it.vector)
+            age = max(0.0, now - it.last_accessed)
+            recency = math.exp(-self.decay_lambda * age)  # exp(-λΔt)
+            score = 0.6 * rel + 0.2 * it.importance + 0.2 * recency
+            scored.append((score, it))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return scored[:top_k]
+
+
+store = LongTermMemoryStore()
+store.add("u1", "用户偏好：沟通风格简洁，禁用表情。", importance=0.9)
+store.add("u1", "用户在做电商客服项目。", importance=0.6)
+for s, it in store.search("u1", "他喜欢怎么说话？"):
+    print(round(s, 4), it.text)</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑通示例 1，把 <code>max_tokens</code> 改小（比如 40），连续 add 十几条消息，观察最早的消息是怎样被丢掉的——再想想：如果第一条是“不要用 Python”这样的硬约束，纯窗口会出什么问题？<br>
+2. 跑通示例 2，把 <code>decay_lambda</code> 调大 1000 倍，再把一条记忆的 <code>last_accessed</code> 改成 30 天前，观察它的得分变化；然后给它加一个“钉住”标记（跳过衰减），验证高重要记忆不再被遗忘。<br>
+3. 用 <code>MessagesPlaceholder</code> + 一个显式 summarize 链写一个 20 行的摘要触发器：消息数超过 10 条时，把前 8 条摘要成一段话存起来，只留最近 2 条原文——不要用已废弃的 ConversationSummaryMemory。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 长期记忆与 RAG 是什么关系？</strong></p><button data-i="0">RAG 就是记忆系统的全部</button><button data-i="1">RAG 是长期记忆的一种实现路径，但记忆还强调时间线、重要性、用户维度与写入策略</button><button data-i="2">两者完全无关</button><div class="ans">解析：选 B。向量检索只解决“找得到”，记忆还要管“什么时候的、谁的、多重要、该不该存”。</div></div>
+<div class="q" data-answer="0"><p><strong>2. Token 预算分配的正确顺序是？</strong></p><button data-i="0">system 指令 &gt; 安全/策略 &gt; 工具定义 &gt; 高优先级记忆 &gt; 近期对话，并预留 10%～20% 给输出</button><button data-i="1">近期对话优先，system 指令最后</button><button data-i="2">平均分配，不用预留输出空间</button><div class="ans">解析：选 A。硬约束和安全永远排在前面，输出空间必须预留，否则模型会被截断。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 记忆的时间衰减常用什么形式？</strong></p><button data-i="0">线性递减</button><button data-i="1">固定 7 天后直接删除</button><button data-i="2">指数衰减 exp(−λΔt)，λ 越大遗忘越快</button><div class="ans">解析：选 C。指数衰减是标准做法，配合访问强化与睡眠巩固；高重要记忆可降低衰减速度或钉住。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 增量摘要与全量摘要的工程常见做法是？</strong></p><button data-i="0">只做增量摘要，从不校准</button><button data-i="1">增量在线 + 定期全量校准，并保留关键事实清单</button><button data-i="2">只做全量摘要，每条消息都重摘要一次</button><div class="ans">解析：选 B。增量省成本但会误差累积，定期全量重摘要校准一次是标准组合。</div></div>
+<div class="q" data-answer="0"><p><strong>5. Generative Agents 三因子检索公式包含哪三项？</strong></p><button data-i="0">相关性、近期性、重要性</button><button data-i="1">相关性、长度、语言</button><button data-i="2">近期性、用户数、成本</button><div class="ans">解析：选 A。score = w_rel·相关性 + w_rec·近期性 + w_imp·重要性，每项先归一化再加权，权重线上 AB 测试。</div></div>
+<div class="q" data-answer="2"><p><strong>6. MemGPT 和简单 RAG 的本质区别是？</strong></p><button data-i="0">MemGPT 用的模型更大</button><button data-i="1">没有区别，只是名字不同</button><button data-i="2">RAG 是被动检索，MemGPT 是主动内存管理：像操作系统管理 RAM 一样分页换入换出</button><div class="ans">解析：选 C。MemGPT 的控制器决定何时把外部记忆换入上下文、何时写出、如何分页，这是主动管理而非被动检索。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：为什么 Agent 需要记忆？没有行不行？</summary><p>需要，四个原因：多轮一致性（避免重复追问、前后矛盾）、长任务（工具调用链与子目标状态需要延续）、个性化（偏好、禁忌、领域术语）、成本（不必每次把全量背景塞进 prompt，可通过摘要与检索按需加载）。简单 FAQ 或单次工具调用可能够用，但在助理、客服、编程 Agent、游戏 NPC 等场景，没有记忆明显不可用。</p></details>
+<details><summary>Q2：Conversation Buffer 和 Window Buffer 的区别与取舍？</summary><p>Buffer 强调完整保留（直到触顶），Window 强调只保留尾部。取舍在于任务是否强依赖“很久以前的一条约束”：纯 Window 会丢信息，需要配合摘要或长期记忆检索。也可以补充“关键句提取 + Window”：先抽取硬约束进画像，再对对话做窗口截断。</p></details>
+<details><summary>Q3：长期记忆为什么常用向量数据库？有什么局限？</summary><p>常用是因为语义检索能处理“换说法”的匹配。局限：相似 ≠ 正确（会召回到表面相近的噪声）、难精确匹配（账号、订单号更适合关键字/关系库）、更新一致性需业务层保障。生产里标准姿势是混合检索（BM25 + 向量）+ 重排。</p></details>
+<details><summary>Q4：增量摘要误差累积怎么缓解？</summary><p>四招：定期全量重摘要；摘要中保留关键事实清单（姓名、日期、硬约束）；对摘要做一致性检查（另一个小模型挑错）；让用户可编辑“长期事实”。工程上就是“增量在线 + 定期全量校准”。</p></details>
+<details><summary>Q5：Embedding 模型升级后旧向量怎么办？</summary><p>旧向量与新向量不在同一空间，不可混比。做法：双写期（新旧模型并行写）、离线全量重嵌入、检索时标明 embedding_model_version，查询与库版本一致。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>记忆系统最容易出的事故是租户隔离失败和敏感数据未加密写入长期记忆。防护清单：强制租户过滤的集成测试、检索审计日志、敏感字段检测、PII 脱敏、最小权限访问向量库；Embedding 升级一定留双写期，不要直接全量切新模型。</p>
+<p><strong>简历讲法：</strong>别写“做过 Agent 记忆系统”，写“给客服 Agent 做记忆分层：短期用滑动窗口 + Token 预算（system &gt; 安全 &gt; 工具 &gt; 高优先级记忆 &gt; 近期对话，预留 15% 输出），长期用向量库 + 元数据 + 三因子检索（相关性/近期性/重要性），摘要用增量在线 + 定期全量校准，检索强制 user_id 过滤防串租户”。每一句都可追问。</p>
+<p><strong>明日预告：</strong>Day 16 讲多智能体系统：为什么一个 Agent 不够用，三大协作模式、四种通信机制、冲突解决与五大框架对比。</p>
+</div>
+<div class="nav"><span><a href="day14.html">← Day 14</a></span><span><a href="day16.html">Day 16 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

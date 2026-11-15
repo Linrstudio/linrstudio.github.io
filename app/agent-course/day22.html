@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 22：附录：大模型基础速通 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 22 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 22：附录：大模型基础速通</h1>
+<p>前面 21 课讲的都是“怎么用模型搭系统”，今天补最后一块拼图：“模型本身是怎么工作的”。这是附录，不是正课——每节只讲核心结论与面试要点，不展开推导。目标只有一个：面试官问到 Transformer、注意力、微调、对齐、量化这些底层问题时，你能用三句话答到点子上，而不是说“这个我没研究过”。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 200" width="100%" role="img" aria-label="Decoder-only 大模型结构：输入 token 经 Embedding 加 RoPE 位置编码，进入多层 Masked 多头注意力加前馈网络堆叠，最后输出下一个 token 的概率分布">
+<rect x="184" y="8" width="360" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="30" text-anchor="middle" font-size="13" fill="#222">输出：下一个 token 的概率分布（softmax）</text>
+<line x1="364" y1="42" x2="364" y2="56" stroke="#0b62d6" stroke-width="2"/>
+<rect x="184" y="56" width="360" height="72" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="78" text-anchor="middle" font-size="13" fill="#222">Decoder 层 × N（堆叠几十层）</text><text x="364" y="100" text-anchor="middle" font-size="12" fill="#555">Masked 多头自注意力（只能看过去）</text><text x="364" y="119" text-anchor="middle" font-size="12" fill="#555">前馈网络 FFN + Pre-Norm + 残差连接</text>
+<line x1="364" y1="128" x2="364" y2="142" stroke="#0b62d6" stroke-width="2"/>
+<rect x="184" y="142" width="360" height="34" rx="8" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="164" text-anchor="middle" font-size="13" fill="#222">输入：Token Embedding + RoPE 位置编码</text>
+<text x="364" y="194" text-anchor="middle" font-size="13" fill="#555">Decoder-only 是当前 LLM 主流形态：自回归生成，一次吐一个 token</text>
+</svg>
+
+<h3>1. Transformer：Encoder / Decoder、自注意力公式、RoPE / ALiBi、Pre-Norm</h3>
+<p><strong>Encoder</strong> 把输入序列编码成一组上下文相关的表示（适合理解、分类，双向可见）；<strong>Decoder</strong> 自回归地生成下一个 token，靠 Masked 自注意力保证只能看到当前位置及之前，Seq2Seq 任务里还用 Cross-Attention 读 Encoder 的输出。<strong>纯 Decoder 堆叠（如 GPT 系列）已成为当前 LLM 主流形态</strong>——生成式预训练目标（下一词预测）与架构一致，工程上堆叠简单、扩展性好。</p>
+<p>自注意力公式（全课唯一需要会写的公式）：<strong>Attention(Q, K, V) = softmax(QK<sup>T</sup> / √d<sub>k</sub>) V</strong>。Q 是“我要查什么”，K 是“我有什么可被匹配的标签”，V 是“匹配成功后取出什么内容”。除以 √d<sub>k</sub> 的原因：d<sub>k</sub> 较大时点积方差约为 d<sub>k</sub>，数值幅度大，softmax 会进入极陡区域、梯度不稳定；除一下把方差缩放到约 1，训练更稳定。</p>
+<p><strong>位置编码</strong>：注意力本身置换不变（打乱顺序结果不变），必须注入位置信息。<strong>RoPE</strong> 在 Q、K 上施加与位置相关的旋转，相对位置以旋转角度差体现，外推与相对位置性质较好，广泛用于 LLaMA、ChatGLM 等；<strong>ALiBi</strong> 不在 embedding 加位置向量，而在注意力 logits 上按距离加线性负偏置，远处更负，实现简单且对长度外推有一定帮助。</p>
+<p><strong>Pre-Norm vs Post-Norm</strong>：Post-Norm 是原始 Transformer（子层输出后再 Norm），Pre-Norm 是先 Norm 再进子层。现代 LLM 常见 Pre-Norm——更稳定、更易训练深层网络。FFN 是每层注意力后接的位置独立前馈网络，常见扩展比为 4，激活函数常用 GELU / SwiGLU；残差连接提供恒等映射捷径，缓解梯度消失。</p>
+
+<h3>2. 注意力变体：GQA / MQA、Flash Attention</h3>
+<p><strong>MHA</strong> 每头有独立 K、V；<strong>MQA</strong> 所有头共享同一份 K、V，大幅减少 KV Cache 体积与内存带宽需求，推理加速明显，但可能略损质量；<strong>GQA</strong> 介于两者之间，多组 Query 共享同一组 K、V（如 8 个 Q 组对应 2 组 KV），在推理显存与带宽和质量之间折中，Llama 3、Mistral 等采用 GQA。面试一句话：GQA 相对 MHA 推理上主要省在 KV Cache。</p>
+<p><strong>Flash Attention</strong> 的核心思想：标准实现需物化完整 n×n 注意力矩阵，显存占用大；Flash Attention 利用 GPU SRAM 快、HBM 慢的层次结构，把 Q、K、V 分块，在块上融合矩阵乘、softmax 与对 V 的加权，避免完整 n×n 矩阵写回 HBM。关键词：IO-aware、分块、融合算子、减少 HBM 读写。</p>
+
+<h3>3. Tokenization：BPE / WordPiece / SentencePiece、中文特殊处理</h3>
+<p><strong>BPE</strong> 从字符或字节开始，统计相邻符号对频率，合并最高频对为新符号，迭代直到词表达目标规模；<strong>WordPiece</strong>（BERT）类似，但合并准则基于最大化语言模型似然，而非单纯最高频；<strong>SentencePiece</strong> 把整句当作输入，不依赖预分词空格，在原始字符串上学习子词，支持 BPE 与 Unigram 等算法，适合无空格语言。</p>
+<p><strong>中文特殊处理</strong>：中文无天然空格，需在字符、子词、词级之间选择，子词级（字 + 常见片段）较常见；字符级词表大、序列长；中英混合、数字、emoji 常统一用字节级 BPE 避免 OOV，但序列可能变长；实践上多用 SentencePiece + 大词表或字节 BPE。铁律：<strong>微调与推理必须用同一套 tokenizer</strong>，不一致会导致 id 错位、性能异常。</p>
+
+<h3>4. 推理：Prefill vs Decode、KV Cache、温度 / Top-k / Top-p、Beam Search vs 贪心</h3>
+<p><strong>Prefill</strong> 一次性并行计算 prompt 各 token 的表示，计算密集；<strong>Decode</strong> 每步只新增一个 token，算力小、内存带宽敏感。<strong>KV Cache</strong> 对每一层、每个头缓存已生成位置的 Key 和 Value，新一步只计算当前 token 的 Q，与缓存的 K、V 做注意力，以空间换时间；代价是序列越长、层数越多，KV Cache 显存线性增长，是长上下文推理的主要瓶颈之一。</p>
+<p><strong>采样策略</strong>：温度 T——logits 除以 T 再 softmax，T&gt;1 更随机，T&lt;1 更确定；<strong>Top-k</strong> 只保留概率最高的 k 个 token；<strong>Top-p（Nucleus）</strong>按概率从大到小累加，取最小集合使累积概率 ≥ p，动态截断候选集。<strong>贪心</strong>每步取 argmax，快但易局部最优；<strong>Beam Search</strong> 维护 top-b 条部分假设，适合机器翻译、摘要等可度量任务，对开放域对话常显得重复、不自然，对话场景更常用采样。</p>
+
+<h3>5. 微调：全量 / LoRA / QLoRA / Adapter / Prefix Tuning、SFT 流程</h3>
+<p><strong>全量微调</strong>更新全部参数，效果潜力大，但需要大显存、易过拟合小数据，每任务一份完整权重。<strong>LoRA</strong> 冻结原权重 W，只训练低秩分解 W' = W + BA（r 远小于 d、k），直觉是大矩阵更新往往低秩即可近似任务有效子空间；常对 Attention 的 q、v（有时 k、o）和 / 或 FFN 注入，秩 r 经验值 8–64。<strong>QLoRA</strong> 在 4-bit 量化的基座权重上叠加 LoRA，大幅降低显存，略有精度损失风险。<strong>Adapter</strong> 在 Transformer 层中插入小瓶颈层，只训练 adapter 参数；<strong>Prefix Tuning</strong> 在输入前加可学习的前缀向量，P-Tuning v2 把前缀扩展到每一层。</p>
+<p><strong>SFT 流程</strong>五步：高质量指令–回答对数据 → Chat 模板与 tokenizer 对齐 → 交叉熵损失（通常只监督 assistant 段 token）→ 验证集 loss、人工 / 模型裁判、任务基准评估 → 常与 DPO / RLHF 等对齐衔接。</p>
+
+<h3>6. 对齐：RLHF 三阶段、PPO 与 KL 惩罚、DPO、GRPO / KTO</h3>
+<p><strong>RLHF 经典三阶段</strong>：① SFT，学会基本指令跟随与格式；② 奖励模型，对人类标注的“好坏排序”数据训练打分函数 r(x, y)；③ 强化学习，以奖励模型为奖励信号，用 PPO 更新策略，并加 KL 惩罚约束与参考模型（常为 SFT 模型）不要偏离太远——防止策略为刷高奖励分而产生分布外投机行为（reward hacking）。PPO 通过 clipped surrogate objective 限制策略更新幅度，训练稳定；挑战是训练链路长、调参难、奖励黑客。</p>
+<p><strong>DPO</strong> 从偏好对出发，推导出仅用策略与参考模型、无需显式奖励模型的分类式损失，直接优化策略满足偏好——去掉 RL 采样环，pipeline 更简单，但数据质量要求高。<strong>GRPO</strong> 对同一 prompt 一组输出内做相对奖励归一化，减 critic、适应组内比较；<strong>KTO</strong> 从二元反馈（好 / 坏）出发，用前景理论风格损失做对齐，不必成对偏好，数据收集更灵活。细节以论文与最新报告为准，面试可说明“用于改进 RLHF 复杂管线或数据形态”。</p>
+
+<h3>7. 量化：INT8 / INT4、GPTQ、AWQ、GGUF</h3>
+<p>量化把浮点权重 / 激活用低比特整数近似，减少显存与带宽、加速推理；训练后量化（PTQ）常见，量化感知训练（QAT）精度更好但成本高。<strong>INT8</strong> 每权重 8 bit，常配合 per-tensor 或 per-channel 缩放；<strong>INT4</strong> 容量再减半，精度风险更高，常与 group-wise 缩放配合。<strong>GPTQ</strong> 逐列（或块）量化权重，用 Hessian 相关信息最小化量化误差，适合 GPU 上 PTQ，广泛用于开源 LLM 的 4-bit 权重。<strong>AWQ</strong> 强调保留对激活幅度大的“显著”权重通道，按激活统计决定保护权重。<strong>GGUF / GGML</strong> 是文件格式与生态（llama.cpp 等），便于 CPU / 多端部署与多种量化类型，不是单一算法名。正面是显存降、吞吐升、边缘部署可行；负面是困惑度上升，复杂推理 / 代码任务可能掉点。</p>
+
+<h3>8. 推理优化：张量 / 流水线并行、PagedAttention、投机采样、MoE</h3>
+<p><strong>张量并行（TP）</strong>：单层内矩阵分块到多 GPU，需 all-reduce 通信；<strong>流水线并行（PP）</strong>：不同层放在不同 GPU，micro-batch 流水；大集群还可数据并行 + TP + PP 组合。<strong>PagedAttention（vLLM 核心）</strong>：将 KV Cache 存成非连续块（类似 OS 分页），按请求动态分配，减少 padding 浪费，提高 batch 利用率——解决的是 KV Cache 显存碎片化与浪费。<strong>连续批处理</strong>在迭代中动态增删请求，提高 GPU 利用率。</p>
+<p><strong>投机采样</strong>：用小模型多步预测，大模型并行验证，接受则一次前进多 token，降低每 token 延迟。<strong>MoE</strong>：每层含多个 FFN 专家，门控只对少数专家计算（如 top-2），总参数大但每 token 激活参数少，提高容量与效率比；挑战是负载均衡与通信。面试一句话：MoE“参数多算力少”，因为每 token 只激活部分专家。</p>
+
+<h3>9. 选型：开源 vs 闭源</h3>
+<p><strong>开源</strong>：数据自主、可微调、离线可部署，需自备算力与运维；<strong>闭源</strong>：上手快、持续升级，依赖供应商、成本与合规需评估；<strong>混合</strong>：敏感数据本地开源模型，通用能力调用 API。面试答法看四点：隐私、延迟、成本、定制需求与团队运维能力；高合规本地优先，快速验证可用 API。模型对比与 benchmark 数字以官方最新文档为准，不编造数字——面试官追问具体榜单时，诚实说“以官方最新评测为准，我做过任务相关评测与 A/B”比编一个数字安全得多。</p>
+<div class="warn"><strong>容易踩的坑：</strong>面试时编 benchmark 数字，或者把源材料里的年代感模型名当成最新结论背出来。模型版本迭代极快，凡是涉及“谁比谁强多少分”的说法，一律以官方最新文档为准；答不出具体数字时，答选型框架（隐私/延迟/成本/定制）比硬编数字得分高。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：缩放点积注意力（纯 Python，不依赖任何深度学习库）</h3>
+<pre><code>import math
+
+def softmax(xs):
+    m = max(xs)
+    exps = [math.exp(x - m) for x in xs]
+    s = sum(exps)
+    return [e / s for e in exps]
+
+def scaled_dot_product_attention(q, keys, values):
+    """单头、单 Query 的注意力：Attention = softmax(QK^T / sqrt(d_k)) V。
+    q: 长度 d_k 的向量；keys/values: 各 n 个长度 d_k 的向量。"""
+    d_k = len(q)
+    scores = [sum(qi * ki for qi, ki in zip(q, k)) / math.sqrt(d_k)
+              for k in keys]
+    weights = softmax(scores)
+    out = [sum(w * v[j] for w, v in zip(weights, values))
+           for j in range(len(values[0]))]
+    return weights, out
+
+# 三个位置的 K、V，Query 更接近第 1 个 Key
+keys = [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
+values = [[10.0, 0.0], [0.0, 10.0], [5.0, 5.0]]
+weights, out = scaled_dot_product_attention([1.0, 0.1], keys, values)
+print("注意力权重:", [round(w, 3) for w in weights])
+print("加权输出:", [round(x, 3) for x in out])
+# 权重集中在第 1 个位置附近：Query 与哪个 Key 相似，就取哪个 Value</code></pre>
+<h3>示例 2：温度 + Top-k + Top-p 采样（纯 Python）</h3>
+<pre><code>import math, random
+
+def softmax(xs):  # 与示例 1 相同：数值稳定的 softmax
+    m = max(xs)
+    exps = [math.exp(x - m) for x in xs]
+    s = sum(exps)
+    return [e / s for e in exps]
+
+def sample_next(logits, temperature=1.0, top_k=0, top_p=1.0):
+    """温度缩放 → Top-k 截断 → Top-p 截断 → 按概率抽一个 token。"""
+    logits = [x / temperature for x in logits]
+    if top_k > 0:  # 只保留概率最高的 k 个
+        cutoff = sorted(logits, reverse=True)[min(top_k, len(logits)) - 1]
+        logits = [x if x >= cutoff else float("-inf") for x in logits]
+    probs = softmax([x if x != float("-inf") else -1e9 for x in logits])
+    if top_p < 1.0:  # 按概率从大到小累加，取最小集合使累积 >= p
+        order = sorted(range(len(probs)), key=lambda i: -probs[i])
+        keep, total = set(), 0.0
+        for i in order:
+            keep.add(i); total += probs[i]
+            if total >= top_p: break
+        probs = [p if i in keep else 0.0 for i, p in enumerate(probs)]
+        s = sum(probs); probs = [p / s for p in probs]
+    return random.choices(range(len(probs)), weights=probs, k=1)[0]
+
+random.seed(0)
+logits = [2.0, 1.0, 0.5, -1.0, -2.0]  # 5 个候选 token 的 logits
+print("贪心(T 趋近 0):", sample_next(logits, temperature=0.01))
+print("温度 1.0:", sample_next(logits, temperature=1.0))
+print("温度 1.0 + Top-k=2:", sample_next(logits, temperature=1.0, top_k=2))
+print("温度 1.0 + Top-p=0.9:", sample_next(logits, temperature=1.0, top_p=0.9))</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，改 Query 为 <code>[0.1, 1.0]</code>，看权重是否转移到第 2 个位置；再把 <code>/ math.sqrt(d_k)</code> 去掉，对比权重分布有什么变化。<br>
+2. 把示例 2 的 <code>temperature</code> 分别设为 0.3、1.0、2.0，各跑 20 次统计每个 token 被抽中的次数，感受温度对分布“尖锐程度”的影响。<br>
+3. 用一句话默写：RoPE 是什么？KV Cache 省了什么？LoRA 训练的是什么？DPO 比 RLHF 省了什么？答不上来就回头翻对应小节。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 缩放点积注意力里为什么要除以 √d<sub>k</sub>？</strong></p><button data-i="0">为了让计算更快</button><button data-i="1">d<sub>k</sub> 大时点积方差约 d<sub>k</sub>，数值大导致 softmax 进入极陡区域、梯度不稳定；除一下把方差缩到约 1</button><button data-i="2">为了让注意力权重之和等于 1</button><div class="ans">解析：选 B。权重之和等于 1 是 softmax 保证的，与除 √d<sub>k</sub> 无关。</div></div>
+<div class="q" data-answer="0"><p><strong>2. GQA 相对 MHA，推理上主要省在哪里？</strong></p><button data-i="0">KV Cache：多组 Query 共享 KV，缓存的 K、V 体积减小，显存与带宽下降</button><button data-i="1">训练时间</button><button data-i="2">词表大小</button><div class="ans">解析：选 A。MQA 是全部共享、GQA 是分组共享，都是拿 KV Cache 开刀。</div></div>
+<div class="q" data-answer="2"><p><strong>3. Prefill 和 Decode 哪个更吃算力、哪个更吃带宽？</strong></p><button data-i="0">Decode 吃算力，Prefill 吃带宽</button><button data-i="1">两者都吃算力</button><button data-i="2">Prefill 并行度高、计算密集；Decode 每步批量小，常内存带宽受限</button><div class="ans">解析：选 C。Decode 每步只新增一个 token，主要瓶颈是读大权重与 KV Cache 的带宽。</div></div>
+<div class="q" data-answer="1"><p><strong>4. LoRA 的核心做法是？</strong></p><button data-i="0">把模型权重全部量化成 4-bit</button><button data-i="1">冻结原权重 W，只训练低秩分解 W' = W + BA，r 远小于矩阵维度</button><button data-i="2">在输入前加可学习的前缀向量</button><div class="ans">解析：选 B。C 是 Prefix Tuning；A 接近 QLoRA 的基座量化部分，但 QLoRA 还要叠加 LoRA。</div></div>
+<div class="q" data-answer="0"><p><strong>5. RLHF 经典三阶段的正确顺序是？</strong></p><button data-i="0">SFT → 奖励模型 → PPO 强化学习（带 KL 惩罚）</button><button data-i="1">奖励模型 → SFT → DPO</button><button data-i="2">PPO → SFT → 奖励模型</button><div class="ans">解析：选 A。KL 惩罚防止策略为刷高奖励分而产生分布外投机行为。</div></div>
+<div class="q" data-answer="2"><p><strong>6. vLLM 的 PagedAttention 解决什么问题？</strong></p><button data-i="0">模型训练太慢</button><button data-i="1">Tokenizer 不一致</button><button data-i="2">KV Cache 变长导致的显存碎片化与浪费，通过分页块管理提高批处理效率</button><div class="ans">解析：选 C。PagedAttention 把 KV Cache 存成非连续块，类似 OS 分页，按请求动态分配。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Transformer 和 RNN 相比，核心优势是什么？为什么除以 √d<sub>k</sub>？</summary><p>自注意力在单步内连接任意两位置，并行计算好、长距离依赖路径短（常数层数内）；RNN 顺序计算且长序列梯度路径长。代价是 O(n²) 注意力内存与时间。除以 √d<sub>k</sub> 是因为 d<sub>k</sub> 大时点积方差约 d<sub>k</sub>，softmax 会进入极陡区域、梯度不稳定，除一下把方差缩到约 1。</p></details>
+<details><summary>Q2：KV Cache 是什么？为什么能加速？瓶颈在哪？</summary><p>对每一层、每个头缓存已生成位置的 Key 和 Value，新一步只计算当前 token 的 Q，与缓存的 K、V 做注意力，避免对历史 token 重复计算各层 K、V，以空间换时间。瓶颈是显存随序列长度、层数、batch 线性增长，是长上下文推理的主要瓶颈之一；GQA、PagedAttention、KV Cache 量化都是在缓解它。</p></details>
+<details><summary>Q3：LoRA 和 QLoRA 主要差在哪？</summary><p>LoRA 冻结原权重，只训练低秩增量 BA，推理可合并回 W。QLoRA 在 4-bit 量化的基座权重上叠加 LoRA，用 paged optimizer 等技巧减少显存峰值，使单卡微调大模型成为可能，略有精度损失风险，需配合 NF4 与调参。LoRA 秩 r 经验值 8–64，常注入 Attention 的 q、v 和 / 或 FFN。</p></details>
+<details><summary>Q4：RLHF 和 DPO 对比，DPO 的最大简化是什么？</summary><p>RLHF 需要三阶段：SFT、训练奖励模型、PPO 强化学习（带 KL 惩罚），训练链路长、调参难。DPO 不显式训练奖励模型与 RL 采样循环，用偏好对直接优化策略，静态数据上优化，pipeline 更简单；代价是数据质量要求高。GRPO 用组内相对优化、KTO 用二元反馈，都是改进 RLHF 复杂管线或数据形态的变体。</p></details>
+<details><summary>Q5：选开源模型还是闭源 API？</summary><p>看四点：隐私、延迟、成本、定制需求与团队运维能力。开源数据自主、可微调、离线可部署，需自备算力与运维；闭源上手快、持续升级，依赖供应商、成本与合规需评估；混合方案是敏感数据本地开源模型、通用能力调用 API。高合规本地优先，快速验证可用 API。具体模型对比与 benchmark 数字以官方最新文档为准。</p></details>
+
+<h2>五、加分项：课程收尾</h2>
+<div class="card">
+<p><strong>22 课复盘：</strong>Day 1–4 是 Agent 的骨架（定义、推理范式、反思搜索、编排框架）；Day 5–6 是 Prompt 工程（结构、安全、结构化输出）；Day 7–12 是 RAG 全链路（Pipeline、分块、Embedding、检索重排、进阶架构、失败与评测）；Day 13–14 是工具调用与 MCP；Day 15–16 是记忆与多智能体；Day 17–21 是 Loop Engineering（导论、循环控制、状态并行、可观测性成本、生产实战）；Day 22 是大模型基础附录。从“一次对话”到“持续运行的系统”，这条线就是整门课的主线。</p>
+<p><strong>怎么把这门课讲成面试故事：</strong>别按课表背目录，按“问题 → 系统 → 证据”讲三段。第一段：单次 Prompt 解决不了多步任务，所以需要 Loop（Day 17）；第二段：Loop 要上生产，必须解决终止、验证、状态、观测、成本、治理（Day 18–21 各取一个你最熟的点）；第三段：底层要懂模型是怎么工作的——注意力、KV Cache、微调与对齐（Day 22 各取一个公式或机制）。每段结尾落一个你亲手跑过的代码示例，故事就从“背过”变成了“做过”。</p>
+<p><strong>下一步建议：</strong>挑一个 Day 21 的实战案例（建议代码修复 Loop 或测试用例生成 Loop），在自己的项目里真正跑起来；跑通之后回头重读 Day 18–20——终止条件、状态快照、预算守卫这三处，只有在真实运行里踩过坑，才算真正学会。</p>
+</div>
+<div class="nav"><span><a href="day21.html">← Day 21</a></span><span><a href="index.html">课程首页 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

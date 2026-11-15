@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 14：工具路由、编排与工具安全 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 14 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 14：工具路由、编排与工具安全</h1>
+<p>Day 13 的 Agent 只有一两个工具，模型一眼就能选对。但真实产品里的工具会越长越多：查订单、查积分、搜商品、发邮件、跑报表……几十上百个工具全塞进上下文，模型还没开始干活就先被干扰晕了。今天讲规模上来之后的三件事：路由（怎么从一堆工具里先筛出几个候选）、编排（调用之间有依赖、有并行时怎么排顺序）、安全（怎么防住模型调错工具、传错参数、泄露数据）。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 150" width="100%" role="img" aria-label="工具调用三层：用户请求经过路由筛出候选，再经编排定顺序，再经安全网关检查，最后执行工具">
+<rect x="6" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="68" y="55" text-anchor="middle" font-size="12" fill="#222">用户请求</text><text x="68" y="72" text-anchor="middle" font-size="12" fill="#222">工具几十上百</text>
+<line x1="130" y1="59" x2="154" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="154,59 142,53 142,65" fill="#0b62d6"/>
+<rect x="154" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="216" y="55" text-anchor="middle" font-size="12" fill="#222">路由</text><text x="216" y="72" text-anchor="middle" font-size="12" fill="#222">筛出 Top-K 候选</text>
+<line x1="278" y1="59" x2="302" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="302,59 290,53 290,65" fill="#0b62d6"/>
+<rect x="302" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="55" text-anchor="middle" font-size="12" fill="#222">编排</text><text x="364" y="72" text-anchor="middle" font-size="12" fill="#222">DAG 拓扑排序</text>
+<line x1="426" y1="59" x2="450" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="450,59 438,53 438,65" fill="#0b62d6"/>
+<rect x="450" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="512" y="55" text-anchor="middle" font-size="12" fill="#222">安全网关</text><text x="512" y="72" text-anchor="middle" font-size="12" fill="#222">权限 / 校验 / 确认</text>
+<line x1="574" y1="59" x2="598" y2="59" stroke="#0b62d6" stroke-width="2"/><polygon points="598,59 586,53 586,65" fill="#0b62d6"/>
+<rect x="598" y="35" width="124" height="48" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="660" y="55" text-anchor="middle" font-size="12" fill="#222">工具执行</text><text x="660" y="72" text-anchor="middle" font-size="12" fill="#222">结果回填模型</text>
+<text x="364" y="115" text-anchor="middle" font-size="13" fill="#222">路由缩候选，编排定顺序，安全守边界——三层缺一不可</text>
+</svg>
+<h3>1. 为什么需要路由：工具多了的三个代价</h3>
+<p>工具过多时，一次性把所有 <code>description</code> 塞进上下文会付出三个代价：<strong>费 token</strong>——每个工具的描述都要钱；<strong>干扰模型</strong>——候选一多，模型更容易被不相关的描述带偏；<strong>增加误选</strong>——Day 13 讲过，模型选工具靠概率，功能重叠的工具越多，选错概率越高。解决思路是先缩小候选集再让大模型填参，或者用小模型专门做路由。</p>
+<p>什么时候必须上路由？一个常用的经验阈值是<strong>几十到上百个工具</strong>（视模型与描述长度而定）。更准确的判断标准是现象：上下文明显膨胀、误选率上升、延迟或成本明显增加，三个信号出现任何一个，就该考虑路由了。</p>
+<h3>2. 三种路由方法：向量检索、分类模型、分组层级</h3>
+<p><strong>向量检索路由</strong>：离线把每个工具的 <code>name + description + 关键词</code> 做成 embedding，存向量库；在线把用户问题 embedding，取 Top-K 相似工具作为本轮唯一候选，再交给大模型。优点是实现快、可跨语种模糊匹配；缺点是极依赖描述质量，边界 case 需要加规则或混合检索（关键词加向量）。</p>
+<p><strong>分类模型路由</strong>：训练或提示一个轻量分类器（BERT、小 LLM、或结构化输出），输入用户句子，输出工具 ID 或工具组 ID。比全量工具更省、更稳；历史日志标注“正确工具”后还可以微调。常和向量路由混合：分类器粗分，向量细分。</p>
+<p><strong>分组层级路由</strong>：按域分组，比如 <code>database_*</code>、<code>hr_*</code>、<code>crm_*</code>。第一轮只暴露组级 meta-tool（比如 <code>list_hr_tools</code>），或让模型先选组再选具体工具。代价是层级过深会增加对话轮次，要在“token 节省”与“轮次增加”之间权衡。另外还有简单的<strong>规则前缀</strong>：用户以 <code>/db</code> 开头就走数据库类，适合命令式入口。</p>
+<p>向量路由选出来的工具不对怎么兜底？五招：Top-K 调大、混合关键词打分、加一层 LLM“是否适用”二分类、允许用户澄清、保留“通用搜索”工具作后备。兜底不是可选项——路由错了没有后备，Agent 就会在一组错误候选里硬选一个，错上加错。</p>
+<h3>3. 编排五种形态：串行、并行、工具链、条件调用、依赖 DAG</h3>
+<p><strong>串行调用</strong>：后一步依赖前一步输出，比如先 <code>lookup_user_id</code> 再 <code>get_orders(user_id)</code>。实现上必须等前一个 <code>tool</code> 消息返回后再发起下一轮；如果模型一次输出多个有依赖的调用，也要按顺序执行，不能图快并行。</p>
+<p><strong>并行调用</strong>：无相互依赖的多个查询（查天气加查股价）可并行请求，缩短延迟。OpenAI 可能在一次 <code>assistant</code> 消息里返回多个 <code>tool_calls</code>。注意速率限制与连接池；写操作并行可能导致竞态，需要业务锁或改串行。</p>
+<p><strong>工具链</strong>：把多个工具按固定或动态顺序组合成复合流程，比如“检索 → 摘要 → 存储”。<strong>静态链</strong>是代码写死的 Pipeline，适合稳定 SOP；<strong>动态链</strong>是 LLM 每步决定下一步（ReAct、Agent），适合开放域任务，但要防循环与成本失控。</p>
+<p><strong>条件调用</strong>：根据中间结果分支，比如仅当风险分超过 0.8 才调用 <code>human_review</code>。可用规则引擎、小模型分类，或让主模型输出结构化“分支字段”（需要校验，不能直接信）。</p>
+<p><strong>依赖 DAG 与拓扑排序</strong>：把工具调用当节点、数据依赖当边，显式维护一张有向无环图；调度器拓扑排序后执行，检测环，失败时重试或补偿。对长事务用 <strong>Saga</strong>（每步配补偿动作，一步失败就逆向回滚前面的步骤）或幂等重试；对 AI 步骤用“检查点”持久化状态，断了能续跑。Day 13 的依赖冲突解法就是这张 DAG，今天把它落到代码里。</p>
+<h3>4. 并行与串行如何取舍</h3>
+<p>一句话：<strong>读多且无依赖就并行；有写冲突、强一致、或后一步参数必须来自上一步精确字段时就串行</strong>。常见的折中是可并行读、再串行写。并行时还要想清楚四件事：幂等性（重试会不会重复下单）、后端并发限制、数据竞争（写操作）、结果合并顺序与部分失败重试策略——多工具并行时单个子失败可以只重试该分支，不用整批重跑。</p>
+<h3>5. 安全性五条线：权限、验证、确认、限流、审计</h3>
+<p><strong>权限最小化</strong>：模型本身没有用户身份，必须在服务端把“当前会话用户”与角色、权限绑定，执行工具前检查是否可读该表、是否可操作该租户。禁止把服务账号密钥交给模型侧推理环境；用用户 OAuth token 或后端代持，且按最小权限。</p>
+<p><strong>输入验证与清洗</strong>：防 Prompt 注入诱导工具执行越权参数；防 SQL 注入、路径穿越（比如 <code>../../etc/passwd</code>）。对所有进入工具的字符串做白名单、参数化查询、沙箱隔离。</p>
+<p><strong>敏感操作确认</strong>：删除、转账、对外发邮件等，需要人在回路（HITL）或二次令牌；或者把工具设计为“创建草稿”而非“直接发送”。这就是<strong>两阶段提交式工具设计</strong>：第一阶段生成草稿或待确认对象，第二阶段在用户确认后再真正执行，降低模型误触发的损失。</p>
+<p><strong>调用频率限制</strong>：按用户、IP、工具维度做 rate limit，防刷与成本失控；遇到 429 用指数退避。</p>
+<p><strong>审计日志</strong>：至少记录时间、trace 或 request id、用户或租户、工具名、参数摘要（脱敏）、结果状态、耗时、模型版本。合规场景下保留策略与不可篡改存储视要求而定。防止模型通过工具泄露敏感数据的组合拳是：最小权限、结果脱敏（掩码）、行级权限、禁止把密钥放进工具返回值、敏感字段仅后端可见且不出现在模型上下文。</p>
+<h3>6. 六种常见工具的安全实现</h3>
+<p><strong>搜索工具</strong>：封装搜索引擎 API，返回摘要与链接，避免整页 HTML 直接进入上下文。自建爬虫要注意合规。</p>
+<p><strong>数据库查询工具</strong>：永远参数化查询，禁止字符串拼接 SQL。最好只允许只读账号加白名单表加行级权限。</p>
+<p><strong>API 调用工具</strong>：对内部 REST 做封装，带超时、重试；鉴权头从服务端保险柜取，不让模型看见 token。</p>
+<p><strong>代码执行工具</strong>：高风险，必须在沙箱（Docker、gVisor、WASM）中执行，限制 CPU、内存、网络，禁用危险模块；默认应关闭或仅对内网开放。</p>
+<p><strong>文件操作工具</strong>：限制根目录（路径规范化后校验是否在沙箱内），禁止任意路径；写操作需备份或 diff；大文件分块读。</p>
+<p><strong>计算器工具</strong>：对数学表达式用 AST 解析或安全数学库，<strong>禁止 <code>eval</code> 任意字符串</strong>——<code>eval</code> 可执行任意 Python，等同于远程代码执行。</p>
+<div class="warn"><strong>容易踩的坑：</strong>一是把写操作并行了——两个写调用同时跑，竞态与重复下单都在等你，写操作默认串行；二是路由错了没有兜底——Top-K 里全是错的候选，模型只能硬选一个错的，通用搜索后备必须留；三是审计日志记了明文参数——密码、token 一旦进日志就等于泄露，参数摘要必须脱敏。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：路由 + 编排——先筛候选，再按 DAG 顺序执行</h3>
+<pre><code>import concurrent.futures
+from collections import deque
+
+# ---- 工具注册表：每个工具有名、描述、优先级 ----
+TOOLS = {
+    "lookup_user_id": {"desc": "按邮箱查用户 ID", "priority": 1},
+    "fetch_orders": {"desc": "按用户 ID 查订单列表", "priority": 1},
+    "fetch_points": {"desc": "按用户 ID 查积分", "priority": 1},
+    "web_search": {"desc": "通用搜索兜底工具", "priority": 0},
+}
+
+def route_tools(query, top_k=3):
+    """最小可跑版路由：关键词重叠打分。
+    生产把打分换成 embedding 向量相似度，结构不变。"""
+    words = set(query)
+    scored = []
+    for name, spec in TOOLS.items():
+        overlap = len(words & set(spec["desc"]))
+        scored.append((overlap, spec["priority"], name))
+    scored.sort(reverse=True)
+    if scored[0][0] == 0:
+        return ["web_search"]  # 兜底：都没命中时走通用搜索
+    return [name for _, _, name in scored[:top_k]]
+
+def topo_sort(nodes, edges):
+    """nodes：工具调用名；edges：(前置, 后置) 依赖边。返回可执行顺序，有环则报错。"""
+    indegree = {n: 0 for n in nodes}
+    followers = {n: [] for n in nodes}
+    for pre, post in edges:
+        followers[pre].append(post)
+        indegree[post] += 1
+    queue = deque([n for n in nodes if indegree[n] == 0])
+    order = []
+    while queue:
+        n = queue.popleft()
+        order.append(n)
+        for m in followers[n]:
+            indegree[m] -= 1
+            if indegree[m] == 0:
+                queue.append(m)
+    if len(order) != len(nodes):
+        raise ValueError("依赖图有环，无法执行")
+    return order
+
+# ---- 编排：串行拿 user_id，再并行查订单与积分 ----
+def lookup_user_id(email):
+    return "u_123"
+
+def fetch_orders(uid):
+    return [{"id": 1}]
+
+def fetch_points(uid):
+    return 42
+
+def orchestrate(email):
+    uid = lookup_user_id(email)  # 串行：后两步都依赖它
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        f1 = ex.submit(fetch_orders, uid)  # 并行：订单与积分互不依赖
+        f2 = ex.submit(fetch_points, uid)
+        return {"orders": f1.result(), "points": f2.result()}
+
+if __name__ == "__main__":
+    print(route_tools("查一下我的订单"))  # 路由筛候选
+    print(topo_sort(["A", "B", "C"], [("A", "B"), ("A", "C")]))  # 依赖定顺序
+    print(orchestrate("a@example.com"))  # 串行 + 并行编排</code></pre>
+<p>这个示例把本课前两段串起来了：路由决定“候选是谁”，DAG 决定“先跑谁”，串行与并行决定“怎么跑”。生产里的向量路由只是把 <code>route_tools</code> 里的重叠打分换成 embedding 相似度，接口与兜底逻辑不用变。</p>
+<h3>示例 2：安全工具箱——AST 计算器 + 防逃逸文件读取</h3>
+<pre><code>import ast
+import operator
+import os
+
+# ---- 计算器：AST 白名单，禁止 eval ----
+_ALLOWED = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.USub: operator.neg,
+    ast.Pow: operator.pow,
+}
+
+def _eval(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    if isinstance(node, ast.BinOp) and type(node.op) in _ALLOWED:
+        return _ALLOWED[type(node.op)](_eval(node.left), _eval(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _ALLOWED:
+        return _ALLOWED[type(node.op)](_eval(node.operand))
+    raise ValueError("unsupported expression")
+
+def calculator(expr):
+    return _eval(ast.parse(expr, mode="eval").body)
+
+# ---- 文件读取：限制根目录，防路径穿越 ----
+SANDBOX_ROOT = "/var/agent_sandbox"
+
+def safe_read_file(path, max_bytes=50_000):
+    full = os.path.realpath(os.path.join(SANDBOX_ROOT, path))
+    if not full.startswith(os.path.realpath(SANDBOX_ROOT) + os.sep):
+        raise PermissionError("path escapes sandbox")
+    with open(full, "rb") as f:
+        return f.read(max_bytes).decode("utf-8", errors="replace")
+
+# ---- 数据库：永远参数化查询，禁止字符串拼接 SQL ----
+# cur.execute(
+#     "SELECT id, amount FROM orders WHERE user_id = %s ORDER BY created_at DESC LIMIT %s",
+#     (user_id, limit),
+# )
+
+if __name__ == "__main__":
+    print(calculator("(2 + 3) * 4"))  # 20.0
+    try:
+        calculator("__import__('os').system('ls')")
+    except ValueError as e:
+        print("已拦截：", e)  # 函数调用不在白名单里，进不来
+    try:
+        safe_read_file("../../etc/passwd")
+    except PermissionError as e:
+        print("已拦截：", e)  # 路径逃出沙箱，进不来</code></pre>
+<p>两个拦截都值得亲手跑一遍：AST 白名单只放行加减乘除乘方这些节点，函数调用、属性访问一律拒绝；文件读取先把路径规范化再校验前缀，<code>../</code> 再多也逃不出沙箱根目录。数据库那行注释是提醒：参数化查询不是建议，是铁律。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在示例 1 的注册表里再加两个工具（比如 <code>fetch_coupons</code> 查优惠券、<code>send_email</code> 发邮件），跑 <code>route_tools("我的优惠券有哪些")</code>，看 Top-K 选得对不对；再故意问一个毫不相关的问题，看兜底有没有触发。<br>
+2. 给 <code>topo_sort</code> 传一组带环的边，比如 <code>[("A", "B"), ("B", "A")]</code>，确认它会报错而不是死循环。<br>
+3. 把示例 2 的 <code>calculator("2 + 3")</code> 换成 <code>eval("2 + 3")</code> 跑一次，再试 <code>eval("__import__('os').getcwd()")</code>——亲眼看看为什么计算器必须禁 eval，然后把 eval 改回去。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. 工具路由什么时候必须上？</strong></p><button data-i="0">工具超过 3 个就必须上</button><button data-i="1">工具到几十上百个，上下文膨胀、误选率上升或延迟成本明显增加时</button><button data-i="2">永远不用上，全塞给模型就行</button><div class="ans">解析：选 B。典型阈值是几十到上百个工具（视模型与描述长度而定），判断标准是现象不是死数字。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 向量检索路由是怎么做的？</strong></p><button data-i="0">离线把工具描述做成 embedding，在线把用户问题 embedding，取 Top-K 相似工具作为本轮唯一候选</button><button data-i="1">把所有工具描述拼成一个长 prompt 让模型背下来</button><button data-i="2">按工具名字母顺序取前 K 个</button><div class="ans">解析：选 A。优点是实现快、可跨语种模糊匹配；缺点是极依赖描述质量。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 向量路由选出来的工具不对，怎么兜底？</strong></p><button data-i="0">直接报错，让用户重问</button><button data-i="1">把所有工具再全塞给模型重选一次</button><button data-i="2">Top-K 调大、混合关键词打分、加 LLM“是否适用”二分类、允许用户澄清、保留通用搜索作后备</button><div class="ans">解析：选 C。兜底不是可选项——没有后备，Agent 就会在一组错误候选里硬选一个。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 并行与串行如何取舍？</strong></p><button data-i="0">永远并行，越快越好</button><button data-i="1">读多且无依赖就并行；有写冲突、强一致、或后一步参数必须来自上一步时就串行</button><button data-i="2">永远串行，最安全</button><div class="ans">解析：选 B。常见折中是可并行读、再串行写；并行时还要考虑幂等、并发限制与部分失败重试。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 敏感操作为什么推荐“两阶段提交”式工具设计？</strong></p><button data-i="0">第一阶段生成草稿或待确认对象，第二阶段在用户确认后再真正执行，降低模型误触发的损失</button><button data-i="1">为了让工具调用次数翻倍，多收 token 费</button><button data-i="2">为了让日志更好看</button><div class="ans">解析：选 A。删除、转账、对外发邮件这类操作，不要让模型一次调用就直接生效。</div></div>
+<div class="q" data-answer="2"><p><strong>6. 计算器工具为什么禁止 eval？</strong></p><button data-i="0">eval 算得太慢</button><button data-i="1">eval 不支持加减乘除</button><button data-i="2">eval 可执行任意 Python，等同于远程代码执行；应该用 AST 白名单或安全数学库</button><div class="ans">解析：选 C。eval("…") 里能塞任何代码，计算器一用 eval 就等于开了个任意代码执行口子。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：向量路由的缺陷与改进？</summary><p>缺陷：描述不佳则 embedding 不准；专有名词（OOV）匹配弱。改进：混合检索（关键词加向量）、同义词表、用户域特征、日志驱动迭代描述、加轻量分类器做二次确认。</p></details>
+<details><summary>Q2：什么是工具编排中的“依赖 DAG”？</summary><p>把工具调用当节点，数据依赖当边；拓扑排序执行，避免环与竞态，便于失败重试与可视化监控。对长事务配 Saga（每步有补偿动作）或幂等重试，对 AI 步骤用检查点持久化状态。</p></details>
+<details><summary>Q3：如何做工具调用的权限控制？</summary><p>会话绑定真实用户身份；服务端校验租户与角色；最小权限；敏感操作走人在回路；不把长期密钥暴露给模型上下文。模型本身没有用户身份，权限必须在服务端做。</p></details>
+<details><summary>Q4：代码执行工具如何做到基本安全？</summary><p>沙箱隔离（Docker、gVisor、WASM）、资源与网络限制、禁用危险模块、超时、只读默认、审计；生产慎用，默认关闭或仅对内网开放。</p></details>
+<details><summary>Q5：审计日志至少记哪些字段？</summary><p>时间、trace 或 request id、用户或租户、工具名、参数摘要（脱敏）、结果状态、耗时、模型版本。合规场景下保留策略与不可篡改存储视要求而定。参数摘要必须脱敏，不能记明文密码或 token。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>路由、编排、安全三层要当成一条流水线来设计，而不是三个散落的功能：路由错了要有兜底，编排乱了要有 DAG 与检查点，安全不能只靠 prompt 约束——权限、校验、确认、限流、审计五条线要在服务端落死。记住：模型不可信，边界必须由代码守。</p>
+<p><strong>简历讲法：</strong>别写“做过工具调用”，写“工具从 5 个长到 80 个后上了向量路由：工具描述 embedding 取 Top-K 候选，选错时通用搜索兜底；调用间依赖用 DAG 加拓扑排序编排，写操作串行、读操作并行；敏感操作两阶段提交加 HITL，审计日志全量落盘”。前者是名词，后者是可追问的规模与安全经验。</p>
+<p><strong>明日预告：</strong>Day 15 讲记忆系统：短期、长期、三因子检索与高级框架——工具让 Agent 有了手，记忆让它有了“记得住”的脑子。</p>
+</div>
+<div class="nav"><span><a href="day13.html">← Day 13</a></span><span><a href="day15.html">Day 15 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

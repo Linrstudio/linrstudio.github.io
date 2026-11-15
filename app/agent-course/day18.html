@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 18：循环控制与可靠性：终止、收敛、防死循环与错误恢复 | Agent 实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 18 / 22</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 18：循环控制与可靠性：终止、收敛、防死循环与错误恢复</h1>
+<p>Day 17 把 Loop 搭起来了，今天解决它最要命的问题：怎么停下来。一个没有终止条件的 Loop 可能无限循环，直到烧光 Token；一个没有错误恢复的 Loop，一错就崩。今天讲循环在“循环”什么、四类终止条件、三法收敛判断、Goal 模式、多层防死循环，以及出错时怎么分层恢复、兜底收尾。</p>
+
+<h2>一、核心解释</h2>
+<svg viewBox="0 0 728 170" width="100%" role="img" aria-label="循环控制流程：执行一轮后依次判断收敛、预算、错误，满足则终止，否则继续下一轮">
+<rect x="264" y="10" width="200" height="40" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="35" text-anchor="middle" font-size="13" fill="#222">执行一轮：思考 → 行动 → 观察</text>
+<line x1="364" y1="50" x2="364" y2="68" stroke="#0b62d6" stroke-width="2"/><polygon points="364,68 358,58 370,58" fill="#0b62d6"/>
+<rect x="264" y="68" width="200" height="40" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="2"/><text x="364" y="93" text-anchor="middle" font-size="13" fill="#222">收敛了吗？预算超了吗？出错了吗？</text>
+<line x1="264" y1="88" x2="150" y2="88" stroke="#22a35a" stroke-width="2"/><polygon points="150,88 160,82 160,94" fill="#22a35a"/>
+<rect x="20" y="68" width="130" height="40" rx="10" fill="#dcfce7" stroke="#22a35a" stroke-width="2"/><text x="85" y="93" text-anchor="middle" font-size="13" fill="#222">正常终止 ✓</text>
+<line x1="464" y1="88" x2="578" y2="88" stroke="#d33" stroke-width="2"/><polygon points="578,88 568,82 568,94" fill="#d33"/>
+<rect x="578" y="68" width="130" height="40" rx="10" fill="#fee2e2" stroke="#d33" stroke-width="2"/><text x="643" y="93" text-anchor="middle" font-size="13" fill="#222">异常终止 / 兜底</text>
+<line x1="364" y1="108" x2="364" y2="130" stroke="#0b62d6" stroke-width="2"/><polygon points="364,130 358,120 370,120" fill="#0b62d6"/>
+<rect x="264" y="130" width="200" height="30" rx="10" fill="#eef4ff" stroke="#0b62d6" stroke-width="2"/><text x="364" y="150" text-anchor="middle" font-size="13" fill="#222">都没满足 → 下一轮（带反思）</text>
+</svg>
+<h3>1. 循环到底在“循环”什么：五个要素</h3>
+<p>Loop 循环的是五个关键要素：<strong>上下文</strong>（每轮携带的历史信息）、<strong>状态与记忆</strong>（当前进度和过往记录）、<strong>预算</strong>（Token 消耗和步数限制）、<strong>可用工具集</strong>（Agent 能调用的工具范围）、<strong>终止与收敛判断</strong>（何时停止）。本质上，Loop 循环的是一段不断增长和演化的“工作流状态”——每跑一轮，系统根据上一轮的观察结果决定下一步，直到任务完成或达到终止条件。控制循环，就是控制这五个要素。</p>
+<h3>2. 终止条件四类：正常与异常要分开</h3>
+<table><tr><th>终止条件</th><th>属于</th><th>说明</th></tr>
+<tr><td><strong>任务完成</strong></td><td>正常终止</td><td>目标达成，这是最理想的终止</td></tr>
+<tr><td><strong>达到预算上限</strong></td><td>异常终止</td><td>Token 消耗或步数超限</td></tr>
+<tr><td><strong>遇到不可恢复的错误</strong></td><td>异常终止</td><td>工具调用持续失败或陷入死循环</td></tr>
+<tr><td><strong>需要人工介入</strong></td><td>异常终止</td><td>遇到需要人类判断的决策点</td></tr></table>
+<p>设计良好的 Loop 应该能区分“正常终止”和“异常终止”，并分别给出不同的输出。预算控制要考虑五个维度：Token 消耗、步数/轮数、时间（单轮超时和总超时）、工具调用次数（外部 API 可能产生费用）、子 Agent 数量。</p>
+<h3>3. 收敛判断三法：怎么知道“做完了”</h3>
+<p>收敛判断是评估“任务是否已经完成”或“是否在朝着正确方向前进”的机制，实现方式有三类：<strong>① 规则检查</strong>——如测试全部通过、文件已修改、PR 已创建，这是最可靠的；<strong>② 独立评估 Agent</strong>——用一个独立的 Agent（甚至不同模型）在每轮结束时检查目标是否达成；<strong>③ 阈值判断</strong>——如代码覆盖率提升到 X%、性能指标达到 Y。Claude Code 和 Codex 的 <code>/goal</code> 功能就是这种模式——每跑完一轮，由独立 Agent 判断是否完成。</p>
+<h3>4. Goal 模式 vs 普通 Loop：目标驱动 vs 轮数驱动</h3>
+<p>Goal 模式是 Loop 的一种运行模式——不按时间触发，而是一直运行到最开始制定的标准真正完成为止，每跑完一轮由独立 Agent 判断是否完成。普通 Loop 可能基于定时或事件触发，跑完预设轮数就停；Goal 模式则是“目标驱动”——目标是终止条件，没达成就不停。Goal 模式更彻底，但也更依赖收敛判断的可靠性：判断错了，要么提前停、要么一直跑。</p>
+<h3>5. 四种触发器：Loop 是被什么启动的</h3>
+<p><strong>① 定时触发</strong>——cron 调度，适合周期性任务（如每日报告）；<strong>② 事件触发</strong>——GitHub hook、Webhook，适合响应外部事件；<strong>③ 持续目标模式（<code>/goal</code>）</strong>——一直运行到目标完成为止；<strong>④ 手动触发</strong>——用户主动启动，适合需要人工判断的场景。触发器是 Day 17 六大组件里的“心跳”，这里补齐它的四种形态。</p>
+<h3>6. 防死循环：多层防御 + 三层工程解法</h3>
+<p>防止死循环需要<strong>多层防御</strong>：<strong>① 硬性约束</strong>——设置最大迭代次数和超时机制；<strong>② 循环检测</strong>——Agent 连续做出相同的 Action，强制触发反思或中断；<strong>③ 熔断机制</strong>——同一工具连续失败 3 次，立即终止当前推理链；<strong>④ 兜底方案</strong>——达到上限后返回当前阶段最接近的结果，标记为“未完成”。</p>
+<p>工程上再分三层落实：<strong>第一层——工具层硬隔离</strong>：Agent 调用外部 API 时必须包裹 try-catch，返回结构化错误信息；<strong>第二层——推理层熔断</strong>：实现 Max Iteration Check 和 Loop Detection 模块；<strong>第三层——规划层自我修正</strong>：工具调用失败时让 Agent 反思“哪里做错了？是不是参数不对？要不要换工具？”</p>
+<p>其中<strong>反思节点（Reflection Node）</strong>值得单独记住：Agent 连续两次做出相同 Action 时，强制触发一个反思 Prompt，提示模型“你已经尝试过此路径且失败了，请更换策略”。实现方式是在循环中维护一个“最近 Action 历史”，每次执行前检查是否与上一次相同，相同则插入反思指令。</p>
+<h3>7. 结构化错误回传：别只说“Error”</h3>
+<p>工具调用失败时，不能只返回简单的“Error”，而应该返回<strong>结构化的错误信息</strong>，包含错误类型、原因和可操作的建议，例如：<code>{"status": "failed", "error_type": "Timeout", "retry_after": 5}</code>。如果是 SQL 报错，要把报错堆栈中最关键的信息塞回上下文，让 Agent 像程序员修 Bug 一样根据报错信息修正下一步。错误信息是 Agent 自我修正的燃料，给得越结构化，修正越准。</p>
+<h3>8. 兜底方案与分层错误恢复：错了怎么办</h3>
+<p><strong>兜底方案</strong>是当 Loop 达到最大迭代次数或遇到不可恢复错误时，返回“当前阶段最接近的结果”并标记为“未完成”。设计思路：① 保存中间状态——每轮结束时持久化当前进度；② 定义“最小可用结果”——即使未完成，也能输出有价值的信息；③ 清晰标记状态——让用户知道“完成了什么、没完成什么、为什么没完成”。</p>
+<p><strong>分层错误恢复</strong>则按错误类型给不同策略：① <strong>可重试错误</strong>（如网络超时）——自动重试，带指数退避；② <strong>可修正错误</strong>（如参数错误）——让 Agent 反思并修正；③ <strong>不可恢复错误</strong>（如权限不足）——终止并通知人工；④ <strong>部分失败</strong>——跳过失败子任务，继续执行其他任务。每层都需要明确的“错误类型识别”和“恢复策略映射”。</p>
+<h3>9. 循环依赖检测四法：Agent 之间互相等怎么办</h3>
+<p>多 Agent 协作时还可能出现循环依赖——A 等 B、B 等 A。检测方法：<strong>① 调用图检测</strong>——构建 Agent/任务调用图，检测是否有环；<strong>② 状态指纹</strong>——比较不同轮次的状态哈希，相同则说明在循环；<strong>③ 行为模式检测</strong>——检测重复的 Action 序列；<strong>④ 超时检测</strong>——Loop 运行时间远超预期，可能陷入了循环。一旦检测到循环依赖，应触发熔断并通知人工。</p>
+<div class="warn"><strong>自动化与人工控制的平衡：</strong>关键操作（如删除数据、发版、修改生产配置）前应预留人工确认接口。原则是：低风险操作全自动；中风险操作自动执行但记录日志，事后可追溯；高风险操作必须人工确认才能继续。Loop 不是要完全取代人，而是让人的精力从“频繁下指令”转移到“设定目标和验收结果”。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：带熔断与反思节点的循环骨架</h3>
+<pre><code>"""防死循环骨架：最大轮数 + 相同 Action 反思 + 同工具连败 3 次熔断。
+用模拟的 agent_action() 代替真实模型，先把控制逻辑跑通。"""
+
+MAX_ROUNDS = 10
+MAX_SAME_ACTION = 2   # 连续两次相同 Action → 强制反思
+MAX_TOOL_FAILS = 3    # 同一工具连败 3 次 → 熔断
+
+def agent_action(state):
+    """模拟 Agent 的一轮决策：这里故意让它重复同一个 Action。"""
+    return "read_file"  # 模拟卡住的 Agent：每轮都做同一件事
+
+def run_loop():
+    state = {"round": 0, "history": [], "tool_fails": {}}
+    while state["round"] < MAX_ROUNDS:  # 硬性约束：最大轮数
+        state["round"] += 1
+        action = agent_action(state)
+
+        # 循环检测：连续两次相同 Action → 强制反思
+        if len(state["history"]) >= 1 and state["history"][-1] == action:
+            print(f"第 {state['round']} 轮：连续两次相同 Action，强制反思——"
+                  f"你已经尝试过此路径且失败了，请更换策略")
+            state["history"].append("reflect")
+            continue
+        state["history"].append(action)
+
+        # 模拟工具调用失败并计数
+        state["tool_fails"][action] = state["tool_fails"].get(action, 0) + 1
+        fails = state["tool_fails"][action]
+        print(f"第 {state['round']} 轮：执行 {action}，失败 {fails} 次")
+
+        # 熔断：同一工具连败 3 次，立即终止当前推理链
+        if fails >= MAX_TOOL_FAILS:
+            print(f"熔断：工具 {action} 连续失败 {fails} 次，终止")
+            return {"status": "aborted", "reason": "circuit_breaker"}
+    print("达到最大轮数，终止")
+    return {"status": "aborted", "reason": "max_rounds"}
+
+run_loop()</code></pre>
+<h3>示例 2：结构化错误回传 + 分层恢复 + 兜底方案</h3>
+<pre><code>"""错误处理骨架：结构化错误 → 按类型分层恢复 → 兜底返回部分结果。"""
+import time
+
+def call_tool(name, attempt):
+    """模拟工具调用：前两次超时，第三次成功。"""
+    if attempt < 2:
+        return {"status": "failed", "error_type": "Timeout",
+                "message": f"{name} 超时", "retry_after": 1}
+    return {"status": "ok", "result": f"{name} 的结果"}
+
+def recover(error, attempt):
+    """分层错误恢复：按错误类型映射恢复策略。"""
+    if error["error_type"] == "Timeout":
+        print(f"可重试错误：{attempt} 秒后重试（指数退避）")
+        time.sleep(attempt)  # 指数退避的简化版
+        return "retry"
+    if error["error_type"] == "PermissionDenied":
+        print("不可恢复错误：权限不足，终止并通知人工")
+        return "abort"
+    print("可修正错误：把报错塞回上下文，让 Agent 反思修正")
+    return "fix"
+
+def run_loop():
+    best_result = None  # 兜底：保存当前阶段最接近的结果
+    attempt = 0
+    while attempt < 5:
+        attempt += 1
+        res = call_tool("search_api", attempt)
+        if res["status"] == "ok":
+            best_result = res["result"]
+            print(f"成功：{best_result}")
+            return {"status": "done", "result": best_result}
+        # 结构化错误回传：错误类型 + 原因 + 可操作建议
+        decision = recover(res, attempt)
+        if decision == "abort":
+            break
+    # 兜底方案：返回最接近的结果，标记为未完成
+    return {"status": "incomplete", "partial": best_result,
+            "note": "完成了什么、没完成什么、为什么没完成，见日志"}
+
+print(run_loop())</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 跑起来，观察反思节点在哪一轮触发、熔断在哪一轮触发；再把 <code>agent_action</code> 改成轮流返回两个不同的 Action，看反思还会不会触发。<br>
+2. 在示例 2 里把 <code>call_tool</code> 改成永远返回 <code>PermissionDenied</code>，观察“不可恢复错误”分支是否立即终止并走兜底。<br>
+3. 给示例 1 加一个“状态指纹”检测：每轮对状态做哈希存入集合，哈希重复时打印“检测到循环依赖”并终止。</p>
+</div>
+
+<h2>三、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="1"><p><strong>1. Loop 循环的五个要素是？</strong></p><button data-i="0">模型、提示词、工具、日志、界面</button><button data-i="1">上下文、状态与记忆、预算、工具集、终止与收敛判断</button><button data-i="2">输入、输出、缓存、队列、数据库</button><div class="ans">解析：选 B。本质上 Loop 循环的是一段不断增长和演化的“工作流状态”。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 以下哪一项属于正常终止？</strong></p><button data-i="0">任务完成，目标达成</button><button data-i="1">达到 Token 预算上限</button><button data-i="2">遇到不可恢复的错误</button><div class="ans">解析：选 A。预算超限、不可恢复错误、需要人工介入都属于异常终止，要和正常终止区分输出。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 收敛判断的三法是？</strong></p><button data-i="0">看心情、看时间、看运气</button><button data-i="1">人工判断、随机判断、模型猜测</button><button data-i="2">规则检查、独立评估 Agent、阈值判断</button><div class="ans">解析：选 C。规则检查如测试全部通过；独立评估 Agent 每轮结束时检查目标是否达成；阈值判断如覆盖率达到 X%。</div></div>
+<div class="q" data-answer="1"><p><strong>4. 反思节点（Reflection Node）在什么情况下触发？</strong></p><button data-i="0">每轮开始时固定触发</button><button data-i="1">Agent 连续两次做出相同 Action 时，强制触发反思 Prompt</button><button data-i="2">任务完成时触发一次</button><div class="ans">解析：选 B。实现方式是维护“最近 Action 历史”，每次执行前检查是否与上一次相同。</div></div>
+<div class="q" data-answer="0"><p><strong>5. 熔断机制的触发条件是？</strong></p><button data-i="0">同一工具连续失败 3 次，立即终止当前推理链</button><button data-i="1">任意工具失败 1 次就终止</button><button data-i="2">Loop 跑满 100 轮才熔断</button><div class="ans">解析：选 A。熔断是防死循环多层防御里的一层，和硬性约束、循环检测、兜底方案配合使用。</div></div>
+<div class="q" data-answer="2"><p><strong>6. Goal 模式和普通 Loop 的核心区别是？</strong></p><button data-i="0">Goal 模式不用模型，普通 Loop 要用</button><button data-i="1">Goal 模式跑得更快</button><button data-i="2">Goal 模式目标驱动：一直运行到目标完成为止；普通 Loop 跑完预设轮数就停</button><div class="ans">解析：选 C。Goal 模式每跑完一轮由独立 Agent 判断是否完成，目标是终止条件。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>四、可能的面试题与答案</h2>
+<details><summary>Q1：Loop 的终止条件有哪些？怎么区分正常与异常终止？</summary><p>四类：任务完成、达到预算上限、遇到不可恢复的错误、需要人工介入。其中任务完成是正常终止，其余三类是异常终止。设计良好的 Loop 应该区分两者并分别给出不同的输出，异常终止时还要走兜底方案，返回最接近的结果并标记“未完成”。</p></details>
+<details><summary>Q2：如何防止 Agent 陷入死循环？</summary><p>多层防御：硬性约束（最大迭代次数和超时）、循环检测（连续相同 Action 强制反思或中断）、熔断机制（同一工具连败 3 次终止推理链）、兜底方案（达上限后返回最接近的结果并标记未完成）。</p></details>
+<details><summary>Q3：Agent 陷入死循环时，工程上怎么解决？</summary><p>三层防御：工具层硬隔离——调用外部 API 包裹 try-catch，返回结构化错误；推理层熔断——实现 Max Iteration Check 和 Loop Detection 模块；规划层自我修正——工具调用失败时让 Agent 反思哪里做错了、是不是参数不对、要不要换工具。</p></details>
+<details><summary>Q4：工具调用失败时，应该返回什么信息给 LLM？</summary><p>不能只返回简单的“Error”，要返回结构化的错误信息，包含错误类型、原因和可操作的建议，例如 {"status": "failed", "error_type": "Timeout", "retry_after": 5}。SQL 报错要把堆栈中最关键的信息塞回上下文，让 Agent 像程序员修 Bug 一样修正下一步。</p></details>
+<details><summary>Q5：如何设计 Loop 的错误恢复机制？</summary><p>分层设计：可重试错误（如网络超时）自动重试，带指数退避；可修正错误（如参数错误）让 Agent 反思并修正；不可恢复错误（如权限不足）终止并通知人工；部分失败跳过失败子任务，继续执行其他任务。每层都需要明确的“错误类型识别”和“恢复策略映射”。</p></details>
+
+<h2>五、加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>上线前先给 Loop 定好三条线：最大轮数、单轮超时、总预算。没有这三条线的 Loop，凌晨 3 点跑了 47 轮输出一堆问题代码，你连它在哪一轮走偏的都找不到。熔断和兜底不是“可选优化”，是无人值守运行的前提。</p>
+<p><strong>简历讲法：</strong>别写“做过 Agent 循环”，写“设计循环控制：四类终止条件区分正常/异常终止，收敛判断用规则检查 + 独立评估 Agent，同一工具连败 3 次熔断，连续相同 Action 强制反思，异常时兜底返回部分结果”。前者是名词，后者是可追问的可靠性设计。</p>
+<p><strong>明日预告：</strong>Day 19 讲状态、记忆与并行：Worktree、断点续传与协作模式——Loop 跑起来、停得下来之后，怎么让它记得住、跑得并行、互相配合。</p>
+</div>
+<div class="nav"><span><a href="day17.html">← Day 17</a></span><span><a href="day19.html">Day 19 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>
