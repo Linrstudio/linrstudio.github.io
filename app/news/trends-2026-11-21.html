@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 科技热点摘要 · 2026-11-21</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;max-width:720px;margin:0 auto;padding:24px 18px 48px;color:#1a1a1a;line-height:1.7}
+a{color:#2563eb}
+h1{font-size:22px;line-height:1.4}
+.meta{color:#666;font-size:14px}
+article{border-top:1px solid #e5e5e5;padding:18px 0}
+h2{font-size:18px;line-height:1.5;margin:0 0 8px}
+.tag{display:inline-block;font-size:12px;color:#555;background:#f0f0f0;border-radius:999px;padding:2px 10px;margin-bottom:8px}
+.back{font-size:14px}
+.src{font-size:13px;color:#666}
+.src a{word-break:break-all}
+.day-list{list-style:none;padding:0}
+.day-list li{border-top:1px solid #e5e5e5;padding:14px 0}
+.day-list .day{font-size:16px;font-weight:600}
+.day-list .head{font-size:14px;color:#555}
+</style>
+</head>
+<body>
+<p class="back"><a href="./">← 全部日报</a> · <a href="trends.html">← 热点摘要存档</a></p>
+<h1>AI 科技热点摘要 · 2026-11-21（周六）</h1>
+<p class="meta">来源：rclabs models/devtools（11 月 20 日更新）、GitHub Trending、Product Hunt、NetEye 美区 X 热榜 · 查看时间：2026-11-21 08:10（北京时间）· 综合热榜其余为体育、政治、娱乐，已过滤</p>
+
+<article>
+<span class="tag">新模型</span>
+<h2>TML 发布 Inkling 2 Mini：开源权重小模型，笔记本就能跑</h2>
+<p>Thinking Machines Lab 的 Inkling 2 Mini 是 26.4B 参数的开源权重模型，中间层每 token 循环 3 次来省 token；Artificial Analysis 称其 5.4B 激活参数在 Intelligence Index 上追平 Qwen3.8 27B，激活参数约少 5 倍。X 美区热榜第 22、43 位也在讨论它。</p>
+<p class="src">来源：<a href="https://www.techmeme.com/261120/p33" target="_blank" rel="noopener">Techmeme</a></p>
+</article>
+<article>
+<span class="tag">数学 × AI</span>
+<h2>Anthropic 数学家宣称用 Claude 证明了黎曼猜想，尚未证实</h2>
+<p>Anthropic 数学家 Levent Alpöge 称借助 Claude 完成了黎曼猜想的证明，证明以 Lean 语言发布；X 美区热榜冲到第 5 位，但目前只是宣称，未经同行验证，别当定论看。</p>
+<p class="src">来源：<a href="https://daily.rclabs.in/t/models" target="_blank" rel="noopener">rclabs 汇总</a></p>
+</article>
+<article>
+<span class="tag">模型安全</span>
+<h2>OpenAI 公开 GPT-6.2 抗蒸馏防线：推理提取成功率 54%→0.2%</h2>
+<p>官方博客披露：自适应红队测试里，从 GPT-6 Astra 提取受保护推理的成功率是 54.0%，到 GPT-6.2 Astra 降至 0.2%（同轮请求内 22.9%→0.9%），防的是对手用推理轨迹蒸馏出无防护的平替模型。</p>
+<p class="src">来源：<a href="https://openai.com/index/combatting-adversarial-distillation" target="_blank" rel="noopener">OpenAI 官方博客</a></p>
+</article>
+<article>
+<span class="tag">新模型</span>
+<h2>NVIDIA 发布 Nemotron-Labs-Sigma：连续扩散语言模型，解码快 4.2 倍</h2>
+<p>14 个开源 checkpoint（3B/8B），在 16 维连续嵌入空间里做去噪而非逐 token 生成；自推测解码版在 GB200 上平均比自回归快 3.46 倍，峰值 4.20 倍。</p>
+<p class="src">来源：<a href="https://www.marktechpost.com/2026/11/20/nvidia-nemotron-labs-sigma-continuous-diffusion-language-model" target="_blank" rel="noopener">MarkTechPost</a></p>
+</article>
+<article>
+<span class="tag">开发工具</span>
+<h2>Claude Code v2.1.330：支持企业组织登录，easel 自动画图</h2>
+<p>新增 Anthropic 企业管理控制台托管的组织登录；新增 easel 内置 mod，问一句就自动画图（Pro/Max，macOS/Linux，可在 /config 里关掉）。</p>
+<p class="src">来源：<a href="https://github.com/anthropics/claude-code/releases/tag/v2.1.330" target="_blank" rel="noopener">GitHub 发布页</a></p>
+</article>
+<article>
+<span class="tag">Agent</span>
+<h2>OpenComputer：开源 Devin 平替，首次提交 24 秒</h2>
+<p>diggerhq 开源，在 Slack 里 @Computer 就能干活，可全套自托管在自己的云上；自家基准称首次推送 24 秒、开 4 个 PR 比 Devin 快 3.3 倍（自测数据，仅供参考）。</p>
+<p class="src">来源：<a href="https://github.com/diggerhq/opencomputer" target="_blank" rel="noopener">GitHub</a></p>
+</article>
+<article>
+<span class="tag">GitHub 热榜</span>
+<h2>GitHub Trending：superpowers 与 CLI-Anything 冲到前三</h2>
+<p>obra/superpowers（agent 技能框架与开发方法论）第 2，HKUDS/CLI-Anything（让所有软件都 agent-native）第 3；Claude-BugHunter 仍居第 1。</p>
+<p class="src">来源：<a href="https://github.com/obra/superpowers" target="_blank" rel="noopener">superpowers</a> · <a href="https://github.com/HKUDS/CLI-Anything" target="_blank" rel="noopener">CLI-Anything</a></p>
+</article>
+<article>
+<span class="tag">Product Hunt</span>
+<h2>Product Hunt 今日：Tripmojo、Docker、Currents</h2>
+<p>Tripmojo 第 2（agentic 旅行应用，规划、预订、全程跟进一条龙）；Docker 第 3（以“为 agent 时代而建的信任”改品牌形象上榜）；Currents 第 5（让 Claude 与 Codex 看到全部测试结果）。</p>
+<p class="src">来源：<a href="https://www.producthunt.com/products/tripmojo" target="_blank" rel="noopener">Tripmojo</a> · <a href="https://www.producthunt.com/products/docker" target="_blank" rel="noopener">Docker</a> · <a href="https://www.producthunt.com/products/currents" target="_blank" rel="noopener">Currents</a></p>
+</article>
+</body>
+</html>
