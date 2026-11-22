@@ -19,7 +19,7 @@
   var miniObjectUrl = null;
   var miniTool = null;
   var saveState = 'checking';
-  var fitMode = 'contain';
+  var fitMode = 'cover';
   var toastTimer = null;
   var defaultPhrase = "it's for you";
   var SAVE_MIN_VERSION = 9420;
