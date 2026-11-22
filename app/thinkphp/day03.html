@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 3：路由：注册、参数、分组与资源路由 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 3 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 3：路由：注册、参数、分组与资源路由</h1>
+<p>路由是请求的“分诊台”：URL 进来之后，由路由决定交给哪个控制器、哪个方法。Day 2 的生命周期里，路由匹配就发生在 Http::run 之后、中间件之前——路由先定下来，后面才知道该跑哪些中间件、调哪个控制器。今天讲注册、参数、分组、资源路由与 MISS 路由，以及 TP8 注解路由的三步正确用法。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 门面与注册方式</h3>
+<p>路由统一用门面 <code>think\facade\Route</code> 注册。门面（Facade）是 TP 给容器里的服务起的静态代理：你写 <code>Route::get(...)</code>，实际调的是容器里 <code>think\Route</code> 实例的方法。JS 对照：<code>::</code> 是静态调用，相当于 JS 的 <code>Class.staticMethod()</code>。</p>
+<table>
+<tr><th>方法</th><th>含义</th></tr>
+<tr><td><code>Route::get($rule, $route)</code></td><td>只响应 GET 请求</td></tr>
+<tr><td><code>Route::post($rule, $route)</code></td><td>只响应 POST 请求</td></tr>
+<tr><td><code>Route::put($rule, $route)</code></td><td>只响应 PUT 请求</td></tr>
+<tr><td><code>Route::delete($rule, $route)</code></td><td>只响应 DELETE 请求</td></tr>
+<tr><td><code>Route::any($rule, $route)</code></td><td>响应任意请求方法</td></tr>
+<tr><td><code>Route::rule($rule, $route, $method)</code></td><td>通用注册，第三个参数指定方法</td></tr>
+</table>
+<p>最简单的闭包路由：<code>Route::get('think', function () { return 'hello,ThinkPHP8!'; });</code>——访问 <code>/think</code> 就返回这句话。<code>function () {}</code> 是 PHP 的匿名函数，相当于 JS 的箭头函数。</p>
+<h3>2. 路由参数：必选、可选与全局规则</h3>
+<p><code>:id</code> 是<strong>必选参数</strong>：<code>Route::get('hello/:name', 'index/hello');</code> 访问 <code>/hello/Arale</code> 时，<code>$name</code> 就是 <code>'Arale'</code>，会作为参数传给 <code>hello</code> 方法。<code>[:id]</code> 是<strong>可选参数</strong>：方括号包起来，URL 里不带它也能匹配。JS 对照：<code>:id</code> 和 Express 的 <code>/user/:id</code> 是一个意思。</p>
+<p>全局变量规则用 <code>Route::pattern(['id' =&gt; '\d+'])</code>：所有 <code>:id</code> 参数只匹配数字，<code>/user/abc</code> 就匹配不上这条路由。面试答法：“参数分必选和可选，pattern 可以全局约束参数格式，相当于给路由加了一层正则校验。”</p>
+<h3>3. 分组与域名路由</h3>
+<p><code>Route::group('api', function () {...})</code> 把一批路由收进 <code>/api</code> 前缀下，<strong>分组可挂中间件</strong>——比如整个 api 分组统一挂鉴权中间件，不用每条路由单独写。域名路由 <code>Route::domain('api', ...)</code> 则按域名分流：<code>api.example.com</code> 的请求走一组路由，<code>www.example.com</code> 走另一组。</p>
+<h3>4. 资源路由：一条语句注册一整组 RESTful 路由</h3>
+<p><code>Route::resource('blog', 'Blog');</code> 一条语句注册 blog 的整组 RESTful 路由，映射关系如下：</p>
+<table>
+<tr><th>请求方法</th><th>URL</th><th>控制器方法</th><th>用途</th></tr>
+<tr><td>GET</td><td>/blog</td><td>index</td><td>列表</td></tr>
+<tr><td>GET</td><td>/blog/create</td><td>create</td><td>新建表单</td></tr>
+<tr><td>POST</td><td>/blog</td><td>save</td><td>保存新建</td></tr>
+<tr><td>GET</td><td>/blog/:id</td><td>read</td><td>详情</td></tr>
+<tr><td>GET</td><td>/blog/:id/edit</td><td>edit</td><td>编辑表单</td></tr>
+<tr><td>PUT</td><td>/blog/:id</td><td>update</td><td>更新</td></tr>
+<tr><td>DELETE</td><td>/blog/:id</td><td>delete</td><td>删除</td></tr>
+</table>
+<p>面试常问“资源路由和手写 7 条路由有什么区别”：答“效果一样，资源路由是约定俗成的简写，RESTful 风格的 CRUD 直接用它，少写样板代码；需要自定义时再手写。”</p>
+<h3>5. MISS 路由：兜底</h3>
+<p><code>Route::miss(function () {...});</code> 是兜底路由：所有未匹配到任何路由的请求都会落到这里，常用来做统一的 404 处理或自定义错误页。注意 MISS 路由要放在路由文件的最后——它一旦匹配就不会继续往下找。</p>
+<h3>6. 路由到类方法：两种写法</h3>
+<p>路由的第二个参数可以是 <code>'控制器/操作'</code> 的简写，如 <code>'index/hello'</code>；也可以写 <code>'\完整类名@方法名'</code>，如 <code>'\app\controller\Index@hello'</code>。简写是约定（按 app/controller 目录找），完整类名是显式指定，跨命名空间或特殊目录时用后者。</p>
+<h3>7. 路由流程四步</h3>
+<p><strong>定义 → 检测 → 解析 → 调度。</strong>定义：路由文件里注册规则；检测：请求进来后按规则逐条匹配；解析：把匹配到的规则解析成控制器、方法与参数；调度：交给容器调度执行。面试时这四个词按顺序说出来，再展开讲任意一步的细节，就是满分答案。</p>
+<h3>8. 路由文件与多应用</h3>
+<p>路由定义在 <code>route/</code> 目录，默认是 <code>route/app.php</code>；<strong>该目录下多个文件都有效</strong>，可以按模块拆成 <code>route/api.php</code>、<code>route/admin.php</code> 等。多应用模式下，各应用有自己的 <code>route/</code> 目录，互不干扰。</p>
+<h3>9. 注解路由：TP8 的三步正确用法</h3>
+<p>TP8 把注解路由剥离出核心了，想用必须做满三步：<strong>① 装扩展</strong> <code>composer require topthink/think-annotation</code>；<strong>② 用 PHP 8 原生 <code>#[Route(...)]</code> Attribute 写在方法上</strong>（不再是旧版的 <code>@route</code> 注释写法）；<strong>③ 在路由文件里调用 <code>AnnotationRoute::init()</code></strong>，让框架扫描注解并注册。</p>
+<div class="warn"><strong>容易踩的坑：</strong>只装扩展、不调 <code>AnnotationRoute::init()</code>，注解路由不会生效——这是 TP8 升级后最常见的“路由 404”原因之一。排查顺序：扩展装了没 → Attribute 写对没 → init() 调了没。</div>
+<h3>10. 路由缓存、开关与 URL 模式</h3>
+<p>生产环境可以用 <code>php think optimize:route</code> 生成路由缓存，避免每次请求重新解析路由规则（呼应 Day 2 的 PHP-FPM 每请求初始化开销）。<code>config/app.php</code> 里的 <code>with_route</code> 控制是否启用路由。URL 模式是 PATHINFO：<code>域名/入口/控制器/操作/参数</code>，如 <code>example.com/index.php/index/hello/name/Arale</code>（入口文件可通过服务器重写隐藏）。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：route/app.php 综合示例（逐行注释）</h3>
+<pre><code>&lt;?php
+// use 导入类，相当于 JS 的 import
+use think\facade\Route;
+
+// 最简单的闭包路由：访问 /think 返回一句话
+Route::get('think', function () {
+    return 'hello,ThinkPHP8!';
+});
+
+// :name 是必选参数，访问 /hello/Arale 时 $name 就是 'Arale'
+// 'index/hello' 是"控制器/操作"简写，对应 app\controller\Index::hello()
+Route::get('hello/:name', 'index/hello');
+
+// 全局变量规则：所有 :id 参数只匹配数字，/user/abc 匹配不上
+// ['id' =&gt; '\d+'] 是关联数组，=&gt; 相当于 JS 对象字面量里的冒号
+Route::pattern(['id' =&gt; '\d+']);
+
+// 分组：/api 下的路由统一收在一起，分组可挂中间件（如鉴权）
+// 闭包里继续用 Route::get 注册，分组前缀自动拼上
+Route::group('api', function () {
+    Route::get('user/:id', 'api/user/read');
+});
+
+// 资源路由：一条语句注册 blog 的整组 RESTful 路由
+// （index/create/save/read/edit/update/delete，见第一节的映射表）
+Route::resource('blog', 'Blog');
+
+// 路由到类方法：完整类名 @ 方法名，显式指定、不走约定查找
+Route::get('about', '\app\controller\Index@about');
+
+// MISS 路由：兜底，所有未匹配的请求都落到这里
+// 必须放在文件最后，否则会截断后面的路由
+Route::miss(function () {
+    return '404 Not Found';
+});</code></pre>
+<h3>示例 2：TP8 注解路由写法（需先装 think-annotation 扩展）</h3>
+<pre><code>&lt;?php
+namespace app\controller;
+
+// Route 属性来自 topthink/think-annotation 扩展（按扩展文档导入）
+// #[...] 是 PHP 8 原生 Attribute，相当于 Java 注解 / C# 特性 / TS 装饰器
+class Index
+{
+    #[Route('hello/:name', method: 'GET')]
+    public function hello($name)
+    {
+        return 'hello,' . $name;
+    }
+}
+
+// ---- 路由文件 route/app.php 里必须加这一行，否则注解不生效 ----
+// AnnotationRoute::init();</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在 Day 1 建的 tp 项目里，把示例 1 逐段加进 <code>route/app.php</code>，访问 <code>/think</code>、<code>/hello/Arale</code>、<code>/user/abc</code>（应 404）和一个不存在的路径（应走到 MISS 路由），逐个验证。<br>
+2. 把 <code>Route::pattern</code> 那行注释掉再访问 <code>/api/user/abc</code>，确认 pattern 注释前后匹配结果的变化。<br>
+3. 跑一遍 <code>php think optimize:route</code>，再改一条路由后访问，观察缓存是否让改动不生效——然后想想生产环境改路由后要做什么。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 的路由分两层：<strong>默认约定路由 + 自定义路由</strong>，和 TP 的“显式注册为主、约定为辅”正好反过来。</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>默认路由</td><td>PATHINFO 模式：域名/入口/控制器/操作/参数</td><td>约定路由 <code>/controller/action</code>，多模块是 <code>/module/controller/action</code></td></tr>
+<tr><td>自定义路由</td><td><code>route/</code> 目录下用 <code>Route::get</code> 等注册</td><td><code>src/config/router.js</code>，如 <code>[['/test/myGet', 'test/get']]</code></td></tr>
+<tr><td>REST 路由</td><td><code>Route::resource('blog', 'Blog')</code> 注册整组</td><td><code>[['/user/:id?', 'rest']]</code> 映射到 <code>getAction</code> / <code>postAction</code> / <code>putAction</code> / <code>deleteAction</code></td></tr>
+<tr><td>参数写法</td><td><code>:id</code> 必选、<code>[:id]</code> 可选</td><td><code>:id?</code> 可选（问号后缀）</td></tr>
+<tr><td>特色</td><td>资源路由、MISS 兜底、路由缓存</td><td><strong>文件即路由</strong>：控制器文件放那儿就能访问，是 ThinkJS 的特色</td></tr>
+</table>
+<p><strong>面试加分句：</strong>“ThinkJS 默认是文件即路由、约定优先，自定义路由写在 router.js；TP 是显式注册为主，路由文件里一条条定义，资源路由和 MISS 兜底是 TP 更顺手的地方。两者 REST 映射的思路一样，都是按 HTTP 方法分发到不同处理函数。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. ThinkPHP 里可选路由参数怎么写？</strong></p><button data-i="0">:id</button><button data-i="1">[:id]</button><button data-i="2">{id}</button><div class="ans">解析：选 B。:id 是必选，[:id] 用方括号包起来才是可选；{id} 是其他框架的写法。</div></div>
+<div class="q" data-answer="1"><p><strong>2. Route::resource('blog', 'Blog') 做了什么？</strong></p><button data-i="0">只注册一条 GET /blog 路由</button><button data-i="1">一条语句注册 blog 的整组 RESTful 路由（index/create/save/read/edit/update/delete）</button><button data-i="2">注册一个 blog 中间件</button><div class="ans">解析：选 B。资源路由是 RESTful CRUD 的简写，7 条路由一次注册。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 在 ThinkPHP 8 里用注解路由，必须做什么？</strong></p><button data-i="0">什么都不用做，核心内置</button><button data-i="1">装 think-annotation 扩展 + 写 PHP 8 原生 #[Route(...)] + 在路由文件里调用 AnnotationRoute::init()</button><button data-i="2">把 config/app.php 的 with_route 改成 false</button><div class="ans">解析：选 B。8.x 注解路由已剥离核心，三步缺一不可；with_route 是路由总开关，和注解路由无关。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：ThinkPHP 的路由流程是哪四步？</summary><p>定义 → 检测 → 解析 → 调度。定义是在路由文件里注册规则；检测是请求进来后按规则逐条匹配；解析是把匹配到的规则解析成控制器、方法与参数；调度是交给容器调度执行。</p></details>
+<details><summary>Q2：:id 和 [:id] 有什么区别？怎么约束参数格式？</summary><p>:id 是必选参数，URL 里必须有；[:id] 是可选参数，不带也能匹配。用 Route::pattern(['id' =&gt; '\d+']) 做全局变量规则，所有 :id 只匹配数字，相当于给路由加了一层正则校验。</p></details>
+<details><summary>Q3：路由分组有什么好处？</summary><p>Route::group('api', function () {...}) 把一批路由收进同一前缀下，还能统一挂中间件（比如整个 api 分组挂鉴权），不用每条路由单独写。域名路由 Route::domain 则按域名分流不同路由组。</p></details>
+<details><summary>Q4：资源路由 Route::resource 注册了哪些路由？</summary><p>一条语句注册整组 RESTful 路由：GET /blog → index（列表）、GET /blog/create → create（新建表单）、POST /blog → save（保存）、GET /blog/:id → read（详情）、GET /blog/:id/edit → edit（编辑表单）、PUT /blog/:id → update（更新）、DELETE /blog/:id → delete（删除）。</p></details>
+<details><summary>Q5：TP8 的注解路由和旧版有什么不同？</summary><p>旧版注解路由内置在核心里，用 @route 注释写法；8.x 剥离为 topthink/think-annotation 扩展，改用 PHP 8 原生 #[Route(...)] Attribute，还必须在路由文件里调用 AnnotationRoute::init() 才能生效。只装扩展不调 init() 是最常见的路由 404 原因之一。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“会用 TP 路由”，写“用 TP 路由做过 API 分组与 RESTful 资源路由：api 分组统一挂鉴权中间件，资源路由覆盖 CRUD，MISS 路由做统一 404；生产环境用 php think optimize:route 做路由缓存”。前者是名词，后者是可追问的实践。</p>
+<p><strong>明日预告：</strong>Day 4 继续往下走：路由匹配之后，请求如何被调度到控制器方法——依赖注入是怎么发生的，Request 与 Response 对象怎么用，以及控制器里最常见的几种写法。</p>
+</div>
+<div class="nav"><span><a href="day02.html">← Day 2</a></span><span><a href="day04.html">Day 4 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

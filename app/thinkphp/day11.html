@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 11：多应用、命令行与部署优化 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 11 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 11：多应用、命令行与部署优化</h1>
+<p>前面十课讲的都是“写代码时”的框架能力，今天讲“项目长大之后”的三件事：一个项目要拆成前台、后台、API 多个应用怎么办？定时任务、数据迁移这些不在 HTTP 请求里跑的活儿怎么写？代码写完了，上线前要做哪些优化？这三块都是面试里区分“会用框架”和“能扛项目”的题目，答案大多是固定套路，记下来就能答。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 多应用：一个项目，多个入口应用</h3>
+<p>单应用模式下，项目只有一个应用：控制器在 <code>app/controller/</code>，路由在 <code>route/app.php</code>。当项目长大，需要同时做 API 接口、后台管理、移动端接口时，可以拆成<strong>多应用</strong>：多应用是扩展 <code>topthink/think-multi-app</code>，安装后 <code>app/</code> 下每个子目录就是一个应用，比如 <code>app/api</code>、<code>app/admin</code>。</p>
+<p>每个应用可以有自己独立的 <code>config/</code>（配置）、<code>route/</code>（路由）、<code>middleware.php</code>（中间件）、<code>event.php</code>（事件）。多应用的路由文件就放在各应用自己的 <code>route/</code> 目录里，不再共用根目录的 <code>route/app.php</code>。JS 对照：像一个 monorepo 里多个 app，各自有自己的路由和配置，但共享同一套框架与依赖。</p>
+<p>两个高频考点要记牢：</p>
+<ul>
+<li><strong>单应用的判断依据：</strong>系统以 <code>app/controller</code> 目录是否存在作为判断单应用的依据。部署多应用后，<strong>记得删除 <code>app/controller</code></strong>，否则框架会以为你还是单应用，多应用不生效。</li>
+<li><strong>应用映射与域名绑定：</strong>在 <code>config/app.php</code> 里，<code>app_map</code> 做应用映射（把 URL 前缀映射到某个应用），<code>domain_bind</code> 做域名绑定（把某个域名绑定到某个应用，比如 <code>api.example.com</code> 绑到 api 应用）。</li>
+</ul>
+<p><strong>面试答法：</strong>“多应用通过 <code>think-multi-app</code> 扩展实现，<code>app/</code> 下每个子目录是一个应用，各有独立的 config、route、middleware.php、event.php。系统以 <code>app/controller</code> 目录是否存在判断单应用，部署多应用后要删除它；<code>config/app.php</code> 的 <code>app_map</code> 做应用映射，<code>domain_bind</code> 做域名绑定。”</p>
+<div class="warn"><strong>容易踩的坑：</strong>装了多应用扩展却发现不生效，第一件事就是检查 <code>app/controller</code> 还在不在——它在，框架就按单应用走。这个坑面试官很爱问，线上也真实常见。</div>
+<h3>2. 命令行：php think 是项目的瑞士军刀</h3>
+<p>项目根目录的 <code>think</code> 文件是 CLI 入口，所有命令行操作都从 <code>php think</code> 开始。<code>php think list</code> 可以看全部命令——记不住命令名时先 list 一下，比翻文档快。</p>
+<p><strong>自定义命令</strong>分三步：① 用生成器 <code>php think make:command</code> 生成命令类骨架；② 命令类继承 <code>think\console\Command</code>；③ 在 <code>configure()</code> 里设置命令名称、参数、选项，在 <code>execute(Input $input, Output $output)</code> 里写逻辑。<code>Input</code> 读用户输入的参数与选项，<code>Output</code> 负责往终端输出。JS 对照：像用 commander 写 Node CLI——<code>configure()</code> 相当于定义 <code>program.command().option()</code>，<code>execute()</code> 相当于 <code>.action()</code> 回调。</p>
+<p><strong>内置生成器</strong>（脚手架命令，面试可能顺带问）：<code>make:controller</code> 生成控制器、<code>make:model</code> 生成模型、<code>make:middleware</code> 生成中间件、<code>make:validate</code> 生成验证器。生成器省的是样板代码，生成的类仍需自己填逻辑。</p>
+<p><strong>优化命令</strong>（上线前必跑，见第 4 节）：<code>optimize:autoload</code>（类映射）、<code>optimize:config</code>（配置缓存）、<code>optimize:route</code>（路由缓存）、<code>optimize:schema</code>（数据表结构缓存）。另外两个常用命令：<code>php think clear</code> 清理缓存（改了配置、路由后缓存没更新时先 clear 再试）；<code>php think run</code> 启动开发服务器，默认地址是 <code>http://localhost:8000</code>，可用 <code>-p</code> 指定端口。JS 对照：<code>php think run</code> 相当于 <code>npm run dev</code> 起本地开发服务器。</p>
+<h3>3. 扩展生态：官方与常用扩展一张表</h3>
+<p>ThinkPHP 8.x 线把很多能力拆成了独立扩展包，按需安装。下面这些都是真实存在的官方或常用扩展，面试提到“我用过哪些 TP 扩展”时按需引用，不要编不存在的包名：</p>
+<table>
+<tr><th>扩展</th><th>用途</th></tr>
+<tr><td>think-view</td><td>模板引擎</td></tr>
+<tr><td>think-queue</td><td>队列（异步任务）</td></tr>
+<tr><td>think-annotation</td><td>注解路由</td></tr>
+<tr><td>think-multi-app</td><td>多应用</td></tr>
+<tr><td>think-trace</td><td>调试跟踪</td></tr>
+<tr><td>think-orm</td><td>独立 ORM 包（模型与查询构建器）</td></tr>
+<tr><td>think-captcha</td><td>验证码</td></tr>
+<tr><td>think-filesystem</td><td>文件存储</td></tr>
+</table>
+<p><strong>面试答法：</strong>“TP 8.x 线是核心精简加扩展按需安装的思路，比如队列用 think-queue、多应用用 think-multi-app、注解路由用 think-annotation、模板用 think-view。扩展通过 composer 安装，服务提供者自动发现。”</p>
+<h3>4. 部署与性能优化：上线检查清单</h3>
+<p>部署部分面试常以“上线前要做哪些事”或“线上慢怎么排查”出现，按下面这张清单答，基本不会丢分：</p>
+<ul>
+<li><strong>Nginx 配置：</strong>root 必须指向 <code>public/</code> 目录（只暴露入口目录，应用代码不直接对外）；<code>try_files $uri $uri/ /index.php?$query_string;</code> 把不存在的路径交给入口文件做路由分发。</li>
+<li><strong>环境配置：</strong><code>.env</code> 里 <code>APP_DEBUG=false</code>，生产环境绝不开调试模式（会暴露敏感信息）。</li>
+<li><strong>目录权限：</strong><code>runtime/</code> 等需要写权限的目录要可写（缓存、日志都写在这里），不可写会导致运行时报错。</li>
+<li><strong>依赖安装：</strong>生产用 <code>composer install --no-dev --optimize-autoloader</code>，不装开发依赖、生成优化的类加载映射。</li>
+<li><strong>OPcache：</strong>开启 OPcache（<code>php.ini</code> 里 <code>opcache.enable=1</code>），生产可设 <code>opcache.validate_timestamps=0</code>（不检查文件时间戳，性能更好，但改代码后要重启或手动刷新缓存才生效）。</li>
+<li><strong>缓存预热：</strong>上线后跑 <code>optimize:config</code>、<code>optimize:route</code>、<code>optimize:schema</code>，把配置、路由、表结构都缓存起来，避免每次请求重复解析。</li>
+<li><strong>会话与缓存：</strong>生产用 Redis 做会话与缓存存储，不要用默认文件存储（多台服务器部署时文件缓存不共享）。</li>
+<li><strong>性能要点：</strong>路由与配置缓存（上面已做）、避免 N+1（模型用 <code>with</code> 预载关联）、给查询字段加索引、耗时任务进队列异步处理。</li>
+</ul>
+<p><strong>面试答法：</strong>“部署上 Nginx root 指向 public 目录、<code>.env</code> 关调试、<code>runtime/</code> 可写、生产依赖用 <code>--no-dev --optimize-autoloader</code> 安装、开启 OPcache、上线后跑 <code>optimize:config</code>、<code>optimize:route</code>、<code>optimize:schema</code>，会话与缓存用 Redis。性能方面重点是缓存预热、<code>with</code> 预载避免 N+1、加索引、耗时任务进队列。”</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：自定义命令——每天凌晨清理过期订单</h3>
+<pre><code>&lt;?php
+// 先用生成器搭骨架：php think make:command CleanOrder
+// 生成的类继承 think\console\Command
+namespace app\command;
+
+use think\console\Command;
+use think\console\Input;
+use think\console\Output;
+
+class CleanOrder extends Command
+{
+    // configure：设置命令名称、参数、选项（只做声明，不写业务逻辑）
+    // JS 对照：commander 的 program.command('order:clean').option(...)
+    protected function configure()
+    {
+        $this-&gt;setName('order:clean')          // 命令名，终端里跑 php think order:clean
+            -&gt;setDescription('清理过期未支付订单'); // php think list 里显示的描述
+    }
+
+    // execute：真正的逻辑。Input 读参数选项，Output 往终端输出
+    // JS 对照：commander 的 .action((options) =&gt; {...})
+    protected function execute(Input $input, Output $output)
+    {
+        // 业务逻辑写这里，比如：把 30 分钟未支付的订单置为已取消
+        $output-&gt;writeln('清理完成'); // writeln 往终端输出一行，相当于 console.log
+    }
+}</code></pre>
+<h3>示例 2：Nginx 配置 + .env 生产设置 + 上线命令</h3>
+<pre><code># Nginx：root 必须指向 public/ 目录，应用代码不直接对外
+server {
+    listen 80;
+    server_name example.com;
+    root /var/www/myapp/public;  # 注意是 public 子目录，不是项目根目录
+
+    location / {
+        # 文件不存在时交给 index.php，由框架做路由分发
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;      # 转给 PHP-FPM 处理
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}</code></pre>
+<pre><code># .env 生产设置
+APP_DEBUG=false   # 生产环境必须关闭调试模式，否则会暴露敏感信息
+
+# 上线命令清单（按顺序跑）
+composer install --no-dev --optimize-autoloader  # 生产依赖，不装 dev 包，优化类加载
+php think optimize:config   # 配置缓存
+php think optimize:route    # 路由缓存
+php think optimize:schema   # 数据表结构缓存
+php think clear             # 改配置或路由后缓存没更新时，先 clear 再试
+
+# 开发时启动本地服务器（默认 http://localhost:8000，-p 指定端口）
+php think run -p 8080</code></pre>
+<h3>示例 3：多应用目录结构一览</h3>
+<pre><code>app/
+├── api/                  # api 应用
+│   ├── controller/       # api 的控制器
+│   ├── config/           # api 独立的配置
+│   ├── route/            # api 的路由文件放这里
+│   ├── middleware.php    # api 独立的中间件
+│   └── event.php         # api 独立的事件
+├── admin/                # admin 应用（结构同 api）
+│   ├── controller/
+│   ├── config/
+│   ├── route/
+│   ├── middleware.php
+│   └── event.php
+└── provider.php          # 应用自己的服务提供者注册（Day 10 讲过）
+
+# 注意：部署多应用后，记得删除根目录下的 app/controller，
+# 否则系统按“app/controller 存在 = 单应用”判断，多应用不生效。
+# config/app.php 里 app_map 做应用映射，domain_bind 做域名绑定。</code></pre>
+
+<h2>三、ThinkJS 对比</h2>
+<p>多应用、CLI、部署这三块，ThinkJS 都有对位物，但形态差异恰好反映了 PHP 与 Node 的根本不同——<strong>PHP 每次请求重建应用，Node 常驻进程</strong>。这条差异线要记牢，Day 12 还会总复习。</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>多模块组织</td><td>多应用扩展，每个应用独立 config / route / middleware.php / event.php</td><td>多模块项目用 <code>src/common</code> 放公共配置，各模块 <code>src/xxx/</code></td></tr>
+<tr><td>CLI</td><td><code>php think</code>，自定义命令继承 <code>think\console\Command</code></td><td><code>thinkjs</code> 命令（think-cli），如 <code>thinkjs controller user -r</code> 同时创建 controller 与 logic 文件</td></tr>
+<tr><td>部署</td><td>Nginx + PHP-FPM，每次请求重建应用</td><td>PM2 常驻进程 + Nginx 反代</td></tr>
+<tr><td>进程内状态</td><td>每次请求干净启动，天然无跨请求污染</td><td>常驻内存，要注意跨请求状态污染</td></tr>
+</table>
+<p><strong>CLI 对比：</strong>ThinkJS 的脚手架是 <code>thinkjs</code> 命令（think-cli 提供）。比如 <code>thinkjs controller user -r</code> 会同时创建 controller 与 logic 两个文件——因为 ThinkJS 把校验逻辑放 Logic 层（Day 12 对比表还会提到），脚手架顺手把配套文件一起生成。TP 的 <code>make:controller</code> 只生成控制器，验证器要另外用 <code>make:validate</code> 生成。两者思路相同（生成器省样板代码），只是配套文件的拆分不同。</p>
+<p><strong>部署对比（面试可展开的点）：</strong>TP 部署是 Nginx + PHP-FPM：Nginx 把 PHP 请求转给 PHP-FPM，PHP-FPM 每次请求拉起应用、跑完即销毁，下次请求重新来过。ThinkJS 部署是 PM2 + Nginx 反代：PM2 让 Node 应用常驻内存，Nginx 只做反向代理转发。常驻进程的好处是启动开销只付一次、内存缓存跨请求可用；代价是<strong>要注意跨请求状态污染</strong>——模块级变量、单例里的可变状态，一个请求改了，下一个请求还能看到，写代码时必须有意识地隔离。而 PHP 每次请求干净启动，天然没有这个问题，这是 PHP 在 Web 场景下一个被低估的优点。</p>
+
+<h2>四、小测验</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. 部署多应用后，以下哪件事必须做？</strong></p><button data-i="0">把 <code>route/app.php</code> 复制到每个应用的 route 目录</button><button data-i="1">删除 <code>app/controller</code> 目录，否则系统仍按单应用判断</button><button data-i="2">在 <code>config/app.php</code> 里删除 <code>app_map</code></button><div class="ans">解析：选 B。系统以 <code>app/controller</code> 目录是否存在作为判断单应用的依据，部署多应用后记得删除它。多应用路由文件放在各应用自己的 route/ 目录，不用复制根路由文件。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 自定义命令的两个关键方法分别做什么？</strong></p><button data-i="0"><code>configure()</code> 设名称、参数、选项；<code>execute(Input, Output)</code> 写逻辑</button><button data-i="1"><code>configure()</code> 写逻辑；<code>execute()</code> 设名称</button><button data-i="2">两个方法都是写逻辑的，分工随意</button><div class="ans">解析：选 A。<code>configure()</code> 只做声明（名称、参数、选项），<code>execute(Input $input, Output $output)</code> 写业务逻辑，Input 读输入、Output 输出。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 上线后应该跑哪几个 optimize 命令做缓存预热？</strong></p><button data-i="0">只需要 <code>optimize:autoload</code></button><button data-i="1"><code>optimize:config</code> 和 <code>php think clear</code></button><button data-i="2"><code>optimize:config</code>、<code>optimize:route</code>、<code>optimize:schema</code></button><div class="ans">解析：选 C。上线后跑配置缓存、路由缓存、表结构缓存三个命令；<code>optimize:autoload</code> 是类映射（composer 安装时 <code>--optimize-autoloader</code> 已覆盖类似效果）；<code>php think clear</code> 是清理缓存，不是预热。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：多应用怎么实现？部署时有什么坑？</summary><p>通过 <code>think-multi-app</code> 扩展实现，<code>app/</code> 下每个子目录是一个应用，各有独立的 config、route、middleware.php、event.php。最大的坑：系统以 <code>app/controller</code> 目录是否存在判断单应用，部署多应用后必须删除它，否则多应用不生效。<code>config/app.php</code> 的 <code>app_map</code> 做应用映射，<code>domain_bind</code> 做域名绑定。</p></details>
+<details><summary>Q2：自定义命令怎么写？</summary><p>用 <code>php think make:command</code> 生成骨架，命令类继承 <code>think\console\Command</code>，在 <code>configure()</code> 里设置名称、参数、选项，在 <code>execute(Input $input, Output $output)</code> 里写逻辑。<code>php think list</code> 可以查看全部命令。</p></details>
+<details><summary>Q3：上线前要做哪些优化和检查？</summary><p>Nginx root 指向 <code>public/</code> 目录；<code>.env</code> 里 <code>APP_DEBUG=false</code>；<code>runtime/</code> 等目录可写；生产用 <code>composer install --no-dev --optimize-autoloader</code>；开启 OPcache（生产可设 <code>opcache.validate_timestamps=0</code>）；上线后跑 <code>optimize:config</code>、<code>optimize:route</code>、<code>optimize:schema</code>；会话与缓存生产用 Redis。</p></details>
+<details><summary>Q4：线上接口慢，一般从哪几方面排查？</summary><p>先看缓存有没有预热（路由、配置、表结构缓存是否已生成）、再看有没有 N+1（模型关联用 <code>with</code> 预载）、查询字段是否加了索引、耗时任务是否进了队列异步处理。配合 think-trace 调试跟踪看各环节耗时，定位到具体瓶颈再动手。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“熟悉多应用与部署”，写“主导单体项目拆多应用：api 与 admin 应用独立路由与配置，域名绑定区分入口；上线流程标准化为 composer 生产安装 + 三个 optimize 缓存预热 + OPcache，接口平均响应从 X 毫秒降到 Y 毫秒”。数字用你自己的真实数据，没有就先不写数字，只写做法。</p>
+<p><strong>明日预告：</strong>Day 12 是结课：ThinkPHP vs ThinkJS 全面对比 + 面试串讲——把 12 课的知识点串成一张对照表，再过一遍面试高频问答，最后给一个动手项目建议。</p>
+</div>
+<div class="nav"><span><a href="day10.html">← Day 10</a></span><span><a href="day12.html">Day 12 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

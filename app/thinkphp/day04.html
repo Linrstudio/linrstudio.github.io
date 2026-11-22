@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4：控制器与请求响应 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 4 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 4：控制器与请求响应</h1>
+<p>Day 2 讲了请求生命周期，Day 3 讲了路由怎么把 URL 映射到“某个控制器、某个操作”。今天就落到这个“某个”上：控制器长什么样、请求参数怎么拿、响应怎么回。这是面试里最常被追问的一层——答法不难，难的是把“为什么这样设计”说清楚。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 控制器：一个类，public 方法就是 Action</h3>
+<p>控制器就是一个普通的 PHP 类，继承 <code>app\BaseController</code>（应用自带的基类）或 <code>think\Controller</code>（框架基类）。类里每个 <code>public</code> 方法就是一个可访问的操作（Action）：路由解析出控制器名和操作名后，框架实例化控制器类、调用对应的方法，方法的返回值就是响应内容。</p>
+<p><strong>面试答法：</strong>被问“请求怎么走到业务代码”，按这条线答：路由解析出控制器与操作 → 容器实例化控制器 → 调用 Action 方法 → 方法返回 Response。控制器是这条线的最后一站，也是你写业务代码的第一站。</p>
+<h3>2. BaseController 自带什么</h3>
+<p>继承 <code>BaseController</code> 后，控制器里直接可用的成员就这几个，面试常考，记住一张表就够了：</p>
+<table>
+<tr><th>成员</th><th>作用</th></tr>
+<tr><td><code>$request</code></td><td>当前请求实例（<code>think\Request</code>），取参数、判断请求类型都靠它</td></tr>
+<tr><td><code>$app</code></td><td>应用实例（<code>think\App</code>），拿配置、容器等</td></tr>
+<tr><td><code>$batchValidate</code></td><td>是否批量验证，验证器相关，Day 8 展开</td></tr>
+<tr><td><code>$middleware</code></td><td>控制器中间件列表，Day 5 展开</td></tr>
+<tr><td><code>initialize()</code></td><td>初始化方法，每个 Action 执行前运行</td></tr>
+<tr><td><code>validate()</code></td><td>数据验证方法，Day 8 展开</td></tr>
+</table>
+<h3>3. 初始化：用 initialize()，不要覆写 __construct</h3>
+<p>父类的 <code>__construct</code> 已经做了初始化工作（注入 <code>$app</code>、<code>$request</code> 等）。如果你在子类里写了自己的 <code>__construct</code>，又忘了调 <code>parent::__construct()</code>，这些初始化就全丢了——<code>$this-&gt;request</code> 可能是空的，中间件注册也可能失效，报错还不好定位。</p>
+<p>框架留的口子就是 <code>initialize()</code>：父类构造器里会调用它。需要初始化逻辑（比如检查登录、加载公共数据）就写在这里，不要动 <code>__construct</code>。</p>
+<div class="warn"><strong>经典面试坑：</strong>“在控制器里覆写 __construct 会怎样？”——答：父类 __construct 做了初始化，覆写后不调 parent::__construct() 会破坏初始化；正确做法是把初始化逻辑写进 initialize()，框架会在构造时自动调用它。</div>
+<h3>4. 依赖注入与参数绑定：Action 的参数从哪来</h3>
+<p>Action 方法的参数有两种来路，面试都爱问：</p>
+<p><strong>类型提示注入：</strong>方法参数带类型提示时，容器自动注入对应实例。比如 <code>index(Request $request)</code>，框架看到 <code>Request</code> 类型提示，就把当前请求实例注进来，不用你手动 new。JS 对照：像 NestJS 里用装饰器取请求对象，只不过 TP 靠类型提示自动识别，不用写装饰器。</p>
+<p><strong>按名绑定请求参数：</strong>方法参数没有类型提示时，框架按参数名从请求参数里找值传进来。比如 <code>show($id)</code>，访问 <code>?id=5</code> 时 <code>$id</code> 就是 5。相当于 Express 里手动写 <code>req.query.id</code>，只不过 TP 帮你取了。</p>
+<p>两种方式可以混用：<code>show(Request $request, $id)</code>，前者容器注入，后者按名绑定。</p>
+<h3>5. Request 对象：取参数的统一入口</h3>
+<p>请求对象是 <code>think\Request</code>，门面是 <code>think\facade\Request</code>（门面的机制 Day 10 展开，现在只要知道门面就是静态调用的壳）。常用方法一张表：</p>
+<table>
+<tr><th>方法</th><th>作用</th></tr>
+<tr><td><code>param()</code></td><td>取全部请求参数（GET、POST、路由参数合并）</td></tr>
+<tr><td><code>get()</code> / <code>post()</code></td><td>分别取 GET / POST 参数</td></tr>
+<tr><td><code>header()</code></td><td>取请求头</td></tr>
+<tr><td><code>cookie()</code></td><td>取 Cookie</td></tr>
+<tr><td><code>file()</code></td><td>取上传的文件</td></tr>
+<tr><td><code>method()</code></td><td>取请求方法（GET、POST 等）</td></tr>
+<tr><td><code>isGet()</code> / <code>isPost()</code> / <code>isAjax()</code></td><td>判断请求类型</td></tr>
+<tr><td><code>module()</code> / <code>controller()</code> / <code>action()</code></td><td>取当前模块 / 控制器 / 操作名</td></tr>
+</table>
+<p><strong>版本注意：</strong>TP6 起推荐用 Request 对象；5.1 的 <code>input()</code> 助手已不推荐。面试答法：新项目用 Request 对象注入取参，<code>input()</code> 只在老代码里见，知道它就行，不要在新代码里用。</p>
+<h3>6. Response：return 什么，浏览器就收到什么</h3>
+<p>控制器方法的返回值就是响应，规则很简单：</p>
+<p><strong>return 字符串：</strong>直接输出。<strong>return 数组：</strong>框架自动转 JSON，这是写 API 最常用的方式。<strong>助手函数：</strong><code>json($data)</code> 明确返回 JSON，可指定状态码与响应头；<code>view()</code> 渲染模板；<code>redirect()</code> 跳转。底层类是 <code>think\Response</code>，JSON 响应类是 <code>think\response\Json</code>，也可以用 <code>Response::create($data, 'json')</code> 通用创建。</p>
+<p><strong>提前返回：</strong>想在中间逻辑里直接结束并返回响应（比如权限不足），抛一个 <code>think\exception\HttpResponseException</code>，把响应对象带进去。框架捕获这个异常后直接输出响应，后续代码不再执行——相当于 Express 里 <code>return res.status(403).json(...)</code> 提前 return，只不过 TP 用异常来中断流程。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：User 控制器——注入、按名绑定、JSON 返回（放到 app\controller\User.php 可跑）</h3>
+<pre><code>&lt;?php
+namespace app\controller;              // 命名空间，相当于 JS 的模块路径
+
+use app\BaseController;                // use 相当于 import
+use think\Request;                     // Request 类：请求对象
+
+class User extends BaseController      // 继承基类，拿到 $this-&gt;request 等成员
+{
+    protected function initialize()
+    {
+        // 初始化逻辑写在这里，每个 Action 执行前都会跑一次
+        // 不要覆写 __construct：父类构造器已做初始化，覆写又不调 parent::__construct() 会破坏它
+    }
+
+    // GET /user —— 用户列表
+    public function index(Request $request)   // 类型提示：容器自动注入 Request 实例
+    {
+        $page = $request-&gt;param('page', 1);   // -&gt; 相当于 JS 的 . ；param() 取参数，第二个参数是默认值
+        return ['page' =&gt; $page, 'list' =&gt; []];  // =&gt; 是键值对，相当于 JS 对象里的冒号；return 数组自动转 JSON
+    }
+
+    // GET /user/5 —— 用户详情，$id 按名绑定请求参数
+    public function show($id)
+    {
+        return '用户 #' . $id;         // . 是字符串拼接，相当于 JS 的 + ；return 字符串直接输出
+    }
+
+    // POST /user —— 新建用户
+    public function store(Request $request)
+    {
+        if (! $request-&gt;isPost()) {    // isPost() 判断请求方法
+            return json(['code' =&gt; 405, 'msg' =&gt; '只接受 POST']);  // json() 助手明确返回 JSON
+        }
+        $name = $request-&gt;post('name');  // post() 只取 POST 参数
+        return json(['code' =&gt; 0, 'msg' =&gt; 'ok', 'name' =&gt; $name]);
+    }
+}</code></pre>
+<h3>示例 2：几种返回方式与提前返回</h3>
+<pre><code>&lt;?php
+namespace app\controller;
+
+use app\BaseController;
+use think\exception\HttpResponseException;
+
+class Demo extends BaseController
+{
+    public function page()
+    {
+        // view() 渲染模板，第二个参数是传给模板的变量
+        return view('demo/index', ['title' =&gt; '你好']);
+    }
+
+    public function jump()
+    {
+        return redirect('/user');      // redirect() 跳转到指定地址
+    }
+
+    public function secret()
+    {
+        $login = false;                // 假设这里是登录检查的结果
+        if (! $login) {
+            // 提前返回：抛 HttpResponseException，框架捕获后直接输出响应，后续代码不再执行
+            throw new HttpResponseException(json(['code' =&gt; 403, 'msg' =&gt; '请先登录']));
+        }
+        return '秘密内容';
+    }
+}</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 1 的 <code>User</code> 控制器建起来，访问 <code>/user</code> 和 <code>/user/show?id=5</code>，确认 JSON 和字符串两种返回长什么样。<br>
+2. 把 <code>index()</code> 里的 <code>param('page', 1)</code> 改成 <code>get('page')</code> 再访问一次，体会 param() 与 get() 的区别。<br>
+3. 在 <code>initialize()</code> 里加一行日志或 echo，访问任意 Action，确认它每次都会先执行。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 的控制器与 TP 几乎同源，只差在 JS 的表达方式上：</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>控制器定义</td><td><code>class User extends BaseController</code></td><td><code>module.exports = class extends think.Controller</code></td></tr>
+<tr><td>操作方法</td><td>public 方法任意名</td><td>方法名必须以 <code>Action</code> 结尾，如 <code>indexAction()</code></td></tr>
+<tr><td>取 GET 参数</td><td><code>$request-&gt;get('id')</code></td><td><code>this.get('id')</code></td></tr>
+<tr><td>取 POST 参数</td><td><code>$request-&gt;post()</code></td><td><code>this.post()</code></td></tr>
+<tr><td>返回统一 JSON</td><td>return 数组 / <code>json()</code></td><td><code>this.success(data)</code> / <code>this.fail(msg)</code></td></tr>
+<tr><td>请求上下文</td><td><code>$this-&gt;request</code></td><td><code>this.ctx</code>（Koa 上下文）</td></tr>
+<tr><td>前置钩子</td><td><code>initialize()</code></td><td><code>__before()</code>，所有 Action 执行前运行</td></tr>
+</table>
+<pre><code>// ThinkJS 控制器：src/controller/user.js
+module.exports = class extends think.Controller {
+  __before() {
+    // 所有 Action 执行前运行，相当于 TP 的 initialize()
+  }
+  async indexAction() {
+    const id = this.get('id');      // 取 GET 参数，相当于 TP 的 $request-&gt;get('id')
+    return this.success({id});      // 返回统一 JSON，相当于 TP 的 return json(...)
+  }
+};</code></pre>
+<p><strong>记忆锚点：</strong>TP 的 <code>initialize()</code> 就是 ThinkJS 的 <code>__before()</code>；TP 的 <code>return 数组自动转 JSON</code> 就是 ThinkJS 的 <code>this.success()</code>。两边概念一一对应，差别只在语法。</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. 控制器需要初始化逻辑（比如检查登录），应该写在哪里？</strong></p><button data-i="0">覆写 __construct，在里面写</button><button data-i="1">写在 initialize() 里，框架会在构造时自动调用</button><button data-i="2">写在每个 Action 方法的第一行</button><div class="ans">解析：选 B。父类 __construct 已做初始化，覆写又不调 parent::__construct() 会破坏它；initialize() 就是框架留的初始化口子。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 控制器方法 return 一个数组，浏览器会收到什么？</strong></p><button data-i="0">直接输出 Array 这样的字符串</button><button data-i="1">框架自动转成 JSON 返回</button><button data-i="2">报错，控制器只能 return 字符串</button><div class="ans">解析：选 B。return 数组自动转 JSON，是 TP 写 API 最常用的方式；想明确控制状态码与响应头时用 json() 助手。</div></div>
+<div class="q" data-answer="0"><p><strong>3. index(Request $request) 里的 $request 是从哪来的？</strong></p><button data-i="0">容器看到类型提示，自动注入当前请求实例</button><button data-i="1">必须在方法里手动 new Request()</button><button data-i="2">从全局变量 $_REQUEST 里取</button><div class="ans">解析：选 A。带类型提示的方法参数由容器自动注入；没有类型提示的参数则按名绑定请求参数。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：控制器里为什么不用 __construct 做初始化？</summary><p>父类 BaseController 的 __construct 已经做了初始化工作（注入 $app、$request 等）。子类覆写 __construct 又不调 parent::__construct()，这些初始化就全丢了。正确做法是把初始化逻辑写进 initialize()，父类构造器会调用它。</p></details>
+<details><summary>Q2：return 数组和 return json() 有什么区别？</summary><p>return 数组时框架按默认方式自动转 JSON，简单够用；json() 助手返回 think\response\Json，可以明确指定状态码与响应头，控制更细。两者底层都是 Response，面试时答“数组是简写，json() 是显式控制”就够了。</p></details>
+<details><summary>Q3：怎么在控制器里提前返回响应、终止后续执行？</summary><p>抛 think\exception\HttpResponseException，把响应对象带进去：throw new HttpResponseException(json([...]))。框架捕获这个异常后直接输出响应，后续代码不再执行。典型场景是权限检查不通过时直接返回 403。</p></details>
+<details><summary>Q4：TP6 为什么推荐用 Request 对象而不是 input()？</summary><p>input() 是 5.1 时代的全局助手函数，TP6 起已不推荐。Request 对象是面向对象的方式：可通过类型提示依赖注入、方法语义清晰（get / post / header / file 各司其职）、便于测试。新项目用 Request 对象，input() 只在老代码里见。</p></details>
+
+<h2>加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>控制器保持瘦：只做参数接收、调用服务层、返回响应；业务逻辑放 Service 或 Model，控制器里不要直接写 SQL。面试官问“控制器里写了 500 行 SQL 怎么看”，答：难复用、难测试、难维护，抽到服务层。</p>
+<p><strong>简历讲法：</strong>别写“熟悉 ThinkPHP 控制器”，写“基于 ThinkPHP 8.x 搭建 API：控制器按资源拆分，Request 对象取参 + 依赖注入，统一 JSON 返回，权限不足时用 HttpResponseException 提前返回”。前者是名词，后者是可追问的做法。</p>
+<p><strong>明日预告：</strong>Day 5 讲中间件与事件——请求进控制器之前要经过哪些关卡（洋葱模型、四级顺序），以及业务解耦用的事件系统怎么配。</p>
+</div>
+<div class="nav"><span><a href="day03.html">← Day 3：路由：注册、参数、分组与资源路由</a></span><span><a href="day05.html">Day 5：中间件与事件 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

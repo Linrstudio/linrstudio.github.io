@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 2：一次请求经历了什么：请求生命周期 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 2 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 2：一次请求经历了什么：请求生命周期</h1>
+<p>面试最爱问的一道题：“一个请求进来，ThinkPHP 内部发生了什么？” 这道题答好了，面试官基本就认定你“真用过框架，而不是只会写控制器”。今天把这条主线从入口文件一路讲到响应发送：入口引导 → App 初始化 → 路由匹配 → 中间件洋葱模型 → 控制器调度 → 响应发送，顺带讲清 PHP-FPM 同步模型这个常考点。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 主线：十步走完一次请求</h3>
+<p>先记住这条主线，面试时按这个顺序说，一步都不要跳：</p>
+<p><strong>入口引导 → Composer 自动加载 → App 初始化（路径、配置、环境变量 .env、服务注册）→ Http::run → 路由匹配 → 中间件管道（洋葱模型）→ 控制器调度（反射 + 依赖注入）→ 响应生成与发送 → HttpEnd 收尾。</strong></p>
+<p>其中 App 初始化做的四件事最常被追问：<strong>定路径</strong>（应用根目录、运行时目录等）、<strong>加载配置</strong>（config/ 目录）、<strong>读环境变量</strong>（.env）、<strong>注册服务</strong>（把路由、日志、数据库等服务放进容器）。</p>
+<h3>2. 入口文件：只有 6 行</h3>
+<p>所有 Web 请求都从 <code>public/index.php</code> 进来，标准骨架只有 6 行有效代码（完整逐行注释见第二节）：先 <code>require</code> Composer 自动加载文件，再 <code>new App()</code> 创建应用实例并取出 <code>http</code> 对象，<code>$http-&gt;run()</code> 跑完整条链路并返回 Response，<code>$response-&gt;send()</code> 把响应发给浏览器，最后 <code>$http-&gt;end($response)</code> 做收尾。入口文件越薄越好——业务逻辑一律不写在这里。</p>
+<h3>3. 关键类速查表</h3>
+<table>
+<tr><th>类</th><th>职责</th></tr>
+<tr><td><code>think\App</code></td><td>应用实例：初始化路径、配置、环境变量、服务注册，是整个请求的“总管”</td></tr>
+<tr><td><code>think\Http</code></td><td>请求处理入口：<code>run()</code> 跑链路、<code>end()</code> 收尾</td></tr>
+<tr><td><code>think\Route</code></td><td>路由：把 URL 匹配到控制器和方法</td></tr>
+<tr><td><code>think\Middleware</code></td><td>中间件管理：组织洋葱管道</td></tr>
+<tr><td><code>think\Request</code></td><td>请求对象：参数、请求头、Cookie 的统一读取口</td></tr>
+<tr><td><code>think\Response</code></td><td>响应对象：内容、状态码、响应头的统一发送口</td></tr>
+<tr><td><code>think\Container</code></td><td>容器：管理对象创建与依赖注入，App 就是它的子类</td></tr>
+</table>
+<p><strong>面试答法：</strong>“入口 new App() 初始化，Http::run 驱动链路，Route 匹配，Middleware 组织洋葱管道，控制器由容器通过反射 + 依赖注入调度，最后 Response 发送、HttpEnd 收尾。” 能把这七个类各说一句话，这道题就稳了。</p>
+<h3>4. 中间件：洋葱模型</h3>
+<p>中间件管道是标准的<strong>洋葱模型</strong>：请求从最外层中间件一层层向内穿，到达控制器后再一层层向外返回。<strong>先注册的中间件，先处理请求、后处理响应。</strong>典型用法：外层放日志、跨域，内层放鉴权、限流。Koa、Express 也是同一模型——你在 JS 里理解的 <code>next()</code> 放行机制，原封不动搬过来。</p>
+<h3>5. 内置事件：三个钩子点</h3>
+<p>框架在生命周期里预埋了三个事件，业务可以在这些点挂监听：<code>AppInit</code>（应用初始化完成时）、<code>HttpRun</code>（请求开始运行时）、<code>HttpEnd</code>（请求结束收尾时）。事件定义在 <code>app/event.php</code>。面试答法：“事件是框架留给业务的钩子，比如在 HttpEnd 里记请求日志、在 AppInit 里做自定义初始化，不用改框架代码。”</p>
+<h3>6. PHP-FPM 同步模型：面试常考点</h3>
+<p>这是 PHP 与 Node 最本质的区别，面试官很爱追问：<strong>PHP-FPM 是同步模型，每个请求都从干净状态启动，请求结束即销毁对象与静态属性。</strong>配置要重新加载、容器要重新创建、静态属性不会带到下一个请求。好处是请求之间天然隔离、不用担心状态污染；代价是每次请求都有重复的初始化开销（所以才有路由缓存、配置缓存这类优化手段）。而 Node 是常驻进程：启动一次，服务多个请求，内存里的状态会一直留着。</p>
+<div class="warn"><strong>容易踩的坑：</strong>不要把状态存在静态属性或全局变量里，指望它跨请求共享——请求一结束就全销毁了。需要跨请求共享的东西（登录态、计数器）要放 Redis、数据库或 Session 里。反过来也别在 Node 思维下写 TP 代码：TP 里没有“启动时初始化一次、一直复用”这回事。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：入口 public/index.php 标准骨架（逐行注释）</h3>
+<pre><code>&lt;?php
+namespace think;
+
+// Composer 自动加载：按 PSR-4 把类名映射到文件，之后 new App() 才能找到类
+// __DIR__ 是当前文件所在目录，相当于 Node 里的 __dirname
+require __DIR__ . '/../vendor/autoload.php';
+
+// new App() 创建应用实例（内部做初始化：路径、配置、.env、服务注册）
+// -&gt;http 取出 Http 对象：-&gt; 相当于 JS 的 .，就是访问对象属性
+$http = (new App())-&gt;http;
+
+// run() 跑完整条链路：路由匹配 → 中间件 → 控制器调度，返回 Response 对象
+$response = $http-&gt;run();
+
+// 把响应头与内容真正发给浏览器
+$response-&gt;send();
+
+// 收尾：触发 HttpEnd 事件，做日志、清理等扫尾工作
+$http-&gt;end($response);</code></pre>
+<h3>示例 2：洋葱模型最小演示（纯 PHP，不依赖框架，直接 php onion.php 可跑）</h3>
+<pre><code>&lt;?php
+// 用闭包嵌套演示"先进后出"：$next 相当于 Express/Koa 的 next()
+// 调用 $next() 才放行到下一层；不调用，请求就卡在这一层
+
+function layer($name, $next)
+{
+    echo "进入 {$name}\n";  // 请求进来时执行（{$name} 插值 ≈ JS 模板字符串 ${name}）
+    $next();                // 放行到下一层
+    echo "离开 {$name}\n";  // 响应出去时执行
+}
+
+// 从内向外包三层：最内层是控制器，外面依次是鉴权、日志
+// use ($app) 是 PHP 闭包捕获外层变量的写法——PHP 闭包默认不捕获，必须显式 use
+// JS 闭包自动捕获，PHP 必须写 use，这是 JS 转 PHP 最容易写错的一点
+$app = function () {
+    echo "控制器：处理业务\n";
+};
+$app = function () use ($app) { layer('鉴权', $app); };
+$app = function () use ($app) { layer('日志', $app); };
+
+$app();
+// 输出：
+// 进入 日志
+// 进入 鉴权
+// 控制器：处理业务
+// 离开 鉴权
+// 离开 日志</code></pre>
+<p>看输出就懂洋葱模型：<strong>日志先注册，所以最先“进入”、最后“离开”</strong>；控制器在最中心，只执行一次。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 把示例 2 存成 onion.php 跑一遍，确认输出顺序；再加一层“限流”包在鉴权外面，预测输出顺序再验证。<br>
+2. 把示例 2 里某层的 <code>$next()</code> 注释掉再跑——控制器还执行吗？这就是中间件“拦截请求”的本质（比如鉴权失败直接返回 401，不放行）。<br>
+3. 打开 Day 1 建的 tp 项目的 <code>public/index.php</code>，对照示例 1 逐行读一遍，确认和骨架一致。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 的请求流程和 TP 高度同构，只是跑在 Node 常驻进程上：</p>
+<table>
+<tr><th>环节</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>入口</td><td><code>public/index.php</code>，每请求启动一次</td><td><code>development.js</code> / <code>production.js</code> 启动 Koa 应用，启动一次服务多个请求</td></tr>
+<tr><td>应用实例</td><td><code>think\App</code></td><td><code>think.app</code> 就是 Koa Application 实例</td></tr>
+<tr><td>中间件</td><td>洋葱管道（<code>think\Middleware</code>）</td><td>中间件洋葱圈；ThinkJS 3.0 执行完全由中间件驱动</td></tr>
+<tr><td>路由</td><td><code>think\Route</code> 匹配</td><td>路由解析 <code>/controller/action</code></td></tr>
+<tr><td>校验层</td><td>验证器（后续课讲）</td><td>Logic 层（参数校验）</td></tr>
+<tr><td>执行</td><td>控制器调度（反射 + 依赖注入）</td><td>Controller Action 执行</td></tr>
+<tr><td>响应</td><td><code>Response-&gt;send()</code></td><td><code>ctx.body</code> 返回</td></tr>
+<tr><td>进程模型</td><td>PHP-FPM 同步：每请求干净启动、结束销毁</td><td>Node 常驻进程：内存状态跨请求保留</td></tr>
+</table>
+<p><strong>面试加分句：</strong>“两者的链路几乎一样：入口 → 中间件洋葱圈 → 路由 → 控制器 → 响应。最大区别是进程模型：TP 每个请求都是全新初始化，天然隔离但有重复开销；ThinkJS 常驻进程，状态能复用但要自己管内存泄漏和状态污染。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. ThinkPHP 的唯一 Web 入口文件是？</strong></p><button data-i="0">app/index.php</button><button data-i="1">public/index.php</button><button data-i="2">think（命令行入口）</button><div class="ans">解析：选 B。public/index.php 是唯一 Web 入口；think 是命令行入口，不走 Web 请求。</div></div>
+<div class="q" data-answer="1"><p><strong>2. PHP-FPM 同步模型下，请求结束后静态属性会怎样？</strong></p><button data-i="0">保留到下一个请求</button><button data-i="1">随请求一起销毁，下个请求从干净状态启动</button><button data-i="2">自动存入 .env</button><div class="ans">解析：选 B。每个请求从干净状态启动、结束即销毁，这是 PHP 与 Node 常驻进程最本质的区别。</div></div>
+<div class="q" data-answer="0"><p><strong>3. 中间件洋葱模型中，先注册的中间件是？</strong></p><button data-i="0">先处理请求、后处理响应</button><button data-i="1">后处理请求、先处理响应</button><button data-i="2">只处理响应，不处理请求</button><div class="ans">解析：选 A。先注册的在最外层：请求进来时最先碰到它，响应出去时最后经过它——先进后出。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：说一下 ThinkPHP 一次请求的完整生命周期。</summary><p>入口 public/index.php 引导 → Composer 自动加载 → App 初始化（路径、配置、.env、服务注册）→ Http::run → 路由匹配 → 中间件管道（洋葱模型）→ 控制器调度（反射 + 依赖注入）→ 响应生成与发送 → HttpEnd 收尾。按这个顺序说，一步不要跳。</p></details>
+<details><summary>Q2：App 初始化具体做了哪几件事？</summary><p>四件：定路径（应用根目录、运行时目录等）、加载配置（config/ 目录）、读环境变量（.env）、注册服务（把路由、日志、数据库等服务放进容器）。</p></details>
+<details><summary>Q3：入口文件 public/index.php 里有什么？</summary><p>只有 6 行有效代码：require Composer 自动加载、new App() 并取出 http 对象、$http-&gt;run() 跑链路返回 Response、$response-&gt;send() 发送、$http-&gt;end($response) 收尾。入口越薄越好，业务逻辑不写在这里。</p></details>
+<details><summary>Q4：PHP-FPM 模型和 Node 常驻进程有什么区别？对写代码有什么影响？</summary><p>PHP-FPM 每个请求从干净状态启动，请求结束即销毁对象与静态属性：好处是请求间天然隔离、不用担心状态污染；代价是每次请求都有重复初始化开销。Node 常驻进程启动一次服务多个请求，内存状态跨请求保留，性能好但要自己管状态污染和内存泄漏。写 TP 代码时不要指望静态属性跨请求共享，跨请求状态放 Redis、数据库或 Session。</p></details>
+<details><summary>Q5：中间件洋葱模型是什么意思？中间件和事件有什么区别？</summary><p>洋葱模型指请求从最外层中间件一层层向内穿、响应再一层层向外返回，先注册的先处理请求、后处理响应。中间件是在请求链路中途拦截和加工（鉴权、日志、限流）；事件是框架在生命周期特定点（AppInit、HttpRun、HttpEnd）留给业务的钩子，不在请求主链路上做拦截。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“熟悉 ThinkPHP 生命周期”，写“能讲清 TP 请求全链路：入口引导 → App 初始化（配置/.env/服务注册）→ 路由匹配 → 中间件洋葱管道 → 容器反射 + 依赖注入调度控制器 → 响应发送与 HttpEnd 收尾；理解 PHP-FPM 每请求干净启动的模型，知道静态属性不能跨请求共享”。前者是名词，后者是可追问的理解。</p>
+<p><strong>明日预告：</strong>Day 3 讲路由：注册、参数、分组与资源路由——请求是怎么从 URL 找到对应控制器方法的，:id 与 [:id] 的区别，以及 TP8 注解路由的三步正确用法。</p>
+</div>
+<div class="nav"><span><a href="day01.html">← Day 1</a></span><span><a href="day03.html">Day 3 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 9：缓存、Session 与队列 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 9 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 9：缓存、Session 与队列</h1>
+<p>缓存、Session、队列是后端面试的“基础设施三件套”：缓存决定接口快不快，Session 决定登录状态怎么存，队列决定耗时任务怎么异步做。ThinkPHP 8.x 线里这三块的 API 都很薄——门面 + 助手函数，真正的考点在配置与边界上：缓存驱动怎么换、Session 为什么默认没开、队列为什么是扩展而不是内置、没有调度器时定时任务怎么做。今天一次讲清。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 缓存：Cache 门面 + 驱动可换</h3>
+<p>缓存用门面 <code>think\facade\Cache</code>，配置在 <code>config/cache.php</code>，默认 <code>default</code> 为 file 驱动。可选驱动有 file、redis、memcached——换驱动改配置即可，业务代码不用动，这就是门面 + 驱动模式的好处。</p>
+<p>四个基本操作：<code>Cache::set('key', $value, 3600)</code> 存（第三个参数是有效期，单位秒）、<code>Cache::get('key', $default)</code> 取（取不到时返回默认值）、<code>Cache::delete('key')</code> 删、<code>Cache::clear()</code> 清空。想临时换存储，用 <code>Cache::store('redis')-&gt;set(...)</code> 切换到指定存储。</p>
+<p><strong>标签缓存是面试加分点：</strong><code>Cache::tag('tag')-&gt;set(...)</code> 给缓存打标签，后续可按标签批量清除。比如文章详情都打上 <code>article</code> 标签，文章更新后一次清掉该标签下的所有相关缓存，不用逐个记 key。<strong>面试答法：</strong>“单机小项目用 file；多台服务器共享缓存或高并发时上 redis；有关联失效需求时用标签缓存批量清。”</p>
+<h3>2. Session：默认没开，先开中间件</h3>
+<p>Session 用门面 <code>think\facade\Session</code>，也有助手函数 <code>session()</code> 可读写。驱动同样是 file / redis / memcached。基本操作：<code>Session::set / get / delete</code>，以及 <code>Session::getId()</code> 取当前会话 ID。</p>
+<p><strong>最容易踩的坑：</strong><code>SessionInit</code> 中间件默认在 <code>app/middleware.php</code> 里是注释掉的，需要手动开启 Session 才可用。Session 读不到值时先别怀疑代码，先去 <code>app/middleware.php</code> 看中间件有没有启用。另外还有 Cookie 门面 <code>think\facade\Cookie</code> 和助手函数 <code>cookie()</code>，负责浏览器侧的键值存储，和 Session 是一对搭档。</p>
+<p><strong>面试答法：</strong>“TP 的 Session 默认不启用，用到时手动开启 <code>SessionInit</code> 中间件；纯 API 项目常用 Token 鉴权，不一定需要 Session。”</p>
+<h3>3. 队列：扩展，不是内置</h3>
+<p>队列是扩展 <code>topthink/think-queue</code>（面向 TP6+），不是框架内置功能，这点面试常考。配置在 <code>config/queue.php</code>，用门面 <code>think\facade\Queue</code>，也有助手函数 <code>queue()</code>。</p>
+<p>任务类实现 <code>handle($job, $data)</code>：<code>$job</code> 是任务对象，<code>$data</code> 是投递时传的数据；成功后必须调用 <code>$job-&gt;delete()</code> 标记完成。投递用 <code>Queue::push($jobClass, $data, $queueName)</code>，三个参数分别是任务类、数据、队列名。</p>
+<p>消费命令：<code>php think queue:work</code> 启动 worker 处理队列，<code>--queue</code> 指定队列名，<code>--daemon</code> 以守护进程方式运行；<code>queue:listen</code> 是监听模式。失败处理有一套命令：<code>queue:failed</code> 查看失败任务、<code>queue:retry</code> 重试、<code>queue:flush</code> 清空、<code>queue:restart</code> 重启队列进程。连接器有三种：sync（同步执行，开发调试用）、database、redis。</p>
+<h3>4. 定时任务：TP 没有内置调度器</h3>
+<p>ThinkPHP 没有内置的任务调度器。生产环境的常见做法是 Linux crontab 调用 <code>php think</code> 自定义命令：先用 <code>make:command</code> 把定时逻辑写成一条命令，再在 crontab 里配执行时间。面试问“TP 怎么做定时任务”，答“框架没有内置调度器，生产用 crontab + 自定义命令”就是标准答案，不要编一个不存在的调度器 API。</p>
+<div class="warn"><strong>容易踩的坑：</strong>① Session 读不到值，先查 <code>app/middleware.php</code> 里 <code>SessionInit</code> 有没有开启；② 队列任务成功后必须 <code>$job-&gt;delete()</code>，否则任务不会被标记完成；③ sync 连接器只用于开发调试，生产用 database 或 redis；④ 不要在 TP 里找内置调度器，定时任务靠 crontab。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：缓存与 Session</h3>
+<pre><code>&lt;?php
+use think\facade\Cache;
+use think\facade\Session;
+
+// 缓存：存 3600 秒，取不到时返回默认值
+Cache::set('user_1', $user, 3600);
+$user = Cache::get('user_1', null);
+Cache::delete('user_1');
+Cache::clear();
+
+// 切换存储：这次读写走 redis
+Cache::store('redis')-&gt;set('hot_list', $list, 600);
+
+// 标签缓存：打上标签，后续可按标签批量清除
+Cache::tag('article')-&gt;set('article_10', $article, 3600);
+
+// Session：set / get / delete / getId()
+Session::set('user_id', 1);
+$userId = Session::get('user_id');
+Session::delete('user_id');
+$sid = Session::getId();
+
+// 助手函数 session() 也可以读写
+session('user_id', 1);</code></pre>
+<h3>示例 2：队列任务类 + 投递 + 消费</h3>
+<pre><code>&lt;?php
+namespace app\job;
+
+class SendMail
+{
+    // 任务入口：$job 是任务对象，$data 是投递时传的数据
+    public function handle($job, $data)
+    {
+        // 比如发邮件、发短信等耗时操作
+        // ...
+
+        // 成功后必须删除任务，标记完成
+        $job-&gt;delete();
+    }
+}</code></pre>
+<pre><code>&lt;?php
+use think\facade\Queue;
+
+// 投递：任务类、数据、队列名
+Queue::push(SendMail::class, ['to' =&gt; 'a@b.com'], 'mail');</code></pre>
+<pre><code># 消费：启动 worker 处理 mail 队列，--daemon 以守护进程方式运行
+php think queue:work --queue=mail --daemon
+# 监听模式：任务变化时自动重载
+php think queue:listen
+# 失败任务管理
+php think queue:failed   # 查看失败任务
+php think queue:retry    # 重试失败任务
+php think queue:flush    # 清空失败任务
+php think queue:restart  # 重启队列进程</code></pre>
+<h3>示例 3：定时任务——crontab + 自定义命令</h3>
+<pre><code># TP 没有内置调度器，定时任务靠系统 crontab 调自定义命令
+# 每天凌晨 2 点跑一次数据清理命令
+0 2 * * * php /path/to/project/think cleanup</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 用 <code>Cache::set / get</code> 存取一个值，再用 <code>Cache::store('redis')</code> 切换存储（本地没装 redis 也没关系，知道 API 怎么写就行）。<br>
+2. 故意不开启 <code>SessionInit</code> 中间件，跑一次 <code>Session::set / get</code>，确认拿不到值；再开启中间件重跑，对比结果。<br>
+3. 写一个最小队列任务类（<code>handle($job, $data)</code> 里只写一行日志 + <code>$job-&gt;delete()</code>），用 sync 连接器投递一次，确认任务同步执行。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>缓存这块两边思路几乎一样，都是适配器模式：ThinkJS 在 <code>src/config/adapter.js</code> 里配 <code>exports.cache = { type: 'file' }</code>（可换 redis / memcache），用 <code>think.cache(key, value)</code> 读写；TP 在 <code>config/cache.php</code> 里配驱动，用 <code>Cache</code> 门面读写。Session 也类似：ThinkJS 用 <code>this.session('userInfo')</code>，TP 用 <code>Session</code> 门面或 <code>session()</code> 助手。</p>
+<p>队列与定时任务两边也都“没有内置”：ThinkJS 同样没有内置队列与定时任务，队列走 bull / bee-queue 等 npm 生态，定时任务可用 node-schedule 或 think-crontab 扩展；TP 这边是 think-queue 扩展 + crontab。换句话说，这两个框架在基础设施层的取舍是一致的——核心框架保持精简，队列与调度交给扩展与系统工具。</p>
+<p><strong>面试怎么说：</strong>“缓存两边都是适配器模式，TP 是 Cache 门面 + config/cache.php，ThinkJS 是 think.cache + adapter.js；队列两边都没有内置，TP 用 think-queue 扩展，ThinkJS 用 bull / bee-queue；定时任务 TP 靠 crontab，ThinkJS 靠 node-schedule 或 think-crontab。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="0"><p><strong>1. Session::set() 之后 get() 拿不到值，最可能的原因是？</strong></p><button data-i="0">SessionInit 中间件默认是注释掉的，没有手动开启</button><button data-i="1">没有安装 redis</button><button data-i="2">没有配置域名</button><div class="ans">解析：选 A。SessionInit 默认在 app/middleware.php 里是注释掉的，必须手动开启 Session 才可用。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 队列任务成功执行后，任务类里必须做什么？</strong></p><button data-i="0">什么都不用做，框架会自动标记完成</button><button data-i="1">调用 $job-&gt;delete() 标记完成</button><button data-i="2">调用 $job-&gt;retry() 确认一次</button><div class="ans">解析：选 B。handle() 成功后必须 $job-&gt;delete()，否则任务不会被标记完成。</div></div>
+<div class="q" data-answer="2"><p><strong>3. ThinkPHP 缓存的默认驱动是？</strong></p><button data-i="0">redis</button><button data-i="1">memcached</button><button data-i="2">file</button><div class="ans">解析：选 C。config/cache.php 里默认 default 为 file；需要时用 Cache::store('redis') 切换存储。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：file / redis / memcached 缓存驱动怎么选？</summary><p>单机小项目用 file，零依赖、够用；多台服务器要共享缓存或高并发场景上 redis；memcached 适合纯缓存场景。TP 用门面 + 驱动模式，换驱动改 <code>config/cache.php</code> 即可，业务代码不用动；也可以用 <code>Cache::store('redis')</code> 临时切换存储。</p></details>
+<details><summary>Q2：SessionInit 中间件为什么默认是注释掉的？</summary><p>框架默认不启用 Session，用到时手动开启。不是所有项目都需要 Session——纯 API 项目常用 Token 鉴权，不依赖服务端会话。Session 读不到值时先查 <code>app/middleware.php</code> 里中间件有没有启用，再查驱动配置。</p></details>
+<details><summary>Q3：队列任务失败了怎么办？</summary><p>think-queue 有一套失败处理命令：<code>queue:failed</code> 查看失败任务、<code>queue:retry</code> 重试、<code>queue:flush</code> 清空、<code>queue:restart</code> 重启队列进程。任务类里成功后要 <code>$job-&gt;delete()</code>，否则不会被标记完成。</p></details>
+<details><summary>Q4：ThinkPHP 怎么做定时任务？</summary><p>TP 没有内置调度器。生产常用 Linux crontab 调用 <code>php think</code> 自定义命令：先用 <code>make:command</code> 把定时逻辑写成一条命令，再在 crontab 里配执行时间。不要编一个不存在的调度器 API。</p></details>
+<details><summary>Q5：标签缓存有什么用？</summary><p><code>Cache::tag('tag')-&gt;set(...)</code> 给缓存打标签，可按标签批量清除。比如文章详情都打上 <code>article</code> 标签，文章更新后一次清掉该标签下的所有相关缓存，不用逐个记 key，解决的是“关联失效”的问题。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“熟悉缓存与队列”，写“热点列表用 Cache 标签缓存 + redis 存储，更新时按标签批量失效；注册邮件、短信通知走 think-queue 异步投递，失败任务用 queue:failed / queue:retry 处理；每日报表用 crontab + 自定义命令定时跑”。前者是名词，后者是可追问的异步与缓存实践。</p>
+<p><strong>明日预告：</strong>Day 10 讲容器、门面与服务：依赖注入到底是怎么把对象"变"出来的，门面为什么能静态调用实例方法。</p>
+</div>
+<div class="nav"><span><a href="day08.html">← Day 8</a></span><span><a href="day10.html">Day 10 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

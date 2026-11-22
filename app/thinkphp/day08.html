@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 8：验证器与安全 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 8 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 8：验证器与安全</h1>
+<p>数据进库之前先过验证器，安全问题多半出在“信了用户输入”上。今天讲两块：验证器（ThinkPHP 8.x 线的参数校验机制）和安全四件套（SQL 注入、XSS、CSRF、密码存储）。面试里这部分考得很实在——不是问你背过多少规则，而是问“这段代码有没有注入风险”“密码为什么不能 MD5”。JS 对照也很好找：验证器相当于 zod / Joi 的服务端版，参数绑定相当于 pg 的占位符查询，思路都是相通的。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 验证器：规则集中写，控制器只调用</h3>
+<p>验证器继承 <code>think\Validate</code>，用命令 <code>php think make:validate User</code> 生成，放在 <code>app/validate/</code> 目录下。类里三个关键属性：<code>protected $rule</code> 写规则，如 <code>['name' =&gt; 'require|max:25', 'email' =&gt; 'require|email', 'age' =&gt; 'number|between:1,120']</code>，多个规则用 <code>|</code> 连接；<code>protected $message</code> 自定义错误信息，格式是 <code>'字段名.规则名' =&gt; '错误信息'</code>；<code>protected $scene</code> 定义场景，如 <code>['add' =&gt; ['name', 'email']]</code>，不同场景只校验指定字段。</p>
+<p>调用方式是 <code>validate(UserValidate::class)-&gt;scene('add')-&gt;check($data)</code>，其中 <code>validate()</code> 是框架助手函数，返回验证器实例；<code>check()</code> 通过返回 true，失败时用 <code>$validate-&gt;getError()</code> 取错误信息。验证器还支持批量验证，一次返回所有字段的错误。</p>
+<p>简单场景不用单独建类，控制器内可以直接内联校验：<code>$this-&gt;validate($data, ['user_id' =&gt; 'require|integer', 'amount' =&gt; 'require|float|gt:0'])</code>，返回 true 或错误信息字符串。<strong>面试答法：</strong>“规则复用、字段多的用验证器类；一次性的简单校验用控制器内联。场景解决的是新增和编辑校验字段不同的问题。”</p>
+<h3>2. 常用规则速查</h3>
+<table>
+<tr><th>类别</th><th>规则</th><th>说明</th></tr>
+<tr><td>必填与类型</td><td>require、integer、float</td><td>必填、整数、浮点数</td></tr>
+<tr><td>格式</td><td>email、mobile、url、ip、date</td><td>邮箱、手机号、网址、IP、日期</td></tr>
+<tr><td>字符</td><td>alpha、alphaNum、chs</td><td>纯字母、字母数字、纯汉字</td></tr>
+<tr><td>长度与范围</td><td>max / min、length、between</td><td>最大/最小、定长、区间</td></tr>
+<tr><td>枚举与比较</td><td>in / notIn、gt / egt / lt / elt / eq</td><td>在列表内/外、大于/大于等于/小于/小于等于/等于</td></tr>
+<tr><td>其他</td><td>regex、confirm、different</td><td>正则、与另一字段一致、与另一字段不同</td></tr>
+<tr><td>数据库相关</td><td>unique:表名、exists、isCard</td><td>值唯一、值存在、身份证号</td></tr>
+</table>
+<h3>3. SQL 注入：参数绑定是底线</h3>
+<p>注入的根本原因是把用户输入拼进了 SQL 字符串，输入里的引号和关键字改变了 SQL 的结构。防护就一条：<strong>永远不要拼接原生 SQL</strong>。查询构造器默认用 PDO 参数绑定（预处理），值和 SQL 结构是分开传给数据库的，输入再刁钻也只会被当成普通值。必须写原生查询时，用 <code>Db::query($sql, [$bindings])</code> 的占位符形式，绑定值以数组传入。</p>
+<p><strong>面试答法：</strong>“注入是因为拼接；查询构造器用 PDO 预处理，值与结构分离，从根上防注入；原生 SQL 必须用占位符绑定。”</p>
+<h3>4. XSS：输出时转义</h3>
+<p>XSS 是恶意脚本被当成页面内容输出并执行。ThinkPHP 的模板引擎默认对变量输出做转义，<code>&lt;script&gt;</code> 这类输入会被转成无害文本显示出来。手动输出（比如直接 <code>echo</code>）时用 <code>htmlspecialchars</code> 转义。富文本场景（用户要发带格式的内容）不能一转了之，要用白名单过滤，只允许安全的标签和属性。</p>
+<h3>5. CSRF：表单令牌</h3>
+<p>CSRF 是攻击者诱导已登录用户的浏览器向你的站点发请求。表单场景的防护是令牌：在 <code>config/app.php</code> 里配 <code>'form_token' =&gt; ['token_on' =&gt; true, 'token_name' =&gt; '__token__', 'token_type' =&gt; 'md5', 'token_reset' =&gt; true]</code>，模板表单里加 <code>{:token()}</code> 输出隐藏域（或 <code>{__TOKEN__}</code> 只输出令牌值），提交时由 <code>FormTokenCheck</code> 中间件校验，失败提示“令牌数据无效”。</p>
+<p>注意边界：这套令牌机制防的是浏览器表单 + Cookie 会话的场景；API 用 Token 鉴权而非 Cookie 会话时，CSRF 的风险模型不同，不能照搬同一套说法。面试被追问“API 还要不要 CSRF 令牌”时，答出“风险模型不同”就比简单说要/不要强。</p>
+<h3>6. 密码：只用 password_hash</h3>
+<p>密码存储只用 PHP 原生函数：<code>password_hash($pwd, PASSWORD_DEFAULT)</code> 生成哈希，<code>password_verify($pwd, $hash)</code> 验证。不要用 MD5 存密码——MD5 是摘要算法不是密码哈希，计算太快、彩虹表可查；<code>password_hash</code> 自动加盐、计算成本可调，是专门为密码设计的。<strong>面试一句话：</strong>“存密码只用 password_hash + password_verify，MD5 是摘要不是密码哈希。”</p>
+<div class="warn"><strong>容易踩的坑：</strong>① 任何情况下都不要把变量拼进 SQL 字符串，占位符是唯一正确的原生查询写法；② <code>$this-&gt;validate()</code> 返回 true 或错误信息字符串，记得判断返回值，别当成“失败会抛异常”；③ CSRF 令牌只防浏览器表单场景，API Token 鉴权是另一套风险模型；④ 密码绝不用 MD5，哪怕“先 MD5 再加盐”也不行。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：验证器类 + 两种调用方式</h3>
+<pre><code>&lt;?php
+namespace app\validate;
+
+use think\Validate;
+
+class UserValidate extends Validate
+{
+    // $rule：字段 =&gt; 规则，多个规则用 | 连接
+    protected $rule = [
+        'name'  =&gt; 'require|max:25',
+        'email' =&gt; 'require|email',
+        'age'   =&gt; 'number|between:1,120',
+    ];
+
+    // $message：自定义错误信息，格式是 '字段名.规则名' =&gt; '错误信息'
+    protected $message = [
+        'name.require' =&gt; '用户名不能为空',
+        'email.email'  =&gt; '邮箱格式不正确',
+    ];
+
+    // $scene：场景，只校验指定字段；新增和编辑共用一个类时很有用
+    protected $scene = [
+        'add' =&gt; ['name', 'email'],
+    ];
+}</code></pre>
+<pre><code>&lt;?php
+use app\validate\UserValidate;
+
+// validate() 是框架助手函数，返回验证器实例
+$validate = validate(UserValidate::class);
+// scene('add') 选场景，check($data) 执行校验
+if (!$validate-&gt;scene('add')-&gt;check($data)) {
+    // getError() 取错误信息
+    return json(['msg' =&gt; $validate-&gt;getError()]);
+}
+
+// 控制器内也可以内联校验，不用单独建类
+// 返回 true 或错误信息字符串
+$result = $this-&gt;validate($data, [
+    'user_id' =&gt; 'require|integer',
+    'amount'  =&gt; 'require|float|gt:0',
+]);
+if ($result !== true) {
+    return json(['msg' =&gt; $result]);
+}</code></pre>
+<h3>示例 2：安全三件套——参数绑定、输出转义、密码哈希</h3>
+<pre><code>&lt;?php
+use app\model\User;
+use think\facade\Db;
+
+// SQL 注入防护：查询构造器默认 PDO 参数绑定，值与 SQL 结构分离
+$user = User::where('id', $id)-&gt;find();
+
+// 原生 SQL 也必须用占位符，不要拼接变量进 SQL 字符串
+// ? 是占位符，[$id] 是绑定值数组
+$user = Db::query('SELECT * FROM user WHERE id = ?', [$id]);
+
+// XSS：手动输出时转义（模板引擎默认已转义）
+echo htmlspecialchars($userInput);
+
+// 密码：只用 password_hash，不要 MD5
+$hash = password_hash($pwd, PASSWORD_DEFAULT);
+if (password_verify($pwd, $hash)) {
+    // 密码正确
+}</code></pre>
+<h3>示例 3：CSRF 表单令牌</h3>
+<pre><code>&lt;?php
+// config/app.php 里的表单令牌配置
+'form_token' =&gt; [
+    'token_on'    =&gt; true,        // 开启表单令牌
+    'token_name'  =&gt; '__token__', // 隐藏域的字段名
+    'token_type'  =&gt; 'md5',       // 令牌生成方式
+    'token_reset' =&gt; true,        // 每次验证后重置令牌
+],</code></pre>
+<pre><code>&lt;!-- 模板里的表单：{:token()} 输出一个带令牌值的隐藏域 --&gt;
+&lt;form method="post" action="/user/save"&gt;
+    {:token()}
+    &lt;input type="text" name="name"&gt;
+    &lt;button type="submit"&gt;提交&lt;/button&gt;
+&lt;/form&gt;
+&lt;!-- 提交时 FormTokenCheck 中间件校验令牌，失败提示“令牌数据无效” --&gt;
+&lt;!-- {__TOKEN__} 只输出令牌值，不输出隐藏域标签 --&gt;</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 建一个 <code>UserValidate</code>，用 <code>scene('add')</code> 校验一组故意写错的数据（空 name、非法 email），看 <code>getError()</code> 返回什么。<br>
+2. 把一条原生查询改成 <code>Db::query($sql, [$bindings])</code> 占位符写法，再试着在输入里塞一个单引号，确认查询不报错、也不被注入。<br>
+3. 用 <code>password_hash</code> 存一个密码，再用 <code>password_verify</code> 验证正确密码和错误密码各一次，确认两次结果不同。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 里没有和 TP 验证器同名的类，但 Logic 层就是它的对位概念：<code>src/logic/</code> 下的文件与 <code>src/controller/</code> 下的文件一一对应，参数校验与权限校验前置到 Action 执行前——和 TP “验证器先行、控制器只做业务”的分层思路完全一致，只是 TP 把校验规则收进独立的验证器类，ThinkJS 把它收进与控制器配对的 Logic 文件。</p>
+<p>另外两个可对照的点：ThinkJS 的 <code>__before()</code> 可以集中做登录校验与 CSRF 校验（例如检查 referrer 域名），对应 TP 里中间件 + 表单令牌的组合；Node 侧的密码哈希用 bcryptjs / argon2 等 npm 包，对应 PHP 原生的 <code>password_hash</code>——两边都是“慢哈希 + 自动加盐”，不要用 MD5 的道理在两个生态里一样成立。</p>
+<p><strong>面试怎么说：</strong>“校验前置是通用原则：TP 用验证器类 + 场景，ThinkJS 用 Logic 层；CSRF 防护 TP 靠表单令牌 + 中间件，ThinkJS 靠 <code>__before()</code> 集中校验；密码哈希两边都是慢哈希，PHP 是 <code>password_hash</code>，Node 是 bcryptjs / argon2。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="0"><p><strong>1. validate()-&gt;scene('add')-&gt;check($data) 里，scene('add') 的作用是？</strong></p><button data-i="0">选择校验场景，只校验该场景定义的字段</button><button data-i="1">选择要写入的数据库表</button><button data-i="2">选择缓存驱动</button><div class="ans">解析：选 A。场景解决的是新增和编辑校验字段不同的问题，同一个验证器类可复用。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 防止 SQL 注入的正确做法是？</strong></p><button data-i="0">把用户输入拼进 SQL 字符串前先加引号包起来</button><button data-i="1">查询构造器用 PDO 参数绑定，原生查询用 Db::query 的占位符</button><button data-i="2">把用户输入 MD5 加密后再拼进 SQL</button><div class="ans">解析：选 B。注入的根因是拼接；参数绑定让值与 SQL 结构分离，才是根本防护。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 密码存储应该用？</strong></p><button data-i="0">MD5</button><button data-i="1">base64 编码</button><button data-i="2">password_hash 存储 + password_verify 验证</button><div class="ans">解析：选 C。MD5 是摘要算法不是密码哈希，计算太快、彩虹表可查；base64 是编码不是加密。只用 password_hash。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：验证器类和控制器内联校验怎么选？</summary><p>规则要复用、字段多、需要场景区分时用验证器类（继承 <code>think\Validate</code>，放在 <code>app/validate/</code>）；一次性的简单校验用控制器内联 <code>$this-&gt;validate($data, [...])</code>，返回 true 或错误信息字符串。选型的标准是复用程度，不是功能强弱。</p></details>
+<details><summary>Q2：场景（scene）解决什么问题？</summary><p>同一个模型在不同操作下校验字段不同：新增时 name、email 都必填，编辑时可能只校验其中几个。场景就是给同一套规则分组，调用时 <code>scene('add')</code> 选组，只校验该组字段，避免为每个操作各写一个验证器类。</p></details>
+<details><summary>Q3：SQL 注入的根本原因和防护手段是什么？</summary><p>根本原因是把用户输入拼进了 SQL 字符串，输入里的引号和关键字改变了 SQL 结构。防护：查询构造器默认用 PDO 参数绑定（预处理），值与结构分离；原生查询用 <code>Db::query($sql, [$bindings])</code> 的占位符形式。永远不要拼接。</p></details>
+<details><summary>Q4：CSRF 表单令牌是怎么工作的？</summary><p>服务端生成令牌，模板里用 <code>{:token()}</code> 输出到表单隐藏域；提交时 <code>FormTokenCheck</code> 中间件校验令牌是否一致，失败提示“令牌数据无效”。配置在 <code>config/app.php</code> 的 <code>form_token</code> 里，可控制开关、字段名、生成方式和是否重置。</p></details>
+<details><summary>Q5：为什么不能用 MD5 存密码？</summary><p>MD5 是摘要算法不是密码哈希：计算太快，暴力破解和彩虹表成本很低。正确做法是 PHP 原生的 <code>password_hash($pwd, PASSWORD_DEFAULT)</code> 存储、<code>password_verify($pwd, $hash)</code> 验证，它自动加盐、计算成本可调，是专门为密码设计的。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“了解 Web 安全”，写“登录与支付接口用验证器 + 场景做参数校验，杜绝拼接 SQL（查询构造器 PDO 绑定 + 原生查询占位符），表单走 CSRF 令牌校验，密码只用 password_hash 存储”。前者是名词，后者是可追问的四条具体防线。</p>
+<p><strong>明日预告：</strong>Day 9 讲缓存、Session 与队列：Cache 门面与标签缓存、Session 为什么默认没开、think-queue 的任务怎么写与怎么消费、没有内置调度器时定时任务怎么做。</p>
+</div>
+<div class="nav"><span><a href="day07.html">← Day 7</a></span><span><a href="day09.html">Day 9 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

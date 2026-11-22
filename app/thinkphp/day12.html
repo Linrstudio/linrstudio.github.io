@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 12：ThinkPHP vs ThinkJS 全面对比 + 面试串讲 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 12 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 12：ThinkPHP vs ThinkJS 全面对比 + 面试串讲</h1>
+<p>最后一课做两件事：第一，把 ThinkPHP 和 ThinkJS 并排放在一张表里——这两个框架不是偶然长得像，ThinkJS 从一开始就是照着 ThinkPHP 的设计思想做的；第二，把 12 课的面试高频问答串讲一遍，面试前照着这份清单过一遍，心里就有底。读完这课，这门课的“知识地图”就完整了，剩下的就是动手写一个项目，把知识变成手感。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 渊源：ThinkJS 是照着 ThinkPHP 的设计思想做的</h3>
+<p>ThinkJS 的作者是李成银（@welefen），360 奇舞团成员。他在 2013 年下半年开始做 ThinkJS 时，参考了 ThinkPHP——多处资料都确认了这一点：“ThinkJS 很多特性来源于 ThinkPHP”、“借鉴了 ThinkPHP 的设计思想”。所以你在前面 11 课里反复看到的相似点（MVC 分层、中间件、模型、配置分层）不是巧合，是有意的传承：作者想给 Node.js 做一个像 ThinkPHP 一样好用的 MVC 框架。</p>
+<p>版本线记三个节点就够了：ThinkJS v2.0 在 2015 年 10 月发布（基于 ES2015+）；v3.0 在 2017 年 10 月发布，核心基于 Koa 2.x，兼容全部 Koa 特性与中间件；3.2 起支持 TypeScript。本课只说 ThinkJS 3.x 线。</p>
+<p><strong>面试答法：</strong>“ThinkJS 作者李成银在 2013 年做 ThinkJS 时参考了 ThinkPHP 的设计思想，所以两者在 MVC 分层、中间件、模型这些概念上高度相似；v3.0 起核心基于 Koa 2.x，兼容 Koa 中间件，3.2 起支持 TypeScript。最大的不同不在 API 形状，而在运行时：PHP 同步阻塞、每请求重建，Node 异步非阻塞、常驻进程。”</p>
+<h3>2. 全面对比表（17 个维度）</h3>
+<table>
+<tr><th>维度</th><th>ThinkPHP（8.x 线）</th><th>ThinkJS（3.x 线）</th></tr>
+<tr><td>语言与运行时</td><td>PHP 8.0+，同步阻塞</td><td>Node.js，异步非阻塞</td></tr>
+<tr><td>进程模型</td><td>PHP-FPM，每请求重建应用</td><td>Node 常驻进程</td></tr>
+<tr><td>入口</td><td><code>public/index.php</code></td><td><code>development.js</code></td></tr>
+<tr><td>路由</td><td>Route 门面 + <code>route/app.php</code></td><td>约定 <code>/controller/action</code> + <code>src/config/router.js</code></td></tr>
+<tr><td>控制器</td><td>BaseController + 方法</td><td><code>think.Controller</code> + XxxAction</td></tr>
+<tr><td>请求对象</td><td><code>think\Request</code></td><td>Koa ctx + <code>this.get</code> / <code>this.post</code></td></tr>
+<tr><td>中间件</td><td>四级 + <code>handle($request, $next)</code></td><td>Koa 中间件 + <code>src/config/middleware.js</code></td></tr>
+<tr><td>校验</td><td>Validate 验证器 + scene 场景</td><td>Logic 层 + <code>__before</code></td></tr>
+<tr><td>数据库</td><td>Db 门面 + think-orm 3.0 模型</td><td>think-model + <code>adapter.js</code> 适配器</td></tr>
+<tr><td>配置</td><td><code>config/*.php</code> + <code>.env</code></td><td><code>src/config/*.js</code></td></tr>
+<tr><td>缓存</td><td>Cache 门面，file / redis 驱动</td><td><code>think.cache</code> + adapter</td></tr>
+<tr><td>会话</td><td>Session 门面 + SessionInit</td><td><code>this.session</code></td></tr>
+<tr><td>队列</td><td>think-queue 扩展</td><td>npm 生态（如 bull 等）</td></tr>
+<tr><td>CLI</td><td><code>php think</code></td><td><code>thinkjs</code> 命令</td></tr>
+<tr><td>模板</td><td>think-view</td><td>view 目录 + nunjucks 等适配器</td></tr>
+<tr><td>部署</td><td>Nginx + PHP-FPM</td><td>PM2 + Nginx 反代</td></tr>
+<tr><td>生态规模</td><td>国内 PHP 生态大</td><td>ThinkJS 小众</td></tr>
+</table>
+<p>这张表怎么记？抓住三条主线就够了：<strong>① 运行时不同</strong>（同步阻塞 vs 异步非阻塞、每请求重建 vs 常驻进程）——这是所有差异的根；<strong>② 形态相似</strong>（路由、控制器、中间件、模型、配置、缓存、会话，概念几乎一一对应）——这是 ThinkJS 借鉴 ThinkPHP 的直接证据；<strong>③ 生态不同</strong>（TP 背靠国内大 PHP 生态，ThinkJS 小众，队列、模板这些能力更多依赖 npm 通用生态而不是框架自带扩展）。</p>
+<div class="warn"><strong>容易踩的坑：</strong>面试时不要说“ThinkJS 就是 Node 版的 ThinkPHP”。概念上像，但运行时、进程模型、异步模型完全不同——常驻进程的跨请求状态污染、异步错误处理，都是 PHP 里不存在的问题。说“设计思想同源、运行时不同”，比说“就是同一个东西”准确得多。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例：同一个功能——“取用户列表”，两种写法对照</h3>
+<p>下面是同一个接口在两个框架里的骨架写法。注意对照的点：路由怎么定义、控制器长什么样、请求参数怎么取、数据怎么查。</p>
+<pre><code>&lt;?php
+// ThinkPHP 写法
+// 路由：route/app.php 里用 Route 门面注册
+// Route::get('user/list', 'User/list');
+
+// 控制器：app/controller/User.php，继承 BaseController
+namespace app\controller;
+
+use think\Request;
+use think\facade\Db;
+
+class User extends BaseController
+{
+    // 方法参数由容器自动注入 Request 实例（Day 10）
+    public function list(Request $request)
+    {
+        $page = $request-&gt;param('page', 1); // param 取请求参数，第二个参数是默认值
+        // Db 门面查库：静态调用转发给容器里的数据库服务实例
+        $users = Db::name('user')-&gt;page($page, 10)-&gt;select();
+        return json($users); // json() 助手返回 JSON 响应
+    }
+}</code></pre>
+<pre><code>// ThinkJS 写法
+// 路由：约定 /user/list 直接对应 user 控制器 + listAction，
+// 也可以在 src/config/router.js 里自定义映射。
+
+// 控制器：src/controller/user.js，继承 think.Controller
+module.exports = class extends think.Controller {
+  // 方法名以 Action 结尾：listAction 对应 /user/list
+  async listAction() {
+    // this.get() 取 GET 参数，this.post() 取 POST 参数
+    const page = this.get('page') || 1;
+    // think-model 查库：this.model('user') 取 user 模型
+    const users = await this.model('user').page(page, 10).select();
+    return this.json(users); // this.json 返回 JSON 响应
+  }
+};</code></pre>
+<p>对照着看，四个对应关系一目了然：<code>Route::get</code> 注册路由 vs 约定 <code>/controller/action</code>；<code>BaseController</code> + 普通方法 vs <code>think.Controller</code> + <code>XxxAction</code>；<code>$request-&gt;param()</code> vs <code>this.get()</code> / <code>this.post()</code>；<code>Db::name()</code> vs <code>this.model()</code>。形状几乎一样，差别只在语言习惯（PHP 同步写法 vs JS 的 <code>async/await</code>）。</p>
+
+<h2>三、ThinkJS 对比：概念迁移表（给 JS 开发者的锚点）</h2>
+<p>你是 JS/TS 开发者，学 ThinkPHP 最快的方法是“锚定已知概念”。下面这张表把 TP 的核心概念映射到你熟悉的 JS 生态——面试时如果一时想不起 TP 的术语，先说 JS 里的对应物，再说 TP 里叫什么，面试官立刻就懂你掌握到什么程度。</p>
+<table>
+<tr><th>ThinkPHP 概念</th><th>JS 生态对应物</th><th>备注</th></tr>
+<tr><td>TP 路由</td><td>Koa Router / express router</td><td>都是“方法 + 路径 → 处理函数”的映射</td></tr>
+<tr><td>TP 中间件</td><td>Koa 中间件</td><td>洋葱模型，<code>$next</code> 相当于 Koa 的 <code>next()</code></td></tr>
+<tr><td>TP 容器</td><td>NestJS DI / Awilix / Inversify</td><td>都是依赖注入容器，反射或装饰器解析依赖</td></tr>
+<tr><td>TP 门面</td><td>静态代理（JS 无直接对应物）</td><td>近似于单例导出：<code>export default new Cache()</code> 后处处 import 同一个实例</td></tr>
+<tr><td>TP Model</td><td>Prisma / TypeORM / Sequelize</td><td>都是 ORM：模型类对应表，关联、预载、查询构建器概念相通</td></tr>
+<tr><td>TP Validate</td><td>zod / joi</td><td>都是声明式校验：定义规则，框架负责跑校验、返回错误</td></tr>
+<tr><td>TP Cache</td><td>node-cache / ioredis</td><td>file 驱动对应进程内缓存，redis 驱动对应 ioredis</td></tr>
+<tr><td>TP 队列</td><td>BullMQ</td><td>都是把耗时任务丢进队列异步执行</td></tr>
+<tr><td>TP Session</td><td>koa-session</td><td>都是服务端会话，生产用 Redis 存</td></tr>
+</table>
+<p><strong>唯一没有直接对应物的是门面。</strong>JS 里没有 <code>__callStatic</code> 这种魔术方法，也就没有“静态调用转发给实例”这套惯用法。最接近的形态是单例导出：一个模块 <code>export default new CacheService()</code>，各处 import 进来用的是同一个实例——调用形态简洁、依赖被隐藏，这两点和门面的优缺点恰好一致。面试时说出这句类比，能说明你不是在背概念，而是真的理解了机制。</p>
+
+<h2>四、小测验（综合卷）</h2>
+<p id="score">得分：0 / 6</p>
+<div class="q" data-answer="2"><p><strong>1. ThinkPHP 与 ThinkJS 在进程模型上的根本差异是？</strong></p><button data-i="0">TP 常驻进程，ThinkJS 每请求重建</button><button data-i="1">两者都是每请求重建</button><button data-i="2">TP 是 PHP-FPM 每请求重建，ThinkJS 是 Node 常驻进程</button><div class="ans">解析：选 C。PHP-FPM 每次请求拉起应用、跑完销毁；Node 应用由 PM2 常驻内存。常驻进程要注意跨请求状态污染，PHP 每次请求干净启动，天然没有这个问题。</div></div>
+<div class="q" data-answer="0"><p><strong>2. ThinkJS 的渊源，哪个说法正确？</strong></p><button data-i="0">作者李成银 2013 年下半年开始做 ThinkJS 时参考了 ThinkPHP</button><button data-i="1">ThinkJS 是 ThinkPHP 官方出的 Node 版本</button><button data-i="2">ThinkJS 参考的是 Laravel，与 ThinkPHP 无关</button><div class="ans">解析：选 A。ThinkJS 作者李成银（@welefen，360 奇舞团），2013 年下半年开始 ThinkJS 时参考 ThinkPHP；多处资料确认“ThinkJS 很多特性来源于 ThinkPHP”。它不是 TP 官方产品。</div></div>
+<div class="q" data-answer="1"><p><strong>3. TP 的门面在 JS 生态里最接近什么？</strong></p><button data-i="0">Koa 中间件</button><button data-i="1">单例导出（一个模块导出同一个实例，各处 import 使用）</button><button data-i="2">Prisma 的 Client</button><div class="ans">解析：选 B。JS 没有 __callStatic 这种魔术方法，门面无直接对应物；最接近的是单例导出——调用简洁、依赖被隐藏，优缺点和门面一致。</div></div>
+<div class="q" data-answer="1"><p><strong>4. TP 8.x 线相对 TP6 的变化，以下哪项正确？</strong></p><button data-i="0">TP8 把注解路由收进了核心，不再需要扩展</button><button data-i="1">注解路由剥离为 think-annotation 扩展，要求 PHP 8.0+</button><button data-i="2">TP8 取消了多应用支持</button><div class="ans">解析：选 B。TP8 相对 TP6：注解路由剥离为 think-annotation 扩展，PHP 版本要求提到 8.0+。多应用仍由 think-multi-app 扩展提供。</div></div>
+<div class="q" data-answer="2"><p><strong>5. 关于缓存穿透、击穿、雪崩，哪个说法正确？</strong></p><button data-i="0">三者是同一个问题的三种叫法</button><button data-i="1">穿透是热点 key 过期瞬间大量请求打到数据库</button><button data-i="2">穿透是请求不存在的数据、每次都查库；击穿是热点 key 过期瞬间大量请求打到库；雪崩是大量 key 同时过期</button><div class="ans">解析：选 C。穿透：查不存在的数据，缓存和库里都没有；击穿：单个热点 key 过期，大量并发直击数据库；雪崩：大批量 key 集中过期。三个是不同的问题，应对方法也不同。</div></div>
+<div class="q" data-answer="0"><p><strong>6. 避免模型关联 N+1 查询，TP 里正确的做法是？</strong></p><button data-i="0">用 <code>with</code> 预载关联，一次查询把关联数据取回来</button><button data-i="1">把关联查询拆成更多次小查询</button><button data-i="2">关闭模型关联，全部手写 SQL</button><div class="ans">解析：选 A。N+1 是指查 N 条主数据又触发 N 次关联查询；<code>with</code> 预载让框架用一次额外的查询把关联数据批量取回，是标准解法。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答（串讲）</h2>
+<details><summary>Q1：说说 ThinkPHP 一次请求的生命周期。</summary><p>入口 <code>public/index.php</code> 创建应用（<code>think\App</code>，本身也是容器）并运行；应用注册服务、加载配置；路由匹配到控制器和方法；请求穿过中间件（全局、应用、路由、控制器四级）；容器用反射解析控制器方法参数并自动注入（如 Request 实例）；执行控制器方法返回响应；中间件后置逻辑执行后响应发出。PHP-FPM 下整个过程每次请求重建，请求结束即销毁。</p></details>
+<details><summary>Q2：中间件有哪几级？执行顺序是怎样的？</summary><p>四级：全局中间件、应用中间件、路由中间件、控制器中间件。执行顺序由外到内：全局最先、控制器最近，形态是洋葱模型——请求一层层向内穿过 <code>handle($request, $next)</code>，<code>$next($request)</code> 之后的代码在响应返回时由内向外执行。面试追问“鉴权放哪一级”：全站鉴权放全局，某个应用独有的放应用级，个别路由的放路由级。</p></details>
+<details><summary>Q3：门面是怎么实现的？有什么优缺点？</summary><p><code>think\Facade</code> 通过 <code>__callStatic</code> 把静态调用转发给容器里的实例，子类用 <code>getFacadeClass()</code> 返回服务类名。门面是静态代理，不是真正的静态类，实例仍由容器管理。优点是调用简洁，缺点是隐藏依赖、测试时要通过容器替换实例。</p></details>
+<details><summary>Q4：容器是怎么做依赖注入的？</summary><p>容器通过 PHP 反射读取构造函数或方法参数的类型提示，递归实例化依赖，再注入目标对象。控制器方法参数、中间件、命令、事件监听都靠这套机制自动装配。类定义了静态 <code>__make(App $app, ...)</code> 时容器优先调用它（如 <code>think\Middleware::__make</code> 从配置加载中间件）；<code>$app-&gt;invoke()</code> 用反射调用任意可调用对象并自动注入参数。</p></details>
+<details><summary>Q5：模型关联与 N+1 问题怎么解决？</summary><p>模型关联描述表与表的关系（如用户与订单的一对多）。N+1 是指查出 N 条主数据后，每条又单独触发一次关联查询，总共 N+1 次查询。解法是 <code>with</code> 预载：告诉框架提前用一次批量查询把关联数据取回来。面试时可以补一句：预载之外，查询字段加索引、只取需要的字段也是常规优化。</p></details>
+<details><summary>Q6：事务一般怎么写？</summary><p>涉及多步写操作要保证要么全成功、要么全回滚时就用事务。常用两种写法：闭包式（把一组操作包进事务闭包，闭包内抛异常自动回滚、正常结束自动提交）和手动式（开启事务、执行操作、成功提交、异常回滚）。注意事务里不要放远程调用、发邮件这类不可回滚的操作，耗时任务放队列里做。</p></details>
+<details><summary>Q7：验证器的 scene 场景是解决什么问题的？</summary><p>同一个模型在不同场景下校验规则不同：比如注册时密码必填，修改资料时密码可不填。Validate 验证器用 scene 定义场景，每个场景指定用哪些规则，调用时选场景即可，不用为每个场景写一个验证器类。ThinkJS 里对应的校验放在 Logic 层，用 <code>__before</code> 做前置校验。</p></details>
+<details><summary>Q8：缓存穿透、击穿、雪崩分别是什么？怎么应对？</summary><p>这三个是缓存通用概念，不只针对 TP。<strong>穿透：</strong>请求不存在的数据，缓存和数据库里都没有，每次都打到库；应对是缓存空值（短过期）或用布隆过滤器拦截。<strong>击穿：</strong>单个热点 key 过期瞬间，大量并发请求直击数据库；应对是热点 key 永不过期加后台刷新，或用互斥锁让一个请求重建缓存。<strong>雪崩：</strong>大批量 key 在同一时间过期，请求洪峰打垮数据库；应对是过期时间加随机抖动、热点数据预热、多级缓存。</p></details>
+<details><summary>Q9：多应用怎么判断？部署多应用有什么坑？</summary><p>系统以 <code>app/controller</code> 目录是否存在作为判断单应用的依据；部署多应用后必须删除它，否则框架仍按单应用走。多应用通过 <code>think-multi-app</code> 扩展实现，<code>app/</code> 下每个子目录是一个应用，各有独立的 config、route、middleware.php、event.php；<code>config/app.php</code> 的 <code>app_map</code> 做应用映射，<code>domain_bind</code> 做域名绑定。</p></details>
+<details><summary>Q10：TP8 与 TP6 有哪些差异？ThinkJS 和 TP 有什么同与不同？</summary><p>TP8 相对 TP6：注解路由剥离为 think-annotation 扩展（核心更精简、能力按需安装），PHP 版本要求提到 8.0+。ThinkJS 与 TP 的同：设计思想同源——作者李成银做 ThinkJS 时参考了 ThinkPHP，MVC 分层、路由、中间件、模型、配置这些概念高度相似；不同：运行时根本不同，TP 是 PHP 8.0+ 同步阻塞、PHP-FPM 每请求重建，ThinkJS 是 Node 异步非阻塞、常驻进程（要注意跨请求状态污染），v3.0 核心基于 Koa 2.x，3.2 起支持 TypeScript；生态上 TP 背靠国内大 PHP 生态，ThinkJS 小众。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>结课：动手项目建议。</strong>课程学完，知识还在纸上。建议动手做一个对照项目，把 12 课的内容变成手感：</p>
+<p>1. <strong>用 TP8 写一个 API 后台：</strong>带登录（Session 或 token）、一套完整 CRUD（用模型关联 + <code>with</code> 预载，刻意避开 N+1）、队列发邮件（think-queue 扩展，注册成功后异步发欢迎邮件）。部署时按 Day 11 的清单走一遍：Nginx root 指向 public、关调试、跑三个 optimize 缓存命令。</p>
+<p>2. <strong>再用 ThinkJS 写同款：</strong>同样的登录、CRUD、队列发邮件（队列用 npm 生态的 bull 等）。写完对照差异：路由约定 vs Route 门面、<code>XxxAction</code> vs 普通方法、<code>this.get</code> vs <code>$request-&gt;param</code>、PM2 常驻 vs PHP-FPM 每请求重建。亲手写过一次，对比表的每一行就都有了体感。</p>
+<p>3. <strong>面试前过一遍：</strong>把 12 课的面试问答从头过一遍，重点是 Day 12 第五节的 10 条串讲——能不看答案说出要点，就算准备好了。祝面试顺利。</p>
+</div>
+<div class="nav"><span><a href="day11.html">← Day 11</a></span><span><a href="index.html">← 回到课程首页</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 6（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>

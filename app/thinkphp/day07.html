@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 7：模型 ORM：关联、软删除与模型事件 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 7 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 7：模型 ORM：关联、软删除与模型事件</h1>
+<p>前面几天讲的是请求怎么进来、路由怎么分发、控制器怎么做事；今天讲数据层最核心的一块：模型 ORM。面试里 ORM 是必考区，考法很固定——关联怎么定义、N+1 怎么防、软删除怎么实现、模型事件怎么用。好消息是这些概念你在 JS 生态里都见过影子：模型就是 TypeORM 的 Entity、Prisma 的 model，一个类对应一张表，再加上一组操作这张表的方法。今天把 ThinkPHP 8.x 线的模型机制一次讲透。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 模型是什么：一个类对应一张表</h3>
+<p>模型继承 <code>think\Model</code>，放在 <code>app/model/</code> 目录下。表名按类名自动推断：<code>User</code> 模型对应 <code>user</code> 表（带上配置里的表前缀）；想改就用 <code>protected $table</code> 自定义表名，用 <code>$pk</code> 自定义主键（默认是 <code>id</code>）。</p>
+<p><strong>面试答法：</strong>“模型是 ORM 的实体类，一个模型类对应一张表；表名按类名自动推断，也可以用 <code>$table</code> 和 <code>$pk</code> 自定义。业务逻辑尽量放模型里，控制器只做调度。”</p>
+<h3>2. CRUD：五种写法一次记全</h3>
+<p><code>User::create([...])</code> 新增；<code>User::find(1)</code> 按主键查一条；<code>User::where('status', 1)-&gt;select()</code> 条件查多条；拿到实例后改字段再 <code>$user-&gt;save()</code> 保存；<code>$user-&gt;delete()</code> 删除。注意 <code>-&gt;</code> 相当于 JS 的 <code>.</code>，是 PHP 访问对象成员的写法；<code>::</code> 是静态调用，类似 JS 的 <code>ClassName.staticMethod()</code>。</p>
+<p><strong>面试高频追问：模型方法为什么能静态调用？</strong>因为静态调用经 PHP 魔术方法 <code>__callStatic</code> 转发到模型实例执行。<code>User::find(1)</code> 表面上是静态调用，实际是 <code>__callStatic</code> 接住调用、转交给实例去跑查询。答出“<code>__callStatic</code> 转发”这七个字，这道题就稳了。</p>
+<h3>3. 关联：七种关系，一张表记全</h3>
+<p>关联是 ORM 的重头戏，think-orm 3.0 提供七种关联：</p>
+<table>
+<tr><th>关联方法</th><th>关系</th><th>举例</th></tr>
+<tr><td>hasOne</td><td>一对一</td><td>用户 — 个人资料</td></tr>
+<tr><td>belongsTo</td><td>反向一对一</td><td>文章 — 作者（文章属于作者）</td></tr>
+<tr><td>hasMany</td><td>一对多</td><td>用户 — 文章</td></tr>
+<tr><td>belongsToMany</td><td>多对多</td><td>文章 — 标签（经中间表）</td></tr>
+<tr><td>hasOneThrough</td><td>远程一对一</td><td>用户 — 国家（经个人资料）</td></tr>
+<tr><td>hasManyThrough</td><td>远程一对多</td><td>国家 — 文章（经用户）</td></tr>
+<tr><td>morphOne / morphMany / morphTo</td><td>多态</td><td>评论可属于文章，也可属于视频</td></tr>
+</table>
+<p>定义方式是在模型里写一个方法：<code>public function profile() { return $this-&gt;hasOne(Profile::class); }</code>。参数是 <code>hasOne('关联模型类名', '外键', '主键')</code>，默认外键是 <code>user_id</code>（当前模型名小写加 <code>_id</code>）。</p>
+<p><strong>一个容易错的细节：</strong>关联方法名是驼峰，读取时属性名自动转下划线。比如方法叫 <code>userProfile()</code>，读取时写 <code>$user-&gt;user_profile</code>。面试常拿这个当陷阱题。</p>
+<h3>4. N+1 问题与预载：with() 是面试必考点</h3>
+<p>查 100 个用户，再逐个取每个人的 profile，懒加载会发出 101 条 SQL——这就是 N+1 问题。解法是预载：<code>User::with('profile')-&gt;select()</code>，一次查询把关联数据一并取出。预载还可以带闭包加约束，只预载符合条件的那部分关联数据。</p>
+<p>关联的写入和删除也有配套 API：<code>together()</code> 做关联自动写入/删除，比如 <code>$article-&gt;together(['comments'])-&gt;delete()</code> 删文章时把评论一起删掉；多对多中间表用 <code>attach()</code> / <code>detach()</code> 挂接和摘除。</p>
+<h3>5. 软删除：删了，但没完全删</h3>
+<p>在模型里 <code>use think\model\concern\SoftDelete;</code>（<code>use</code> 相当于 JS 的 <code>import</code>；<code>trait</code> 相当于 JS 的 mixin，把软删除能力混入模型），表里需要一个 <code>delete_time</code> 字段。此后 <code>delete()</code> 不再真删数据，只给 <code>delete_time</code> 写上时间戳；普通查询会自动排除已删记录。</p>
+<p>配套方法：<code>withTrashed()</code> 包含已删记录一起查，<code>onlyTrashed()</code> 只看已删的，<code>restore()</code> 恢复，<code>force()-&gt;delete()</code> 真删。<strong>面试答法：</strong>“软删除是逻辑删除，数据还在表里，只打时间戳标记；需要恢复或审计的场景用它，真删用 <code>force()</code>。”</p>
+<h3>6. 获取器 / 修改器与字段控制</h3>
+<p><code>getStatusAttr($value, $data)</code> 是获取器，读取字段时自动转换（比如把 0/1 转成“禁用/启用”）；<code>setPasswordAttr($value)</code> 是修改器，写入字段时自动转换（比如写入密码时自动加密）。命名规则是 <code>get + 字段名驼峰 + Attr</code> / <code>set + 字段名驼峰 + Attr</code>。</p>
+<p>另外三个常用属性：<code>$append</code> 追加虚拟属性（表中没有、输出时算出来的字段）；<code>$hidden</code> / <code>$visible</code> 控制输出字段（转数组或 JSON 时哪些字段不出现，比如隐藏密码）；<code>$autoWriteTimestamp</code> 自动维护 <code>create_time</code> / <code>update_time</code> 两个时间戳字段。</p>
+<h3>7. 模型事件：数据变动的钩子</h3>
+<p>模型事件是在数据增删改前后自动触发的钩子。两种写法：一是在模型类里写静态方法，如 <code>onBeforeInsert</code> / <code>onAfterInsert</code> / <code>onBeforeUpdate</code> / <code>onAfterDelete</code>；二是用 <code>Model::event('before_insert', function ($model) {...})</code> 注册回调。典型用途：写入前统一处理字段、删除前清理关联文件、写入后记操作日志。</p>
+<div class="warn"><strong>容易踩的坑：</strong>① 关联方法名是驼峰，读取属性是下划线，写反了取不到数据；② 列表页忘了 <code>with()</code> 预载，N+1 直接把接口拖慢；③ 软删除的行还在表里，唯一索引（如 email）仍会冲突，恢复前要先用 <code>withTrashed()</code> 找到它；④ <code>$user-&gt;save()</code> 之前要先有实例——要么 <code>find()</code> 出来，要么 <code>new</code> 出来。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：模型定义 + CRUD</h3>
+<pre><code>&lt;?php
+namespace app\model;      // 命名空间：对应 app/model/ 目录，类似 JS 的模块路径
+
+use think\Model;          // use 相当于 JS 的 import
+
+class User extends Model  // 继承 think\Model，User 模型默认对应 user 表
+{
+    // 表名默认按类名推断；想改就取消下面这行的注释
+    // protected $table = 'users';   // 自定义表名
+    // protected $pk = 'uid';        // 自定义主键，默认是 id
+
+    // 自动维护 create_time / update_time 两个时间戳字段
+    protected $autoWriteTimestamp = true;
+}</code></pre>
+<pre><code>&lt;?php
+use app\model\User;
+
+// 新增：create() 接收键值对数组，=&gt; 相当于 JS 对象字面量的冒号
+$user = User::create(['name' =&gt; 'Linr', 'status' =&gt; 1]);
+
+// 按主键查一条；静态调用经 __callStatic 转发到实例
+$user = User::find(1);
+
+// 条件查询多条：-&gt; 相当于 JS 的 .，链式调用
+$users = User::where('status', 1)-&gt;select();
+
+// 修改后保存：先有实例，再 save()
+$user-&gt;name = 'Arale';
+$user-&gt;save();
+
+// 删除
+$user-&gt;delete();</code></pre>
+<h3>示例 2：关联定义 + 预载 + 软删除</h3>
+<pre><code>&lt;?php
+namespace app\model;
+
+use think\Model;
+use think\model\concern\SoftDelete;  // trait：相当于 JS 的 mixin，混入软删除能力
+
+class User extends Model
+{
+    use SoftDelete;  // 启用软删除，需要表里有 delete_time 字段
+
+    // 一对一：一个用户对应一条个人资料
+    // hasOne(关联模型类名, 外键, 主键)，默认外键是 user_id
+    public function profile()
+    {
+        return $this-&gt;hasOne(Profile::class);
+    }
+
+    // 一对多：一个用户多篇文章
+    public function articles()
+    {
+        return $this-&gt;hasMany(Article::class);
+    }
+}</code></pre>
+<pre><code>&lt;?php
+use app\model\User;
+
+// 预载：一次查询把 profile 一并取出，避免 N+1
+$users = User::with('profile')-&gt;select();
+echo $users[0]-&gt;profile-&gt;nickname;  // 关联属性直接当对象属性读
+
+// 预载时带闭包加约束：只预载已发布的文章
+$users = User::with(['articles' =&gt; function ($query) {
+    $query-&gt;where('status', 1);
+}])-&gt;select();
+
+// 关联方法名是驼峰，读取时属性名自动转下划线：
+// userProfile() 方法对应 $user-&gt;user_profile 属性
+
+// 软删除：delete() 只写 delete_time，不真删
+$user-&gt;delete();
+// 包含已删记录一起查
+$all = User::withTrashed()-&gt;select();
+// 只看已删的
+$trashed = User::onlyTrashed()-&gt;select();
+// 恢复：先 withTrashed() 找到，再 restore()
+$trashed[0]-&gt;restore();
+// 真删
+$user-&gt;force()-&gt;delete();
+
+// 多对多中间表：给文章挂标签 / 摘标签
+$article-&gt;tags()-&gt;attach($tagId);
+$article-&gt;tags()-&gt;detach($tagId);
+
+// 关联自动删除：删文章时把评论一起删掉
+$article-&gt;together(['comments'])-&gt;delete();</code></pre>
+<h3>示例 3：获取器、修改器与模型事件</h3>
+<pre><code>&lt;?php
+namespace app\model;
+
+use think\Model;
+
+class User extends Model
+{
+    // 获取器：读取 status 字段时自动转换，0/1 变成中文
+    public function getStatusAttr($value, $data)
+    {
+        return $value ? '启用' : '禁用';
+    }
+
+    // 修改器：写入 password 字段时自动加密
+    public function setPasswordAttr($value)
+    {
+        return password_hash($value, PASSWORD_DEFAULT);
+    }
+
+    // 模型事件：插入前执行，$model 是当前模型实例
+    public static function onBeforeInsert($model)
+    {
+        // 比如统一生成邀请码、补默认值
+    }
+}
+
+// 模型事件的另一种写法：用 event() 注册回调
+User::event('before_insert', function ($model) {
+    // 插入前执行的逻辑
+});</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在本地 TP 项目里建一个 <code>User</code> 模型和 <code>profile</code> 一对一关联，分别用懒加载和 <code>with('profile')</code> 查 10 个用户，对比发出的 SQL 条数（开 SQL 日志看）。<br>
+2. 给模型加上 <code>SoftDelete</code>，删一条数据后进数据库看 <code>delete_time</code> 是否写上了时间戳，再用 <code>onlyTrashed()</code> 查出来 <code>restore()</code>。<br>
+3. 写一个 <code>getStatusAttr</code> 获取器，把状态 0/1 转成中文，确认读取和 <code>toArray()</code> 输出都生效。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 3.x 线的 think-model 同样有关联模型（Relation Model）的概念，API 有 <code>model.relation</code>、<code>model.setRelation(name, value)</code>，支持 mysql / sqlite / postgresql 适配器——和 TP 一样，关联定义与数据库驱动是分开的两层，换库不用改模型代码。</p>
+<p>模型事件在 ThinkJS 里叫模型钩子：<code>afterFind</code> / <code>afterSelect</code> 是在查询出数据后执行的钩子，对应 TP 的模型事件思路（在数据生命周期的关键点插逻辑）。另外两个 ThinkJS 的模型特点值得知道：模型会自动分析数据表字段类型、自动做数据安全过滤——TP 这边对应的分别是模型对字段类型的处理和验证器/获取器那一套，Day 8 会讲验证器。</p>
+<p><strong>面试怎么说：</strong>“两边都有 ORM 关联和模型钩子，思路相通；TP 的关联类型更全（七种，含远程和多态），ThinkJS 的关联 API 更精简。换框架时，关联关系的设计经验是可以平移的。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="0"><p><strong>1. User::find(1) 为什么能静态调用？</strong></p><button data-i="0">经 PHP 魔术方法 __callStatic 转发到模型实例执行</button><button data-i="1">因为 Model 类里内置了所有静态查询方法</button><button data-i="2">因为 Model 是单例，静态调用就是实例调用</button><div class="ans">解析：选 A。TP 模型用 __callStatic 接住静态调用、转交给实例执行，这是面试高频追问点。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 模型里定义了 userProfile() 关联方法，读取时属性名是？</strong></p><button data-i="0">userProfile</button><button data-i="1">user_profile</button><button data-i="2">UserProfile</button><div class="ans">解析：选 B。关联方法名是驼峰，读取时属性名自动转下划线，写反了取不到数据。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 启用软删除后，$user-&gt;delete() 实际做了什么？</strong></p><button data-i="0">把记录从表里真删掉</button><button data-i="1">把记录移到一张回收站表</button><button data-i="2">只给 delete_time 写上时间戳，数据还在表里</button><div class="ans">解析：选 C。软删除是逻辑删除：只写时间戳、不真删；真删要用 force()-&gt;delete()。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：模型方法为什么能静态调用？</summary><p>经 PHP 魔术方法 <code>__callStatic</code> 转发到模型实例执行。<code>User::find(1)</code> 表面是静态调用，实际是 <code>__callStatic</code> 接住调用、转交给实例去跑查询。所以模型既能静态调用，也能 <code>new User</code> 后实例调用。</p></details>
+<details><summary>Q2：什么是 N+1 问题，怎么解决？</summary><p>查 N 条主数据，再逐条查关联数据，会发出 N+1 条 SQL。解法是预载：<code>User::with('profile')-&gt;select()</code> 一次查询把关联数据一并取出；预载还能带闭包加约束。列表页忘了预载是常见的性能坑。</p></details>
+<details><summary>Q3：软删除和真删除有什么区别？</summary><p>软删除用 <code>SoftDelete</code> trait，表里要有 <code>delete_time</code> 字段；<code>delete()</code> 只写时间戳、不真删，普通查询自动排除已删记录。<code>withTrashed()</code> 包含已删、<code>onlyTrashed()</code> 只看已删、<code>restore()</code> 恢复、<code>force()-&gt;delete()</code> 真删。需要恢复或审计的场景用软删除。</p></details>
+<details><summary>Q4：关联方法名和读取属性名有什么讲究？</summary><p>关联方法名是驼峰，读取时属性名自动转下划线：<code>userProfile()</code> 方法对应 <code>$user-&gt;user_profile</code> 属性。默认外键是当前模型名小写加 <code>_id</code>，比如 <code>user_id</code>，也可以在 <code>hasOne('关联模型类名', '外键', '主键')</code> 里显式指定。</p></details>
+<details><summary>Q5：获取器和修改器分别在什么时候触发？</summary><p>获取器 <code>getXxxAttr($value, $data)</code> 在读取字段时触发，做展示转换；修改器 <code>setXxxAttr($value)</code> 在写入字段时触发，做入库前处理，比如密码加密。命名规则是 <code>get/set + 字段名驼峰 + Attr</code>。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“熟悉 ThinkPHP ORM”，写“用模型关联 + with() 预载把用户列表接口的 SQL 从 101 条降到 2 条；订单数据用软删除 + restore() 做可恢复删除，配合模型事件在删除前清理关联文件”。前者是名词，后者是可追问的性能与数据安全实践。</p>
+<p><strong>明日预告：</strong>Day 8 讲验证器与安全：验证器怎么写规则与场景、SQL 注入怎么防、XSS 与 CSRF 各用什么手段、密码为什么只能用 password_hash 存。</p>
+</div>
+<div class="nav"><span><a href="day06.html">← Day 6</a></span><span><a href="day08.html">Day 8 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

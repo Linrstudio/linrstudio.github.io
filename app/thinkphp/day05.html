@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5：中间件与事件 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 5 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 5：中间件与事件</h1>
+<p>请求在进控制器之前，要先经过一串关卡：登录检查、跨域处理、请求缓存……这些横切在请求链路上的逻辑，就是中间件。而“用户登录后要发欢迎邮件、记一条日志”这种“一个动作触发多个后续动作”的需求，硬写在控制器里会把控制器越写越臃肿，解耦的办法是事件系统。今天把这两块一次讲透。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 中间件是什么：handle() + 必须返回 Response</h3>
+<p>中间件是一个类，唯一硬性要求是有一个 <code>handle($request, \Closure $next)</code> 方法，并且必须返回一个 Response 实例。生成命令是 <code>php think make:middleware Check</code>，生成的类放在 <code>app\middleware</code> 命名空间下。</p>
+<p>典型骨架长这样：<code>$next($request)</code> 之前是前置逻辑（请求进来先执行），<code>$next($request)</code> 之后是后置逻辑（响应出来后执行）。想放行就调 <code>$next($request)</code>；想拦截就直接 return 一个 Response，后续中间件和控制器都不会再执行——登录检查就是这么实现的。</p>
+<div class="warn"><strong>容易踩的坑：</strong>handle() 里忘了 return <code>$next($request)</code> 的结果，请求就会“断”在中间件里，控制器永远收不到请求；或者写了 <code>$next($request);</code> 却没 return，响应直接丢了。记住：handle() 必须返回 Response 实例，要么 return 自己造的响应，要么 return <code>$next($request)</code> 的返回值。</div>
+<h3>2. 洋葱模型与四级执行顺序</h3>
+<p>中间件的执行是洋葱模型：请求从外向内一层层穿过中间件到达控制器，响应再从内向外一层层原路返回。所以前置逻辑按注册顺序执行，后置逻辑按逆序执行。底层实现是一个队列，先进先出（<code>array_shift</code> 逐个取出执行）。</p>
+<p>四级中间件按执行顺序排列：</p>
+<table>
+<tr><th>级别</th><th>配置位置</th><th>作用范围</th></tr>
+<tr><td>全局中间件</td><td><code>app/middleware.php</code> 或 <code>config/middleware.php</code></td><td>所有请求</td></tr>
+<tr><td>应用中间件</td><td>多应用下 <code>app/xxx/middleware.php</code></td><td>某个应用内的请求</td></tr>
+<tr><td>路由中间件</td><td><code>Route::middleware()</code> 或分组挂载</td><td>某条路由或某个路由分组</td></tr>
+<tr><td>控制器中间件</td><td>类内 <code>protected $middleware = [...]</code></td><td>某个控制器内的 Action</td></tr>
+</table>
+<p><strong>面试答法：</strong>被问“中间件执行顺序”，答：全局 → 应用 → 路由 → 控制器，请求按顺序进、响应按逆序出；同一级内按注册顺序，先进先出。能把“洋葱模型”四个字和这张表说出来，这道题就稳了。</p>
+<h3>3. 别名与 priority：给中间件起名字、排优先级</h3>
+<p>在 <code>config/middleware.php</code> 里可以用 <code>alias</code> 给中间件起别名：<code>'alias' =&gt; ['auth' =&gt; \app\middleware\AuthCheck::class]</code>，之后路由上挂中间件时写别名 <code>'auth'</code> 就行，不用每次写完整类名。</p>
+<p>同一个文件里还有 <code>priority</code> 数组，控制中间件的优先执行顺序：写在 priority 里的中间件会优先于其他中间件执行，适合把 Session 初始化、跨域这类“必须最先跑”的中间件排到前面。</p>
+<h3>4. 内置中间件：框架自带的四个</h3>
+<table>
+<tr><th>内置中间件</th><th>作用</th></tr>
+<tr><td><code>think\middleware\SessionInit</code></td><td>Session 初始化，用 Session 之前要先跑它</td></tr>
+<tr><td><code>think\middleware\AllowCrossDomain</code></td><td>跨域处理，给响应加上跨域头</td></tr>
+<tr><td><code>think\middleware\FormTokenCheck</code></td><td>表单令牌检查，防表单重复提交与跨站请求</td></tr>
+<tr><td><code>think\middleware\CheckRequestCache</code></td><td>请求缓存，命中缓存时直接返回，不再进控制器</td></tr>
+</table>
+<p>面试常考的是 <code>AllowCrossDomain</code>：前后端分离项目里跨域问题怎么处理，答“挂 AllowCrossDomain 中间件”就是标准答案之一。</p>
+<h3>5. 事件系统：一个动作，多个监听</h3>
+<p>事件系统把“触发动作”和“后续处理”解耦：触发方只管抛一个事件名和数据，谁来响应、响应几个，都由配置决定。配置在 <code>app/event.php</code>，分三段：</p>
+<table>
+<tr><th>配置段</th><th>含义</th></tr>
+<tr><td><code>bind</code></td><td>事件名直接绑一个处理类</td></tr>
+<tr><td><code>listen</code></td><td>一个事件绑多个监听类（数组）</td></tr>
+<tr><td><code>subscribe</code></td><td>订阅者类，一个类可监听多个事件</td></tr>
+</table>
+<p>触发用 <code>Event::trigger('UserLogin', $user)</code> 或 <code>event()</code> 助手，第二个参数是传给监听类的数据。监听类里写一个 <code>handle($params)</code> 方法，<code>$params</code> 就是触发时传来的数据。</p>
+<p>框架还内置了几个事件：<code>AppInit</code>（应用初始化）、<code>HttpRun</code>（HTTP 请求开始）、<code>HttpEnd</code>（请求结束）、<code>LogWrite</code>（写日志时）。想在请求开始时做点事（比如记一条访问日志），监听 <code>HttpRun</code> 即可，不用改框架代码。</p>
+<p><strong>面试答法：</strong>被问“中间件和事件有什么区别”，答：中间件是请求链路上的横切逻辑（鉴权、限流、跨域），请求必须经过它；事件是业务解耦（登录后发邮件、记日志），触发方不知道也不关心谁在听。一个是“必经之路”，一个是“广播通知”。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：登录检查中间件（放到 app\middleware\Check.php 可跑）</h3>
+<pre><code>&lt;?php
+namespace app\middleware;              // 中间件类的命名空间
+
+class Check
+{
+    // handle() 是中间件的唯一入口：$request 是请求，$next 是“下一个环节”
+    // \Closure 是 PHP 的闭包类型，相当于 JS 里的 () =&gt; {} 函数类型
+    public function handle($request, \Closure $next)
+    {
+        // 前置逻辑：请求进来先执行
+        if (! $request-&gt;header('token')) {
+            // 没带 token：直接返回响应，拦截请求，后续中间件与控制器不再执行
+            return json(['code' =&gt; 401, 'msg' =&gt; '未登录']);
+        }
+
+        $response = $next($request);   // 放行：交给下一个中间件，最终到达控制器
+
+        // 后置逻辑：响应出来后执行，可以在这里改响应头、记日志
+        return $response;              // 必须返回 Response 实例，别忘了 return
+    }
+}</code></pre>
+<p>挂载方式（三种，任选其一）：全局挂载写进 <code>app/middleware.php</code> 的返回数组；路由挂载用 <code>Route::get('user', 'User/index')-&gt;middleware(\app\middleware\Check::class)</code>；控制器挂载在类内写 <code>protected $middleware = [\app\middleware\Check::class];</code>。</p>
+<h3>示例 2：用户登录事件——配置、监听类与触发</h3>
+<pre><code>&lt;?php
+// app/event.php：事件配置分 bind / listen / subscribe 三段
+return [
+    'bind' =&gt; [
+        // 事件名直接绑一个处理类
+        'UserLogin' =&gt; \app\listener\UserLogin::class,
+    ],
+    'listen' =&gt; [
+        // 一个事件绑多个监听类：订单支付后既发短信又记日志
+        'OrderPaid' =&gt; [\app\listener\SendSms::class, \app\listener\LogOrder::class],
+    ],
+    'subscribe' =&gt; [
+        // 订阅者类：一个类可监听多个事件
+        \app\subscribe\User::class,
+    ],
+];</code></pre>
+<pre><code>&lt;?php
+namespace app\listener;                // 监听类放 app\listener 命名空间
+
+class SendSms
+{
+    // handle($params)：$params 是触发时传来的数据
+    public function handle($params)
+    {
+        // $params 就是触发时传的订单数据，这里发短信
+        // 触发方不用知道这个类的存在，这就是解耦
+    }
+}</code></pre>
+<pre><code>&lt;?php
+// 在控制器里触发事件（两种写法等价）
+use think\facade\Event;
+
+Event::trigger('OrderPaid', $order);   // 门面静态调用，第二个参数是传给监听类的数据
+event('OrderPaid', $order);            // event() 助手函数，等价写法</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 跑 <code>php think make:middleware Check</code> 生成中间件，把示例 1 的逻辑贴进去，挂到一条路由上，不带 token 访问一次、带 token 访问一次，对比结果。<br>
+2. 写两个中间件 A 和 B，都在 <code>$next()</code> 前后各记一行日志，挂到同一条路由上，看日志顺序是不是“进 A → 进 B → 出 B → 出 A”，亲手验证洋葱模型。<br>
+3. 在 <code>app/event.php</code> 的 listen 里给一个事件绑两个监听类，触发一次，确认两个 handle() 都执行了。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>中间件这一块，ThinkJS 与 TP 是“同一个人写的”既视感；事件系统则是两者分道扬镳的地方：</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>中间件形态</td><td>类 + <code>handle($request, \Closure $next)</code></td><td>Koa 中间件 <code>(ctx, next) =&gt; { await next(); }</code></td></tr>
+<tr><td>执行模型</td><td>洋葱模型</td><td>洋葱模型，完全一致</td></tr>
+<tr><td>配置位置</td><td><code>app/middleware.php</code>、路由、控制器四级</td><td>统一在 <code>src/config/middleware.js</code> 管理</td></tr>
+<tr><td>事件机制</td><td><code>app/event.php</code> 的 bind / listen / subscribe</td><td>没有 TP 式的事件订阅配置，应用级事件一般用 Koa 的 <code>app.on</code>（EventEmitter）或中间件实现</td></tr>
+</table>
+<pre><code>// ThinkJS 中间件：就是 Koa 中间件，洋葱模型与 TP 完全一致
+module.exports = (options) =&gt; {
+  return async (ctx, next) =&gt; {
+    // 前置逻辑：相当于 TP 里 $next($request) 之前的代码
+    if (!ctx.header.token) {
+      ctx.body = {code: 401, msg: '未登录'};
+      return;  // 直接返回，不调 next()，就是 TP 里的拦截
+    }
+    await next();  // 放行，相当于 TP 的 $next($request)
+    // 后置逻辑：相当于 TP 里 $next($request) 之后的代码
+  };
+};</code></pre>
+<p><strong>版本注意：</strong>ThinkJS 3.0 废弃了 2.x 的 hook 机制，改用 Koa 中间件。面试时如果对方问“ThinkJS 的 hook 怎么用”，答“3.x 已经废弃 hook，统一用 Koa 中间件”，这是个能加分的版本细节。</p>
+<p><strong>记忆锚点：</strong>TP 的 <code>$next($request)</code> 就是 Koa 的 <code>await next()</code>；TP 的四级中间件就是 ThinkJS 在 <code>middleware.js</code> 里统一配置的那一串。事件系统是 TP 独有的，ThinkJS 没有对应物，不要硬对。</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="0"><p><strong>1. 中间件的 handle() 方法必须返回什么？</strong></p><button data-i="0">一个 Response 实例</button><button data-i="1">布尔值，true 放行、false 拦截</button><button data-i="2">什么都不用返回，框架会自动继续</button><div class="ans">解析：选 A。handle() 必须返回 Response 实例：要么 return 自己造的响应（拦截），要么 return $next($request) 的返回值（放行）。</div></div>
+<div class="q" data-answer="2"><p><strong>2. 四级中间件的执行顺序是？</strong></p><button data-i="0">控制器 → 路由 → 应用 → 全局</button><button data-i="1">路由 → 全局 → 控制器 → 应用</button><button data-i="2">全局 → 应用 → 路由 → 控制器</button><div class="ans">解析：选 C。请求按全局、应用、路由、控制器的顺序进，响应按逆序出，这就是洋葱模型。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 一个事件要绑多个监听类，应该写在 app/event.php 的哪一段？</strong></p><button data-i="0">bind</button><button data-i="1">listen</button><button data-i="2">subscribe</button><div class="ans">解析：选 B。bind 是一个事件绑一个处理类；listen 是一个事件绑多个监听类数组；subscribe 是订阅者类，一个类监听多个事件。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：洋葱模型怎么理解？</summary><p>请求从外向内一层层穿过中间件到达控制器，响应再从内向外一层层原路返回。前置逻辑按注册顺序执行，后置逻辑按逆序执行。底层是一个队列，先进先出。画图时画同心圆，请求进、响应出，一句话就说清了。</p></details>
+<details><summary>Q2：中间件里怎么提前返回、不让请求继续往下走？</summary><p>直接 return 一个 Response，不调 $next($request)。后续中间件和控制器都不会再执行。典型场景是登录检查：没带 token 就直接 return 401 的 JSON。</p></details>
+<details><summary>Q3：bind、listen、subscribe 三者有什么区别？</summary><p>bind 是事件名直接绑一个处理类；listen 是一个事件绑多个监听类数组，触发时依次执行；subscribe 是订阅者类，一个类里可以监听多个事件，适合把同一业务的多个监听收在一起。三者都是 app/event.php 里的配置段。</p></details>
+<details><summary>Q4：中间件和事件分别适合什么场景？</summary><p>中间件适合请求链路上的横切逻辑：鉴权、限流、跨域、日志，请求必须经过它。事件适合业务解耦：登录后发欢迎邮件、订单支付后发短信记日志，触发方不知道也不关心谁在听。一个是必经之路，一个是广播通知。</p></details>
+<details><summary>Q5：前后端分离项目跨域怎么处理？</summary><p>挂框架内置的 think\middleware\AllowCrossDomain 中间件，它会给响应加上跨域头。也可以在全局中间件里统一挂上，所有接口一次性解决。</p></details>
+
+<h2>加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>中间件里不要写业务逻辑，只写横切逻辑（鉴权、限流、日志、跨域）；业务解耦用事件，不要把“登录后发邮件、记日志、送积分”全塞进登录控制器——每加一个后续动作都要改控制器，迟早改出 bug。</p>
+<p><strong>简历讲法：</strong>别写“会用中间件”，写“用中间件做登录鉴权与限流：全局挂跨域与 Session 初始化，路由分组挂鉴权中间件；订单支付后用事件触发短信与日志监听，控制器只负责主流程”。前者是名词，后者是可追问的架构。</p>
+<p><strong>明日预告：</strong>Day 6 进入数据篇：Db 查询构造器与事务——链式查询怎么写、事务两种写法怎么选、读写分离怎么配。</p>
+</div>
+<div class="nav"><span><a href="day04.html">← Day 4：控制器与请求响应</a></span><span><a href="day06.html">Day 6：数据库层：Db 查询构造器与事务 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

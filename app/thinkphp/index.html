@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThinkPHP 面试实战课：12 天从入门到面试</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.7;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:20px;margin-top:36px;border-bottom:2px solid #eee;padding-bottom:8px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:12px 0}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.done{color:#0a7a42;font-weight:bold} .soon{color:#888}
+ol{padding-left:20px} li{margin:8px 0}
+.note{background:#f7f7f7;border-radius:10px;padding:14px 16px}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<h1>ThinkPHP 面试实战课：12 天从入门到面试</h1>
+<p><span class="tag">ThinkPHP 8.x</span> <span class="tag">ThinkJS 对比</span> <span class="tag">每天一课 · 约 60 分钟</span></p>
+<p>这门课面向有前端背景、要面试 PHP 岗位的开发者：以 <strong>ThinkPHP 8.x</strong> 为主线，12 天讲透请求生命周期、路由、控制器、中间件、数据库、模型、验证与安全、缓存与队列、容器与门面、多应用与部署，最后用一课做 ThinkPHP vs ThinkJS 全面对比与面试串讲。每课先讲清机制与"面试官想听的点"，再给逐行注释的可跑代码，最后落到面试题与简历讲法。</p>
+<div class="note">
+<p><strong>为什么拿 ThinkJS 做对比</strong><br>
+ThinkJS 是 360 奇舞团开源的 Node.js 框架，作者李成银 2013 年底参考 ThinkPHP 起步，许多特性直接来源于 ThinkPHP：Controller、Model、Middleware、Adapter 的命名与目录结构高度相似，连数据库链式 API 的写法都像同一个人写的。如果你熟悉 JS/Node，用 ThinkJS 做锚点，ThinkPHP 的概念几乎不用死记——只需要分清一处根本不同：PHP-FPM 是同步阻塞、每请求重建应用；Node 是异步非阻塞、常驻进程。Day 12 会把这张对照表一次讲透。</p>
+<p><strong>学习路线</strong><br>
+入门篇：Day 1 定位与安装 → Day 2 请求生命周期（面试最高频）→ Day 3 路由<br>
+请求处理篇：Day 4 控制器与请求响应 → Day 5 中间件与事件<br>
+数据篇：Day 6 数据库层 → Day 7 模型 ORM → Day 8 验证器与安全<br>
+进阶篇：Day 9 缓存、Session 与队列 → Day 10 容器、门面与服务 → Day 11 多应用、命令行与部署<br>
+收官篇：Day 12 ThinkPHP vs ThinkJS 全面对比 + 面试串讲</p>
+<p><strong>12 课已建完（12 天完结）。</strong>先从 Day 1 开始，不用跳着看；有 PHP 基础的可以直接从 Day 2（生命周期）或 Day 10（容器与门面）开始。面试前把 Day 12 的串讲过一遍。</p>
+</div>
+<div class="card">
+<p><strong>相关课程：</strong><a href="../langchain-course/index.html">LangChain 30 天实战课 →</a> <a href="../agent-course/index.html">Agent 实战课 →</a> <a href="../langgraph-course/index.html">LangGraph 14 天实战课 →</a><br>
+链、提示词、工具调用、记忆、RAG、Mini Cursor、Multi-Agent 与 MCP，以及图、状态、Checkpoint、用户之声 Agent 实战。</p>
+</div>
+
+<h2>12 天课表</h2>
+<ol>
+<li><a href="day01.html"><strong>Day 1：ThinkPHP 是什么：定位、版本线与安装</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day02.html"><strong>Day 2：一次请求经历了什么：请求生命周期</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day03.html"><strong>Day 3：路由：注册、参数、分组与资源路由</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day04.html"><strong>Day 4：控制器与请求响应</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day05.html"><strong>Day 5：中间件与事件</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day06.html"><strong>Day 6：数据库层：Db 查询构造器与事务</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day07.html"><strong>Day 7：模型 ORM：关联、软删除与模型事件</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day08.html"><strong>Day 8：验证器与安全</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day09.html"><strong>Day 9：缓存、Session 与队列</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day10.html"><strong>Day 10：容器、门面与服务</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day11.html"><strong>Day 11：多应用、命令行与部署优化</strong></a> <span class="done">● 已上线</span></li>
+<li><a href="day12.html"><strong>Day 12：ThinkPHP vs ThinkJS 全面对比 + 面试串讲</strong></a> <span class="done">● 已上线</span></li>
+</ol>
+
+<h2>每课的固定结构</h2>
+<div class="card">
+<p>1. <strong>核心解释</strong>：先讲机制和一张心智地图，不堆 API；每个概念给面试答法。<br>
+2. <strong>代码示例</strong>：能直接跑的最小代码，逐行注释；关键 PHP 语法有解释，能用 JS/TS 对照就对照。<br>
+3. <strong>ThinkJS 对比</strong>：有真实相似点时才写，具体到类名、方法名、目录结构。<br>
+4. <strong>小测验</strong>：当页可点、可判分，答完再看解析。<br>
+5. <strong>面试题与答案</strong>：按"面试官想听的点"写，不是背诵版。<br>
+6. <strong>加分项</strong>：生产视角、简历讲法。</p>
+</div>
+<p class="note">来源说明：ThinkPHP 8.x 的机制表述以官方文档（thinkphp.cn / 完全开发手册）与 top-think 官方仓库 README 为准，要求 PHP 8.0+、依赖 think-orm 3.0+；ThinkJS 3.x 的表述以 thinkjs.org 官方文档为准（3.0 起核心基于 Koa 2.x）。课内不写未经核实的小版本号，API 以官方最新文档为准。</p>
+<p><a href="day01.html">→ 开始 Day 1 →</a></p>
+</body>
+</html>

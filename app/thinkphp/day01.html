@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 1：ThinkPHP 是什么：定位、版本线与安装 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 1 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 1：ThinkPHP 是什么：定位、版本线与安装</h1>
+<p>你 JS/TS 精通、PHP 能写但不精通，面试 PHP 岗位时，ThinkPHP 是最常被问到的国产框架：很多国内中小公司的后台系统、CMS、API 服务都跑在它上面。好消息是，ThinkPHP 的核心概念——MVC、路由、中间件、ORM、容器——和你在 JS 生态里见过的东西一一对应，缺的只是 PHP 侧的叫法和细节。今天先把定位、版本线、安装与目录结构立起来，后面 11 天逐块填血肉。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 一句话定位</h3>
+<p>ThinkPHP 是国产开源的轻量级 PHP Web 开发框架，遵循 MVC 架构，特点是<strong>轻量、上手快、中文文档与社区强</strong>，在国内中小项目、后台系统、CMS 里很常见。框架遵循 PSR-2 代码风格与 PSR-4 自动加载规范——PSR-4 就是 PHP 版的“按目录找模块”：类名与文件路径一一对应，不用手动 require。</p>
+<p><strong>面试答法：</strong>“ThinkPHP 是国内最常用的轻量 PHP 框架之一，MVC 架构，核心瘦身、能力靠扩展；我用它做过后台系统和 API 服务，熟悉路由、中间件、ORM 和容器这套完整链路。”</p>
+<h3>2. 版本线演进：5.x → 6.x → 8.x</h3>
+<table>
+<tr><th>版本线</th><th>关键变化</th></tr>
+<tr><td>5.x</td><td><code>application/</code> 目录、<code>thinkphp/</code> 核心目录、<code>input()</code> 助手函数、注解路由内置</td></tr>
+<tr><td>6.x（2019 年）</td><td><code>app/</code> 目录、Composer 优先、容器/门面重构、think-orm 独立为组件、多应用拆为扩展</td></tr>
+<tr><td>8.x</td><td>基于 PHP 8.0+ 重构；注解路由剥离为扩展，改用 PHP 8 原生 <code>#[Route(...)]</code> Attribute</td></tr>
+</table>
+<p>面试常问“5.x 和 6.x 最大的区别是什么”：答<strong>目录结构变了（application/ → app/）、Composer 成为标准安装方式、ORM 独立、多应用变成扩展</strong>，这四点就够了。</p>
+<h3>3. ThinkPHP 8 的关键变化</h3>
+<p><strong>基于 PHP 8.0+ 重构</strong>（推荐 8.1/8.2），依赖 think-orm 3.0+，升级了 PSR 依赖；<strong>新增 think-dumper</strong>（支持远程调试）；<strong>6.0/6.1 可无缝升级</strong>到 8.x。最大的结构性变化是<strong>注解路由剥离出核心</strong>：8.x 之前注解路由内置，8.x 需要单独装 <code>topthink/think-annotation</code> 扩展，并改用 PHP 8 原生的 <code>#[Route(...)]</code> Attribute 写法，还要在路由文件里调用 <code>AnnotationRoute::init()</code> 才能生效（Day 3 展开）。</p>
+<h3>4. 目录结构：一眼认出 TP 项目</h3>
+<pre><code>tp/
+├── app/                  # 应用目录：业务代码都在这里
+│   ├── controller/       # 控制器
+│   ├── model/            # 模型（对应数据库表）
+│   ├── view/             # 模板视图
+│   ├── middleware/       # 中间件
+│   ├── BaseController.php
+│   ├── ExceptionHandle.php
+│   ├── event.php         # 事件定义
+│   ├── middleware.php    # 中间件注册
+│   └── provider.php      # 服务提供者
+├── config/               # 配置文件（app.php、database.php…）
+├── route/                # 路由定义（默认 route/app.php）
+├── public/               # Web 根目录，唯一入口 index.php 在这里
+├── runtime/              # 缓存、日志等运行时文件
+├── vendor/topthink/framework/  # 框架核心（Composer 装进来的）
+├── .env                  # 环境变量（数据库密码等，不进版本库）
+├── think                 # 命令行入口（php think run / php think make:controller…）
+└── composer.json</code></pre>
+<p>记住三个最常被问的点：<strong>唯一 Web 入口是 <code>public/index.php</code></strong>（其余目录不应暴露给 Web 服务器）；<strong><code>think</code> 是命令行入口</strong>，相当于 Laravel 的 artisan、NestJS 的 nest CLI；<strong><code>.env</code> 放敏感配置</strong>，和 Node 项目里的 .env 完全一个思路。</p>
+<h3>5. 核心瘦身、能力靠扩展</h3>
+<p>从 6.x 开始，ThinkPHP 走“核心瘦身”路线：很多能力不在核心里，而是独立扩展，需要时用 Composer 装：</p>
+<table>
+<tr><th>扩展</th><th>提供什么能力</th></tr>
+<tr><td>think-multi-app</td><td>多应用支持（一个项目跑多个应用，如 admin + api）</td></tr>
+<tr><td>think-view</td><td>模板引擎</td></tr>
+<tr><td>think-queue</td><td>消息队列</td></tr>
+<tr><td>think-annotation</td><td>注解路由（8.x 必装才有）</td></tr>
+</table>
+<p>扩展通过 <code>composer.json</code> 的 <code>extra.think.services</code> 自动发现——装上就能用，不用手动注册。面试答法：“TP 核心只保留路由、容器、ORM 这些底座，多应用、队列、模板都是扩展，这样项目可以按需裁剪，不用的功能不进包。”</p>
+<h3>6. 与 Laravel 的定位差异</h3>
+<table>
+<tr><th>维度</th><th>Laravel</th><th>ThinkPHP</th></tr>
+<tr><td>定位</td><td>全功能框架，全球生态大</td><td>轻量框架，中文文档社区强</td></tr>
+<tr><td>内置能力</td><td>Eloquent / Blade / Artisan / 队列都内置</td><td>核心瘦身，队列、模板、多应用靠扩展</td></tr>
+<tr><td>常见场景</td><td>国际化项目、大型应用</td><td>国内中小项目、后台系统、CMS</td></tr>
+</table>
+<p>关键一句：<strong>两者都是 MVC + 路由 + 中间件 + ORM + 容器，概念完全可迁移</strong>——你在 Laravel/Express/Koa 里理解的中间件洋葱模型、ORM、依赖注入，换到 TP 只是换了类名和写法。面试时不要踩一捧一，就说“选型看团队与项目规模”。</p>
+<div class="warn"><strong>容易踩的坑：</strong>不要在面试里说某个 8.x 小版本是“最新版”——小版本一直在发，说错了立刻露馅。只说“8.x 线”就够了。同样，ThinkJS 只说 3.x 线，不要编 4.x。</div>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：安装、启动与更新（命令行）</h3>
+<pre><code># 创建项目：topthink/think 是官方应用骨架，tp 是目录名
+composer create-project topthink/think tp
+
+cd tp
+
+# 启动内置开发服务器，访问 http://localhost:8000
+php think run
+
+# 只更新框架本身（不碰其他依赖）
+composer update topthink/framework</code></pre>
+<h3>示例 2：最小控制器（逐行注释 + JS 对照）</h3>
+<pre><code>&lt;?php
+// namespace 声明命名空间 ≈ JS 的模块路径；PSR-4 按它找到这个文件
+namespace app\controller;
+
+class Index
+{
+    // 方法名 hello 对应 URL 里的操作名：访问 /index/hello 就会调它
+    // $name：PHP 变量都以 $ 开头；= 'ThinkPHP' 是默认值，和 JS 默认参数一样
+    public function hello($name = 'ThinkPHP')
+    {
+        // . 是字符串拼接，相当于 JS 的 +
+        // 直接 return 字符串，框架会把它包成 Response 发出去
+        return 'hello,' . $name;
+    }
+}</code></pre>
+<p><strong>PHP 语法速记（JS 对照）：</strong><code>$变量</code> 相当于 JS 的变量名（只是多了 $ 前缀）；<code>-&gt;</code> 相当于 JS 的 <code>.</code>（调对象方法/属性）；<code>::</code> 是静态调用，相当于 JS 的 <code>Class.staticMethod()</code>；<code>=&gt;</code> 是键值对分隔符，相当于 JS 对象字面量里的 <code>:</code>；<code>use</code> 导入类，相当于 JS 的 <code>import</code>。</p>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 在本机跑通 <code>composer create-project topthink/think tp</code>，<code>php think run</code> 启动后打开 http://localhost:8000，确认看到默认欢迎页。<br>
+2. 把示例 2 的控制器写进 <code>app/controller/Index.php</code>，访问 <code>/index/hello</code>，再改改默认值，确认 URL 操作名与方法名的对应关系。<br>
+3. 打开 <code>public/index.php</code> 看一眼入口骨架——只有 6 行，Day 2 会逐行拆它。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>ThinkJS 和 ThinkPHP <strong>同名不同语言</strong>：一个是 Node.js 框架，一个是 PHP 框架，但渊源很深。ThinkJS 作者李成银（@welefen），360 奇舞团，2013 年底参考 ThinkPHP 起步；多处资料确认“ThinkJS 很多特性来源于 ThinkPHP”。如果你用过 ThinkJS，TP 的很多概念你已经会了，只是换了语言。</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>语言与底层</td><td>PHP</td><td>Node.js；ThinkJS 3.x 基于 Koa 2.x</td></tr>
+<tr><td>控制器目录</td><td><code>app/controller</code></td><td><code>src/controller</code></td></tr>
+<tr><td>模型目录</td><td><code>app/model</code></td><td><code>src/model</code></td></tr>
+<tr><td>配置目录</td><td><code>config/</code></td><td><code>src/config</code></td></tr>
+<tr><td>独有目录</td><td><code>app/middleware</code></td><td><code>src/logic</code>（参数校验层）</td></tr>
+<tr><td>核心命名</td><td>Controller / Model / Middleware</td><td>Controller / Model / Middleware / Adapter 对应</td></tr>
+</table>
+<p><strong>面试加分句：</strong>“我之前用过 ThinkJS，它就是参考 ThinkPHP 设计的，目录和命名高度相似，所以 TP 的 MVC 结构我上手很快；区别主要在运行模型——PHP-FPM 每个请求都是干净启动，Node 是常驻进程（Day 2 展开）。”</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. ThinkPHP 8 基于哪个 PHP 版本重构？</strong></p><button data-i="0">PHP 7.4</button><button data-i="1">PHP 8.0+（推荐 8.1/8.2）</button><button data-i="2">PHP 5.6</button><div class="ans">解析：选 B。TP8 基于 PHP 8.0+ 重构，推荐用 8.1/8.2；这也是它能用原生 #[Route] Attribute 的前提。</div></div>
+<div class="q" data-answer="1"><p><strong>2. 在 ThinkPHP 8 里用注解路由，正确的做法是？</strong></p><button data-i="0">什么都不用做，核心内置</button><button data-i="1">装 topthink/think-annotation 扩展，用 PHP 8 原生 #[Route(...)]，并在路由文件里调用 AnnotationRoute::init()</button><button data-i="2">注解路由在 8.x 已彻底移除，没法用</button><div class="ans">解析：选 B。8.x 把注解路由剥离为扩展，三步缺一不可：装扩展、写 Attribute、调 init()。</div></div>
+<div class="q" data-answer="1"><p><strong>3. 多应用功能在 ThinkPHP 8 的核心里吗？</strong></p><button data-i="0">在，核心内置</button><button data-i="1">不在，需要装 think-multi-app 扩展</button><button data-i="2">8.x 已经取消了多应用</button><div class="ans">解析：选 B。从 6.x 起多应用就拆为扩展，8.x 延续“核心瘦身、能力靠扩展”的路线。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：一句话介绍 ThinkPHP，它适合做什么项目？</summary><p>ThinkPHP 是国产轻量级 PHP MVC 框架，上手快、中文文档社区强，适合国内中小项目、后台管理系统、CMS 和 API 服务。核心瘦身、能力靠扩展，项目可以按需裁剪。</p></details>
+<details><summary>Q2：ThinkPHP 5.x、6.x、8.x 各有什么标志性变化？</summary><p>5.x 是 application/ 目录、thinkphp/ 核心目录、input() 助手、注解路由内置；6.x（2019 年）改成 app/ 目录、Composer 优先、容器/门面重构、think-orm 独立、多应用拆为扩展；8.x 基于 PHP 8.0+ 重构，注解路由剥离为扩展、改用 PHP 8 原生 Attribute，新增 think-dumper 支持远程调试，6.0/6.1 可无缝升级。</p></details>
+<details><summary>Q3：ThinkPHP 8 对 PHP 版本有什么要求？</summary><p>基于 PHP 8.0+ 重构，推荐 8.1/8.2；依赖 think-orm 3.0+。面试时只说 8.x 线，不要编某个小版本是“最新版”。</p></details>
+<details><summary>Q4：怎么安装和启动一个 ThinkPHP 项目？</summary><p>composer create-project topthink/think tp 创建项目，cd tp 后 php think run 启动内置服务器，访问 http://localhost:8000；更新框架用 composer update topthink/framework。唯一 Web 入口是 public/index.php。</p></details>
+<details><summary>Q5：ThinkPHP 和 Laravel 怎么选？</summary><p>两者都是 MVC + 路由 + 中间件 + ORM + 容器，概念可迁移。Laravel 是全功能框架、全球生态大，Eloquent/Blade/Artisan/队列都内置；ThinkPHP 轻量、上手快、中文文档社区强，国内中小项目、后台系统、CMS 常见。选型看团队熟悉度与项目规模，不要踩一捧一。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“了解 ThinkPHP”，写“用 ThinkPHP 8（PHP 8.1）做过后台系统与 API 服务：路由 + 中间件 + think-orm，熟悉请求生命周期与容器依赖注入；能按需选用 think-queue / think-multi-app 等扩展”。前者是名词，后者是可追问的架构。</p>
+<p><strong>明日预告：</strong>Day 2 讲一次请求经历了什么：从 public/index.php 的 6 行骨架出发，走完 App 初始化 → 路由 → 中间件洋葱模型 → 控制器调度 → 响应发送，并讲清 PHP-FPM 同步模型这个面试常考点。</p>
+</div>
+<div class="nav"><span><a href="index.html">← 课程首页</a></span><span><a href="day02.html">Day 2 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

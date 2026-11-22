@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 6：数据库层：Db 查询构造器与事务 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 6 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 6：数据库层：Db 查询构造器与事务</h1>
+<p>请求处理篇结束，今天进入数据篇。ThinkPHP 里操作数据库有两层：今天讲的 Db 查询构造器是底层——链式拼 SQL、直接打交道；Day 7 的模型 ORM 是上层——在构造器之上包了一层对象与关联。面试时两层都会问，但构造器是根：模型的方法最后都要落到构造器上。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. Db 门面与 name / table：从哪张表开始查</h3>
+<p>入口是门面 <code>think\facade\Db</code>（门面机制 Day 10 展开，现在只要会用）。一张表两种写法：<code>Db::name('user')</code> 自动加上配置里的表前缀（比如前缀是 <code>tp_</code>，实际查的就是 <code>tp_user</code>）；<code>Db::table('tp_user')</code> 写完整表名，不加前缀。</p>
+<p><strong>面试答法：</strong>被问“name 和 table 有什么区别”，答：name 写不带前缀的表名、框架自动加前缀，换前缀不用改代码；table 写完整表名，适合表名不在前缀规则内的情况（比如跨库查另一张表）。日常开发用 name 居多。</p>
+<h3>2. 链式查询：像搭积木一样拼 SQL</h3>
+<p>查询构造器的核心是链式调用：每个方法返回构造器本身，可以一直点下去，最后用一个终结方法执行。JS 对照：就像数组的 <code>filter().map().slice()</code> 链式调用，只不过这里拼的是 SQL。</p>
+<table>
+<tr><th>方法</th><th>作用</th><th>对应 SQL</th></tr>
+<tr><td><code>where('id', 1)</code></td><td>条件（两参数是等于，三参数可写操作符，如 <code>where('age', '&gt;', 18)</code>）</td><td>WHERE</td></tr>
+<tr><td><code>field('id,name')</code></td><td>只取指定列</td><td>SELECT id, name</td></tr>
+<tr><td><code>order('id', 'desc')</code></td><td>排序</td><td>ORDER BY id DESC</td></tr>
+<tr><td><code>limit(10)</code></td><td>取多少条</td><td>LIMIT 10</td></tr>
+<tr><td><code>find()</code></td><td>终结方法：查一条，返回数组，查不到返回 null</td><td>LIMIT 1</td></tr>
+<tr><td><code>select()</code></td><td>终结方法：查多条，返回数组的数组</td><td>—</td></tr>
+</table>
+<p><strong>聚合方法</strong>也是终结方法：<code>value()</code> 取某个字段的值（一条记录的一个字段）、<code>column()</code> 取某一列（多条记录的某个字段）、<code>count()</code> 计数、<code>sum()</code> 求和。分页用 <code>paginate(15)</code>，每页 15 条，返回分页对象（包含当前页数据与分页信息）。</p>
+<h3>3. 写入：增删改与自增自减</h3>
+<table>
+<tr><th>方法</th><th>作用</th></tr>
+<tr><td><code>insert($data)</code></td><td>插入一条，返回受影响行数</td></tr>
+<tr><td><code>insertGetId($data)</code></td><td>插入一条并返回自增 id</td></tr>
+<tr><td><code>insertAll($list)</code></td><td>批量插入多条</td></tr>
+<tr><td><code>update($data)</code></td><td>更新，需先写 where() 限定范围</td></tr>
+<tr><td><code>delete()</code></td><td>删除，需先写 where() 限定范围</td></tr>
+<tr><td><code>inc('score', 5)</code> / <code>dec('num', 1)</code></td><td>字段自增 / 自减，链式后接 update() 执行</td></tr>
+</table>
+<p><code>inc()</code> / <code>dec()</code> 值得单独记：它们是在数据库层面做原子自增自减，相当于 <code>UPDATE user SET score = score + 5</code>。面试常考“计数器怎么避免竞态”：答“不要先读出来再加回去，用 inc() 让数据库原子更新”，这就是标准答案。</p>
+<div class="warn"><strong>容易踩的坑：</strong>update() 和 delete() 之前务必先写 where()，否则整张表都会被改掉或删掉。构造器不会拦你——没有 where 的 update 就是全表更新。生产事故里这一条能排进前三，面试官问“update 忘写 where 会怎样”就是在考这个。</div>
+<h3>4. 原生查询：想写 SQL 也行，但要用占位符</h3>
+<p>构造器拼不出的复杂 SQL，可以用原生查询：<code>Db::query('select * from user where id=?', [1])</code> 查数据，<code>Db::execute(...)</code> 执行写操作。关键点是 <code>?</code> 占位符 + 参数数组绑定：参数由驱动转义后再拼进 SQL，杜绝 SQL 注入。</p>
+<p><strong>面试答法：</strong>被问“怎么防 SQL 注入”，答两层：日常用查询构造器（参数自动绑定）；必须写原生 SQL 时用占位符 <code>?</code> + 参数数组，绝不把用户输入直接拼进 SQL 字符串。</p>
+<h3>5. 事务：两种写法，闭包更常用</h3>
+<p>事务保证“一组操作要么全成功，要么全回滚”，典型场景是下单：插订单 + 扣库存，任一步失败都要撤销。TP 提供两种写法：</p>
+<p><strong>手动控制：</strong><code>Db::startTrans()</code> 开启，<code>try</code> 里做操作，全部成功调 <code>Db::commit()</code> 提交，<code>catch (\Exception $e)</code> 里调 <code>Db::rollback()</code> 回滚。适合需要精细控制提交点的场景。</p>
+<p><strong>闭包自动：</strong><code>Db::transaction(function () { ... })</code>，把操作写进闭包：闭包正常结束自动提交，抛异常自动回滚。代码更短，日常开发更常用。</p>
+<p><strong>面试答法：</strong>被问“两种事务写法怎么选”，答：闭包写法简洁、自动提交回滚，日常优先；手动写法适合跨方法、需要中途判断是否提交的复杂流程。</p>
+<h3>6. 读写分离与连接配置</h3>
+<p>连接配置在 <code>config/database.php</code>：<code>default</code> 设默认连接（一般是 <code>mysql</code>），<code>charset</code> 建议 <code>utf8mb4</code>（支持 emoji 与生僻字），<code>prefix</code> 是表前缀（<code>Db::name()</code> 自动加的就是它）。</p>
+<p>读写分离的配置也在同一个文件里：<code>'deploy' =&gt; 1</code> 开启分布式，<code>'rw_separate' =&gt; true</code> 开启读写分离，主从地址配在 <code>hostname</code> 数组里（第一个是主库，其余是从库）。开启后读请求走从库、写请求走主库。</p>
+<p><strong>面试答法：</strong>被问“读写分离怎么配”，答：deploy 设 1、rw_separate 设 true、hostname 配主从地址数组。追问“主从延迟怎么办”时诚实答：强一致读要走主库，这是读写分离的固有代价，业务上一般用“写后短时间内读主库”来缓解。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：查询、写入与分页（在控制器方法里可跑）</h3>
+<pre><code>&lt;?php
+use think\facade\Db;               // Db 门面：数据库操作的统一入口
+
+// 查一条：where('id', 1) 相当于 WHERE id = 1
+$user = Db::name('user')-&gt;where('id', 1)-&gt;find();  // find() 返回一条记录（数组），查不到返回 null
+
+// 链式查询：条件 + 字段 + 排序 + 条数，像 JS 数组的 filter().map().slice() 一样链下去
+$list = Db::name('user')
+    -&gt;where('age', '&gt;', 18)       // 三参数 where：字段、操作符、值；&gt; 写在代码里是大于号
+    -&gt;field('id,name')             // 只取这两列，相当于 SELECT id, name
+    -&gt;order('id', 'desc')          // 按 id 倒序
+    -&gt;limit(10)                    // 取 10 条
+    -&gt;select();                    // select() 终结：返回多条记录的数组
+
+// 聚合：count() 计数、sum() 求和，都是终结方法
+$count = Db::name('user')-&gt;where('status', 1)-&gt;count();
+$total = Db::name('order')-&gt;sum('amount');
+
+// 分页：每页 15 条，返回分页对象（带当前页数据与分页信息）
+$page = Db::name('user')-&gt;paginate(15);
+
+// 写入：insertGetId() 插入并返回自增 id
+$id = Db::name('user')-&gt;insertGetId(['name' =&gt; 'linr', 'age' =&gt; 30]);
+Db::name('user')-&gt;where('id', $id)-&gt;update(['age' =&gt; 31]);   // update 前先 where，否则全表更新
+Db::name('user')-&gt;where('id', $id)-&gt;inc('score', 5)-&gt;update(); // score 原子加 5，防竞态</code></pre>
+<h3>示例 2：原生查询与事务两种写法</h3>
+<pre><code>&lt;?php
+use think\facade\Db;
+
+// 原生查询：? 占位符 + 参数数组绑定，参数由驱动转义，防 SQL 注入
+$rows = Db::query('select * from user where id=?', [1]);
+Db::execute('update user set age=? where id=?', [31, 1]);
+
+// 事务写法一：手动控制提交与回滚
+Db::startTrans();                  // 开启事务
+try {
+    Db::name('order')-&gt;insert(['user_id' =&gt; 1, 'amount' =&gt; 99]);
+    Db::name('stock')-&gt;where('id', 1)-&gt;dec('num', 1)-&gt;update();  // 库存减 1
+    Db::commit();                  // 全部成功才提交
+} catch (\Exception $e) {
+    Db::rollback();                // 任一步失败，全部回滚
+    throw $e;                      // 回滚后把异常继续抛出去
+}
+
+// 事务写法二：闭包自动提交 / 回滚（日常更常用）
+Db::transaction(function () {
+    Db::name('order')-&gt;insert(['user_id' =&gt; 1, 'amount' =&gt; 99]);
+    Db::name('stock')-&gt;where('id', 1)-&gt;dec('num', 1)-&gt;update();
+});  // 闭包正常结束自动 commit，抛异常自动 rollback</code></pre>
+<h3>示例 3：读写分离配置（config/database.php 片段）</h3>
+<pre><code>&lt;?php
+return [
+    'default' =&gt; 'mysql',          // 默认连接
+    'connections' =&gt; [
+        'mysql' =&gt; [
+            'type' =&gt; 'mysql',
+            'hostname' =&gt; ['192.168.1.1', '192.168.1.2'],  // 主从地址数组：第一个是主库，其余是从库
+            'database' =&gt; 'demo',
+            'username' =&gt; 'root',
+            'password' =&gt; '',
+            'charset' =&gt; 'utf8mb4',   // 字符集，建议 utf8mb4
+            'prefix' =&gt; 'tp_',        // 表前缀，Db::name() 会自动加上
+            'deploy' =&gt; 1,            // 1 开启分布式
+            'rw_separate' =&gt; true,    // true 开启读写分离：读走从库，写走主库
+        ],
+    ],
+];</code></pre>
+<h3>动手任务（10 分钟）</h3>
+<div class="card">
+<p>1. 用示例 1 的链式查询查一张真实的表，把 <code>field()</code> 拿掉再跑一次，对比返回的字段有什么不同。<br>
+2. 故意在事务闭包里抛一个异常，确认插进去的订单有没有被回滚——亲手验证“抛异常自动 rollback”。<br>
+3. 把 <code>inc('score', 5)</code> 改成“先 select 读出 score，再 update 写回 score + 5”，想一想两个请求同时跑时会发生什么，这就是 inc() 要解决的竞态。</p>
+</div>
+
+<h2>三、ThinkJS 对比</h2>
+<p>数据库层是 ThinkJS 与 TP 最像的地方——链式 API 几乎同源，只差在模型功能的装配方式上：</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>模型功能来源</td><td>框架内置 Db 门面</td><td>靠 think-model 扩展，在 <code>src/config/extend.js</code> 里加 <code>model(think.app)</code></td></tr>
+<tr><td>数据库配置</td><td><code>config/database.php</code></td><td><code>src/config/adapter.js</code> 的 <code>exports.model</code></td></tr>
+<tr><td>查一条 / 查多条</td><td><code>Db::name('user')-&gt;where('id', 1)-&gt;find()</code> / <code>-&gt;select()</code></td><td><code>model('user').where({id: 1}).find()</code> / <code>.select()</code></td></tr>
+<tr><td>写入</td><td><code>insert()</code> / <code>update()</code> / <code>delete()</code></td><td><code>add()</code> / <code>update()</code> / <code>delete()</code></td></tr>
+<tr><td>聚合 / 分页</td><td><code>count()</code> / <code>paginate(15)</code></td><td><code>count()</code> / <code>page()</code> + <code>limit()</code></td></tr>
+<tr><td>事务</td><td><code>Db::transaction(fn)</code> 或 <code>startTrans() / commit() / rollback()</code></td><td><code>model.transaction(fn)</code> 或 <code>startTrans() / commit() / rollback()</code></td></tr>
+</table>
+<pre><code>// ThinkJS 数据库配置：src/config/adapter.js
+exports.model = {
+  type: 'mysql',
+  mysql: {
+    handle: adapter,      // MySQL 适配器句柄
+    database: 'demo',
+    prefix: 'tp_',        // 表前缀，与 TP 的 prefix 同义
+    encoding: 'utf8mb4',
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'root',
+    password: ''
+  }
+};</code></pre>
+<pre><code>// ThinkJS 链式查询：与 TP 几乎同源
+const user = await model('user').where({id: 1}).find();   // 对应 TP 的 Db::name('user')-&gt;where('id', 1)-&gt;find()
+const list = await model('user').where({age: ['&gt;', 18]}).page(1, 10).select();
+await model('user').where({id: 1}).update({age: 31});
+await model('user').where({id: 1}).delete();</code></pre>
+<p><strong>记忆锚点：</strong>TP 的 <code>Db::name('user')</code> 就是 ThinkJS 的 <code>model('user')</code>；<code>where / find / select / update / delete / count</code> 两边方法名基本一致，只有新增是 <code>insert()</code> 对 <code>add()</code>、分页是 <code>paginate()</code> 对 <code>page() + limit()</code>。记住这两处不同，数据库层基本不用死记。</p>
+
+<h2>四、小测验（点选项判分，答完点解析）</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. Db::name('user') 和 Db::table('tp_user') 的区别是？</strong></p><button data-i="0">两者完全一样，只是叫法不同</button><button data-i="1">name 写不带前缀的表名、框架自动加前缀；table 写完整表名</button><button data-i="2">name 只能查，table 只能写</button><div class="ans">解析：选 B。前缀是 tp_ 时，Db::name('user') 实际查 tp_user；Db::table('tp_user') 直接写完整表名，不加前缀。</div></div>
+<div class="q" data-answer="0"><p><strong>2. Db::transaction(function () { ... }) 闭包里抛了异常，会发生什么？</strong></p><button data-i="0">自动回滚，闭包里已执行的操作全部撤销</button><button data-i="1">自动提交，已执行的操作保留</button><button data-i="2">什么都不发生，要手动调 rollback()</button><div class="ans">解析：选 A。闭包写法的好处就是自动：正常结束自动 commit，抛异常自动 rollback，不用手写 try / catch。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 原生查询防 SQL 注入靠什么？</strong></p><button data-i="0">靠 Db::query() 自动过滤所有输入</button><button data-i="1">靠把用户输入拼进 SQL 前手动转义</button><button data-i="2">靠 ? 占位符 + 参数数组绑定，参数由驱动转义</button><div class="ans">解析：选 C。绝不把用户输入直接拼进 SQL 字符串；用 ? 占位符 + 参数数组，驱动会负责转义。日常优先用查询构造器，它内部也是参数绑定。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：Db::name() 和 Db::table() 什么时候用哪个？</summary><p>日常用 name：写不带前缀的表名，框架自动加前缀，换前缀不用改代码。table 写完整表名，适合表名不在前缀规则内的情况，比如跨库查另一张表。</p></details>
+<details><summary>Q2：两种事务写法怎么选？</summary><p>闭包写法 Db::transaction(fn) 简洁、自动提交回滚，日常优先。手动写法 startTrans / commit / rollback 适合跨方法、需要中途判断是否提交的复杂流程。核心是保证“一组操作要么全成功，要么全回滚”。</p></details>
+<details><summary>Q3：paginate() 返回的是什么？</summary><p>返回分页对象，包含当前页数据与分页信息（总数、当前页、每页条数等）。控制器里 return 它，框架会序列化成带分页信息的 JSON，前端直接用 total 和当前页数据渲染分页器。</p></details>
+<details><summary>Q4：inc() / dec() 有什么用？为什么不用“读出来再加回去”？</summary><p>inc() / dec() 在数据库层面做原子自增自减，相当于 UPDATE ... SET score = score + 5。先读再写有两个请求同时跑时会互相覆盖（竞态）；原子更新不存在这个问题。计数器、库存、点赞数都应该用 inc() / dec()。</p></details>
+<details><summary>Q5：读写分离怎么配？有什么代价？</summary><p>config/database.php 里 deploy 设 1 开分布式、rw_separate 设 true 开读写分离、hostname 配主从地址数组（第一个是主库）。代价是主从延迟：刚写入主库的数据，从库可能还没同步到，强一致读要走主库。</p></details>
+
+<h2>加分项</h2>
+<div class="card">
+<p><strong>生产视角：</strong>查询构造器是底线，不是上限：复杂报表 SQL 别硬用链式拼，可读性会崩，用原生查询 + 占位符；高频查询记得看执行计划，where 字段有没有索引比写法花哨重要得多。</p>
+<p><strong>简历讲法：</strong>别写“熟练使用 ThinkPHP 数据库操作”，写“用 Db 查询构造器做订单列表：链式条件 + 分页，下单流程用 Db::transaction 保证插订单与扣库存原子性，计数器用 inc() 避免竞态”。前者是名词，后者是可追问的场景。</p>
+<p><strong>明日预告：</strong>Day 7 讲模型 ORM：关联、软删除与模型事件——在构造器之上，对象怎么映射到表、关联怎么查、删除怎么“假删”。</p>
+</div>
+<div class="nav"><span><a href="day05.html">← Day 5：中间件与事件</a></span><span><a href="day07.html">Day 7：模型 ORM：关联、软删除与模型事件 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+
+</body>
+</html>

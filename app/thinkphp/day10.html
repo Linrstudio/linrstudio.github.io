@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 10：容器、门面与服务 | ThinkPHP 面试实战课</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;color:#222;line-height:1.75;background:#fff}
+h1{font-size:26px;line-height:1.4} h2{font-size:21px;margin-top:40px;border-bottom:2px solid #eee;padding-bottom:8px} h3{font-size:17px;margin-top:24px}
+a{color:#0b62d6;text-decoration:none} a:hover{text-decoration:underline}
+pre{background:#111827;color:#e5e7eb;border-radius:10px;padding:14px;overflow:auto;font-size:14px;line-height:1.6}
+code{background:#f2f2f2;border-radius:4px;padding:1px 5px} pre code{background:none;padding:0}
+.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin:14px 0}
+.warn{background:#fff7e6;border:1px solid #f5d68a;border-radius:10px;padding:14px 16px}
+.tag{display:inline-block;background:#eef4ff;color:#0b62d6;border-radius:999px;padding:2px 10px;font-size:13px}
+.q{border:1px solid #e5e5e5;border-radius:12px;padding:14px 16px;margin:12px 0}
+.q button{margin:4px 6px 4px 0;padding:7px 12px;border-radius:999px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.q button.correct{background:#dcfce7;border-color:#22a35a} .q button.wrong{background:#fee2e2;border-color:#d33}
+.ans{display:none;margin-top:8px;color:#333} .ans.show{display:block}
+details{border:1px solid #e5e5e5;border-radius:10px;padding:12px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:bold}
+.nav{display:flex;justify-content:space-between;margin-top:40px}
+table{border-collapse:collapse;width:100%} th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+
+</style>
+</head>
+<body>
+<p><a href="index.html">← 课程首页</a> &nbsp; <span class="tag">Day 10 / 12</span> <span class="tag">约 60 分钟</span></p>
+<h1>Day 10：容器、门面与服务</h1>
+<p>前面九课你一直在用框架给的现成东西：控制器里随手拿到的 <code>Request</code>、<code>Db::name()</code>、<code>Cache::get()</code>。今天把盖子掀开：这些对象是谁创建的？为什么控制器方法声明一个参数就能拿到实例？答案是同一套机制——<strong>容器（Container）负责创建和管理对象，门面（Facade）负责把调用写得简洁，服务提供者（Service）负责把扩展的服务注册进容器</strong>。理解这三者，ThinkPHP 的骨架就通了，面试里“说说依赖注入”“门面是怎么实现的”也都有话可说。</p>
+
+<h2>一、核心解释</h2>
+<h3>1. 容器：think\App 本身就是容器</h3>
+<p>ThinkPHP 的容器是 <code>topthink/think-container</code> 3.x 包，实现 PSR-11 容器接口。PSR-11 是 PHP 社区的一个通用标准：规定容器必须有“按名字取实例”的能力（<code>get</code> / <code>has</code>），至于内部怎么创建对象，各框架自己定。</p>
+<p>关键认知：<strong>应用类 <code>think\App</code> 本身就是容器</strong>。入口文件创建的那个 <code>$app</code>，既是应用对象，也是装着所有服务实例的大盒子。<code>app()</code> 助手函数返回的就是这个应用（容器）实例——你在任何地方调 <code>app()</code>，拿到的都是同一个容器。</p>
+<p>容器最常用的三个方法：</p>
+<ul>
+<li><code>$app-&gt;make(Class::class)</code>：解析一个类的实例。容器会看它的构造函数需要什么参数，递归把依赖都造出来，再返回实例。JS 对照：像 NestJS 里 <code>app.get(ServiceClass)</code> 从容器里取一个已装配好的服务。</li>
+<li><code>$app-&gt;bind()</code>：绑定。告诉容器“当有人要 A 时，给他 B”。典型用法是把接口绑定到实现类，或者把一个类名绑定到一个闭包（闭包返回实例）。</li>
+<li><code>$app-&gt;instance()</code>：把一个已经造好的实例直接放进容器。之后任何人来取这个类，拿到的都是这个现成的实例，相当于单例注册。</li>
+</ul>
+<p><strong>面试答法：</strong>“容器是 ThinkPHP 管理对象创建与依赖关系的核心，<code>think\App</code> 本身就是容器，实现 PSR-11。通过 <code>make</code> 解析实例、<code>bind</code> 绑定抽象与实现、<code>instance</code> 注册已有实例。框架里的 Request、Cache、Db 这些服务都由容器统一管理。”</p>
+<h3>2. 依赖注入原理：反射读类型提示，递归实例化</h3>
+<p>依赖注入（DI）说白了就一句话：<strong>一个类需要的东西，不由它自己 new，而是由容器在外面造好再塞进来</strong>。容器怎么知道要塞什么？靠 PHP 的<strong>反射（Reflection）</strong>：容器读取构造函数或方法参数的<strong>类型提示</strong>（比如 <code>__construct(Request $request)</code> 里的 <code>Request</code>），发现这个参数是个类，就递归地先把这个类实例化出来，再传进去。如果依赖的类自己还有依赖，继续递归，直到整棵依赖树都造完。</p>
+<p>这套机制贯穿框架各处：<strong>控制器方法参数、中间件、控制台命令、事件监听</strong>，都是靠它自动装配的。这就是为什么控制器方法里写 <code>public function index(Request $request)</code> 就能直接用 <code>$request</code>——不是魔法，是容器在调用这个方法前用反射看了参数表，自动把 Request 实例注进来了。</p>
+<p>两个补充机制要记住：</p>
+<ul>
+<li><strong><code>__make</code> 优先：</strong>依赖解析时，如果类定义了静态方法 <code>__make(App $app, ...)</code>，容器会优先调用它来创建实例，而不是直接 new。典型例子是 <code>think\Middleware</code>，它的 <code>__make</code> 会从配置里加载中间件列表。面试答法：“类可以通过静态 <code>__make</code> 方法自定义自己的创建逻辑，容器解析时会优先调用它。”</li>
+<li><strong><code>$app-&gt;invoke($callable, $vars)</code>：</strong>用反射调用一个可调用对象（函数、方法、闭包），并自动注入它声明的参数。<code>$vars</code> 是你额外传入的参数，会优先于自动解析的结果。框架内部调度控制器、执行中间件时用的就是这类机制。</li>
+</ul>
+<div class="warn"><strong>容易踩的坑：</strong>依赖注入只对“有类型提示”的参数生效。如果参数没有类型提示（比如 <code>function index($id)</code>），容器不知道要注什么，只能靠路由参数或你手动传。<code>$id</code> 这种标量参数走的是路由传参，不是容器注入——面试追问“为什么 <code>$id</code> 不用注入”时就按这条答。</div>
+<h3>3. 门面：静态调用的壳，容器实例的核</h3>
+<p>你每天写的 <code>Db::name('user')</code>、<code>Cache::get('key')</code>、<code>Config::get('app.debug')</code>，看起来都是静态调用，其实背后是<strong>门面（Facade）</strong>：<code>think\Facade</code> 基类利用 PHP 的魔术方法 <code>__callStatic</code>，把静态调用转发给容器里的真实实例。</p>
+<p>机制分三步：① 你调 <code>Cache::get('key')</code>；② <code>Cache</code> 门面类本身没有 <code>get</code> 静态方法，PHP 触发 <code>__callStatic</code>；③ <code>__callStatic</code> 从容器里取出真正的缓存服务实例，再调它的 <code>get</code> 方法。门面子类只需要定义一个方法：<code>getFacadeClass()</code>，返回它代理的服务类名，告诉基类“去容器里拿哪个实例”。</p>
+<p><strong>门面是静态代理，不是真正的静态类。</strong>真正干活的实例仍由容器管理、仍可被替换。这带来两个后果，面试常考：</p>
+<ul>
+<li><strong>优点：</strong>调用简洁，不用每次 <code>app()-&gt;make(...)</code> 再调方法；写起来像全局函数，读起来直观。</li>
+<li><strong>缺点：</strong>隐藏依赖——从方法签名上看不出它依赖了哪些服务，类的依赖关系被藏在了方法体内部；测试时要通过容器替换实例（用 <code>instance()</code> 把真服务换成 mock），不能像构造函数注入那样直接传假对象。</li>
+</ul>
+<p><strong>面试答法：</strong>“门面通过 <code>__callStatic</code> 把静态调用转发给容器中的实例，子类用 <code>getFacadeClass()</code> 指定代理的服务类。它本质是静态代理，实例仍由容器管理，所以优点是调用简洁，缺点是隐藏依赖、测试时需要替换容器实例。”</p>
+<h3>4. 服务提供者：扩展把自己注册进容器的方式</h3>
+<p>框架自带的服务（Request、Cache、Db……）是框架注册的，那第三方扩展的服务怎么进容器？靠<strong>服务提供者（Service）</strong>：<code>think\Service</code>。</p>
+<ul>
+<li><code>register()</code>：在这里把服务绑定到容器（调 <code>$this-&gt;app-&gt;bind(...)</code> 之类）。只做绑定，不做重活。</li>
+<li><code>boot()</code>：在应用启动时执行，适合做初始化工作（比如注册路由、注册事件监听、加载配置）。</li>
+</ul>
+<p>注册位置有两个层次：应用自己的服务提供者写在 <code>app/provider.php</code> 里；扩展包则通过 <code>composer.json</code> 的 <code>extra.think.services</code> 字段<strong>自动发现</strong>——装上扩展包，服务提供者就自动注册了，不用手动改配置。如果想关掉自动发现，在 <code>config/app.php</code> 里把 <code>auto_discover</code> 设为 false，关闭后就需要手动在 <code>services</code> 里注册。</p>
+<p><strong>面试答法：</strong>“服务提供者是扩展向容器注册服务的方式：<code>register()</code> 做绑定，<code>boot()</code> 在应用启动时做初始化。应用的提供者注册在 <code>app/provider.php</code>，扩展包通过 <code>composer.json</code> 的 <code>extra.think.services</code> 自动发现，<code>config/app.php</code> 的 <code>auto_discover</code> 可以关闭自动发现。”</p>
+<h3>5. app/service/：业务服务层的约定目录</h3>
+<p>最后区分一个容易混的概念：<code>app/service/</code> 目录。它是<strong>业务服务层的约定目录</strong>——放你自己写的业务逻辑服务类（比如 <code>UserService</code>、<code>OrderService</code>），让控制器变薄、逻辑可复用。<strong>它不是框架强制的</strong>，框架不会自动加载这个目录里的类，你的服务类该 <code>bind</code> 还是 <code>make</code>，按容器规则来。别把它和 <code>think\Service</code>（服务提供者）混为一谈：一个是放业务代码的目录约定，一个是向容器注册服务的机制。</p>
+
+<h2>二、代码示例</h2>
+<h3>示例 1：容器三件套——make / bind / instance</h3>
+<pre><code>&lt;?php
+// $app 就是容器：think\App 本身就是容器实例
+// app() 助手返回应用（容器）实例，和入口文件里的 $app 是同一个
+$app = app();
+
+// make：解析实例。容器看 MailService 构造函数需要什么，递归造好再返回
+// JS 对照：NestJS 的 app.get(MailService)，或手动 new MailService(new SmtpClient())
+$mail = $app-&gt;make(MailService::class);
+// -&gt; 相当于 JS 的 . ：$app-&gt;make(...) 就是 app.make(...)
+// ::class 是 PHP 取类名字符串的语法，MailService::class 得到 'app\service\MailService'
+
+// bind：绑定接口到实现。之后凡是需要 MailerInterface 的地方，容器都给 SmtpMailer
+// JS 对照：NestJS 的 { provide: MailerInterface, useClass: SmtpMailer }
+$app-&gt;bind(MailerInterface::class, SmtpMailer::class);
+
+// bind 也可以绑闭包：需要时才执行闭包创建实例（延迟创建）
+$app-&gt;bind(MailerInterface::class, function () {
+    return new SmtpMailer('smtp.example.com', 465);
+});
+
+// instance：把已经造好的实例直接放进容器，之后取到的都是这一个（单例效果）
+// 测试时常用这招：把真服务换成假对象（mock）
+$fakeMailer = new FakeMailer();
+$app-&gt;instance(MailerInterface::class, $fakeMailer);</code></pre>
+<h3>示例 2：__make 自定义创建逻辑 + invoke 自动注入参数</h3>
+<pre><code>&lt;?php
+// 类定义了静态 __make 方法时，容器解析它会优先调 __make，而不是直接 new
+// 框架里的 think\Middleware 就是这样从配置加载中间件列表的
+class MiddlewareLoader
+{
+    // __make 的第一个参数固定是 App（容器），后面可跟额外参数
+    public static function __make(App $app)
+    {
+        $list = $app-&gt;config-&gt;get('middleware'); // 从配置读中间件列表
+        return new static($list);                // 自己决定怎么造实例
+    }
+}
+
+// invoke：用反射调用可调用对象，自动注入它声明的参数
+// $vars 里传的参数优先于自动解析
+$app-&gt;invoke(function (Request $request) {
+    // $request 由容器自动注入，不用手动传
+    return $request-&gt;param('id');
+}, ['id' =&gt; 42]); // =&gt; 是 PHP 的键值对语法，相当于 JS 对象字面量里的冒号 { id: 42 }</code></pre>
+<h3>示例 3：写一个自己的门面（静态代理的完整形态）</h3>
+<pre><code>&lt;?php
+// 第一步：真正的服务类，干活的逻辑都在这里
+namespace app\service;
+
+class SmsService
+{
+    public function send(string $phone, string $text): bool
+    {
+        // 真正发短信的逻辑……
+        return true;
+    }
+}
+
+// 第二步：门面类，只做一件事——告诉基类去容器里拿哪个服务
+namespace app\facade;
+
+use think\Facade;
+
+// use 相当于 JS 的 import：把 think\Facade 引入当前命名空间
+class Sms extends Facade
+{
+    // getFacadeClass 返回服务类名，基类 __callStatic 会据此从容器取实例
+    protected static function getFacadeClass()
+    {
+        return \app\service\SmsService::class;
+    }
+}
+
+// 第三步：调用方写起来像静态调用，实际跑的是容器里的 SmsService 实例
+// Sms::send(...) → __callStatic 触发 → 容器取 SmsService 实例 → 调实例的 send 方法
+Sms::send('13800000000', '您的验证码是 123456');</code></pre>
+<h3>示例 4：服务提供者——register 绑定，boot 初始化</h3>
+<pre><code>&lt;?php
+// 文件：app/service/SmsServiceProvider.php（名字自定，习惯以 ServiceProvider 结尾）
+namespace app\service;
+
+use think\Service;
+
+class SmsServiceProvider extends Service
+{
+    // register：只做绑定，把服务注册进容器
+    public function register()
+    {
+        // $this-&gt;app 就是容器；绑接口到实现，控制器里类型提示接口即可注入
+        $this-&gt;app-&gt;bind(SmsInterface::class, SmsService::class);
+    }
+
+    // boot：应用启动时执行，做初始化工作
+    public function boot()
+    {
+        // 比如：注册事件监听、加载扩展配置等
+    }
+}</code></pre>
+<pre><code>&lt;?php
+// 文件：app/provider.php —— 应用自己的服务提供者在这里注册
+// 返回一个数组，列出所有要注册的提供者类
+return [
+    app\service\SmsServiceProvider::class,
+];
+
+// 扩展包不用写这里：它们在自己的 composer.json 里声明
+// "extra": { "think": { "services": ["vendor\\xxx\\XxxService"] } }
+// 框架安装扩展后自动发现并注册。
+// 想关掉自动发现：config/app.php 里 auto_discover 设为 false，
+// 关闭后扩展的服务提供者要手动写进 services 数组。</code></pre>
+
+<h2>三、ThinkJS 对比</h2>
+<p>这一课是 ThinkJS 对比最“不对位”的一课——因为 <strong>ThinkJS 没有 DI 容器这个概念</strong>。这本身就是面试可以聊的点：不是每个框架都需要容器，容器的价值取决于语言和生态。</p>
+<table>
+<tr><th>维度</th><th>ThinkPHP</th><th>ThinkJS</th></tr>
+<tr><td>依赖管理</td><td>DI 容器（think-container 3.x，PSR-11），反射自动注入</td><td>没有 DI 容器对位概念，依赖通过 <code>require</code> 与全局 <code>think</code> 对象组织</td></tr>
+<tr><td>取服务</td><td><code>app()-&gt;make()</code>、控制器方法参数自动注入</td><td><code>require</code> 模块、<code>think.xxx</code> 全局挂载</td></tr>
+<tr><td>扩展机制</td><td>服务提供者 + composer 自动发现</td><td><code>src/extend/</code> 目录扩展内置对象</td></tr>
+<tr><td>请求上下文</td><td>Request 对象注入控制器方法</td><td>Koa 的 <code>ctx</code> 是请求级上下文传递</td></tr>
+</table>
+<p><strong>ThinkJS 的扩展机制：<code>src/extend/</code> 目录。</strong>ThinkJS 没有服务提供者，扩展靠往内置对象上挂方法：在 <code>src/extend/</code> 下放文件，就能扩展七类对象——<code>think</code>、<code>application</code>（Koa app，即 <code>think.app</code>）、<code>context</code>、<code>request</code>、<code>response</code>、<code>controller</code>、<code>logic</code>、<code>service</code>。比如在 <code>src/extend/think.js</code> 里写 <code>think.xxx = ...</code>，项目里任何地方都能用 <code>think.xxx</code>。JS 对照：这更像给全局对象打补丁（monkey-patch），而不是往容器里注册服务——简单直接，但没有容器的“绑定接口到实现”“测试时替换实例”那套能力。</p>
+<p><strong>请求上下文的相似点：</strong>Koa 的 <code>ctx</code> 是请求级上下文传递——每个请求一个 <code>ctx</code>，中间件和控制器都通过它拿请求数据、写响应。这和 TP 把 Request 对象注入控制器方法在目的上是相似的（都是“当前请求的数据载体”），只是传递方式不同：Koa 是把 <code>ctx</code> 沿中间件链一路传下去，TP 是容器在调用时把 Request 实例注进来。</p>
+<p><strong>为什么 PHP 需要容器、Node 不太需要？</strong>可以这样理解：PHP 是每次请求重建应用，对象图每请求都要重新装配一遍，容器就是干这件事的装配线；Node 是常驻进程，模块 <code>require</code> 一次就缓存在内存里，天然就是单例，<code>require</code> 本身就承担了“取共享实例”的角色。当然 Node 生态也有真正的 DI 容器（NestJS 内置、Awilix、Inversify），只是 ThinkJS 这个框架没有引入这个概念。</p>
+
+<h2>四、小测验</h2>
+<p id="score">得分：0 / 3</p>
+<div class="q" data-answer="1"><p><strong>1. 关于 ThinkPHP 容器，哪个说法正确？</strong></p><button data-i="0">容器是一个独立对象，和应用对象 <code>think\App</code> 没有关系</button><button data-i="1"><code>think\App</code> 本身就是容器，<code>app()</code> 助手返回的就是它</button><button data-i="2">容器只能管理框架自带的服务，不能注册业务类</button><div class="ans">解析：选 B。<code>think\App</code> 本身就是容器实例，<code>app()</code> 返回应用（容器）实例；业务类同样可以用 <code>bind</code> / <code>make</code> 管理。</div></div>
+<div class="q" data-answer="0"><p><strong>2. 门面 <code>Cache::get()</code> 的调用，实际是怎么执行的？</strong></p><button data-i="0"><code>__callStatic</code> 把调用转发给容器里的缓存服务实例</button><button data-i="1"><code>Cache</code> 类真的有一个静态方法 <code>get</code></button><button data-i="2">每次调用都 new 一个新的缓存服务实例</button><div class="ans">解析：选 A。门面是静态代理：<code>__callStatic</code> 按 <code>getFacadeClass()</code> 返回的类名从容器取实例再转发，实例仍由容器管理。</div></div>
+<div class="q" data-answer="2"><p><strong>3. 扩展包的服务提供者默认是怎么注册的？</strong></p><button data-i="0">必须手动写进 <code>app/provider.php</code></button><button data-i="1">必须手动写进 <code>config/app.php</code> 的 services 数组</button><button data-i="2">通过 <code>composer.json</code> 的 <code>extra.think.services</code> 自动发现</button><div class="ans">解析：选 C。扩展包通过 composer.json 的 extra.think.services 自动发现；只有把 <code>config/app.php</code> 的 <code>auto_discover</code> 关闭后，才需要手动在 services 里注册。应用自己的提供者才写 <code>app/provider.php</code>。</div></div>
+<p><button id="showAll">显示全部解析</button></p>
+
+<h2>五、面试高频问答</h2>
+<details><summary>Q1：说说 ThinkPHP 的依赖注入是怎么实现的？</summary><p>容器通过 PHP 反射读取构造函数或方法参数的类型提示，递归实例化依赖，再注入目标对象。控制器方法参数、中间件、命令、事件监听都靠这套机制自动装配。如果类定义了静态 <code>__make(App $app, ...)</code> 方法，容器解析时会优先调用它（如 <code>think\Middleware::__make</code> 从配置加载中间件）。<code>$app-&gt;invoke()</code> 则用反射调用任意可调用对象并自动注入参数。</p></details>
+<details><summary>Q2：门面和真正的静态类有什么区别？</summary><p>门面是静态代理，不是真正的静态类：<code>think\Facade</code> 通过 <code>__callStatic</code> 把静态调用转发给容器里的实例，子类用 <code>getFacadeClass()</code> 指定服务类名。真正干活的实例仍由容器管理、可替换。优点是调用简洁，缺点是隐藏依赖、测试时要通过容器替换实例。</p></details>
+<details><summary>Q3：服务提供者的 register() 和 boot() 有什么区别？</summary><p><code>register()</code> 里只做绑定——把服务注册进容器；<code>boot()</code> 在应用启动时执行，做初始化工作。应用自己的提供者注册在 <code>app/provider.php</code>，扩展包通过 <code>composer.json</code> 的 <code>extra.think.services</code> 自动发现，<code>config/app.php</code> 的 <code>auto_discover</code> 可关闭自动发现，关闭后需手动在 services 里注册。</p></details>
+<details><summary>Q4：app/service/ 目录是框架强制的吗？</summary><p>不是。它是业务服务层的约定目录，放自己写的业务逻辑服务类，让控制器变薄、逻辑可复用。框架不会自动加载它，服务类该绑定还是解析仍按容器规则来。不要把它和 <code>think\Service</code>（服务提供者，向容器注册服务的机制）混为一谈。</p></details>
+
+<h2>六、加分项</h2>
+<div class="card">
+<p><strong>简历讲法：</strong>别写“熟悉 ThinkPHP 容器”，写“用容器管理业务服务：接口与实现通过服务提供者 <code>register()</code> 绑定，控制器用构造函数注入；测试时用 <code>instance()</code> 把短信、支付服务替换为 mock，核心下单流程可脱离第三方接口单测”。前者是名词，后者是可追问的工程实践。</p>
+<p><strong>明日预告：</strong>Day 11 讲多应用、命令行与部署优化：多应用怎么拆、<code>php think</code> 有哪些常用命令、上线前要跑哪几个 optimize 命令、Nginx 该怎么配。</p>
+</div>
+<div class="nav"><span><a href="day09.html">← Day 9</a></span><span><a href="day11.html">Day 11 →</a></span></div>
+<script>
+let score = 0, answered = 0;
+document.querySelectorAll('.q').forEach(function(box){
+  const right = parseInt(box.dataset.answer, 10);
+  box.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (box.dataset.done) return;
+      box.dataset.done = '1'; answered++;
+      const i = parseInt(btn.dataset.i, 10);
+      if (i === right) { btn.classList.add('correct'); score++; }
+      else { btn.classList.add('wrong'); box.querySelectorAll('button')[right].classList.add('correct'); }
+      box.querySelector('.ans').classList.add('show');
+      document.getElementById('score').textContent = '得分：' + score + ' / 3（已答 ' + answered + ' 题）';
+    });
+  });
+});
+document.getElementById('showAll').addEventListener('click', function(){
+  document.querySelectorAll('.ans').forEach(function(a){ a.classList.add('show'); });
+});
+</script>
+</body>
+</html>
