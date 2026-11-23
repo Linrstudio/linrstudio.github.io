@@ -62,6 +62,7 @@
         min-height: 2.5rem; padding: 0 1rem; border-radius: 999px;
         border: 1.5px solid var(--line); background: var(--panel);
         font-size: .92rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+        white-space: nowrap;
       }
       .btn:active { transform: scale(.97); }
       .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -187,10 +188,10 @@
 
       /* ---------- controls ---------- */
       .controls {
-        display: flex; gap: .5rem; padding: .35rem .8rem .5rem; align-items: center;
+        display: flex; gap: .45rem; padding: .35rem .6rem .5rem; align-items: center;
       }
-      .controls .btn { flex: 1; }
-      .controls .btn.primary { flex: 1.35; }
+      .controls .btn { flex: 1 1 0; min-width: 0; padding: 0 .4rem; font-size: .88rem; }
+      .controls .btn.primary { flex: 1.25 1 0; }
       .hintleft { font-size: .74rem; color: var(--ink2); }
 
       /* ---------- footer ---------- */
