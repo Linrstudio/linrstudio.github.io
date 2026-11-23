@@ -7,7 +7,7 @@
   <meta name="description" content="画一个圈，变出一只羊。2.0 梦幻草地：绿油油的草、蓝蓝的河，小草随风摇，陪小羊吃草、奔跑、跳跃，享受一点慢悠悠的快乐。">
   <title>圈一只羊 2.0 · 一点慢悠悠的快乐</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23d6f2bd'/%3E%3Cpath d='M21 42v9m20-9v9' stroke='%231c1c1c' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M46 30a12 12 0 0 0-12-16 12 12 0 0 0-18 10 12 12 0 0 0 1 22h25a10 10 0 0 0 4-16' fill='%23ffffff'/%3E%3Cellipse cx='46' cy='33' rx='9' ry='12' fill='%231c1c1c'/%3E%3Ccircle cx='49' cy='30' r='1.6' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <header class="topbar">
@@ -18,7 +18,7 @@
   <main class="layout">
     <section class="stage-card" aria-label="小羊草地">
       <div class="canvas-wrap"><canvas id="meadow" aria-label="互动草地：按住画闭合圈召唤小羊，轻点小羊后选择动作。"></canvas><div class="toast" id="toast">在草地上画一个圈吧</div><div class="field-tag" aria-hidden="true"><span></span> 一片慢悠悠的草地</div></div>
-      <div class="species-picker" role="group" aria-label="选择要画出的动物"><span class="species-label">画个圈，变出</span><button type="button" class="species-btn active" data-species="sheep" aria-pressed="true">🐑 羊</button><button type="button" class="species-btn" data-species="yak" aria-pressed="false">🐃 牦牛</button><button type="button" class="species-btn" data-species="rabbit" aria-pressed="false">🐰 兔子</button></div>
+      <div class="species-picker" role="group" aria-label="选择要画出的动物"><span class="species-label">画个圈，变出</span><button type="button" class="species-btn active" data-species="sheep" aria-pressed="true">羊</button><button type="button" class="species-btn" data-species="yak" aria-pressed="false">牦牛</button><button type="button" class="species-btn" data-species="rabbit" aria-pressed="false">兔子</button></div>
       <div class="stage-footer"><span class="hint-dot" aria-hidden="true"></span><span id="drawHint">按住并绕一圈，新的羊会从圈心出现</span><span class="capacity" id="capacity">5 / 40 只</span></div>
     </section>
     <aside class="side-panel" aria-label="牧场与小羊动作">
@@ -30,6 +30,6 @@
     </aside>
   </main>
   <footer class="page-footer"><span>一点慢悠悠的快乐 · 2.0 梦幻草地</span><span>画圈生羊 · 点击互动 · 最多 40 只</span></footer>
-  <script src="game.js"></script>
+  <script src="game.js?v=3"></script>
 </body>
 </html>
