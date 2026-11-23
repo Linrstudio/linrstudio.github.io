@@ -144,15 +144,22 @@
   $('resetBtn').addEventListener('click',reset);
   function ellipse(x,y,rx,ry,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();}
   function background(t){
-    ctx.fillStyle='#adbf87';ctx.fillRect(0,0,WW,WH);
-    // Quiet, organic patches of sunlight, drawn in logical world coordinates.
-    for(let i=0;i<8;i++){ellipse((i*197+50)%WW,(i*143+40)%WH,110+(i%3)*30,70+(i%2)*25,i%2?'#b7c993':'#a6ba7d');}
+    const meadowGrad=ctx.createLinearGradient(0,0,0,WH);meadowGrad.addColorStop(0,'#8fe060');meadowGrad.addColorStop(.55,'#6fd64e');meadowGrad.addColorStop(1,'#4fc53e');
+    ctx.fillStyle=meadowGrad;ctx.fillRect(0,0,WW,WH);
+    // Bright, dreamy patches of sunlight, drawn in logical world coordinates.
+    for(let i=0;i<8;i++){ellipse((i*197+50)%WW,(i*143+40)%WH,110+(i%3)*30,70+(i%2)*25,i%2?'#a8ec78':'#79dd55');}
     for(const r of rivers){
       ctx.beginPath();for(let y=-10;y<=WH+10;y+=8){const x=center(r,y)-r.w/2;if(y===-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
       for(let y=WH+10;y>=-10;y-=8)ctx.lineTo(center(r,y)+r.w/2,y);
-      ctx.closePath();ctx.fillStyle='#86b9b5';ctx.fill();ctx.strokeStyle='#c2d4ad';ctx.lineWidth=7;ctx.stroke();
-      ctx.strokeStyle='#d2e5d6';ctx.lineWidth=1.7;
+      ctx.closePath();ctx.fillStyle='#38a6e8';ctx.fill();ctx.strokeStyle='#c9ecb0';ctx.lineWidth=7;ctx.stroke();
+      // A lighter current down the middle, plus highlights that drift downstream.
+      ctx.save();ctx.clip();
+      ctx.fillStyle='#6cc8f566';ctx.fillRect(0,0,WW,WH);
+      ctx.strokeStyle='#eafaff';ctx.lineWidth=2;
+      for(let j=0;j<6;j++){const yy=((j*127+r.x*3+(reduced?0:t*.055))%(WH+60))-30,x=center(r,yy);ctx.beginPath();ctx.moveTo(x-8,yy);ctx.lineTo(x+8,yy+14);ctx.stroke();}
+      ctx.lineWidth=1.7;
       for(let j=0;j<8;j++){const y=(j*101+r.x)%WH,x=center(r,y),wave=reduced?0:Math.sin(t*.0017+j)*4;ctx.beginPath();ctx.moveTo(x-11+wave,y);ctx.quadraticCurveTo(x,y-3,x+9+wave,y);ctx.stroke();}
+      ctx.restore();
     }
     const r=rivers[0],by=445,bx=center(r,by),bw=r.w+34;
     ctx.fillStyle='#516f4920';ctx.fillRect(bx-bw/2+3,by-11,bw,40);
@@ -160,12 +167,21 @@
     ctx.strokeStyle='#94734f';ctx.lineWidth=1.6;
     for(let x=bx-bw/2+4;x<bx+bw/2;x+=12){ctx.beginPath();ctx.moveTo(x,by-15);ctx.lineTo(x,by+10);ctx.stroke();}
     ctx.strokeStyle='#d6b18a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(bx-bw/2,by-18);ctx.lineTo(bx+bw/2,by-18);ctx.moveTo(bx-bw/2,by+14);ctx.lineTo(bx+bw/2,by+14);ctx.stroke();
-    for(let i=0;i<100;i++){
+    for(let i=0;i<170;i++){
       const x=(i*137+41)%WW,y=(i*79+21)%WH;if(riverAt(x,y,16))continue;
-      const sway=reduced?0:Math.sin(t*.0014+i)*1.5;ctx.strokeStyle=i%3?'#8ca36a80':'#78965c88';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(x,y+4);ctx.quadraticCurveTo(x-2,y-3,x-4+sway,y-7);ctx.moveTo(x,y+4);ctx.quadraticCurveTo(x+1,y-2,x+4+sway,y-5);ctx.stroke();
-      if(i%9===0){const c=['#efd293','#e5b1a2','#f5edcf'][i%3];for(let a=0;a<5;a++)ellipse(x+Math.cos(a*1.256)*3,y-8+Math.sin(a*1.256)*3,2.4,2.4,c);ellipse(x,y-8,1.8,1.8,'#d5af65');}
-      if(i%23===0)ellipse(x+10,y+7,5,3,'#a4aa87');
+      // Wind rolls across the field: phase follows position, so blades sway in waves.
+      const sway=reduced?0:Math.sin(t*.0022+x*.018+y*.011)*4;
+      ctx.strokeStyle=i%3?'#2fae4ed9':'#4ccf5ad9';ctx.lineWidth=1.8;
+      ctx.beginPath();ctx.moveTo(x,y+4);ctx.quadraticCurveTo(x-2,y-4,x-5+sway,y-11);ctx.moveTo(x,y+4);ctx.quadraticCurveTo(x+1,y-3,x+5+sway,y-9);ctx.moveTo(x,y+4);ctx.quadraticCurveTo(x+sway*.4,y-5,x+sway,y-13);ctx.stroke();
+      if(i%9===0){const c=['#ffd166','#ff9fb2','#ffffff'][i%3];for(let a=0;a<5;a++)ellipse(x+Math.cos(a*1.256)*3.4,y-12+Math.sin(a*1.256)*3.4,2.7,2.7,c);ellipse(x,y-12,2,2,'#f5a623');}
+      if(i%23===0)ellipse(x+10,y+7,5,3,'#8ede5e');
+    }
+    // Dreamy drifting petals, slow and soft.
+    for(let i=0;i<14;i++){
+      const px=((i*173+60)%WW)+(reduced?0:Math.sin(t*.0006+i*1.7)*20);
+      const py=((i*97+(reduced?0:t*.012))%(WH+30))-15;
+      ctx.save();ctx.globalAlpha=.55;ctx.translate(px,py);ctx.rotate(Math.sin(t*.0009+i)*.6);
+      ellipse(0,0,5,3,i%2?'#ffd9e8':'#ffffff');ctx.restore();
     }
   }
   function drawSheep(s,t){
