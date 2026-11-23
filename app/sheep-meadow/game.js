@@ -4,7 +4,12 @@
   const canvas = $('meadow'), ctx = canvas.getContext('2d');
   const WW = 1100, WH = 700, MAX = 40;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const names = ['小麦','团团','云朵','栗子','棉花','露珠','奶糖','小满','芝麻','桃酥','铃铛','阿福'];
+  const SPECIES = {
+    sheep: {label:'羊', scale:1, names:['小麦','团团','云朵','栗子','棉花','露珠','奶糖','小满','芝麻','桃酥','铃铛','阿福']},
+    yak: {label:'牦牛', scale:1.32, names:['阿牦','小黑','云杉','雪宝','高原','牦牦','扎西','卓玛','格桑','阿布','小山','雪山']},
+    rabbit: {label:'兔子', scale:.72, names:['小白','雪球','月亮','跳跳','胡萝卜','小灰','长耳','阿兔','玉兔','小豆','糯米','蹦蹦']}
+  };
+  let currentSpecies = 'sheep';
   const rivers = [{x:310,w:70,a:30,p:.4},{x:655,w:62,a:39,p:2.2},{x:910,w:47,a:24,p:4.1}];
   let width=1,height=1,dpr=1,sheep=[],selected=null,nextId=1,last=performance.now();
   let pointer=null,stroke=[],drawing=false,toastTimer;
@@ -28,9 +33,9 @@
     for(let i=1;i<=n;i++){const p=i/n;if(!onLand(a.x+(b.x-a.x)*p,a.y+(b.y-a.y)*p,23))return false;}
     return true;
   }
-  function makeSheep(x,y){
-    const p=grassPoint(x,y),id=nextId++;
-    return {id,name:names[(id-1)%names.length]+(id>12?'·'+id:''),x:p.x,y:p.y,tx:p.x,ty:p.y,dir:id%2?1:-1,phase:Math.random()*6.28,scale:.94+Math.random()*.11,state:'吃草',action:null,lift:0,idleUntil:performance.now()+3500+Math.random()*5000,born:0};
+  function makeAnimal(x,y,sp){
+    const p=grassPoint(x,y),id=nextId++,cfg=SPECIES[sp]||SPECIES.sheep;
+    return {id,species:sp,name:cfg.names[(id-1)%cfg.names.length]+(id>12?'·'+id:''),x:p.x,y:p.y,tx:p.x,ty:p.y,dir:id%2?1:-1,phase:Math.random()*6.28,scale:(.94+Math.random()*.11)*cfg.scale,state:'吃草',action:null,lift:0,idleUntil:performance.now()+3500+Math.random()*5000,born:0};
   }
   function say(message){
     $('statusText').textContent=message;$('toast').textContent=message;$('toast').classList.remove('hide');
@@ -39,13 +44,13 @@
   function updatePanel(){
     $('sheepCount').textContent=sheep.length;$('capacity').textContent=`${sheep.length} / ${MAX} 只`;
     $('selectedName').textContent=selected?selected.name:'还没有选中';
-    $('selectedState').textContent=selected?selected.state:'轻点草地上的一只羊';
+    $('selectedState').textContent=selected?selected.state:'轻点草地上的小动物';
     $('selectedCard').classList.toggle('has-selection',!!selected);$('actions').hidden=!selected;
     document.querySelectorAll('[data-action]').forEach(b=>{b.disabled=!selected;b.setAttribute('aria-pressed',String(!!selected&&selected.action===b.dataset.action));});
   }
   function reset(){
     nextId=1;selected=null;pointer=null;drawing=false;stroke=[];
-    sheep=[[.13,.30],[.21,.65],[.44,.38],[.72,.66],[.94,.32]].map(p=>makeSheep(p[0]*WW,p[1]*WH));
+    sheep=[[.13,.30],[.21,.65],[.44,.38],[.72,.66],[.94,.32]].map(p=>makeAnimal(p[0]*WW,p[1]*WH,'sheep'));
     updatePanel();say('风吹过矮草，小羊们正在慢悠悠地吃草。');
   }
   function jumpTarget(s){
@@ -135,12 +140,18 @@
     if(cancel)return;
     if(loop){
       if(sheep.length>=MAX){say('40 只小羊已经很热闹啦，先陪它们玩一会吧。');return;}
-      const p=grassPoint(loop.x,loop.y),s=makeSheep(p.x,p.y);s.born=performance.now();sheep.push(s);selected=s;updatePanel();
-      say(riverAt(loop.x,loop.y,20)?'河水凉凉的，新朋友在岸边等你啦。':'圈得刚刚好！一只新羊来啦。');
+      const p=grassPoint(loop.x,loop.y),s=makeAnimal(p.x,p.y,currentSpecies);s.born=performance.now();sheep.push(s);selected=s;updatePanel();
+      say(riverAt(loop.x,loop.y,20)?'河水凉凉的，新朋友在岸边等你啦。':`圈得刚刚好！一只新${SPECIES[currentSpecies].label}来啦。`);
     }else if(drawn)say('差一点点：把圈画大些，再回到起点试试。');
   }
   canvas.addEventListener('pointerup',e=>endPointer(e));canvas.addEventListener('pointercancel',e=>endPointer(e,true));
   document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>chooseAction(b.dataset.action)));
+  document.querySelectorAll('[data-species]').forEach(b=>b.addEventListener('click',()=>{
+    currentSpecies=b.dataset.species;
+    document.querySelectorAll('[data-species]').forEach(x=>{const on=x===b;x.classList.toggle('active',on);x.setAttribute('aria-pressed',String(on));});
+    $('drawHint').textContent=`按住并绕一圈，新的${SPECIES[currentSpecies].label}会从圈心出现`;
+    say(`好，接下来画圈变${SPECIES[currentSpecies].label}。`);
+  }));
   $('resetBtn').addEventListener('click',reset);
   function ellipse(x,y,rx,ry,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();}
   function background(t){
@@ -184,16 +195,11 @@
       ellipse(0,0,5,3,i%2?'#ffd9e8':'#ffffff');ctx.restore();
     }
   }
-  function drawSheep(s,t){
-    const jumping=s.action==='jump',resting=s.action==='rest',running=s.action==='run';
-    const walking=!s.action&&Math.hypot(s.tx-s.x,s.ty-s.y)>2,grazing=s.action==='graze'||(!s.action&&!walking);
-    const scale=s.scale*spriteScale(),ratio=(width/WW)/(height/WH),phase=t*.008+s.phase;
-    // Shadows remain on the ground while the woolly body leaves it.
-    ctx.save();ctx.translate(s.x,s.y+17*ratio);ctx.scale(scale,scale*ratio);
-    ellipse(0,0,25-s.lift*.08,6-s.lift*.015,`rgba(66,87,49,${.17-s.lift*.001})`);ctx.restore();
-    ctx.save();ctx.translate(s.x,s.y-s.lift);ctx.scale(s.dir*scale,scale*ratio);
-    if(resting)ctx.translate(0,8);
-    const swing=(walking||running)&&!reduced?Math.sin(phase*(running?2:1))*5:0;
+  // One body painter per species. Each draws in local coordinates inside the
+  // shared transform (+x is the direction the animal faces); the shared code
+  // owns the shadow, selection ring, name tag and birth ring.
+  function drawSheepBody(a){
+    const {swing,resting,grazing,t}=a;
     ctx.strokeStyle='#1c1c1c';ctx.lineWidth=3.8;ctx.lineCap='round';
     for(let i=0;i<4;i++){const x=-14+i*9;ctx.beginPath();ctx.moveTo(x,6);ctx.lineTo(x+(i%2?swing:-swing),resting?10:20);ctx.stroke();}
     // Small overlapping wool puffs produce a soft, recognizable silhouette.
@@ -206,12 +212,72 @@
     if(resting){ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(4,-1);ctx.lineTo(8,-1);ctx.stroke();}
     if(grazing){ctx.strokeStyle='#1d9e2f';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(7,11);ctx.lineTo(13,9+(reduced?0:Math.sin(t*.013)*2));ctx.stroke();}
     ctx.restore();
+  }
+  function drawYakBody(a){
+    const {swing,resting,grazing,t}=a;
+    ctx.strokeStyle='#2b1d14';ctx.lineWidth=5;ctx.lineCap='round';
+    for(let i=0;i<4;i++){const x=-15+i*10;ctx.beginPath();ctx.moveTo(x,6);ctx.lineTo(x+(i%2?swing:-swing),resting?11:21);ctx.stroke();}
+    // Long hair skirt hanging under the belly, swaying gently.
+    ctx.strokeStyle='#3a2a1e';ctx.lineWidth=2.4;
+    for(let i=0;i<9;i++){const x=-22+i*5.5;ctx.beginPath();ctx.moveTo(x,10);ctx.lineTo(x+(reduced?0:Math.sin(t*.004+i)*1.5),23+(i%3)*2);ctx.stroke();}
+    // Big dark body with a shoulder hump.
+    ellipse(-2,-3,30,19,'#4a3226');
+    ellipse(-14,-17,13,10,'#4a3226');
+    // Tail with a dark tuft.
+    ctx.strokeStyle='#38261c';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-30,-4);ctx.quadraticCurveTo(-36,4,-33,10);ctx.stroke();
+    ellipse(-33,12,4,6,'#2b1d14');
+    const headY=grazing?9:-4,headX=grazing?27:25;
+    ctx.save();ctx.translate(headX,headY);if(grazing)ctx.rotate(.3);
+    // Horns curve up and out from the head.
+    ctx.strokeStyle='#e8dcc0';ctx.lineWidth=3.4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-2,-9);ctx.quadraticCurveTo(-8,-18,-2,-24);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(4,-10);ctx.quadraticCurveTo(10,-17,8,-23);ctx.stroke();
+    ellipse(0,0,11,13,'#38261c');
+    ellipse(4,6,7,5,'#6b4a35');
+    ellipse(8,-2,1.7,2,'#ffffff');ellipse(8.3,-2,0.9,1.2,'#111111');
+    if(resting){ctx.strokeStyle='#e8dcc0';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(5,-2);ctx.lineTo(9,-2);ctx.stroke();}
+    if(grazing){ctx.strokeStyle='#1d9e2f';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(8,11);ctx.lineTo(14,9+(reduced?0:Math.sin(t*.013)*2));ctx.stroke();}
+    ctx.restore();
+  }
+  function drawRabbitBody(a){
+    const {swing,resting,grazing,t}=a;
+    ctx.strokeStyle='#d9d9d9';ctx.lineWidth=3.4;ctx.lineCap='round';
+    for(let i=0;i<2;i++){const x=-8+i*14;ctx.beginPath();ctx.moveTo(x,6);ctx.lineTo(x+(i?swing:-swing),resting?10:16);ctx.stroke();}
+    ellipse(0,0,17,13,'#ffffff');
+    ellipse(-3,-4,13,10,'#f4f4f4');
+    ellipse(-16,-2,5,5,'#ffffff');
+    const headY=grazing?9:-6,headX=grazing?17:15;
+    ctx.save();ctx.translate(headX,headY);if(grazing)ctx.rotate(.3);
+    // Long ears, slightly apart, pink inside, wiggling a little.
+    const wiggle=reduced?0:Math.sin(t*.003)*.05;
+    ctx.save();ctx.rotate(-.12+wiggle);ellipse(-3,-16,3.6,10,'#ffffff');ellipse(-3,-16,1.8,7,'#ffb3c1');ctx.restore();
+    ctx.save();ctx.rotate(.14-wiggle);ellipse(4,-16,3.6,10,'#ffffff');ellipse(4,-16,1.8,7,'#ffb3c1');ctx.restore();
+    ellipse(0,0,9.5,9,'#ffffff');
+    ellipse(6.5,-1,1.8,2.2,'#1c1c1c');ellipse(7,-1.6,.7,.9,'#ffffff');
+    ellipse(9,3,1.4,1.1,'#ff9fb2');
+    if(resting){ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(4,-1);ctx.lineTo(8,-1);ctx.stroke();}
+    if(grazing){ctx.strokeStyle='#1d9e2f';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(7,8);ctx.lineTo(12,7+(reduced?0:Math.sin(t*.013)*2));ctx.stroke();}
+    ctx.restore();
+  }
+  function drawAnimal(s,t){
+    const jumping=s.action==='jump',resting=s.action==='rest',running=s.action==='run';
+    const walking=!s.action&&Math.hypot(s.tx-s.x,s.ty-s.y)>2,grazing=s.action==='graze'||(!s.action&&!walking);
+    const scale=s.scale*spriteScale(),ratio=(width/WW)/(height/WH),phase=t*.008+s.phase;
+    const hop=s.species==='rabbit'&&(walking||running)&&!reduced?Math.abs(Math.sin(phase*2))*6:0;
+    // Shadows remain on the ground while the body leaves it.
+    ctx.save();ctx.translate(s.x,s.y+17*ratio);ctx.scale(scale,scale*ratio);
+    ellipse(0,0,25-s.lift*.08,6-s.lift*.015,`rgba(66,87,49,${.17-s.lift*.001})`);ctx.restore();
+    ctx.save();ctx.translate(s.x,s.y-s.lift-hop);ctx.scale(s.dir*scale,scale*ratio);
+    if(resting)ctx.translate(0,8);
+    const swing=(walking||running)&&!reduced?Math.sin(phase*(running?2:1))*5:0;
+    const anim={swing,resting,grazing,t};
+    if(s.species==='yak')drawYakBody(anim);else if(s.species==='rabbit')drawRabbitBody(anim);else drawSheepBody(anim);
     if(s===selected){
       ctx.strokeStyle='#f5dfa5';ctx.lineWidth=1.5;ctx.setLineDash([3,4]);ctx.beginPath();ctx.ellipse(0,-1,37,32,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
     }
     ctx.restore();
     if(s===selected){
-      ctx.save();ctx.translate(s.x,s.y-s.lift-45*ratio*scale);ctx.scale(scale,scale*ratio);
+      ctx.save();ctx.translate(s.x,s.y-s.lift-hop-45*ratio*scale);ctx.scale(scale,scale*ratio);
       ctx.fillStyle='#ffffff';ctx.beginPath();ctx.roundRect(-25,-10,50,19,9);ctx.fill();ctx.fillStyle='#1c1c1c';ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText(s.name,0,3);ctx.restore();
     }
     const age=t-s.born;
@@ -227,9 +293,9 @@
       ctx.beginPath();ctx.moveTo(stroke[0].x,stroke[0].y);for(const p of stroke.slice(1))ctx.lineTo(p.x,p.y);ctx.stroke();ctx.shadowBlur=0;
       ellipse(stroke[0].x,stroke[0].y,4,4,'#fff5d8');
     }
-    [...sheep].sort((a,b)=>a.y-b.y).forEach(s=>drawSheep(s,t));
+    [...sheep].sort((a,b)=>a.y-b.y).forEach(s=>drawAnimal(s,t));
   }
   function loop(t){const dt=Math.min(40,t-last);last=t;sheep.forEach(s=>update(s,dt,t));draw(t);requestAnimationFrame(loop);}
-  window.meadowDebug=Object.freeze({snapshot:()=>({worldWidth:WW,worldHeight:WH,sheepCount:sheep.length,selected:selected?{id:selected.id,name:selected.name}:null,sheep:sheep.map(s=>({id:s.id,name:s.name,x:s.x,y:s.y,state:s.state,action:s.action,lift:s.lift}))}),reset});
+  window.meadowDebug=Object.freeze({snapshot:()=>({worldWidth:WW,worldHeight:WH,sheepCount:sheep.length,selected:selected?{id:selected.id,name:selected.name}:null,sheep:sheep.map(s=>({id:s.id,species:s.species,name:s.name,x:s.x,y:s.y,state:s.state,action:s.action,lift:s.lift}))}),reset});
   new ResizeObserver(resize).observe(canvas);resize();reset();requestAnimationFrame(loop);
 })();
