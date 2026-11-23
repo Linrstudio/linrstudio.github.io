@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#fff7f0"/>
+  <g stroke="#f3d9c8" stroke-width="3">
+    <path d="M0 170 H512 M0 342 H512 M170 0 V512 M342 0 V512"/>
+  </g>
+  <path d="M120 400 C 190 360, 200 280, 270 260 S 340 210, 355 165" fill="none" stroke="#f0567a" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 22"/>
+  <g transform="translate(360 150)">
+    <path d="M0 10 C -24 -12, -32 -32, -32 -48 A32 32 0 1 1 32 -48 C 32 -32, 24 -12, 0 10 Z" fill="#f0567a"/>
+    <circle cx="0" cy="-48" r="14" fill="#ffffff"/>
+  </g>
+  <g transform="translate(96 330)">
+    <rect x="0" y="0" width="120" height="96" rx="18" fill="#ffc93c"/>
+    <path d="M30 0 C 30 -26, 90 -26, 90 0" fill="none" stroke="#e8a91c" stroke-width="10" stroke-linecap="round"/>
+    <path d="M60 66 c -8 -12, -22 -12, -22 2 c 0 11, 11 16, 22 26 c 11 -10, 22 -15, 22 -26 c 0 -14, -14 -14, -22 -2 z" fill="#f0567a"/>
+  </g>
+  <path d="M420 392 c -6 -10, -18 -10, -18 1 c 0 9, 9 13, 18 21 c 9 -8, 18 -12, 18 -21 c 0 -11, -12 -11, -18 -1 z" fill="#f78fb0"/>
+</svg>

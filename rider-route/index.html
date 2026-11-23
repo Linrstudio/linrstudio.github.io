@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#fff7f0" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <title>骑手送单路</title>
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2rem; }
+    </style>
+    <style>
+      :root {
+        --bg: #fff7f0; --bg2: #ffeef4;
+        --panel: #fffdf9; --panel2: #fff1e4;
+        --ink: #4a3532; --ink2: #a07a70;
+        --line: #f3d9c8;
+        --accent: #f0567a; --accent-soft: #ffd9e2;
+        --gold: #ffb703; --good: #2fa36b; --bad: #e0483e;
+        --street: #fffdf8; --street-edge: #f0d7c3;
+        --shadow: 0 8px 22px rgba(160, 90, 70, .16);
+        --blocks: #ffe3ec, #dff3e2, #fff3c4, #ddebfd, #efe3fb, #ffe8d6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1d1620; --bg2: #241a24;
+          --panel: #2c2230; --panel2: #372a3a;
+          --ink: #f5e9ec; --ink2: #bd9aa8;
+          --line: #4c3a4a;
+          --accent: #f4708f; --accent-soft: #59303f;
+          --street: #3a2f3c; --street-edge: #574657;
+          --shadow: 0 8px 22px rgba(0, 0, 0, .45);
+        }
+      }
+      * { box-sizing: border-box; font-weight: 400; }
+      html, body { height: 100%; }
+      body {
+        margin: 0; color: var(--ink);
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+        height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      h1, h2, p { margin: 0; }
+      button { font-family: inherit; color: inherit; }
+
+      .screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .hidden { display: none !important; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        display: flex; align-items: center; gap: .5rem;
+        padding: .55rem .8rem .35rem;
+      }
+      .topbar .title { flex: 1; min-width: 0; }
+      .topbar h1 { font-size: 1.22rem; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .topbar .sub { font-size: .74rem; color: var(--ink2); margin-top: .1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .btn {
+        min-height: 2.5rem; padding: 0 1rem; border-radius: 999px;
+        border: 1.5px solid var(--line); background: var(--panel);
+        font-size: .92rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+      }
+      .btn:active { transform: scale(.97); }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.primary:disabled { opacity: .4; }
+      .btn:disabled { opacity: .45; cursor: default; }
+      .btn.small { min-height: 2.25rem; padding: 0 .7rem; font-size: .82rem; }
+      .iconbtn {
+        width: 2.5rem; height: 2.5rem; min-height: 2.5rem; border-radius: 50%;
+        border: 1.5px solid var(--line); background: var(--panel);
+        font-size: 1.05rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none;
+      }
+
+      /* ---------- level select ---------- */
+      .cards {
+        flex: 1; min-height: 0; overflow-y: auto;
+        display: grid; grid-template-columns: 1fr 1fr; gap: .6rem;
+        padding: .45rem .8rem .6rem; align-content: start;
+      }
+      .card {
+        background: var(--panel); border: 1.5px solid var(--line); border-radius: 1.1rem;
+        padding: .5rem .6rem .55rem; cursor: pointer; text-align: left; width: 100%;
+        overflow: hidden; align-self: start;
+      }
+      .card:active { transform: scale(.98); }
+      .card.locked { opacity: .55; cursor: default; }
+      .card svg { width: 100%; height: 4.5rem; display: block; border-radius: .6rem; background: var(--panel2); }
+      @media (min-width: 700px) {
+        .cards { grid-template-columns: repeat(3, 1fr); }
+        .card svg { height: 6rem; }
+      }
+      .card .cname { font-size: .95rem; margin-top: .3rem; display: flex; align-items: baseline; gap: .35rem; }
+      .card .cname .no { color: var(--accent); font-size: .8rem; }
+      .card .cstars { font-size: .8rem; color: var(--gold); letter-spacing: .12em; min-height: 1.1em; }
+      .card .clock { font-size: .78rem; color: var(--ink2); margin-top: .35rem; }
+
+      /* ---------- game HUD ---------- */
+      .hud { padding: .15rem .8rem 0; display: flex; gap: .5rem; align-items: stretch; }
+      .chip {
+        background: var(--panel); border: 1.5px solid var(--line); border-radius: .8rem;
+        padding: .3rem .7rem; font-size: .95rem; display: flex; align-items: center; gap: .45rem;
+      }
+      .chip .lab { font-size: .72rem; color: var(--ink2); }
+      .chip .val { font-size: 1.05rem; }
+      .chip.over .val { color: var(--bad); }
+      .pips { flex: 1; justify-content: flex-start; overflow: hidden; }
+      .pip { position: relative; font-size: 1.05rem; line-height: 1; opacity: .38; filter: grayscale(.5); }
+      .pip.done { opacity: 1; filter: none; }
+      .pip .tick {
+        position: absolute; right: -.28em; top: -.32em; font-size: .58rem; color: #fff;
+        background: var(--good); border-radius: 50%; width: 1.15em; height: 1.15em;
+        display: none; align-items: center; justify-content: center;
+      }
+      .pip.done .tick { display: inline-flex; }
+      .statusline {
+        height: 1.55rem; padding: 0 .9rem; display: flex; align-items: center;
+        font-size: .82rem; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .statusline.warn { color: var(--bad); }
+
+      /* ---------- board ---------- */
+      .boardwrap {
+        flex: 1; min-height: 0; position: relative;
+        display: grid; place-items: center; padding: .1rem .5rem .3rem;
+      }
+      .boardwrap.shake { animation: shake .3s ease; }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-6px); }
+        55% { transform: translateX(5px); }
+        80% { transform: translateX(-3px); }
+      }
+      svg#board { width: 100%; height: 100%; display: block; touch-action: none; }
+      .toast {
+        position: absolute; top: .35rem; left: 50%; transform: translateX(-50%) translateY(-4px);
+        background: var(--ink); color: var(--bg); font-size: .8rem; padding: .32rem .8rem;
+        border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+        white-space: nowrap; z-index: 5;
+      }
+      .toast.show { opacity: .94; transform: translateX(-50%) translateY(0); }
+
+      /* svg bits */
+      .street { stroke: var(--street); stroke-width: 34; stroke-linecap: round; }
+      .streetedge { stroke: var(--street-edge); stroke-width: 38; stroke-linecap: round; }
+      .streetblocked { stroke: var(--street-edge); stroke-width: 30; stroke-linecap: round; stroke-dasharray: 4 10; opacity: .7; }
+      .pathunder { fill: none; stroke: #ffffff; stroke-width: 21; stroke-linejoin: round; stroke-linecap: round; opacity: .92; }
+      .pathline { fill: none; stroke: var(--accent); stroke-width: 11; stroke-linejoin: round; stroke-linecap: round; }
+      @media (prefers-color-scheme: dark) { .pathunder { stroke: #241a24; } }
+      .hintseg { stroke: var(--gold); stroke-width: 13; stroke-linecap: round; stroke-dasharray: 2 14; animation: hintdash 0.7s linear infinite; }
+      @keyframes hintdash { to { stroke-dashoffset: -16; } }
+      .onearrow { fill: none; stroke: #d98a7d; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+      @media (prefers-color-scheme: dark) { .onearrow { stroke: #e8a294; } }
+      .nodebadge { stroke: #fff; stroke-width: 3.5; }
+      @media (prefers-color-scheme: dark) { .nodebadge { stroke: #2c2230; } }
+      .badgepill { fill: var(--ink); }
+      .badgetext { fill: #fff; font-size: 12.5px; text-anchor: middle; }
+      .foodicon { font-size: 21px; text-anchor: middle; dominant-baseline: central; }
+      .starticon { font-size: 22px; text-anchor: middle; dominant-baseline: central; }
+      .heartfly { animation: heartfly 0.95s ease-out forwards; }
+      @keyframes heartfly {
+        0% { transform: translateY(0) scale(.5); opacity: 0; }
+        18% { opacity: 1; }
+        100% { transform: translateY(-46px) scale(1.05); opacity: 0; }
+      }
+      .animalpop { animation: animalpop 1.25s ease forwards; transform-box: fill-box; transform-origin: center; }
+      @keyframes animalpop {
+        0% { transform: scale(0); opacity: 0; }
+        22% { transform: scale(1.15); opacity: 1; }
+        38% { transform: scale(1); }
+        78% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(.6) translateY(-10px); opacity: 0; }
+      }
+      .floattext { animation: floatup 1s ease-out forwards; font-size: 17px; text-anchor: middle; fill: var(--bad); }
+      @keyframes floatup {
+        0% { transform: translateY(0); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translateY(-30px); opacity: 0; }
+      }
+      .riderbob { animation: bob .34s ease-in-out infinite alternate; }
+      @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-2.2px); } }
+      @media (prefers-reduced-motion: reduce) {
+        .riderbob, .hintseg { animation: none; }
+      }
+
+      /* ---------- controls ---------- */
+      .controls {
+        display: flex; gap: .5rem; padding: .35rem .8rem .5rem; align-items: center;
+      }
+      .controls .btn { flex: 1; }
+      .controls .btn.primary { flex: 1.35; }
+      .hintleft { font-size: .74rem; color: var(--ink2); }
+
+      /* ---------- footer ---------- */
+      .foot {
+        padding: .3rem .9rem calc(.45rem + env(safe-area-inset-bottom));
+        font-size: .64rem; line-height: 1.45; color: var(--ink2); text-align: center;
+      }
+
+      /* ---------- win modal ---------- */
+      .overlay {
+        position: fixed; inset: 0; background: rgba(74, 40, 45, .38);
+        display: grid; place-items: center; z-index: 20; padding: 1rem;
+      }
+      .modal {
+        background: var(--panel); border-radius: 1.5rem; box-shadow: var(--shadow);
+        width: min(88vw, 21rem); padding: 1.3rem 1.2rem 1.1rem; text-align: center;
+      }
+      .modal h2 { font-size: 1.3rem; }
+      .modal .stars { margin: .55rem 0 .2rem; display: flex; justify-content: center; gap: .35rem; }
+      .modal .stars svg { width: 2.5rem; height: 2.5rem; }
+      .starpath { fill: #ead9d2; }
+      .starpath.on { fill: var(--gold); }
+      @media (prefers-color-scheme: dark) { .starpath { fill: #554458; } .starpath.on { fill: var(--gold); } }
+      .modal .eureka {
+        margin: .6rem auto .2rem; background: var(--panel2); border-radius: .9rem;
+        padding: .6rem .8rem; font-size: .95rem; line-height: 1.5;
+      }
+      .modal .eureka .elab { display: block; font-size: .7rem; color: var(--accent); margin-bottom: .15rem; }
+      .modal .tipnote { font-size: .8rem; color: var(--bad); margin-top: .45rem; min-height: 1em; }
+      .modal .mrow { display: flex; gap: .5rem; margin-top: .9rem; }
+      .modal .mrow .btn { flex: 1; }
+      .modal .stepsline { font-size: .85rem; color: var(--ink2); margin-top: .3rem; }
+    </style>
+  </head>
+  <body>
+    <!-- ======== level select ======== -->
+    <section class="screen" id="screen-select">
+      <div class="topbar">
+        <div class="title">
+          <h1 data-i18n="gameTitle">骑手送单路</h1>
+          <p class="sub" data-i18n="gameSub">画一条路线，送完所有单</p>
+        </div>
+        <button class="btn small" id="langBtn1" type="button">EN</button>
+      </div>
+      <div class="cards" id="cards"></div>
+      <p class="foot" data-i18n="foot">全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩</p>
+    </section>
+
+    <!-- ======== game ======== -->
+    <section class="screen hidden" id="screen-game">
+      <div class="topbar">
+        <button class="iconbtn" id="backBtn" type="button" aria-label="back">←</button>
+        <div class="title">
+          <h1 id="lvlTitle">第一单</h1>
+          <p class="sub" id="lvlSub">第 1 关</p>
+        </div>
+        <button class="btn small" id="langBtn2" type="button">EN</button>
+      </div>
+      <div class="hud">
+        <div class="chip" id="stepsChip"><span class="lab" data-i18n="steps">步数</span><span class="val" id="stepsVal">0 / 15</span></div>
+        <div class="chip pips" id="pips"></div>
+      </div>
+      <p class="statusline" id="statusLine"></p>
+      <div class="boardwrap" id="boardWrap">
+        <svg id="board" preserveAspectRatio="xMidYMid meet" aria-label="map"></svg>
+        <div class="toast" id="toast"></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="undoBtn" type="button" data-i18n="undo">撤销</button>
+        <button class="btn" id="clearBtn" type="button" data-i18n="clear">重画</button>
+        <button class="btn" id="hintBtn" type="button"><span data-i18n="hint">提示</span><span class="hintleft" id="hintLeft"></span></button>
+        <button class="btn primary" id="goBtn" type="button" data-i18n="go">出发</button>
+      </div>
+      <p class="foot" data-i18n="foot">全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩</p>
+    </section>
+
+    <!-- ======== win modal ======== -->
+    <div class="overlay hidden" id="winOverlay">
+      <div class="modal">
+        <h2 data-i18n="winTitle">送完啦！</h2>
+        <div class="stars" id="winStars"></div>
+        <p class="stepsline" id="winSteps"></p>
+        <div class="eureka"><span class="elab" data-i18n="eurekaLab">顿悟点</span><span id="winEureka"></span></div>
+        <p class="tipnote" id="winTipNote"></p>
+        <div class="mrow">
+          <button class="btn" id="winLevelsBtn" type="button" data-i18n="levels">选关</button>
+          <button class="btn" id="winReplayBtn" type="button" data-i18n="replay">再玩一次</button>
+          <button class="btn primary" id="winNextBtn" type="button" data-i18n="next">下一关</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+      /* ================= i18n ================= */
+      const STR = {
+        zh: {
+          gameTitle: "骑手送单路", gameSub: "画一条路线，送完所有单",
+          steps: "步数", undo: "撤销", clear: "重画", hint: "提示", go: "出发",
+          winTitle: "送完啦！", eurekaLab: "顿悟点", levels: "选关", replay: "再玩一次", next: "下一关",
+          levelN: n => "第 " + n + " 关",
+          locked: "完成上一关解锁",
+          oneway: "单行道，不能逆行", blocked: "这条路在修，走不通",
+          needPickup: "先去冰淇淋店取货", overBudget: "步数超了，试试更短的路线",
+          leftOrders: n => "还差 " + n + " 单没安排", ready: "可以出发啦",
+          tipLost: "小费飞走了…下次注意特殊单",
+          winSteps: (s, o) => "用了 " + s + " 步 · 最优 " + o + " 步",
+          foot: "全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩",
+          intro: [
+            "单行道只能顺着箭头走", "修路的地方画不过去", "热乎单要在 8 步内送到",
+            "跟着箭头走，别逆行", "电梯坏的楼，送一单多 3 步", "先取冰淇淋，6 步内送到",
+            "顺路的单，一趟送完", "步数很紧，先想好再画", "热的、冰的、爬楼的，都赶上了",
+            "预算只比最优多 2 步"
+          ]
+        },
+        en: {
+          gameTitle: "Rider Routes", gameSub: "Draw one route, deliver every order",
+          steps: "Steps", undo: "Undo", clear: "Redraw", hint: "Hint", go: "Go",
+          winTitle: "All delivered!", eurekaLab: "Aha moment", levels: "Levels", replay: "Replay", next: "Next",
+          levelN: n => "Level " + n,
+          locked: "Finish the last level to unlock",
+          oneway: "One-way street — no going back", blocked: "Road closed for repairs",
+          needPickup: "Pick up the ice cream first", overBudget: "Over budget — try a shorter route",
+          leftOrders: n => n + " order(s) not on the route yet", ready: "Ready to go",
+          tipLost: "The tip slipped away… mind the special orders",
+          winSteps: (s, o) => s + " steps · best " + o,
+          foot: "All ages · No violence / gambling / chat · No purchases or loot boxes · No personal data collected · Progress is saved only on this device · No rapid flashing",
+          intro: [
+            "One-way streets follow the arrows", "Closed roads can't be drawn through", "Hot order: arrive within 8 steps",
+            "Follow the arrows around the ring", "Broken lift: +3 steps for that delivery", "Pick up ice cream, deliver within 6 steps",
+            "Orders on the way go in one trip", "Tight budget — plan before you draw", "Hot, cold and stairs — all in one day",
+            "Budget is only best + 2"
+          ]
+        }
+      };
+
+      /* ================= levels (solver-verified) ================= */
+      // opt = best steps of a fully clean run (all specials on time); budget = opt + slack
+      const TEAMS = ["#ffc93c", "#5aa9e6", "#ff6b6b", "#ff9f43", "#6bcb77", "#f28bb4"];
+      const FOODS = {
+        1: ["🍔", "🧋"], 2: ["🍰", "🍕", "🥗"], 3: ["🍜", "🍩", "🍔"], 4: ["🍔", "🧃", "🍰", "🍕"],
+        5: ["🍔", "🧋", "🍰"], 6: ["🍔", "🧋", "🍦", "🍕"], 7: ["🍔", "🧋", "🍰", "🍕"],
+        8: ["🍔", "🧋", "🍰", "🍕", "🥗"], 9: ["🍜", "🍔", "🍰", "🍦", "🥗"], 10: ["🍔", "🧋", "🍰", "🍕", "🥗", "🍩"]
+      };
+      const ANIMALS = ["🐰", "🐱", "🐶", "🐼", "🐷", "🦊"];
+      const LEVELS = [
+        { id: 1, cols: 4, rows: 4, start: [0, 3], opt: 9, budget: 15,
+          name: { zh: "第一单", en: "First Order" },
+          eureka: { zh: "先送远的，顺路带近的。", en: "Send the far one first — the near one is on the way back." },
+          orders: [ { at: [3, 1], kind: "normal" }, { at: [1, 3], kind: "normal" } ],
+          pickup: null,
+          oneway: [ [[1,3],[0,3]], [[1,2],[1,3]], [[2,3],[1,3]], [[1,2],[0,2]] ], blocked: [] },
+        { id: 2, cols: 5, rows: 4, start: [0, 3], opt: 9, budget: 15,
+          name: { zh: "修路了", en: "Road Closed" },
+          eureka: { zh: "先看哪条路不通，再画路线。", en: "Check which road is closed before you draw." },
+          orders: [ { at: [4, 0], kind: "normal" }, { at: [2, 2], kind: "normal" }, { at: [4, 3], kind: "normal" } ],
+          pickup: null, oneway: [],
+          blocked: [ [[1,1],[2,1]], [[2,1],[3,1]], [[3,1],[4,1]], [[2,2],[2,3]] ] },
+        { id: 3, cols: 4, rows: 5, start: [0, 4], opt: 10, budget: 16,
+          name: { zh: "热乎的", en: "Still Hot" },
+          eureka: { zh: "热的单先送，凉了没小费。", en: "Hot food first — cold food, no tip." },
+          orders: [ { at: [3, 0], kind: "hot", limit: 8 }, { at: [0, 0], kind: "normal" }, { at: [2, 2], kind: "normal" } ],
+          pickup: null, oneway: [], blocked: [] },
+        { id: 4, cols: 5, rows: 5, start: [2, 4], opt: 14, budget: 20,
+          name: { zh: "单行街区", en: "One-Way Town" },
+          eureka: { zh: "顺着箭头走，别跟单行道较劲。", en: "Follow the arrows — don't fight one-way streets." },
+          orders: [ { at: [0, 0], kind: "normal" }, { at: [2, 2], kind: "normal" }, { at: [3, 3], kind: "normal" }, { at: [4, 0], kind: "normal" } ],
+          pickup: null,
+          oneway: [ [[1,1],[2,1]], [[2,1],[3,1]], [[3,1],[3,2]], [[3,2],[3,3]], [[3,3],[2,3]], [[2,3],[1,3]], [[1,3],[1,2]], [[1,2],[1,1]], [[2,1],[2,0]], [[2,1],[2,2]], [[2,2],[2,3]] ],
+          blocked: [ [[1,2],[2,2]], [[3,2],[2,2]] ] },
+        { id: 5, cols: 5, rows: 5, start: [0, 4], opt: 15, budget: 21,
+          name: { zh: "电梯坏了", en: "Broken Lift" },
+          eureka: { zh: "电梯坏的楼最后去。", en: "Save the broken-lift building for last." },
+          orders: [ { at: [0, 0], kind: "normal" }, { at: [4, 4], kind: "normal" }, { at: [4, 0], kind: "lift" } ],
+          pickup: null, oneway: [], blocked: [] },
+        { id: 6, cols: 5, rows: 5, start: [0, 4], opt: 14, budget: 20,
+          name: { zh: "冰淇淋", en: "Ice Cream" },
+          eureka: { zh: "冰的单最后取，取完直奔。", en: "Pick up the ice cream last — then go straight there." },
+          orders: [ { at: [0, 0], kind: "normal" }, { at: [2, 1], kind: "normal" }, { at: [4, 2], kind: "cold" }, { at: [4, 4], kind: "normal" } ],
+          pickup: [4, 0], oneway: [], blocked: [] },
+        { id: 7, cols: 6, rows: 5, start: [0, 4], opt: 13, budget: 19,
+          name: { zh: "同一条街", en: "One Street" },
+          eureka: { zh: "同一条街的单，一趟全送了。", en: "Orders on one street: one trip, all delivered." },
+          orders: [ { at: [0, 0], kind: "normal" }, { at: [1, 2], kind: "normal" }, { at: [4, 2], kind: "normal" }, { at: [5, 4], kind: "normal" } ],
+          pickup: null,
+          oneway: [ [[1,2],[2,2]], [[2,2],[3,2]], [[3,2],[4,2]] ], blocked: [] },
+        { id: 8, cols: 6, rows: 6, start: [0, 5], opt: 19, budget: 24,
+          name: { zh: "晚高峰", en: "Rush Hour" },
+          eureka: { zh: "先数步数，再画路线。", en: "Count your steps before you draw." },
+          orders: [ { at: [5, 0], kind: "normal" }, { at: [0, 0], kind: "normal" }, { at: [3, 2], kind: "normal" }, { at: [5, 4], kind: "normal" }, { at: [1, 3], kind: "normal" } ],
+          pickup: null,
+          oneway: [ [[2,0],[2,1]], [[2,1],[2,2]], [[4,3],[4,2]] ],
+          blocked: [ [[1,2],[2,2]], [[3,4],[4,4]] ] },
+        { id: 9, cols: 6, rows: 6, start: [0, 5], opt: 24, budget: 30,
+          name: { zh: "大单日", en: "Big Day" },
+          eureka: { zh: "先定顺序，再画路线。", en: "Decide the order first, then draw." },
+          orders: [ { at: [3, 0], kind: "hot", limit: 10 }, { at: [0, 2], kind: "normal" }, { at: [5, 5], kind: "lift" }, { at: [5, 1], kind: "cold" }, { at: [2, 4], kind: "normal" } ],
+          pickup: [5, 3], oneway: [], blocked: [] },
+        { id: 10, cols: 7, rows: 6, start: [0, 5], opt: 24, budget: 26,
+          name: { zh: "完美一天", en: "A Perfect Day" },
+          eureka: { zh: "难的不是送单，是忍住不走捷径。", en: "The hard part isn't delivering — it's resisting shortcuts." },
+          orders: [ { at: [6, 0], kind: "normal" }, { at: [0, 0], kind: "normal" }, { at: [6, 5], kind: "normal" }, { at: [3, 2], kind: "normal" }, { at: [5, 3], kind: "normal" }, { at: [2, 0], kind: "lift" } ],
+          pickup: null,
+          oneway: [ [[3,5],[4,5]], [[4,5],[5,5]], [[6,2],[6,1]] ],
+          blocked: [ [[2,3],[3,3]], [[4,1],[4,2]] ] }
+      ];
+
+      /* ================= save / language ================= */
+      const SAVE_KEY = "songdanlu_save_v1";
+      let save = { stars: {}, lang: null };
+      try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); if (s && typeof s === "object") save = Object.assign(save, s); } catch (e) {}
+      const qlang = new URLSearchParams(location.search).get("lang");
+      let lang = (qlang === "zh" || qlang === "en") ? qlang : (save.lang || ((navigator.language || "zh").toLowerCase().indexOf("zh") === 0 ? "zh" : "en"));
+      function persist() { save.lang = lang; try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+      const T = () => STR[lang];
+
+      /* ================= graph helpers ================= */
+      const nkey = (x, y) => x + "," + y;
+      const ekey = (a, b) => [nkey(a[0], a[1]), nkey(b[0], b[1])].sort().join("|");
+      const idx = (L, x, y) => y * L.cols + x;
+      const xyOf = (L, i) => [i % L.cols, Math.floor(i / L.cols)];
+
+      function buildGraph(L) {
+        const blocked = new Set(L.blocked.map(([a, b]) => ekey(a, b)));
+        const oneway = new Map();
+        for (const [f, t] of L.oneway) oneway.set(ekey(f, t), nkey(f[0], f[1]) + ">" + nkey(t[0], t[1]));
+        const adj = new Map(); // nodeIdx -> [nodeIdx] allowed moves
+        const edges = [];      // drawable streets {a, b, blocked}
+        const dirs = [[1, 0], [0, 1]];
+        for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) adj.set(idx(L, x, y), []);
+        for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) {
+          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= L.cols || ny >= L.rows) continue;
+            const ek = ekey([x, y], [nx, ny]);
+            if (blocked.has(ek)) continue;
+            const ow = oneway.get(ek);
+            if (ow && ow !== nkey(x, y) + ">" + nkey(nx, ny)) continue;
+            adj.get(idx(L, x, y)).push(idx(L, nx, ny));
+          }
+          for (const [dx, dy] of dirs) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= L.cols || ny >= L.rows) continue;
+            edges.push({ a: idx(L, x, y), b: idx(L, nx, ny), blocked: blocked.has(ekey([x, y], [nx, ny])) });
+          }
+        }
+        return { adj, edges, blocked, oneway };
+      }
+
+      // Evaluate a drawn path: steps, per-order arrival steps, specials status
+      function evalPath(L, path) {
+        const orderAt = new Map(L.orders.map((o, i) => [idx(L, o.at[0], o.at[1]), i]));
+        const pickupIdx = L.pickup ? idx(L, L.pickup[0], L.pickup[1]) : -1;
+        let steps = 0, pickupStep = null;
+        const arrivals = new Map();
+        for (let s = 1; s < path.length; s++) {
+          steps += 1;
+          const node = path[s];
+          const oi = orderAt.get(node);
+          if (oi !== undefined && !arrivals.has(oi)) {
+            const o = L.orders[oi];
+            if (o.kind === "cold") {
+              if (pickupStep !== null) arrivals.set(oi, steps);
+            } else {
+              if (o.kind === "lift") steps += 3;
+              arrivals.set(oi, steps);
+            }
+          }
+          if (node === pickupIdx && pickupStep === null) pickupStep = steps;
+        }
+        const coldIdx = L.orders.findIndex(o => o.kind === "cold");
+        const hotIdx = L.orders.findIndex(o => o.kind === "hot");
+        let coldWindow = null;
+        if (coldIdx >= 0 && arrivals.has(coldIdx) && pickupStep !== null) coldWindow = arrivals.get(coldIdx) - pickupStep;
+        return {
+          steps, arrivals, pickupStep,
+          delivered: arrivals.size,
+          hotMissed: hotIdx >= 0 && arrivals.has(hotIdx) && arrivals.get(hotIdx) > L.orders[hotIdx].limit,
+          coldMissed: coldIdx >= 0 && arrivals.has(coldIdx) && coldWindow !== null && coldWindow > 6,
+          coldWindow,
+          coldPending: coldIdx >= 0 && !arrivals.has(coldIdx) && pickupStep !== null,
+          coldNeedsPickup: coldIdx >= 0 && !arrivals.has(coldIdx) && pickupStep === null
+        };
+      }
+
+      // Dijkstra (same model as the build-time verifier) — used for hints
+      function solveFrom(L, G, startNode, mask, coldTimer, hotOk0, coldOk0, perfect, elapsed0) {
+        const orderAt = new Map(L.orders.map((o, i) => [idx(L, o.at[0], o.at[1]), i]));
+        const pickupIdx = L.pickup ? idx(L, L.pickup[0], L.pickup[1]) : -1;
+        const hotIdx = L.orders.findIndex(o => o.kind === "hot");
+        const coldIdx = L.orders.findIndex(o => o.kind === "cold");
+        const FULL = (1 << L.orders.length) - 1;
+        const start = [startNode, mask, coldTimer, hotOk0, coldOk0, elapsed0 || 0]; // last field: absolute steps so far (hot deadline check)
+        return solveInner(L, G, orderAt, pickupIdx, hotIdx, coldIdx, FULL, start, perfect);
+      }
+      function solveInner(L, G, orderAt, pickupIdx, hotIdx, coldIdx, FULL, start, perfect) {
+        const skey = s => s.slice(0, 5).join("|");
+        const dist = new Map([[skey(start), 0]]);
+        const prev = new Map();
+        const pq = [[0, start]];
+        let goal = null;
+        while (pq.length) {
+          let bi = 0;
+          for (let i = 1; i < pq.length; i++) if (pq[i][0] < pq[bi][0]) bi = i;
+          const [cost, st] = pq.splice(bi, 1)[0];
+          if (cost > (dist.get(skey(st)) ?? Infinity)) continue;
+          const [node, mask, ct, hotOk, coldOk, elapsed] = st;
+          if (mask === FULL && (!perfect || (hotOk && coldOk))) { goal = st; break; }
+          for (const nb of G.adj.get(node)) {
+            let nmask = mask, nct = ct, nhot = hotOk, ncold = coldOk, sc = 1;
+            const oi = orderAt.get(nb);
+            if (oi !== undefined && !(mask & (1 << oi))) {
+              const o = L.orders[oi];
+              if (o.kind === "cold") {
+                if (ct >= 0) { nmask |= (1 << oi); ncold = ct <= 6 ? 1 : 0; nct = -1; }
+              } else {
+                nmask |= (1 << oi);
+                if (o.kind === "lift") sc += 3;
+                if (o.kind === "hot") nhot = (elapsed + sc) <= o.limit ? 1 : 0;
+              }
+            }
+            if (nb === pickupIdx && coldIdx >= 0 && !(nmask & (1 << coldIdx)) && nct < 0) nct = 0;
+            else if (nct >= 0) nct = Math.min(99, nct + sc);
+            const nst = [nb, nmask, nct, nhot, ncold, elapsed + sc];
+            const sk = skey(nst);
+            if (cost + sc < (dist.get(sk) ?? Infinity)) {
+              dist.set(sk, cost + sc); prev.set(sk, skey(st)); pq.push([cost + sc, nst]);
+            }
+          }
+        }
+        if (!goal) return null;
+        const nodes = [];
+        let cur = skey(goal);
+        while (cur) { nodes.unshift(Number(cur.split("|")[0])); cur = prev.get(cur); }
+        return nodes;
+      }
+
+      /* ================= DOM ================= */
+      const $ = id => document.getElementById(id);
+      const board = $("board"), boardWrap = $("boardWrap"), toastEl = $("toast");
+      const SVGNS = "http://www.w3.org/2000/svg";
+      function el(tag, attrs, parent) {
+        const e = document.createElementNS(SVGNS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+      }
+      let toastTimer = null;
+      function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1500);
+      }
+      function shake() {
+        boardWrap.classList.remove("shake");
+        void boardWrap.offsetWidth;
+        boardWrap.classList.add("shake");
+        if (navigator.vibrate) navigator.vibrate(25);
+      }
+
+      /* ================= state ================= */
+      let cur = null; // { L, G, path:[], hints:2, running:false, deliveredAnim:Set }
+      const startIdxOf = L => idx(L, L.start[0], L.start[1]);
+
+      function applyI18n() {
+        document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+        document.querySelectorAll("[data-i18n]").forEach(n => {
+          const k = n.getAttribute("data-i18n");
+          if (typeof T()[k] === "string") n.textContent = T()[k];
+        });
+        $("langBtn1").textContent = lang === "zh" ? "EN" : "中文";
+        $("langBtn2").textContent = lang === "zh" ? "EN" : "中文";
+        renderCards();
+        if (cur) { renderLevelHead(); refreshHUD(); }
+      }
+      function setLang(l) { lang = l; persist(); applyI18n(); }
+      $("langBtn1").addEventListener("click", () => setLang(lang === "zh" ? "en" : "zh"));
+      $("langBtn2").addEventListener("click", () => setLang(lang === "zh" ? "en" : "zh"));
+
+      /* ================= level select ================= */
+      function miniMap(L) {
+        const G = buildGraph(L);
+        const W = L.cols * 100, H = L.rows * 100;
+        let s = '<svg viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" aria-hidden="true">';
+        s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="var(--panel2)"/>';
+        for (const e of G.edges) {
+          const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
+          s += '<line x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '" stroke="' + (e.blocked ? "#ff9f43" : "#e9cdb8") + '" stroke-width="' + (e.blocked ? 10 : 15) + '" stroke-linecap="round"' + (e.blocked ? ' stroke-dasharray="3 12"' : "") + "/>";
+        }
+        const [sx, sy] = L.start;
+        s += '<circle cx="' + (sx * 100 + 50) + '" cy="' + (sy * 100 + 50) + '" r="17" fill="var(--accent)"/>';
+        L.orders.forEach((o, i) => {
+          s += '<circle cx="' + (o.at[0] * 100 + 50) + '" cy="' + (o.at[1] * 100 + 50) + '" r="14" fill="' + TEAMS[i % TEAMS.length] + '" stroke="#fff" stroke-width="4"/>';
+        });
+        if (L.pickup) s += '<circle cx="' + (L.pickup[0] * 100 + 50) + '" cy="' + (L.pickup[1] * 100 + 50) + '" r="12" fill="#7cd4fc" stroke="#fff" stroke-width="4"/>';
+        return s + "</svg>";
+      }
+      function isUnlocked(id) { return id === 1 || (save.stars[id - 1] || 0) > 0; }
+      function renderCards() {
+        const wrap = $("cards");
+        wrap.innerHTML = "";
+        for (const L of LEVELS) {
+          const unlocked = isUnlocked(L.id);
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "card" + (unlocked ? "" : " locked");
+          const stars = save.stars[L.id] || 0;
+          card.innerHTML = miniMap(L) +
+            '<div class="cname"><span class="no">' + L.id + '</span><span>' + L.name[lang] + "</span></div>" +
+            (unlocked
+              ? '<div class="cstars">' + "★".repeat(stars) + "☆".repeat(3 - stars) + "</div>"
+              : '<div class="clock">🔒 ' + T().locked + "</div>");
+          if (unlocked) card.addEventListener("click", () => openLevel(L.id));
+          wrap.appendChild(card);
+        }
+      }
+
+      /* ================= board rendering ================= */
+      const BLOCK_COLORS = ["#ffe3ec", "#dff3e2", "#fff3c4", "#ddebfd", "#efe3fb", "#ffe8d6"];
+      const BLOCK_COLORS_DARK = ["#43303c", "#2f4234", "#4a4028", "#2e3c50", "#3e3350", "#4a382a"];
+      function riderSVG() {
+        return '' +
+        '<g id="rider"><g class="riderflip"><g class="riderbobbody">' +
+          '<rect x="-36" y="-32" width="18" height="18" rx="4.5" fill="#ffc93c"/>' +
+          '<path d="M-27 -23.5 c-.9-2.2-4.6-2.2-4.6.3 c0 1.9 2.4 3.1 4.6 4.6 c2.2-1.5 4.6-2.7 4.6-4.6 c0-2.5-3.7-2.5-4.6-.3z" fill="#fff"/>' +
+          '<circle cx="-15" cy="13" r="6.2" fill="#43302b"/><circle cx="-15" cy="13" r="2.5" fill="#fff"/>' +
+          '<circle cx="18" cy="13" r="6.2" fill="#43302b"/><circle cx="18" cy="13" r="2.5" fill="#fff"/>' +
+          '<path d="M-19 13 Q-16 1 -3 0 L9 0 Q20 1 19 13 L12 13 Q10 6 1 6 L-8 6 Q-14 6 -15 13 Z" fill="#f78fb0"/>' +
+          '<path d="M11 0 Q15 -13 7 -17" fill="none" stroke="#f78fb0" stroke-width="5" stroke-linecap="round"/>' +
+          '<path d="M-3 -7 L7 5" stroke="#5a6b8c" stroke-width="5.5" stroke-linecap="round"/>' +
+          '<rect x="-14" y="-27" width="16" height="21" rx="7.5" fill="#5aa9e6" transform="rotate(9 -6 -16)"/>' +
+          '<path d="M1 -21 L9 -7" stroke="#ffd9c0" stroke-width="4.6" stroke-linecap="round"/>' +
+          '<circle cx="-7" cy="-34" r="8.2" fill="#ffd9c0"/>' +
+          '<path d="M-15.2 -34.5 A8.2 8.2 0 0 1 1.2 -34.5 L1.2 -32 L-15.2 -32 Z" fill="#f0567a"/>' +
+          '<circle cx="-14.5" cy="-39.5" r="3.1" fill="#ffc93c"/>' +
+          '<circle cx="0.5" cy="-31.5" r="1.35" fill="#43302b"/>' +
+        "</g></g></g>";
+      }
+      function renderBoard() {
+        const L = cur.L, G = cur.G;
+        const W = L.cols * 100, H = L.rows * 100;
+        board.setAttribute("viewBox", "0 0 " + W + " " + H);
+        let s = "";
+        // city blocks (decor)
+        const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const palette = dark ? BLOCK_COLORS_DARK : BLOCK_COLORS;
+        for (let y = 0; y < L.rows - 1; y++) for (let x = 0; x < L.cols - 1; x++) {
+          const h = (L.id * 31 + x * 7 + y * 13) % 6;
+          s += '<rect x="' + (x * 100 + 56) + '" y="' + (y * 100 + 56) + '" width="88" height="88" rx="16" fill="' + palette[h] + '" opacity="0.75"/>';
+          if (h === 1 || h === 4) { // little tree
+            const cx = x * 100 + 100, cy = y * 100 + 100;
+            s += '<circle cx="' + cx + '" cy="' + (cy - 4) + '" r="13" fill="#8fd0a0" opacity="0.9"/><circle cx="' + (cx - 10) + '" cy="' + (cy + 3) + '" r="9" fill="#a8dcb4" opacity="0.9"/><rect x="' + (cx - 2) + '" y="' + (cy + 4) + '" width="4" height="8" rx="2" fill="#b08968"/>';
+          } else if (h === 3) { // flower dots
+            const cx = x * 100 + 100, cy = y * 100 + 100;
+            s += '<circle cx="' + (cx - 12) + '" cy="' + cy + '" r="3.4" fill="#f28bb4"/><circle cx="' + (cx + 10) + '" cy="' + (cy - 8) + '" r="3.4" fill="#ffb703"/><circle cx="' + (cx + 4) + '" cy="' + (cy + 11) + '" r="3.4" fill="#f28bb4"/>';
+          }
+        }
+        // street edges (underlay then surface)
+        for (const pass of ["streetedge", "street"]) {
+          for (const e of G.edges) {
+            if (e.blocked) continue;
+            const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
+            s += '<line class="' + pass + '" x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '"/>';
+          }
+        }
+        for (const e of G.edges) {
+          if (!e.blocked) continue;
+          const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
+          s += '<line class="streetblocked" x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '"/>';
+        }
+        s += '<g id="layer-path"></g><g id="layer-marks"></g><g id="layer-nodes"></g><g id="layer-fx"></g>';
+        board.innerHTML = s;
+        drawMarks();
+        drawNodes();
+        drawPath();
+        placeRider(startIdxOf(L), 1);
+      }
+      function nodeXY(i) { const L = cur.L; const [x, y] = xyOf(L, i); return [x * 100 + 50, y * 100 + 50]; }
+      function drawMarks() {
+        const L = cur.L, G = cur.G;
+        const g = $("layer-marks");
+        let s = "";
+        // one-way arrows
+        for (const [f, t] of L.oneway) {
+          const [fx, fy] = nodeXY(idx(L, f[0], f[1])), [tx, ty] = nodeXY(idx(L, t[0], t[1]));
+          const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+          const ang = Math.atan2(ty - fy, tx - fx) * 180 / Math.PI;
+          s += '<g transform="translate(' + mx + " " + my + ") rotate(" + ang + ')"><path class="onearrow" d="M-8 -7 L4 0 L-8 7"/></g>';
+        }
+        // blocked barriers
+        for (const e of G.edges) {
+          if (!e.blocked) continue;
+          const [ax, ay] = nodeXY(e.a), [bx, by] = nodeXY(e.b);
+          const mx = (ax + bx) / 2, my = (ay + by) / 2;
+          const ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+          s += '<g transform="translate(' + mx + " " + my + ") rotate(" + ang + ')">' +
+            '<rect x="-17" y="-8" width="34" height="16" rx="4" fill="#ff9f43"/>' +
+            '<path d="M-11 -8 L-3 8 M0 -8 L8 8 M11 -8 L17 -2" stroke="#fff" stroke-width="4.5"/>' +
+            '<rect x="-17" y="-8" width="34" height="16" rx="4" fill="none" stroke="#e07f2e" stroke-width="2"/></g>';
+        }
+        g.innerHTML = s;
+      }
+      function drawNodes() {
+        const L = cur.L;
+        const g = $("layer-nodes");
+        let s = "";
+        const [sx, sy] = nodeXY(startIdxOf(L));
+        s += '<circle cx="' + sx + '" cy="' + sy + '" r="21" fill="var(--accent)" class="nodebadge"/>' +
+             '<text class="starticon" x="' + sx + '" y="' + (sy + 1) + '">🏪</text>';
+        if (L.pickup) {
+          const [px, py] = nodeXY(idx(L, L.pickup[0], L.pickup[1]));
+          s += '<g id="pickupNode"><circle cx="' + px + '" cy="' + py + '" r="20" fill="#bfe9fd" class="nodebadge"/>' +
+               '<text class="foodicon" x="' + px + '" y="' + (py + 1) + '">🍦</text></g>';
+        }
+        L.orders.forEach((o, i) => {
+          const [x, y] = nodeXY(idx(L, o.at[0], o.at[1]));
+          const team = TEAMS[i % TEAMS.length];
+          s += '<g id="orderNode' + i + '"><circle cx="' + x + '" cy="' + y + '" r="20" fill="#fff" class="nodebadge" stroke="' + team + '"/>' +
+               '<circle cx="' + x + '" cy="' + y + '" r="20" fill="none" stroke="' + team + '" stroke-width="3.5"/>' +
+               '<text class="foodicon" x="' + x + '" y="' + (y + 1) + '">' + FOODS[L.id][i] + "</text>";
+          if (o.kind === "hot") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="34" height="19" rx="9.5"/><text class="badgetext" x="' + (x + 21) + '" y="' + (y - 20.5) + '">🔥' + o.limit + "</text></g>";
+          if (o.kind === "lift") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="30" height="19" rx="9.5"/><text class="badgetext" x="' + (x + 19) + '" y="' + (y - 20.5) + '">+3</text></g>';
+          if (o.kind === "cold") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="34" height="19" rx="9.5"/><text class="badgetext" id="coldPillText" x="' + (x + 21) + '" y="' + (y - 20.5) + '">❄6</text></g>';
+          s += "</g>";
+        });
+        s += '<g id="layer-rider"></g>';
+        g.innerHTML = s;
+        $("layer-rider").innerHTML = riderSVG();
+      }
+      function placeRider(nodeI, dir) {
+        const r = document.querySelector("#rider");
+        if (!r) return;
+        const [x, y] = nodeXY(nodeI);
+        r.setAttribute("transform", "translate(" + x + " " + (y - 6) + ")");
+        const flip = r.querySelector(".riderflip");
+        if (flip) flip.setAttribute("transform", dir < 0 ? "scale(-1 1)" : "scale(1 1)");
+        const bob = r.querySelector(".riderbobbody");
+        if (bob) bob.setAttribute("class", cur && cur.running ? "riderbob" : "");
+      }
+      function drawPath() {
+        const g = $("layer-path");
+        if (!g) return;
+        if (!cur.path.length) { g.innerHTML = ""; return; }
+        const pts = cur.path.map(n => nodeXY(n).join(",")).join(" ");
+        let s = '<polyline class="pathunder" points="' + pts + '"/><polyline class="pathline" points="' + pts + '"/>';
+        if (cur.hintSeg) {
+          const [ax, ay] = nodeXY(cur.hintSeg[0]), [bx, by] = nodeXY(cur.hintSeg[1]);
+          s += '<line class="hintseg" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '"/>';
+        }
+        g.innerHTML = s;
+      }
+
+      /* ================= HUD ================= */
+      function renderLevelHead() {
+        const L = cur.L;
+        $("lvlTitle").textContent = L.name[lang];
+        $("lvlSub").textContent = T().levelN(L.id);
+      }
+      function renderPips() {
+        const L = cur.L;
+        const pips = $("pips");
+        let s = "";
+        if (L.pickup) s += '<span class="pip" id="pipPickup">🍦<span class="tick">✓</span></span>';
+        L.orders.forEach((o, i) => { s += '<span class="pip" id="pip' + i + '">' + FOODS[L.id][i] + '<span class="tick">✓</span></span>'; });
+        pips.innerHTML = s;
+      }
+      function refreshHUD() {
+        const L = cur.L;
+        const ev = evalPath(L, cur.path);
+        cur.ev = ev;
+        $("stepsVal").textContent = ev.steps + " / " + L.budget;
+        $("stepsChip").classList.toggle("over", ev.steps > L.budget);
+        if (L.pickup) { const p = $("pipPickup"); if (p) p.classList.toggle("done", ev.pickupStep !== null); }
+        L.orders.forEach((o, i) => { const p = $("pip" + i); if (p) p.classList.toggle("done", ev.arrivals.has(i)); });
+        // cold pill live countdown
+        const cpt = document.getElementById("coldPillText");
+        if (cpt) {
+          if (ev.coldPending) { const left = 6 - (ev.steps - ev.pickupStep); cpt.textContent = "❄" + Math.max(0, left); }
+          else cpt.textContent = "❄6";
+        }
+        // status line
+        const sl = $("statusLine");
+        let msg = T().intro[L.id - 1], warn = false;
+        if (cur.path.length > 1 || ev.delivered > 0 || ev.pickupStep !== null) {
+          if (ev.delivered < L.orders.length) {
+            const coldI = L.orders.findIndex(o => o.kind === "cold");
+            if (coldI >= 0 && cur.path.indexOf(idx(L, L.orders[coldI].at[0], L.orders[coldI].at[1])) >= 0 && ev.pickupStep === null && !ev.arrivals.has(coldI)) { msg = T().needPickup; warn = true; }
+            else { msg = T().leftOrders(L.orders.length - ev.delivered); }
+          } else if (ev.steps > L.budget) { msg = T().overBudget; warn = true; }
+          else msg = T().ready;
+        }
+        sl.textContent = msg;
+        sl.classList.toggle("warn", warn);
+        $("goBtn").disabled = cur.running || !(ev.delivered === L.orders.length && ev.steps <= L.budget);
+        $("undoBtn").disabled = cur.running || cur.path.length <= 1;
+        $("clearBtn").disabled = cur.running || cur.path.length <= 1;
+        $("hintBtn").disabled = cur.running || cur.hints <= 0 || ev.delivered === L.orders.length;
+        $("hintLeft").textContent = " ×" + cur.hints;
+      }
+
+      /* ================= level flow ================= */
+      function openLevel(id) {
+        const L = LEVELS.find(l => l.id === id);
+        cur = { L, G: buildGraph(L), path: [startIdxOf(L)], hints: 2, running: false, hintSeg: null, ev: null };
+        $("screen-select").classList.add("hidden");
+        $("screen-game").classList.remove("hidden");
+        $("winOverlay").classList.add("hidden");
+        renderLevelHead();
+        renderPips();
+        renderBoard();
+        refreshHUD();
+      }
+      function backToSelect() {
+        cur = null;
+        $("screen-game").classList.add("hidden");
+        $("winOverlay").classList.add("hidden");
+        $("screen-select").classList.remove("hidden");
+        renderCards();
+      }
+      $("backBtn").addEventListener("click", backToSelect);
+
+      /* ================= drawing input ================= */
+      let dragging = false;
+      function svgPoint(evt) {
+        const pt = board.createSVGPoint();
+        pt.x = evt.clientX; pt.y = evt.clientY;
+        const m = board.getScreenCTM();
+        if (!m) return null;
+        return pt.matrixTransform(m.inverse());
+      }
+      function nearestNode(p) {
+        if (!p || !cur) return -1;
+        let best = -1, bd = 52;
+        for (let i = 0; i < cur.L.cols * cur.L.rows; i++) {
+          const [x, y] = nodeXY(i);
+          const d = Math.hypot(p.x - x, p.y - y);
+          if (d < bd) { bd = d; best = i; }
+        }
+        return best;
+      }
+      function classifyMove(from, to) {
+        const L = cur.L, G = cur.G;
+        if (G.adj.get(from).indexOf(to) >= 0) return "ok";
+        const [fx, fy] = xyOf(L, from), [tx, ty] = xyOf(L, to);
+        if (Math.abs(fx - tx) + Math.abs(fy - ty) !== 1) return "far";
+        if (G.blocked.has(ekey([fx, fy], [tx, ty]))) return "blocked";
+        return "oneway";
+      }
+      function tryNode(n) {
+        if (!cur || cur.running || n < 0) return;
+        const path = cur.path;
+        const head = path[path.length - 1];
+        if (n === head) return;
+        const at = path.lastIndexOf(n);
+        if (at >= 0) { cur.path = path.slice(0, at + 1); cur.hintSeg = null; drawPath(); refreshHUD(); return; }
+        const c = classifyMove(head, n);
+        if (c === "ok") { path.push(n); cur.hintSeg = null; drawPath(); refreshHUD(); }
+        else if (c === "blocked") { shake(); toast(T().blocked); }
+        else if (c === "oneway") { shake(); toast(T().oneway); }
+      }
+      board.addEventListener("pointerdown", evt => {
+        if (!cur || cur.running) return;
+        const n = nearestNode(svgPoint(evt));
+        if (n < 0) return;
+        dragging = true;
+        try { board.setPointerCapture(evt.pointerId); } catch (e) {}
+        if (cur.path.length === 1 && n !== startIdxOf(cur.L)) { /* must start at restaurant */ }
+        tryNode(n);
+        evt.preventDefault();
+      });
+      board.addEventListener("pointermove", evt => {
+        if (!dragging || !cur || cur.running) return;
+        tryNode(nearestNode(svgPoint(evt)));
+      });
+      ["pointerup", "pointercancel"].forEach(ev => board.addEventListener(ev, () => { dragging = false; }));
+
+      $("undoBtn").addEventListener("click", () => {
+        if (!cur || cur.running || cur.path.length <= 1) return;
+        cur.path.pop(); cur.hintSeg = null; drawPath(); refreshHUD();
+      });
+      $("clearBtn").addEventListener("click", () => {
+        if (!cur || cur.running) return;
+        cur.path = [startIdxOf(cur.L)]; cur.hintSeg = null; drawPath(); refreshHUD();
+      });
+      $("hintBtn").addEventListener("click", () => {
+        if (!cur || cur.running || cur.hints <= 0) return;
+        const L = cur.L, ev = cur.ev;
+        const head = cur.path[cur.path.length - 1];
+        let mask = 0;
+        ev.arrivals.forEach((v, k) => { mask |= (1 << k); });
+        const coldI = L.orders.findIndex(o => o.kind === "cold");
+        const hotI = L.orders.findIndex(o => o.kind === "hot");
+        const ct = (coldI >= 0 && ev.pickupStep !== null && !ev.arrivals.has(coldI)) ? (ev.steps - ev.pickupStep) : -1;
+        const hotOk0 = hotI < 0 ? 1 : (ev.arrivals.has(hotI) ? (ev.hotMissed ? 0 : 1) : 0);
+        const coldOk0 = coldI < 0 ? 1 : (ev.arrivals.has(coldI) ? (ev.coldMissed ? 0 : 1) : 0);
+        let nodes = solveFrom(L, cur.G, head, mask, ct, hotOk0, coldOk0, true, ev.steps);
+        if (!nodes) nodes = solveFrom(L, cur.G, head, mask, ct, hotOk0, coldOk0, false, ev.steps);
+        if (!nodes || nodes.length < 2) return;
+        cur.hints -= 1;
+        cur.hintSeg = [nodes[0], nodes[1]];
+        drawPath();
+        refreshHUD();
+        setTimeout(() => { if (cur) { cur.hintSeg = null; drawPath(); } }, 2400);
+      });
+
+      /* ================= run animation ================= */
+      function heartsAt(nodeI) {
+        const fx = $("layer-fx");
+        if (!fx) return;
+        const [x, y] = nodeXY(nodeI);
+        for (let i = 0; i < 5; i++) {
+          const g = el("g", { transform: "translate(" + (x + (Math.random() * 36 - 18)) + " " + (y - 16) + ")" }, fx);
+          const p = el("path", { d: "M0 3.5 C0 1 -2.6 -1.8 -5.4 -1.8 C-8.8 -1.8 -10.6 .8 -10.6 3.6 C-10.6 7.2 -5.4 10 0 14.6 C5.4 10 10.6 7.2 10.6 3.6 C10.6 .8 8.8 -1.8 5.4 -1.8 C2.6 -1.8 0 1 0 3.5 Z", fill: i % 2 ? "#f78fb0" : "#f0567a", class: "heartfly" }, g);
+          p.style.animationDelay = (i * 0.09) + "s";
+          setTimeout(() => g.remove(), 1500);
+        }
+      }
+      function animalAt(nodeI, i) {
+        const fx = $("layer-fx");
+        if (!fx) return;
+        const [x, y] = nodeXY(nodeI);
+        const g = el("g", { transform: "translate(" + (x + 26) + " " + (y - 24) + ")", class: "animalpop" }, fx);
+        el("circle", { r: 15.5, fill: "#fff", stroke: "#f3d9c8", "stroke-width": 2 }, g);
+        const t = el("text", { "text-anchor": "middle", "dominant-baseline": "central", "font-size": "17px", y: 1 }, g);
+        t.textContent = ANIMALS[i % ANIMALS.length];
+        setTimeout(() => g.remove(), 1300);
+      }
+      function floatText(nodeI, txt) {
+        const fx = $("layer-fx");
+        if (!fx) return;
+        const [x, y] = nodeXY(nodeI);
+        const t = el("text", { x: x + 24, y: y - 18, class: "floattext" }, fx);
+        t.textContent = txt;
+        setTimeout(() => t.remove(), 1100);
+      }
+      function markDelivered(i) {
+        const node = document.getElementById("orderNode" + i);
+        if (!node) return;
+        const c = node.querySelector("circle");
+        if (c) c.setAttribute("fill", "#e8f6ee");
+        const chk = el("g", { transform: "translate(0 0)" }, node);
+        const [x, y] = nodeXY(idx(cur.L, cur.L.orders[i].at[0], cur.L.orders[i].at[1]));
+        const bg = el("circle", { cx: x - 15, cy: y - 15, r: 8.5, fill: "#2fa36b" }, node);
+        const tx = el("text", { x: x - 15, y: y - 14.2, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5px", fill: "#fff" }, node);
+        tx.textContent = "✓";
+      }
+      function runRoute() {
+        if (!cur || cur.running) return;
+        const L = cur.L, path = cur.path.slice();
+        cur.running = true;
+        refreshHUD();
+        const orderAt = new Map(L.orders.map((o, i) => [idx(L, o.at[0], o.at[1]), i]));
+        const seen = new Set();
+        let seg = 0;
+        const SEG_MS = 235;
+        function stepSeg() {
+          if (seg >= path.length - 1) { finishRun(); return; }
+          const from = path[seg], to = path[seg + 1];
+          const [fx, fy] = nodeXY(from), [tx, ty] = nodeXY(to);
+          const dir = tx < fx ? -1 : 1;
+          placeRider(from, dir);
+          const rider = document.querySelector("#rider");
+          const t0 = performance.now();
+          function frame(now) {
+            const k = Math.min(1, (now - t0) / SEG_MS);
+            const x = fx + (tx - fx) * k, y = fy + (ty - fy) * k;
+            if (rider) rider.setAttribute("transform", "translate(" + x + " " + (y - 6) + ")");
+            if (k < 1) { requestAnimationFrame(frame); return; }
+            seg += 1;
+            const oi = orderAt.get(to);
+            if (oi !== undefined && !seen.has(oi)) {
+              seen.add(oi);
+              heartsAt(to);
+              animalAt(to, oi);
+              markDelivered(oi);
+              if (L.orders[oi].kind === "lift") floatText(to, "+3");
+            }
+            if (to === (L.pickup ? idx(L, L.pickup[0], L.pickup[1]) : -1)) heartsAt(to);
+            setTimeout(stepSeg, L.orders[oi] && !seen.has(oi) ? 60 : 30);
+          }
+          requestAnimationFrame(frame);
+        }
+        stepSeg();
+      }
+      function finishRun() {
+        const L = cur.L, ev = evalPath(L, cur.path);
+        cur.running = false;
+        let stars;
+        if (L.id === 10) stars = ev.steps === L.opt ? 3 : (ev.steps <= L.opt + 1 ? 2 : 1);
+        else stars = ev.steps <= L.opt + 1 ? 3 : (ev.steps <= L.opt + 4 ? 2 : 1);
+        const missed = ev.hotMissed || ev.coldMissed;
+        if (missed) stars = Math.max(1, stars - 1);
+        if (stars > (save.stars[L.id] || 0)) { save.stars[L.id] = stars; persist(); }
+        const starRow = $("winStars");
+        starRow.innerHTML = "";
+        for (let i = 0; i < 3; i++) {
+          const svg = document.createElementNS(SVGNS, "svg");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          const p = document.createElementNS(SVGNS, "path");
+          p.setAttribute("d", "M12 2.6 L14.7 8.6 L21.2 9.3 L16.4 13.7 L17.8 20.1 L12 16.7 L6.2 20.1 L7.6 13.7 L2.8 9.3 L9.3 8.6 Z");
+          p.setAttribute("class", "starpath" + (i < stars ? " on" : ""));
+          svg.appendChild(p);
+          starRow.appendChild(svg);
+        }
+        $("winSteps").textContent = T().winSteps(ev.steps, L.opt);
+        $("winEureka").textContent = L.eureka[lang];
+        $("winTipNote").textContent = missed ? T().tipLost : "";
+        $("winNextBtn").style.display = L.id >= 10 ? "none" : "";
+        setTimeout(() => $("winOverlay").classList.remove("hidden"), 420);
+        refreshHUD();
+      }
+      $("goBtn").addEventListener("click", runRoute);
+      $("winNextBtn").addEventListener("click", () => { if (cur && cur.L.id < 10) openLevel(cur.L.id + 1); });
+      $("winReplayBtn").addEventListener("click", () => { if (cur) openLevel(cur.L.id); });
+      $("winLevelsBtn").addEventListener("click", backToSelect);
+
+      /* ================= init ================= */
+      persist();
+      applyI18n();
+      backToSelect();
+    </script>
+      <script>
+      // PWA registration with proactive auto-update (same pattern as marble-game).
+      if ('serviceWorker' in navigator) {
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadController && !reloading) { reloading = true; window.location.reload(); }
+        });
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then((reg) => {
+            reg.update().catch(() => {});
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') reg.update().catch(() => {});
+            });
+            setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+          }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
