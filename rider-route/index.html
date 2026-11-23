@@ -21,7 +21,9 @@
         --accent: #f0567a; --accent-soft: #ffd9e2;
         --gold: #ffb703; --good: #2fa36b; --bad: #e0483e;
         --street: #fffdf8; --street-edge: #f0d7c3;
+        --lane: #eccfa5; --cross: rgba(190, 145, 95, .38); --ground: #fdf1de;
         --shadow: 0 8px 22px rgba(160, 90, 70, .16);
+        --shadow-sm: 0 3px 10px rgba(160, 90, 70, .13);
         --blocks: #ffe3ec, #dff3e2, #fff3c4, #ddebfd, #efe3fb, #ffe8d6;
       }
       @media (prefers-color-scheme: dark) {
@@ -31,8 +33,10 @@
           --ink: #f5e9ec; --ink2: #bd9aa8;
           --line: #4c3a4a;
           --accent: #f4708f; --accent-soft: #59303f;
-          --street: #3a2f3c; --street-edge: #574657;
+          --street: #4a3f63; --street-edge: #352b4c;
+          --lane: #9a8cc4; --cross: rgba(232, 226, 255, .30); --ground: #201830;
           --shadow: 0 8px 22px rgba(0, 0, 0, .45);
+          --shadow-sm: 0 3px 10px rgba(0, 0, 0, .42);
         }
       }
       * { box-sizing: border-box; font-weight: 400; }
@@ -62,10 +66,10 @@
         min-height: 2.5rem; padding: 0 1rem; border-radius: 999px;
         border: 1.5px solid var(--line); background: var(--panel);
         font-size: .92rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
-        white-space: nowrap;
+        white-space: nowrap; box-shadow: var(--shadow-sm);
       }
       .btn:active { transform: scale(.97); }
-      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 5px 14px rgba(240, 86, 122, .32); }
       .btn.primary:disabled { opacity: .4; }
       .btn:disabled { opacity: .45; cursor: default; }
       .btn.small { min-height: 2.25rem; padding: 0 .7rem; font-size: .82rem; }
@@ -73,6 +77,7 @@
         width: 2.5rem; height: 2.5rem; min-height: 2.5rem; border-radius: 50%;
         border: 1.5px solid var(--line); background: var(--panel);
         font-size: 1.05rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none;
+        box-shadow: var(--shadow-sm);
       }
 
       /* ---------- level select ---------- */
@@ -84,7 +89,7 @@
       .card {
         background: var(--panel); border: 1.5px solid var(--line); border-radius: 1.1rem;
         padding: .5rem .6rem .55rem; cursor: pointer; text-align: left; width: 100%;
-        overflow: hidden; align-self: start;
+        overflow: hidden; align-self: start; box-shadow: var(--shadow-sm);
       }
       .card:active { transform: scale(.98); }
       .card.locked { opacity: .55; cursor: default; }
@@ -103,6 +108,7 @@
       .chip {
         background: var(--panel); border: 1.5px solid var(--line); border-radius: .8rem;
         padding: .3rem .7rem; font-size: .95rem; display: flex; align-items: center; gap: .45rem;
+        box-shadow: var(--shadow-sm);
       }
       .chip .lab { font-size: .72rem; color: var(--ink2); }
       .chip .val { font-size: 1.05rem; }
@@ -146,10 +152,14 @@
       /* svg bits */
       .street { stroke: var(--street); stroke-width: 34; stroke-linecap: round; }
       .streetedge { stroke: var(--street-edge); stroke-width: 38; stroke-linecap: round; }
+      .lane { fill: none; stroke: var(--lane); stroke-width: 3; stroke-dasharray: 9 13; stroke-linecap: round; opacity: .6; }
+      .crossline { stroke: var(--cross); stroke-width: 4.2; stroke-linecap: round; }
+      .wheelg.spinning { animation: wheelspin .5s linear infinite; transform-box: fill-box; transform-origin: center; }
+      @keyframes wheelspin { to { transform: rotate(360deg); } }
       .streetblocked { stroke: var(--street-edge); stroke-width: 30; stroke-linecap: round; stroke-dasharray: 4 10; opacity: .7; }
       .pathunder { fill: none; stroke: #ffffff; stroke-width: 21; stroke-linejoin: round; stroke-linecap: round; opacity: .92; }
       .pathline { fill: none; stroke: var(--accent); stroke-width: 11; stroke-linejoin: round; stroke-linecap: round; }
-      @media (prefers-color-scheme: dark) { .pathunder { stroke: #241a24; } }
+      @media (prefers-color-scheme: dark) { .pathunder { stroke: #2b2145; } }
       .hintseg { stroke: var(--gold); stroke-width: 13; stroke-linecap: round; stroke-dasharray: 2 14; animation: hintdash 0.7s linear infinite; }
       @keyframes hintdash { to { stroke-dashoffset: -16; } }
       .onearrow { fill: none; stroke: #d98a7d; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
@@ -183,7 +193,7 @@
       .riderbob { animation: bob .34s ease-in-out infinite alternate; }
       @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-2.2px); } }
       @media (prefers-reduced-motion: reduce) {
-        .riderbob, .hintseg { animation: none; }
+        .riderbob, .hintseg, .wheelg.spinning { animation: none; }
       }
 
       /* ---------- controls ---------- */
@@ -576,14 +586,33 @@
       function miniMap(L) {
         const G = buildGraph(L);
         const W = L.cols * 100, H = L.rows * 100;
+        const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const specs = dark ? BUILD_DARK : BUILD_LIGHT;
         let s = '<svg viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" aria-hidden="true">';
-        s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="var(--panel2)"/>';
+        s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="var(--ground)"/>';
+        for (let y = 0; y < L.rows - 1; y++) for (let x = 0; x < L.cols - 1; x++) {
+          const bx = x * 100 + 58, by = y * 100 + 58, h = (L.id * 31 + x * 7 + y * 13) % 30;
+          if (h % 5 === 3) {
+            s += '<rect x="' + bx + '" y="' + by + '" width="84" height="84" rx="14" fill="' + (dark ? "#2c4638" : "#dff3e2") + '"/><circle cx="' + (bx + 28) + '" cy="' + (by + 34) + '" r="13" fill="' + (dark ? "#4c8f68" : "#8fd0a0") + '"/><circle cx="' + (bx + 58) + '" cy="' + (by + 58) + '" r="10" fill="' + (dark ? "#4c8f68" : "#8fd0a0") + '"/>';
+          } else {
+            const sp = specs[h % 6];
+            s += '<rect x="' + (bx + 15) + '" y="' + (by + 32) + '" width="54" height="46" rx="4" fill="' + sp.wall + '"/><polygon points="' + (bx + 9) + "," + (by + 34) + " " + (bx + 42) + "," + (by + 13) + " " + (bx + 75) + "," + (by + 34) + '" fill="' + sp.roof + '"/><rect x="' + (bx + 24) + '" y="' + (by + 44) + '" width="10" height="11" rx="2" fill="' + sp.win + '"/><rect x="' + (bx + 50) + '" y="' + (by + 44) + '" width="10" height="11" rx="2" fill="' + sp.win + '"/>';
+          }
+        }
+        for (const pass of [30, 24]) {
+          for (const e of G.edges) {
+            if (e.blocked) continue;
+            const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
+            s += '<line x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '" stroke="var(--' + (pass === 30 ? "street-edge" : "street") + ')" stroke-width="' + pass + '" stroke-linecap="round"/>';
+          }
+        }
         for (const e of G.edges) {
+          if (!e.blocked) continue;
           const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
-          s += '<line x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '" stroke="' + (e.blocked ? "#ff9f43" : "#e9cdb8") + '" stroke-width="' + (e.blocked ? 10 : 15) + '" stroke-linecap="round"' + (e.blocked ? ' stroke-dasharray="3 12"' : "") + "/>";
+          s += '<line x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '" stroke="#ff9f43" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 12"/>';
         }
         const [sx, sy] = L.start;
-        s += '<circle cx="' + (sx * 100 + 50) + '" cy="' + (sy * 100 + 50) + '" r="17" fill="var(--accent)"/>';
+        s += '<circle cx="' + (sx * 100 + 50) + '" cy="' + (sy * 100 + 50) + '" r="17" fill="var(--accent)" stroke="#fff" stroke-width="4"/>';
         L.orders.forEach((o, i) => {
           s += '<circle cx="' + (o.at[0] * 100 + 50) + '" cy="' + (o.at[1] * 100 + 50) + '" r="14" fill="' + TEAMS[i % TEAMS.length] + '" stroke="#fff" stroke-width="4"/>';
         });
@@ -611,43 +640,122 @@
       }
 
       /* ================= board rendering ================= */
-      const BLOCK_COLORS = ["#ffe3ec", "#dff3e2", "#fff3c4", "#ddebfd", "#efe3fb", "#ffe8d6"];
-      const BLOCK_COLORS_DARK = ["#43303c", "#2f4234", "#4a4028", "#2e3c50", "#3e3350", "#4a382a"];
+      const BUILD_LIGHT = [
+        { wall: "#fff6ea", roof: "#ff9f43", door: "#d97b54", win: "#bfe3f2" },
+        { wall: "#fdf0f3", roof: "#f0567a", door: "#b84a63", win: "#cdeffb" },
+        { wall: "#eef7ee", roof: "#6bcb77", door: "#4e8f57", win: "#cdeffb" },
+        { wall: "#eef4fd", roof: "#5aa9e6", door: "#3f74a8", win: "#ffe9a8" },
+        { wall: "#f6eefc", roof: "#a678d8", door: "#7a52ab", win: "#cdeffb" },
+        { wall: "#fff8e1", roof: "#ffb703", door: "#c07f13", win: "#cdeffb" }
+      ];
+      const BUILD_DARK = [
+        { wall: "#46355c", roof: "#5f4a7d", door: "#2e2142", win: "#ffd166" },
+        { wall: "#3d4a6b", roof: "#54648c", door: "#28324e", win: "#ffd166" },
+        { wall: "#513d5e", roof: "#6e557f", door: "#382a47", win: "#ffe29a" },
+        { wall: "#37455e", roof: "#4d5f7d", door: "#263144", win: "#ffd166" },
+        { wall: "#4c3550", roof: "#66486a", door: "#332338", win: "#ffe29a" },
+        { wall: "#3f3a5e", roof: "#585180", door: "#2b2745", win: "#ffd166" }
+      ];
+      function winRect(x, y, spec) {
+        return '<rect x="' + x + '" y="' + y + '" width="11" height="13" rx="2" fill="' + spec.win + '" stroke="rgba(70,40,30,.18)" stroke-width="1"/>' +
+          '<line x1="' + (x + 5.5) + '" y1="' + (y + 1) + '" x2="' + (x + 5.5) + '" y2="' + (y + 12) + '" stroke="rgba(70,40,30,.15)" stroke-width="1"/>';
+      }
+      function buildingSVG(bx, by, spec, kind) {
+        const cx = bx + 44;
+        let s = '<ellipse cx="' + cx + '" cy="' + (by + 82) + '" rx="37" ry="6" fill="rgba(60,30,20,.13)"/>';
+        s += '<rect x="' + (bx + 15) + '" y="' + (by + 32) + '" width="58" height="48" rx="5" fill="' + spec.wall + '"/>';
+        if (kind === 0) { // gable roof
+          s += '<polygon points="' + (bx + 8) + "," + (by + 35) + " " + cx + "," + (by + 13) + " " + (bx + 80) + "," + (by + 35) + '" fill="' + spec.roof + '"/>';
+          s += '<polygon points="' + (bx + 22) + "," + (by + 29) + " " + cx + "," + (by + 17) + " " + (cx + 7) + "," + (by + 29) + '" fill="rgba(255,255,255,.28)"/>';
+        } else if (kind === 1) { // flat roof + chimney
+          s += '<rect x="' + (bx + 57) + '" y="' + (by + 14) + '" width="9" height="13" rx="2" fill="' + spec.roof + '"/>';
+          s += '<rect x="' + (bx + 10) + '" y="' + (by + 23) + '" width="68" height="11" rx="4" fill="' + spec.roof + '"/>';
+          s += '<rect x="' + (bx + 10) + '" y="' + (by + 23) + '" width="68" height="4" rx="2" fill="rgba(255,255,255,.25)"/>';
+        } else { // shop: sign band
+          s += '<rect x="' + (bx + 10) + '" y="' + (by + 22) + '" width="68" height="11" rx="4" fill="' + spec.roof + '"/>';
+          s += '<rect x="' + (bx + 25) + '" y="' + (by + 24.5) + '" width="38" height="6" rx="3" fill="rgba(255,255,255,.8)"/>';
+        }
+        s += winRect(bx + 22, by + 41, spec) + winRect(bx + 55, by + 41, spec);
+        if (kind === 2) { // scalloped awning
+          s += '<rect x="' + (bx + 19) + '" y="' + (by + 52) + '" width="50" height="6" fill="' + spec.roof + '"/>';
+          for (let i = 0; i < 5; i++) s += '<circle cx="' + (bx + 24 + i * 10) + '" cy="' + (by + 58) + '" r="5" fill="' + spec.roof + '"/>';
+        }
+        s += '<rect x="' + (bx + 38) + '" y="' + (by + 59) + '" width="12" height="21" rx="3" fill="' + spec.door + '"/><circle cx="' + (bx + 47) + '" cy="' + (by + 70) + '" r="1.6" fill="#ffe1c9"/>';
+        return s;
+      }
+      function treeSVG(cx, cy, dark) {
+        return '<ellipse cx="' + cx + '" cy="' + (cy + 16) + '" rx="13" ry="3.5" fill="rgba(60,30,20,.15)"/>' +
+          '<rect x="' + (cx - 2) + '" y="' + (cy + 4) + '" width="4.5" height="12" rx="2" fill="#a9805d"/>' +
+          '<circle cx="' + cx + '" cy="' + (cy - 6) + '" r="12" fill="' + (dark ? "#3f7d5a" : "#7cc793") + '"/>' +
+          '<circle cx="' + (cx - 9) + '" cy="' + (cy + 1) + '" r="8.5" fill="' + (dark ? "#4c8f68" : "#93d6a7") + '"/>' +
+          '<circle cx="' + (cx + 9) + '" cy="' + (cy + 1) + '" r="8.5" fill="' + (dark ? "#4c8f68" : "#93d6a7") + '"/>' +
+          '<circle cx="' + (cx - 3) + '" cy="' + (cy - 9) + '" r="4" fill="rgba(255,255,255,.35)"/>';
+      }
+      function lampSVG(cx, cy, dark) {
+        let s = "";
+        if (dark) s += '<circle cx="' + cx + '" cy="' + (cy - 2) + '" r="17" fill="url(#lampGlow)"/>';
+        s += '<rect x="' + (cx - 1.3) + '" y="' + cy + '" width="2.6" height="13" rx="1.3" fill="' + (dark ? "#8d7fb8" : "#b08968") + '"/>';
+        s += '<circle cx="' + cx + '" cy="' + (cy - 2) + '" r="4" fill="#ffd166" stroke="' + (dark ? "#e8a93d" : "#e0a83e") + '" stroke-width="1.2"/>';
+        return s;
+      }
+      function parkSVG(bx, by, dark) {
+        let s = '<rect x="' + (bx + 4) + '" y="' + (by + 4) + '" width="80" height="80" rx="16" fill="' + (dark ? "#2c4638" : "#dff3e2") + '"/>';
+        s += treeSVG(bx + 28, by + 34, dark);
+        s += treeSVG(bx + 62, by + 58, dark);
+        s += '<circle cx="' + (bx + 58) + '" cy="' + (by + 22) + '" r="3.2" fill="#f28bb4"/><circle cx="' + (bx + 68) + '" cy="' + (by + 28) + '" r="3.2" fill="#ffb703"/><circle cx="' + (bx + 18) + '" cy="' + (by + 64) + '" r="3.2" fill="#f28bb4"/><circle cx="' + (bx + 28) + '" cy="' + (by + 70) + '" r="3.2" fill="#ffb703"/>';
+        s += lampSVG(bx + 78, by + 14, dark);
+        return s;
+      }
+      function crosswalkSVG(ax, ay, bx, by, t) {
+        const mx = ax + (bx - ax) * t, my = ay + (by - ay) * t;
+        const len = Math.hypot(bx - ax, by - ay) || 1;
+        const ux = (bx - ax) / len, uy = (by - ay) / len, px = -uy, py = ux;
+        let s = "";
+        for (let i = -1.5; i <= 1.5; i++) {
+          const cx = mx + px * i * 8, cy = my + py * i * 8;
+          s += '<line class="crossline" x1="' + (cx - ux * 5) + '" y1="' + (cy - uy * 5) + '" x2="' + (cx + ux * 5) + '" y2="' + (cy + uy * 5) + '"/>';
+        }
+        return s;
+      }
       function riderSVG() {
         return '' +
-        '<g id="rider"><g class="riderflip"><g class="riderbobbody">' +
-          '<rect x="-36" y="-32" width="18" height="18" rx="4.5" fill="#ffc93c"/>' +
-          '<path d="M-27 -23.5 c-.9-2.2-4.6-2.2-4.6.3 c0 1.9 2.4 3.1 4.6 4.6 c2.2-1.5 4.6-2.7 4.6-4.6 c0-2.5-3.7-2.5-4.6-.3z" fill="#fff"/>' +
-          '<circle cx="-15" cy="13" r="6.2" fill="#43302b"/><circle cx="-15" cy="13" r="2.5" fill="#fff"/>' +
-          '<circle cx="18" cy="13" r="6.2" fill="#43302b"/><circle cx="18" cy="13" r="2.5" fill="#fff"/>' +
+        '<g id="rider"><g class="riderflip"><g transform="scale(1.16)"><g class="riderbobbody">' +
+          '<ellipse cx="-2" cy="20" rx="30" ry="4.6" fill="rgba(60,25,20,.18)"/>' +
+          '<rect x="-38" y="-34" width="20" height="20" rx="5" fill="#ffc93c"/>' +
+          '<rect x="-38" y="-34" width="20" height="7" rx="3.5" fill="#f5a623"/>' +
+          '<path d="M-28 -24.5 c-.9-2.2-4.6-2.2-4.6.3 c0 1.9 2.4 3.1 4.6 4.6 c2.2-1.5 4.6-2.7 4.6-4.6 c0-2.5-3.7-2.5-4.6-.3z" fill="#fff"/>' +
+          '<g class="wheelg"><circle cx="-15" cy="13" r="6.4" fill="#43302b"/><circle cx="-15" cy="13" r="2.4" fill="#fff"/><path d="M-15 7.5 V18.5 M-20.5 13 H-9.5 M-19 9 L-11 17 M-19 17 L-11 9" stroke="#fff" stroke-width="1.1" opacity=".65"/></g>' +
+          '<g class="wheelg"><circle cx="18" cy="13" r="6.4" fill="#43302b"/><circle cx="18" cy="13" r="2.4" fill="#fff"/><path d="M18 7.5 V18.5 M12.5 13 H23.5 M14 9 L22 17 M14 17 L22 9" stroke="#fff" stroke-width="1.1" opacity=".65"/></g>' +
           '<path d="M-19 13 Q-16 1 -3 0 L9 0 Q20 1 19 13 L12 13 Q10 6 1 6 L-8 6 Q-14 6 -15 13 Z" fill="#f78fb0"/>' +
           '<path d="M11 0 Q15 -13 7 -17" fill="none" stroke="#f78fb0" stroke-width="5" stroke-linecap="round"/>' +
+          '<path d="M13 -6 L25 -6 L22.5 3 L15 3 Z" fill="#ffb703"/><path d="M16.2 -6 L15.9 3 M20 -6 L20.2 3" stroke="#e09500" stroke-width="1.4"/>' +
           '<path d="M-3 -7 L7 5" stroke="#5a6b8c" stroke-width="5.5" stroke-linecap="round"/>' +
           '<rect x="-14" y="-27" width="16" height="21" rx="7.5" fill="#5aa9e6" transform="rotate(9 -6 -16)"/>' +
           '<path d="M1 -21 L9 -7" stroke="#ffd9c0" stroke-width="4.6" stroke-linecap="round"/>' +
           '<circle cx="-7" cy="-34" r="8.2" fill="#ffd9c0"/>' +
           '<path d="M-15.2 -34.5 A8.2 8.2 0 0 1 1.2 -34.5 L1.2 -32 L-15.2 -32 Z" fill="#f0567a"/>' +
+          '<path d="M-14.8 -35.8 A8.2 8.2 0 0 1 0.8 -35.8" fill="none" stroke="#fff" stroke-width="1.6" opacity=".8"/>' +
+          '<polygon points="-7,-40.6 -6,-38.1 -3.7,-38.1 -5.3,-36.7 -4.6,-34.4 -7,-35.7 -9.4,-34.4 -8.7,-36.7 -10.3,-38.1 -8,-38.1" fill="#fff"/>' +
           '<circle cx="-14.5" cy="-39.5" r="3.1" fill="#ffc93c"/>' +
           '<circle cx="0.5" cy="-31.5" r="1.35" fill="#43302b"/>' +
-        "</g></g></g>";
+        "</g></g></g></g>";
       }
       function renderBoard() {
         const L = cur.L, G = cur.G;
         const W = L.cols * 100, H = L.rows * 100;
         board.setAttribute("viewBox", "0 0 " + W + " " + H);
-        let s = "";
-        // city blocks (decor)
         const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const palette = dark ? BLOCK_COLORS_DARK : BLOCK_COLORS;
+        const specs = dark ? BUILD_DARK : BUILD_LIGHT;
+        let s = '<defs><radialGradient id="lampGlow"><stop offset="0%" stop-color="#ffd166" stop-opacity=".5"/><stop offset="100%" stop-color="#ffd166" stop-opacity="0"/></radialGradient></defs>';
+        s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="var(--ground)"/>';
+        // city blocks: little houses & parks
         for (let y = 0; y < L.rows - 1; y++) for (let x = 0; x < L.cols - 1; x++) {
-          const h = (L.id * 31 + x * 7 + y * 13) % 6;
-          s += '<rect x="' + (x * 100 + 56) + '" y="' + (y * 100 + 56) + '" width="88" height="88" rx="16" fill="' + palette[h] + '" opacity="0.75"/>';
-          if (h === 1 || h === 4) { // little tree
-            const cx = x * 100 + 100, cy = y * 100 + 100;
-            s += '<circle cx="' + cx + '" cy="' + (cy - 4) + '" r="13" fill="#8fd0a0" opacity="0.9"/><circle cx="' + (cx - 10) + '" cy="' + (cy + 3) + '" r="9" fill="#a8dcb4" opacity="0.9"/><rect x="' + (cx - 2) + '" y="' + (cy + 4) + '" width="4" height="8" rx="2" fill="#b08968"/>';
-          } else if (h === 3) { // flower dots
-            const cx = x * 100 + 100, cy = y * 100 + 100;
-            s += '<circle cx="' + (cx - 12) + '" cy="' + cy + '" r="3.4" fill="#f28bb4"/><circle cx="' + (cx + 10) + '" cy="' + (cy - 8) + '" r="3.4" fill="#ffb703"/><circle cx="' + (cx + 4) + '" cy="' + (cy + 11) + '" r="3.4" fill="#f28bb4"/>';
+          const bx = x * 100 + 56, by = y * 100 + 56;
+          const h = (L.id * 31 + x * 7 + y * 13) % 30;
+          if (h % 5 === 3) s += parkSVG(bx, by, dark);
+          else {
+            s += buildingSVG(bx, by, specs[h % 6], h % 3);
+            if (h % 3 === 0) s += lampSVG(bx + 9, by + 14, dark);
           }
         }
         // street edges (underlay then surface)
@@ -658,10 +766,23 @@
             s += '<line class="' + pass + '" x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '"/>';
           }
         }
+        // lane dashes + crosswalks
+        for (const e of G.edges) {
+          if (e.blocked) continue;
+          const [ax, ay] = nodeXY(e.a), [bx, by] = nodeXY(e.b);
+          s += '<line class="lane" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '"/>';
+          if ((e.a * 7 + e.b * 13 + L.id) % 4 === 0) s += crosswalkSVG(ax, ay, bx, by, 0.2) + crosswalkSVG(ax, ay, bx, by, 0.8);
+        }
         for (const e of G.edges) {
           if (!e.blocked) continue;
           const [ax, ay] = xyOf(L, e.a), [bx, by] = xyOf(L, e.b);
           s += '<line class="streetblocked" x1="' + (ax * 100 + 50) + '" y1="' + (ay * 100 + 50) + '" x2="' + (bx * 100 + 50) + '" y2="' + (by * 100 + 50) + '"/>';
+        }
+        if (dark) { // night sparkles
+          for (let i = 0; i < 22; i++) {
+            const sx = ((i * 173 + L.id * 57) % 100) / 100 * W, sy = ((i * 269 + L.id * 91) % 100) / 100 * H;
+            s += '<circle cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="' + (i % 3 === 0 ? 1.9 : 1.2) + '" fill="#fff" opacity="' + (0.22 + (i % 4) * 0.1).toFixed(2) + '"/>';
+          }
         }
         s += '<g id="layer-path"></g><g id="layer-marks"></g><g id="layer-nodes"></g><g id="layer-fx"></g>';
         board.innerHTML = s;
@@ -695,24 +816,29 @@
         }
         g.innerHTML = s;
       }
+      function houseMark(x, y, color, icon, num) {
+        let s = '<polygon points="' + (x - 23) + "," + (y - 5) + " " + x + "," + (y - 26) + " " + (x + 23) + "," + (y - 5) + '" fill="' + color + '"/>' +
+          '<rect x="' + (x - 19) + '" y="' + (y - 6) + '" width="38" height="29" rx="5" fill="var(--panel)" stroke="' + color + '" stroke-width="2"/>' +
+          '<circle cx="' + x + '" cy="' + (y - 1) + '" r="15" fill="#fff" stroke="' + color + '" stroke-width="3"/>' +
+          '<text class="foodicon" style="font-size:16px" x="' + x + '" y="' + y + '">' + icon + "</text>" +
+          '<rect x="' + (x - 5) + '" y="' + (y + 12) + '" width="10" height="11" rx="2.5" fill="' + color + '" opacity=".85"/>';
+        if (num) s += '<circle cx="' + x + '" cy="' + (y - 26) + '" r="6.5" fill="#fff" stroke="' + color + '" stroke-width="2"/><text x="' + x + '" y="' + (y - 25.4) + '" text-anchor="middle" dominant-baseline="central" font-size="8.5px" fill="var(--ink)">' + num + "</text>";
+        return s;
+      }
       function drawNodes() {
         const L = cur.L;
         const g = $("layer-nodes");
         let s = "";
         const [sx, sy] = nodeXY(startIdxOf(L));
-        s += '<circle cx="' + sx + '" cy="' + sy + '" r="21" fill="var(--accent)" class="nodebadge"/>' +
-             '<text class="starticon" x="' + sx + '" y="' + (sy + 1) + '">🏪</text>';
+        s += houseMark(sx, sy, "var(--accent)", "🏪", null);
         if (L.pickup) {
           const [px, py] = nodeXY(idx(L, L.pickup[0], L.pickup[1]));
-          s += '<g id="pickupNode"><circle cx="' + px + '" cy="' + py + '" r="20" fill="#bfe9fd" class="nodebadge"/>' +
-               '<text class="foodicon" x="' + px + '" y="' + (py + 1) + '">🍦</text></g>';
+          s += '<g id="pickupNode">' + houseMark(px, py, "#5aa9e6", "🍦", null) + "</g>";
         }
         L.orders.forEach((o, i) => {
           const [x, y] = nodeXY(idx(L, o.at[0], o.at[1]));
           const team = TEAMS[i % TEAMS.length];
-          s += '<g id="orderNode' + i + '"><circle cx="' + x + '" cy="' + y + '" r="20" fill="#fff" class="nodebadge" stroke="' + team + '"/>' +
-               '<circle cx="' + x + '" cy="' + y + '" r="20" fill="none" stroke="' + team + '" stroke-width="3.5"/>' +
-               '<text class="foodicon" x="' + x + '" y="' + (y + 1) + '">' + FOODS[L.id][i] + "</text>";
+          s += '<g id="orderNode' + i + '">' + houseMark(x, y, team, FOODS[L.id][i], i + 1);
           if (o.kind === "hot") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="34" height="19" rx="9.5"/><text class="badgetext" x="' + (x + 21) + '" y="' + (y - 20.5) + '">🔥' + o.limit + "</text></g>";
           if (o.kind === "lift") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="30" height="19" rx="9.5"/><text class="badgetext" x="' + (x + 19) + '" y="' + (y - 20.5) + '">+3</text></g>';
           if (o.kind === "cold") s += '<g id="pill' + i + '"><rect class="badgepill" x="' + (x + 4) + '" y="' + (y - 34) + '" width="34" height="19" rx="9.5"/><text class="badgetext" id="coldPillText" x="' + (x + 21) + '" y="' + (y - 20.5) + '">❄6</text></g>';
@@ -731,6 +857,7 @@
         if (flip) flip.setAttribute("transform", dir < 0 ? "scale(-1 1)" : "scale(1 1)");
         const bob = r.querySelector(".riderbobbody");
         if (bob) bob.setAttribute("class", cur && cur.running ? "riderbob" : "");
+        r.querySelectorAll(".wheelg").forEach(w => w.classList.toggle("spinning", !!(cur && cur.running)));
       }
       function drawPath() {
         const g = $("layer-path");
@@ -903,9 +1030,9 @@
         const fx = $("layer-fx");
         if (!fx) return;
         const [x, y] = nodeXY(nodeI);
-        for (let i = 0; i < 5; i++) {
-          const g = el("g", { transform: "translate(" + (x + (Math.random() * 36 - 18)) + " " + (y - 16) + ")" }, fx);
-          const p = el("path", { d: "M0 3.5 C0 1 -2.6 -1.8 -5.4 -1.8 C-8.8 -1.8 -10.6 .8 -10.6 3.6 C-10.6 7.2 -5.4 10 0 14.6 C5.4 10 10.6 7.2 10.6 3.6 C10.6 .8 8.8 -1.8 5.4 -1.8 C2.6 -1.8 0 1 0 3.5 Z", fill: i % 2 ? "#f78fb0" : "#f0567a", class: "heartfly" }, g);
+        for (let i = 0; i < 6; i++) {
+          const g = el("g", { transform: "translate(" + (x + (Math.random() * 40 - 20)) + " " + (y - 16) + ") scale(1.35)" }, fx);
+          const p = el("path", { d: "M0 3.5 C0 1 -2.6 -1.8 -5.4 -1.8 C-8.8 -1.8 -10.6 .8 -10.6 3.6 C-10.6 7.2 -5.4 10 0 14.6 C5.4 10 10.6 7.2 10.6 3.6 C10.6 .8 8.8 -1.8 5.4 -1.8 C2.6 -1.8 0 1 0 3.5 Z", fill: i % 2 ? "#f78fb0" : "#f0567a", stroke: "#fff", "stroke-width": "1.2", class: "heartfly" }, g);
           p.style.animationDelay = (i * 0.09) + "s";
           setTimeout(() => g.remove(), 1500);
         }
@@ -980,6 +1107,7 @@
       function finishRun() {
         const L = cur.L, ev = evalPath(L, cur.path);
         cur.running = false;
+        placeRider(cur.path[cur.path.length - 1], 1);
         let stars;
         if (L.id === 10) stars = ev.steps === L.opt ? 3 : (ev.steps <= L.opt + 1 ? 2 : 1);
         else stars = ev.steps <= L.opt + 1 ? 3 : (ev.steps <= L.opt + 4 ? 2 : 1);
