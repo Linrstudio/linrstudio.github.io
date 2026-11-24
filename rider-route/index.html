@@ -320,6 +320,7 @@
           <p class="sub" data-i18n="gameSub">画一条路线，送完所有单</p>
         </div>
         <button class="iconbtn" id="themeBtn1" type="button" aria-label="day / night"></button>
+        <button class="iconbtn" id="soundBtn1" type="button" aria-label="sound on / off"></button>
         <button class="btn small" id="langBtn1" type="button">EN</button>
       </div>
       <div class="cards" id="cards"></div>
@@ -341,6 +342,7 @@
           <div class="chip" id="stepsChip"><span class="lab" data-i18n="steps">步数</span><span class="val" id="stepsVal">0 / 15</span></div>
           <div class="chip hidden" id="timeChip"><span class="lab">⏱</span><span class="val" id="timeVal">0:00</span></div>
           <button class="iconbtn" id="themeBtn2" type="button" aria-label="day / night"></button>
+          <button class="iconbtn" id="soundBtn2" type="button" aria-label="sound on / off"></button>
           <button class="btn small" id="langBtn2" type="button">EN</button>
         </div>
         <div class="taskrow">
@@ -742,6 +744,146 @@
       }
       document.getElementById("themeBtn1").addEventListener("click", () => setTheme(isDark() ? "light" : "dark"));
       document.getElementById("themeBtn2").addEventListener("click", () => setTheme(isDark() ? "light" : "dark"));
+
+      /* ================= sound: speech + Web Audio ================= */
+      // Voices use the device speechSynthesis (no audio files); the
+      // scooter hum and the win jingle are synthesized live with Web
+      // Audio. Nothing sounds on page load: the AudioContext is only
+      // created inside a user gesture (tapping a level card, tapping
+      // Go). The speaker toggle in the top bars mutes everything; the
+      // choice lives in the same local save (soundOn, default on).
+      let soundOn = save.soundOn !== false;
+      const SPK_ON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19z" fill="currentColor" stroke="none"/><path d="M14.5 9.2a4 4 0 0 1 0 5.6"/><path d="M17 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>';
+      const SPK_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19z" fill="currentColor" stroke="none"/><path d="M15 9.5l6 6M21 9.5l-6 6"/></svg>';
+      function applySound() {
+        const icon = soundOn ? SPK_ON : SPK_OFF;
+        $("soundBtn1").innerHTML = icon;
+        $("soundBtn2").innerHTML = icon;
+      }
+      function setSound(on) {
+        soundOn = on;
+        save.soundOn = on;
+        persist();
+        applySound();
+        if (!on) { // muting silences everything right away
+          try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+          stopEngine();
+        } else if (cur && cur.running) {
+          startEngine();
+        }
+      }
+      document.getElementById("soundBtn1").addEventListener("click", () => setSound(!soundOn));
+      document.getElementById("soundBtn2").addEventListener("click", () => setSound(!soundOn));
+
+      let AC = null;
+      function ensureAudio() {
+        if (!soundOn) return null;
+        try {
+          if (!AC) {
+            const Ctor = window.AudioContext || window.webkitAudioContext;
+            if (!Ctor) return null;
+            AC = new Ctor();
+          }
+          if (AC.state === "suspended") AC.resume();
+          return AC;
+        } catch (e) { return null; }
+      }
+      // --- speech: pick a voice matching the line's language, else
+      // fall back to the default voice with just lang set; any failure
+      // is silent and never blocks the game ---
+      let voiceCache = [];
+      function refreshVoices() { try { voiceCache = speechSynthesis.getVoices() || []; } catch (e) {} }
+      if ("speechSynthesis" in window) {
+        refreshVoices();
+        try { speechSynthesis.addEventListener("voiceschanged", refreshVoices); } catch (e) {}
+      }
+      function speakLine(text, langCode) {
+        if (!soundOn) return;
+        try {
+          if (!("speechSynthesis" in window)) return;
+          speechSynthesis.cancel(); // never queue up: the latest line wins
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = langCode;
+          u.rate = 1.05;
+          const want = langCode.toLowerCase();
+          const v = voiceCache.find(v => (v.lang || "").toLowerCase().replace(/_/g, "-") === want) ||
+            voiceCache.find(v => (v.lang || "").toLowerCase().indexOf(want.split("-")[0]) === 0);
+          if (v) u.voice = v;
+          speechSynthesis.speak(u);
+        } catch (e) {}
+      }
+      const speakNewOrder = () => speakLine("你有新的订单", "zh-CN");
+      const PRAISES = [["good", "en-US"], ["perfect", "en-US"], ["太棒了", "zh-CN"]];
+      function speakPraise() {
+        const p = PRAISES[Math.floor(Math.random() * PRAISES.length)];
+        speakLine(p[0], p[1]);
+      }
+      // --- scooter hum: low oscillators through a lowpass, plus a
+      // whisper of filtered noise; quiet background, never shrill ---
+      let engine = null;
+      function startEngine() {
+        if (!soundOn || engine) return;
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const gain = ac.createGain();
+          gain.gain.value = 0;
+          gain.connect(ac.destination);
+          const filter = ac.createBiquadFilter();
+          filter.type = "lowpass"; filter.frequency.value = 300; filter.Q.value = 0.5;
+          filter.connect(gain);
+          const o1 = ac.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 78;
+          const o2 = ac.createOscillator(); o2.type = "sine"; o2.frequency.value = 156;
+          const g2 = ac.createGain(); g2.gain.value = 0.5;
+          o1.connect(filter); o2.connect(g2); g2.connect(filter);
+          const lfo = ac.createOscillator(); lfo.frequency.value = 6.5;
+          const lg = ac.createGain(); lg.gain.value = 4;
+          lfo.connect(lg); lg.connect(o1.frequency);
+          const len = ac.sampleRate;
+          const buf = ac.createBuffer(1, len, ac.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+          const ns = ac.createBufferSource(); ns.buffer = buf; ns.loop = true;
+          const nf = ac.createBiquadFilter(); nf.type = "lowpass"; nf.frequency.value = 420;
+          const ng = ac.createGain(); ng.gain.value = 0.16;
+          ns.connect(nf); nf.connect(ng); ng.connect(gain);
+          o1.start(); o2.start(); lfo.start(); ns.start();
+          gain.gain.linearRampToValueAtTime(0.038, ac.currentTime + 0.45);
+          engine = { gain, nodes: [o1, o2, lfo, ns] };
+        } catch (e) { engine = null; }
+      }
+      function stopEngine() {
+        if (!engine || !AC) { engine = null; return; }
+        const eng = engine; engine = null;
+        try {
+          const t = AC.currentTime;
+          eng.gain.gain.cancelScheduledValues(t);
+          eng.gain.gain.setValueAtTime(eng.gain.gain.value, t);
+          eng.gain.gain.linearRampToValueAtTime(0, t + 0.12);
+          setTimeout(() => {
+            eng.nodes.forEach(n => { try { n.stop(); } catch (e) {} });
+            try { eng.gain.disconnect(); } catch (e) {}
+          }, 200);
+        } catch (e) {}
+      }
+      // --- win jingle: four rising notes, about a second ---
+      function playWinJingle() {
+        if (!soundOn) return;
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            const t0 = ac.currentTime + i * 0.11;
+            const o = ac.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+            const g = ac.createGain();
+            g.gain.setValueAtTime(0, t0);
+            g.gain.linearRampToValueAtTime(0.12, t0 + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.34);
+            o.connect(g); g.connect(ac.destination);
+            o.start(t0); o.stop(t0 + 0.4);
+          });
+        } catch (e) {}
+      }
 
       /* ================= graph helpers ================= */
       const nkey = (x, y) => x + "," + y;
@@ -1674,6 +1816,7 @@
         if (!cur || cur.timedOut || cur.finished) return;
         cur.timedOut = true;
         stopTimer();
+        stopEngine();
         if (cur.running) { // stop the rider where it stands
           cur.running = false;
           cur.runId += 1;
@@ -1693,6 +1836,7 @@
       function openLevel(id) {
         const L = LEVELS.find(l => l.id === id);
         if (cur && cur.timerId) clearInterval(cur.timerId);
+        stopEngine();
         cur = { L, G: buildGraph(L), path: [startIdxOf(L)], hints: 2, running: false, hintSeg: null, ev: null, carrying: true,
           opSet: new Set((L.overpass || []).map(p => idx(L, p[0], p[1]))),
           timeLeft: L.timeLimit || 0, timerId: null, lastTick: 0, finished: false, timedOut: false, runId: 0 };
@@ -1705,9 +1849,11 @@
         renderBoard();
         refreshHUD();
         startTimer();
+        speakNewOrder(); // entering a level (a tap) announces the new orders
       }
       function backToSelect() {
         if (cur && cur.timerId) clearInterval(cur.timerId);
+        stopEngine();
         cur = null;
         $("screen-game").classList.add("hidden");
         $("winOverlay").classList.add("hidden");
@@ -1894,6 +2040,7 @@
         const bg = el("circle", { cx: x - 15, cy: y - 15, r: 8.5, fill: "#2fa36b" }, node);
         const tx = el("text", { x: x - 15, y: y - 14.2, "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10.5px", fill: "#fff" }, node);
         tx.textContent = "✓";
+        speakPraise(); // one random praise per delivered order (pickup never lands here)
       }
       function runRoute() {
         if (!cur || cur.running) return;
@@ -1902,6 +2049,7 @@
         cur.runId += 1;
         const rid = cur.runId;
         refreshHUD();
+        startEngine(); // scooter hum for the whole run
         const rm = reducedMotion();
         const orderAt = new Map(L.orders.map((o, i) => [idx(L, o.at[0], o.at[1]), i]));
         const seen = new Set();
@@ -1952,6 +2100,7 @@
       }
       function finishRun() {
         if (cur) { cur.finished = true; stopTimer(); } // clock stops the moment the run completes
+        stopEngine();
         const L = cur.L, ev = evalPath(L, cur.path);
         cur.running = false;
         placeRider(cur.path[cur.path.length - 1], 1);
@@ -1976,7 +2125,7 @@
         $("winEureka").textContent = L.eureka[lang];
         $("winTipNote").textContent = missed ? T().tipLost : "";
         $("winNextBtn").style.display = L.id >= LEVELS.length ? "none" : "";
-        setTimeout(() => $("winOverlay").classList.remove("hidden"), 640);
+        setTimeout(() => { $("winOverlay").classList.remove("hidden"); playWinJingle(); }, 640);
         refreshHUD();
       }
       $("goBtn").addEventListener("click", runRoute);
@@ -1989,6 +2138,7 @@
       /* ================= init ================= */
       persist();
       applyTheme();
+      applySound();
       applyI18n();
       backToSelect();
     </script>
