@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#fff7f0" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icon.svg" />
-    <script>try{var _sv=JSON.parse(localStorage.getItem("songdanlu_save_v1")||"null");var _th=_sv&&_sv.theme;if(_th!=="dark"&&_th!=="light"){_th=(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";}document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
+    <script>try{var _sv=JSON.parse(localStorage.getItem("songdanlu_save_v1")||"null");var _th=_sv&&_sv.theme;if(_th!=="dark"&&_th!=="light"){_th="light";}document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
     <title>骑手送单路</title>
     <style>
       button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2rem; }
@@ -138,7 +138,7 @@
       #screen-game { position: relative; }
       .boardwrap {
         position: absolute; inset: 0;
-        padding: calc(env(safe-area-inset-top, 0px) + 6.55rem) .12rem calc(env(safe-area-inset-bottom, 0px) + 5.3rem);
+        padding: calc(env(safe-area-inset-top, 0px) + 6.55rem) .12rem calc(env(safe-area-inset-bottom, 0px) + 4.4rem);
       }
       .boardwrap.shake { animation: shake .3s ease; }
       @keyframes shake {
@@ -250,7 +250,7 @@
         box-shadow: var(--shadow-sm); padding: .38rem .5rem;
       }
       .ftop { top: calc(env(safe-area-inset-top, 0px) + .45rem); }
-      .fbot { bottom: calc(env(safe-area-inset-bottom, 0px) + .45rem); padding: .42rem .5rem .3rem; }
+      .fbot { bottom: calc(env(safe-area-inset-bottom, 0px) + .45rem); padding: .42rem .5rem; }
       .frow { display: flex; align-items: center; gap: .4rem; }
       .frow .title { flex: 0 1 auto; min-width: 0; display: flex; align-items: baseline; gap: .35rem; }
       .frow .title h1 { font-size: .98rem; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -272,23 +272,12 @@
       .todobadge.done { background: var(--good); box-shadow: 0 3px 9px rgba(47, 163, 107, .3); }
       .taskrow .pip svg { width: 1.85rem; height: 1.95rem; }
       .fbot .controls { padding: 0; }
-      .fbot .foot {
-        padding: .24rem .1rem 0; line-height: 1.3; text-align: center;
-        font-size: min(1.45vw, .62rem); white-space: nowrap; overflow: hidden;
-      }
-      html[lang="en"] .fbot .foot { font-size: min(1.05vw, .62rem); }
       @media (max-width: 460px) {
         .frow { gap: .3rem; }
         .frow .chip { padding: .22rem .45rem; }
         .frow .chip .lab { display: none; }
         .taskrow .pip svg { width: 1.62rem; height: 1.72rem; }
         .todobadge { font-size: .84rem; padding: .28rem .6rem; }
-      }
-
-      /* ---------- footer ---------- */
-      .foot {
-        padding: .3rem .9rem calc(.45rem + env(safe-area-inset-bottom));
-        font-size: .64rem; line-height: 1.45; color: var(--ink2); text-align: center;
       }
 
       /* ---------- win modal ---------- */
@@ -329,7 +318,6 @@
         <button class="btn small" id="langBtn1" type="button">EN</button>
       </div>
       <div class="cards" id="cards"></div>
-      <p class="foot" data-i18n="foot">全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩</p>
     </section>
 
     <!-- ======== game ======== -->
@@ -361,7 +349,6 @@
           <button class="btn" id="hintBtn" type="button"><span data-i18n="hint">提示</span><span class="hintleft" id="hintLeft"></span></button>
           <button class="btn primary" id="goBtn" type="button" data-i18n="go">出发</button>
         </div>
-        <p class="foot" data-i18n="foot">全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩</p>
       </div>
     </section>
 
@@ -397,12 +384,14 @@
           leftOrders: n => "还差 " + n + " 单没安排", ready: "可以出发啦",
           tipLost: "小费飞走了…下次注意特殊单",
           winSteps: (s, o) => "用了 " + s + " 步 · 最优 " + o + " 步",
-          foot: "全年龄 · 无暴力 / 无赌博 / 无聊天 · 无内购、无开箱 · 不收集个人数据 · 进度仅保存在本机 · 画面无高频闪烁，请放心游玩",
           intro: [
             "单行道只能顺着箭头走", "修路的地方画不过去", "热乎单要在 8 步内送到",
             "跟着箭头走，别逆行", "电梯坏的楼，送一单多 3 步", "先取冰淇淋，6 步内送到",
             "顺路的单，一趟送完", "步数很紧，先想好再画", "热的、冰的、爬楼的，都赶上了",
-            "预算只比最优多 2 步"
+            "预算只比最优多 2 步", "两单都热，先送限时短的", "冰柜藏在巷子最里面",
+            "大环套小环，方向不一样", "河只有一座桥，在最南边", "路过爬楼单，先别急着送",
+            "四个单都在环上", "两条河，桥一南一北", "先兜远路，热单压线送",
+            "过河之前，先清完西岸", "去程南桥，回程北桥"
           ]
         },
         en: {
@@ -417,12 +406,14 @@
           leftOrders: n => n + " order(s) not on the route yet", ready: "Ready to go",
           tipLost: "The tip slipped away… mind the special orders",
           winSteps: (s, o) => s + " steps · best " + o,
-          foot: "All ages · No violence / gambling / chat · No purchases or loot boxes · No personal data collected · Progress is saved only on this device · No rapid flashing",
           intro: [
             "One-way streets follow the arrows", "Closed roads can't be drawn through", "Hot order: arrive within 8 steps",
             "Follow the arrows around the ring", "Broken lift: +3 steps for that delivery", "Pick up ice cream, deliver within 6 steps",
             "Orders on the way go in one trip", "Tight budget — plan before you draw", "Hot, cold and stairs — all in one day",
-            "Budget is only best + 2"
+            "Budget is only best + 2", "Two hot orders — tighter deadline first", "The freezer hides at the end of the alley",
+            "Two rings, two directions", "One bridge, at the very south", "Pass the lift order by, for now",
+            "Every order is on the ring", "Two rivers, bridges at opposite ends", "Long way first — hot lands on the line",
+            "Clear the west bank before crossing", "South bridge out, north bridge back"
           ]
         }
       };
@@ -433,7 +424,10 @@
       const FOODS = {
         1: ["🍔", "🧋"], 2: ["🍰", "🍕", "🥗"], 3: ["🍜", "🍩", "🍔"], 4: ["🍔", "🧃", "🍰", "🍕"],
         5: ["🍔", "🧋", "🍰"], 6: ["🍔", "🧋", "🍦", "🍕"], 7: ["🍔", "🧋", "🍰", "🍕"],
-        8: ["🍔", "🧋", "🍰", "🍕", "🥗"], 9: ["🍜", "🍔", "🍰", "🍦", "🥗"], 10: ["🍔", "🧋", "🍰", "🍕", "🥗", "🍩"]
+        8: ["🍔", "🧋", "🍰", "🍕", "🥗"], 9: ["🍜", "🍔", "🍰", "🍦", "🥗"], 10: ["🍔", "🧋", "🍰", "🍕", "🥗", "🍩"],
+        11: ["🧋", "🍔", "🍰"], 12: ["🍜", "🍰", "🍦"], 13: ["🍔", "🧋", "🍰", "🍕"], 14: ["🍔", "🧋", "🍰", "🍕"],
+        15: ["🍔", "🧋", "🍰", "🥗"], 16: ["🍔", "🧋", "🍰", "🥗"], 17: ["🍔", "🧋", "🍰", "🍕", "🍦"],
+        18: ["🍔", "🍦", "🧋", "🍕", "🥗"], 19: ["🍔", "🍦", "🧋", "🍰", "🥗"], 20: ["🍔", "🍦", "🧋", "🍰", "🥗"]
       };
       const ANIMALS = ["🐰", "🐱", "🐶", "🐼", "🐷", "🦊"];
       /* Perspective 2.5D — near big, far small, NOT isometric, no diamond.
@@ -575,7 +569,69 @@
           orders: [ { at: [6, 0], kind: "normal" }, { at: [0, 0], kind: "normal" }, { at: [6, 5], kind: "normal" }, { at: [3, 2], kind: "normal" }, { at: [5, 3], kind: "normal" }, { at: [2, 0], kind: "lift" } ],
           pickup: null,
           oneway: [ [[3,5],[4,5]], [[4,5],[5,5]], [[6,2],[6,1]] ],
-          blocked: [ [[2,3],[3,3]], [[4,1],[4,2]] ] }
+          blocked: [ [[2,3],[3,3]], [[4,1],[4,2]] ] },
+        { id: 11, cols: 5, rows: 5, start: [0, 4], opt: 12, budget: 14,
+          name: { zh: "双热单", en: "Two Deadlines" },
+          eureka: { zh: "近的那单别急——限时短的先送。", en: "The nearer hot order can wait — the tighter deadline goes first." },
+          orders: [ { at: [4, 4], kind: "hot", limit: 13 }, { at: [3, 0], kind: "hot", limit: 8 }, { at: [4, 2], kind: "normal" } ],
+          pickup: null, oneway: [], blocked: [] },
+        { id: 12, cols: 5, rows: 5, start: [0, 4], opt: 13, budget: 16,
+          name: { zh: "深巷冰柜", en: "The Deep Freezer" },
+          eureka: { zh: "冰柜在巷子最里面——先清顺路的，再钻到底。", en: "The freezer sits at the end of the alley — clear the way first, then dive in." },
+          orders: [ { at: [2, 3], kind: "normal" }, { at: [0, 1], kind: "normal" }, { at: [1, 1], kind: "cold" } ],
+          pickup: [4, 0], oneway: [],
+          blocked: [ [[3,0],[3,1]], [[3,1],[4,1]] ] },
+        { id: 13, cols: 6, rows: 6, start: [0, 5], opt: 16, budget: 20,
+          name: { zh: "环中环", en: "Ring in a Ring" },
+          eureka: { zh: "大环顺时针，小环逆时针——转对方向，一圈带走。", en: "Big ring clockwise, small ring counter — ride each the right way round." },
+          orders: [ { at: [0, 0], kind: "normal" }, { at: [4, 1], kind: "normal" }, { at: [3, 3], kind: "lift" }, { at: [1, 4], kind: "normal" } ],
+          pickup: null,
+          oneway: [ [[1,1],[2,1]], [[2,1],[3,1]], [[3,1],[4,1]], [[4,1],[4,2]], [[4,2],[4,3]], [[4,3],[4,4]], [[4,4],[3,4]], [[3,4],[2,4]], [[2,4],[1,4]], [[1,4],[1,3]], [[1,3],[1,2]], [[1,2],[1,1]], [[2,2],[2,3]], [[2,3],[3,3]], [[3,3],[3,2]], [[3,2],[2,2]] ],
+          blocked: [] },
+        { id: 14, cols: 6, rows: 5, start: [0, 4], opt: 22, budget: 25,
+          name: { zh: "大U形", en: "The Big U" },
+          eureka: { zh: "路是一条大 U 形——沿着河岸走到底，再从对岸爬回来。", en: "The route is one big U — down one bank, all the way up the other." },
+          orders: [ { at: [0, 0], kind: "lift" }, { at: [5, 0], kind: "normal" }, { at: [4, 2], kind: "normal" }, { at: [5, 4], kind: "normal" } ],
+          pickup: null, oneway: [],
+          blocked: [ [[2,0],[3,0]], [[2,1],[3,1]], [[2,2],[3,2]], [[2,3],[3,3]] ] },
+        { id: 15, cols: 6, rows: 5, start: [0, 4], opt: 19, budget: 22,
+          name: { zh: "路过不送", en: "Not Yet" },
+          eureka: { zh: "路过爬楼单先别送——那 3 步会吃掉热单的时间。", en: "Pass the lift order by — its 3 steps eat into the hot order's clock." },
+          orders: [ { at: [5, 1], kind: "hot", limit: 10 }, { at: [3, 2], kind: "lift" }, { at: [5, 4], kind: "normal" }, { at: [0, 0], kind: "normal" } ],
+          pickup: null, oneway: [], blocked: [] },
+        { id: 16, cols: 6, rows: 6, start: [0, 5], opt: 17, budget: 19,
+          name: { zh: "别下环", en: "Stay on the Ring" },
+          eureka: { zh: "四个单都在环上——上了环就别下来。", en: "All four orders are on the ring — once you're on, stay on." },
+          orders: [ { at: [5, 0], kind: "normal" }, { at: [4, 1], kind: "normal" }, { at: [1, 4], kind: "lift" }, { at: [4, 4], kind: "hot", limit: 16 } ],
+          pickup: null,
+          oneway: [ [[1,1],[2,1]], [[2,1],[3,1]], [[3,1],[4,1]], [[4,1],[4,2]], [[4,2],[4,3]], [[4,3],[4,4]], [[4,4],[3,4]], [[3,4],[2,4]], [[2,4],[1,4]], [[1,4],[1,3]], [[1,3],[1,2]], [[1,2],[1,1]] ],
+          blocked: [] },
+        { id: 17, cols: 7, rows: 6, start: [0, 5], opt: 30, budget: 32,
+          name: { zh: "两条河", en: "Two Rivers" },
+          eureka: { zh: "两条河，一条从南边过，一条从北边过。", en: "Two rivers — cross the first at its south bridge, the second at its north bridge." },
+          orders: [ { at: [0, 3], kind: "normal" }, { at: [0, 0], kind: "lift" }, { at: [3, 0], kind: "hot", limit: 22 }, { at: [6, 0], kind: "lift" }, { at: [6, 5], kind: "cold" } ],
+          pickup: [6, 2], oneway: [],
+          blocked: [ [[2,0],[3,0]], [[2,1],[3,1]], [[2,2],[3,2]], [[2,3],[3,3]], [[4,2],[5,2]], [[4,3],[5,3]], [[4,4],[5,4]], [[4,5],[5,5]] ] },
+        { id: 18, cols: 7, rows: 6, start: [0, 5], opt: 30, budget: 32,
+          name: { zh: "压线送达", en: "Right on the Line" },
+          eureka: { zh: "先兜远路取冰，热单压着线送到——顺序对了就不慌。", en: "Take the long way to the ice first — the hot order still lands right on its deadline." },
+          orders: [ { at: [5, 1], kind: "hot", limit: 13 }, { at: [4, 1], kind: "cold" }, { at: [3, 3], kind: "lift" }, { at: [6, 5], kind: "normal" }, { at: [0, 0], kind: "normal" } ],
+          pickup: [6, 0],
+          oneway: [ [[1,1],[2,1]], [[2,1],[3,1]], [[3,1],[4,1]], [[4,1],[5,1]], [[5,1],[5,2]], [[5,2],[5,3]], [[5,3],[5,4]], [[5,4],[4,4]], [[4,4],[3,4]], [[3,4],[2,4]], [[2,4],[1,4]], [[1,4],[1,3]], [[1,3],[1,2]], [[1,2],[1,1]] ],
+          blocked: [] },
+        { id: 19, cols: 7, rows: 6, start: [0, 5], opt: 30, budget: 32,
+          name: { zh: "一去不回", en: "No Way Back" },
+          eureka: { zh: "先清西岸再过河——过了河，就不再回头。", en: "Clear the west bank first — once you cross, there's no coming back." },
+          orders: [ { at: [6, 0], kind: "hot", limit: 26 }, { at: [5, 5], kind: "cold" }, { at: [0, 0], kind: "lift" }, { at: [0, 3], kind: "normal" }, { at: [2, 0], kind: "normal" } ],
+          pickup: [6, 3], oneway: [],
+          blocked: [ [[3,0],[4,0]], [[3,1],[4,1]], [[3,2],[4,2]], [[3,3],[4,3]], [[3,4],[4,4]] ] },
+        { id: 20, cols: 7, rows: 6, start: [0, 5], opt: 32, budget: 34,
+          name: { zh: "双桥记", en: "Two Bridges" },
+          eureka: { zh: "去程南桥，回程北桥——桥也分单行道。", en: "South bridge out, north bridge back — even the bridges are one-way." },
+          orders: [ { at: [6, 0], kind: "hot", limit: 16 }, { at: [5, 3], kind: "cold" }, { at: [1, 1], kind: "lift" }, { at: [2, 0], kind: "normal" }, { at: [0, 4], kind: "normal" } ],
+          pickup: [6, 5],
+          oneway: [ [[4,4],[3,4]] ],
+          blocked: [ [[3,0],[4,0]], [[3,1],[4,1]], [[3,2],[4,2]], [[3,3],[4,3]] ] }
       ];
 
       /* ================= save / language ================= */
@@ -588,11 +644,10 @@
       const T = () => STR[lang];
 
       /* ================= day / night theme ================= */
-      // Manual toggle wins; until the player picks one, follow the system.
-      // The choice is stored in the same local save and restored on open
+      // Day (light) is the default on first open; once the player toggles,
+      // their choice is stored in the same local save and restored on open
       // (the tiny head script sets data-theme before first paint).
-      let theme = (save.theme === "dark" || save.theme === "light") ? save.theme
-        : ((window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light");
+      let theme = (save.theme === "dark" || save.theme === "light") ? save.theme : "light";
       const isDark = () => theme === "dark";
       const SUN_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="#ffb703" stroke="#e09500" stroke-width="1.6"/><g stroke="#e09500" stroke-width="2"><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5 5l1.6 1.6M17.4 17.4L19 19M19 5l-1.6 1.6M6.6 17.4L5 19"/></g></svg>';
       const MOON_ICON = '<svg width="19" height="19" viewBox="0 0 24 24"><path d="M20.2 13.6A8.6 8.6 0 1 1 10.4 3.8a7 7 0 0 0 9.8 9.8Z" fill="#8d7fb8" stroke="#6a558c" stroke-width="1.4" stroke-linejoin="round"/></svg>';
@@ -678,7 +733,7 @@
         return {
           steps, arrivals, pickupStep,
           delivered: arrivals.size,
-          hotMissed: hotIdx >= 0 && arrivals.has(hotIdx) && arrivals.get(hotIdx) > L.orders[hotIdx].limit,
+          hotMissed: L.orders.some((o, i) => o.kind === "hot" && arrivals.has(i) && arrivals.get(i) > o.limit),
           coldMissed: coldIdx >= 0 && arrivals.has(coldIdx) && coldWindow !== null && coldWindow > 6,
           coldWindow,
           coldPending: coldIdx >= 0 && !arrivals.has(coldIdx) && pickupStep !== null,
@@ -1031,18 +1086,25 @@
         '<g id="rider"><g class="riderflip"><g transform="scale(1.16)"><g class="riderbobbody">' +
           '<ellipse cx="-2" cy="21" rx="31" ry="4.6" fill="rgba(60,25,20,.18)"/>' +
           // the loaded order: a kraft bag peeking out of the box until the last delivery
-          '<g id="carryBag"><polygon points="-41,-34 -27,-34 -28.5,-47 -39.5,-47" fill="#e2ac60" stroke="#9c6b32" stroke-width="1.4" stroke-linejoin="round"/>' +
-          '<polygon points="-39.5,-47 -28.5,-47 -28.5,-50.5 -39.5,-50.5" fill="#c98f4b" stroke="#9c6b32" stroke-width="1.2" stroke-linejoin="round"/>' +
-          '<path d="M-37.5 -50.5 q3.5 -4.5 7 0" stroke="#8a5a28" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>' +
-          // 3D delivery box, big and unmistakable: top face + end face + side face, lid seam, strap, logo
-          '<polygon points="-46,-37 -39,-44.5 -12,-44.5 -19,-37" fill="#ffda6e"/>' +
-          '<polygon points="-19,-37 -12,-44.5 -12,-19.5 -19,-12" fill="#eda71f"/>' +
-          '<rect x="-46" y="-37" width="27" height="25" rx="4" fill="#ffc93c"/>' +
-          '<line x1="-46" y1="-29.5" x2="-19" y2="-29.5" stroke="#e09c1c" stroke-width="1.8"/>' +
-          '<line x1="-24.5" y1="-37" x2="-24.5" y2="-12" stroke="#e09c1c" stroke-width="2" opacity=".75"/>' +
-          '<line x1="-43" y1="-41" x2="-15" y2="-41" stroke="#e09c1c" stroke-width="1.4" opacity=".6"/>' +
-          '<circle cx="-34.5" cy="-20.5" r="5.8" fill="#fff"/>' +
-          '<path d="M-34.5 -17.4 c-.7-2-4-2-4 .3 c0 1.7 2.1 2.8 4 4.1 c1.9-1.3 4-2.4 4-4.1 c0-2.3-3.3-2.3-4-.3z" fill="#f0567a"/>' +
+          '<g id="carryBag"><polygon points="-41,-23 -27,-23 -28.5,-36 -39.5,-36" fill="#e2ac60" stroke="#9c6b32" stroke-width="1.4" stroke-linejoin="round"/>' +
+          '<polygon points="-39.5,-36 -28.5,-36 -28.5,-39.5 -39.5,-39.5" fill="#c98f4b" stroke="#9c6b32" stroke-width="1.2" stroke-linejoin="round"/>' +
+          '<path d="M-37.5 -39.5 q3.5 -4.5 7 0" stroke="#8a5a28" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>' +
+          // 3D delivery box, big and unmistakable: top face + end face + side face, lid seam, strap, logo.
+          // The box sits low on the rear rack: its bottom edge (y=-1) rests
+          // exactly on the seat base / scooter body top line — no air gap.
+          '<polygon points="-46,-26 -39,-33.5 -12,-33.5 -19,-26" fill="#ffda6e"/>' +
+          '<polygon points="-19,-26 -12,-33.5 -12,-8.5 -19,-1" fill="#eda71f"/>' +
+          '<rect x="-46" y="-26" width="27" height="25" rx="4" fill="#ffc93c"/>' +
+          '<line x1="-46" y1="-18.5" x2="-19" y2="-18.5" stroke="#e09c1c" stroke-width="1.8"/>' +
+          '<line x1="-24.5" y1="-26" x2="-24.5" y2="-1" stroke="#e09c1c" stroke-width="2" opacity=".75"/>' +
+          '<line x1="-43" y1="-30" x2="-15" y2="-30" stroke="#e09c1c" stroke-width="1.4" opacity=".6"/>' +
+          '<circle cx="-34.5" cy="-9.5" r="5.8" fill="#fff"/>' +
+          '<path d="M-34.5 -6.4 c-.7-2-4-2-4 .3 c0 1.7 2.1 2.8 4 4.1 c1.9-1.3 4-2.4 4-4.1 c0-2.3-3.3-2.3-4-.3z" fill="#f0567a"/>' +
+          // rear rack the box is bolted to: a plate flush under the box
+          // (top edge y=-1 touches the box bottom) + a strut down to the
+          // rear axle, so the overhang behind the seat is visibly supported
+          '<path d="M-37 1.8 L-17.5 11.5" stroke="#6b4a3a" stroke-width="2.6" stroke-linecap="round"/>' +
+          '<rect x="-47" y="-1" width="30" height="3.2" rx="1.6" fill="#6b4a3a"/>' +
           // wheels: elliptical tyres, spoked hubs that spin while riding
           '<ellipse cx="-16" cy="13" rx="5.2" ry="6.9" fill="#43302b"/>' +
           '<ellipse cx="-16" cy="13" rx="3.1" ry="4.6" fill="#7a5f52"/>' +
@@ -1137,66 +1199,17 @@
           }
         }
         s += '<g id="layer-path"></g><g id="layer-marks"></g><g id="layer-nodes"></g><g id="layer-fx"></g>';
-        board.innerHTML = '<g id="camG">' + s + "</g>";
-        camG = document.getElementById("camG");
-        curFrame = f;
-        camCur = { z: 1, fx: f.x + f.w / 2, fy: f.y + f.h / 2 };
-        camTgt = { z: 1, fx: camCur.fx, fy: camCur.fy };
-        if (camRAF) { cancelAnimationFrame(camRAF); camRAF = null; }
-        camApply();
+        board.innerHTML = s;
         drawMarks();
         drawNodes();
         drawPath();
         placeRider(startIdxOf(L), 1);
       }
-      /* ================= run camera ================= */
-      // While the rider runs, the whole board sits inside #camG and the
-      // camera eases in to ~1.3x and trails the rider, then eases back out
-      // before the win modal. Drawing happens at z=1, so route input and
-      // the inverse projection are untouched.
-      let camG = null, curFrame = null, camRAF = null;
-      let camCur = { z: 1, fx: 0, fy: 0 }, camTgt = { z: 1, fx: 0, fy: 0 };
+      /* ================= run effects ================= */
+      // The board never zooms or pans: a run plays out at the same scale
+      // the route was drawn at. Only the rider's own effects animate
+      // (wheel spin, lean, bob, speed streaks, delivery hearts).
       const reducedMotion = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-      function camApply() {
-        if (!camG || !curFrame) return;
-        const cx = curFrame.x + curFrame.w / 2, cy = curFrame.y + curFrame.h / 2;
-        camG.setAttribute("transform", "translate(" + (cx - camCur.z * camCur.fx).toFixed(2) + " " + (cy - camCur.z * camCur.fy).toFixed(2) + ") scale(" + camCur.z.toFixed(4) + ")");
-      }
-      function clampFocus(z, fx, fy) {
-        if (!curFrame) return [fx, fy];
-        const hw = curFrame.w / (2 * z), hh = curFrame.h / (2 * z), mx = curFrame.w * 0.14, my = curFrame.h * 0.14;
-        let x0 = curFrame.x + hw - mx, x1 = curFrame.x + curFrame.w - hw + mx;
-        let y0 = curFrame.y + hh - my, y1 = curFrame.y + curFrame.h - hh + my;
-        if (x0 > x1) { const c = (x0 + x1) / 2; x0 = x1 = c; }
-        if (y0 > y1) { const c = (y0 + y1) / 2; y0 = y1 = c; }
-        return [Math.max(x0, Math.min(x1, fx)), Math.max(y0, Math.min(y1, fy))];
-      }
-      function camTick() {
-        const k = 0.085; // soft trailing follow — no jumps, no snaps
-        camCur.z += (camTgt.z - camCur.z) * k;
-        camCur.fx += (camTgt.fx - camCur.fx) * k;
-        camCur.fy += (camTgt.fy - camCur.fy) * k;
-        camApply();
-        if (Math.abs(camTgt.z - camCur.z) > 0.002 || Math.hypot(camTgt.fx - camCur.fx, camTgt.fy - camCur.fy) > 0.6) {
-          camRAF = requestAnimationFrame(camTick);
-        } else {
-          camCur = { z: camTgt.z, fx: camTgt.fx, fy: camTgt.fy };
-          camApply();
-          camRAF = null;
-        }
-      }
-      function camKick() { if (!camRAF) camRAF = requestAnimationFrame(camTick); }
-      function camTo(z, fx, fy) {
-        if (reducedMotion()) z = 1;
-        const c = clampFocus(z, fx, fy);
-        camTgt = { z, fx: c[0], fy: c[1] };
-        camKick();
-      }
-      function camFollow(x, y) {
-        const c = clampFocus(camTgt.z, x, y);
-        camTgt.fx = c[0]; camTgt.fy = c[1];
-        camKick();
-      }
       function spawnStreak(x, y, dir) {
         const fxLayer = $("layer-fx");
         if (!fxLayer) return;
@@ -1532,7 +1545,8 @@
         const coldI = L.orders.findIndex(o => o.kind === "cold");
         const hotI = L.orders.findIndex(o => o.kind === "hot");
         const ct = (coldI >= 0 && ev.pickupStep !== null && !ev.arrivals.has(coldI)) ? (ev.steps - ev.pickupStep) : -1;
-        const hotOk0 = hotI < 0 ? 1 : (ev.arrivals.has(hotI) ? (ev.hotMissed ? 0 : 1) : 0);
+        const anyHotArrived = L.orders.some((o, i) => o.kind === "hot" && ev.arrivals.has(i));
+        const hotOk0 = hotI < 0 ? 1 : (anyHotArrived ? (ev.hotMissed ? 0 : 1) : 0);
         const coldOk0 = coldI < 0 ? 1 : (ev.arrivals.has(coldI) ? (ev.coldMissed ? 0 : 1) : 0);
         let nodes = solveFrom(L, cur.G, head, mask, ct, hotOk0, coldOk0, true, ev.steps);
         if (!nodes) nodes = solveFrom(L, cur.G, head, mask, ct, hotOk0, coldOk0, false, ev.steps);
@@ -1590,9 +1604,7 @@
         const L = cur.L, path = cur.path.slice();
         cur.running = true;
         refreshHUD();
-        // camera glides in as the run starts — the map grows around the rider
         const rm = reducedMotion();
-        if (!rm) { const [sx0, sy0] = nodeXY(path[0]); camTo(1.3, sx0, sy0); }
         const orderAt = new Map(L.orders.map((o, i) => [idx(L, o.at[0], o.at[1]), i]));
         const seen = new Set();
         let seg = 0;
@@ -1615,10 +1627,7 @@
             const horiz = Math.abs(tx - fx) >= Math.abs(ty - fy);
             const lean = horiz ? (dir > 0 ? 3.2 : -3.2) : 1.4;
             if (rider) rider.setAttribute("transform", "translate(" + x + " " + (y - 6 + bobY) + ") rotate(" + lean + ") scale(" + (sF + (sT - sF) * ke).toFixed(3) + ")");
-            if (!rm) {
-              camFollow(x, y - 6);
-              if (now - lastStreak > 120) { lastStreak = now; spawnStreak(x, y, dir); }
-            }
+            if (!rm && now - lastStreak > 120) { lastStreak = now; spawnStreak(x, y, dir); }
             if (k < 1) { requestAnimationFrame(frame); return; }
             seg += 1;
             const oi = orderAt.get(to);
@@ -1645,10 +1654,8 @@
         const L = cur.L, ev = evalPath(L, cur.path);
         cur.running = false;
         placeRider(cur.path[cur.path.length - 1], 1);
-        // camera eases back out to the full map before the modal appears
-        if (curFrame) camTo(1, curFrame.x + curFrame.w / 2, curFrame.y + curFrame.h / 2);
         let stars;
-        if (L.id === 10) stars = ev.steps === L.opt ? 3 : (ev.steps <= L.opt + 1 ? 2 : 1);
+        if (L.id === LEVELS.length) stars = ev.steps === L.opt ? 3 : (ev.steps <= L.opt + 1 ? 2 : 1);
         else stars = ev.steps <= L.opt + 1 ? 3 : (ev.steps <= L.opt + 4 ? 2 : 1);
         const missed = ev.hotMissed || ev.coldMissed;
         if (missed) stars = Math.max(1, stars - 1);
@@ -1667,12 +1674,12 @@
         $("winSteps").textContent = T().winSteps(ev.steps, L.opt);
         $("winEureka").textContent = L.eureka[lang];
         $("winTipNote").textContent = missed ? T().tipLost : "";
-        $("winNextBtn").style.display = L.id >= 10 ? "none" : "";
+        $("winNextBtn").style.display = L.id >= LEVELS.length ? "none" : "";
         setTimeout(() => $("winOverlay").classList.remove("hidden"), 640);
         refreshHUD();
       }
       $("goBtn").addEventListener("click", runRoute);
-      $("winNextBtn").addEventListener("click", () => { if (cur && cur.L.id < 10) openLevel(cur.L.id + 1); });
+      $("winNextBtn").addEventListener("click", () => { if (cur && cur.L.id < LEVELS.length) openLevel(cur.L.id + 1); });
       $("winReplayBtn").addEventListener("click", () => { if (cur) openLevel(cur.L.id); });
       $("winLevelsBtn").addEventListener("click", backToSelect);
 
