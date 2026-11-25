@@ -4,7 +4,7 @@
     "kicker": "ChatGPT 设计实操知识库",
     "lead": "把模糊的审美要求，变成清楚的任务、视觉约束和验收标准。覆盖海报、网页 UI、图标、小程序、H5、App、动效与图表。",
     "note": "这里整理的是可复用的设计工作方法，不是灵感词堆叠。规范和经验会分开标注；涉及平台版本或设备差异的建议，需要按目标环境复核。",
-    "updated": "2026-11-21",
+    "updated": "2026-11-25",
     "badges": [
       "8 个设计主题",
       "每节含可复制提示词",
@@ -259,9 +259,13 @@
         {
           "title": "把 ChatGPT MCP App 的数据工具与渲染工具分离",
           "body": "设计聊天内嵌 MCP App/widget 时，把 fetch/compute/mutate 放在数据工具中，以 structuredContent 返回可复用结果，不附 UI resource；让模型先检查/筛选最终数据，再调用只负责展示的 render tool，并仅在它上面配置 _meta.ui.resourceUri。把依赖顺序写进工具说明，渲染层不重复业务计算，本地交互尽量复用当前组件而不重挂 iframe。此模式针对 MCP Apps，不是普通响应式网页的必需结构。本次未运行 MCP server、ChatGPT App 或 Playground；端到端验收=PENDING。"
+        },
+        {
+          "title": "先验证 MCP App 资源契约，再看宿主渲染",
+          "body": "2026-11-22 增量：ChatGPT MCP App 的发布检查不应止于“某个宿主看起来能显示”。逐个核对 UI 工具的 _meta.ui.resourceUri 是否指向真实 ui:// 资源；resources/read 是否返回完整 HTML 文档且 MIME 精确为 text/html;profile=mcp-app；若同时兼容旧 Apps SDK 格式，分别注册并核对两类资源。再用 MCP Inspector 或等价客户端核对 ui/initialize→initialized→tool-result 生命周期，并在不渲染 UI 的调用路径检查文本 fallback。该资源层检查补充既有 data/render tool 分层；实际 server、跨宿主渲染、生命周期和 fallback 测试本次未运行，均为 PENDING。"
         }
       ],
-      "prompt": "你是网页产品设计师和前端设计系统顾问。请基于资料，为【产品 / 页面：[填写]】产出可交付的网页 UI 规格；不要编造未提供的业务事实，不确定处标成待确认。\n目标用户与任务：[填写]；真实内容样本（标题、正文、字段、长短文案、图片、空数据、错误文案）：[粘贴]；页面范围、入口和权限：[填写]；品牌与技术约束：[填写]。\n请依次输出：1）设计目标和验收标准；2）页面树与导航标签；3）使用真实内容的页面结构；4）视觉 tokens（语义色、字号 / 行高、间距、圆角、边框、阴影、容器、断点）；5）组件及变体；6）页面状态矩阵（加载、空、成功、焦点、禁用、错误、权限、离线按适用项覆盖）；7）按紧凑 / 中等 / 扩展可用窗口空间规划重排（不要只列设备名称），说明内容何时显示、隐藏、堆叠、分栏或改序；网页在 320 CSS px 检查普通正文是否横向溢出，确需二维浏览的表格 / 地图等只让局部容器滚动；检查最长中文文案与大字号是否截断；8）可执行 QA 清单。每条建议说明理由；把待确认项单独列出。另先建立 5–7 项 UI 验收 rubric（清晰度、任务完成、响应式、状态、无障碍、一致性、内容完整性），完成后逐项附实测证据；每轮只修最低的一项。\n【截图批注迭代】\n请再附一张最长文案 / 展开 / 错误状态截图；我已圈出修改区并标注必须保持不变的区域。沿用现有设计系统，只做最小调整；在 1440px、768px、390px 分别截默认态与最糟状态，列出差异和待验项。\n【机器可读 UI 规格契约】\n先输出 ui-spec.json，再实现：列页面信息层级、组件 anatomy / props / variants / states、token 引用、按内容变化的响应式规则、无障碍要求，以及逐项可观察验收。至少覆盖 320/768/1280px 和一个断点间宽度、长标题、焦点、加载/空/错误。最后只修失败项并重跑同一矩阵。把 W3C 社区组草案、WCAG 要求和项目建议分栏。\n【可访问组件状态矩阵】\n先列 default/near-limit/over-limit/submit-error/focus/screen-reader/no-JS 状态；每一行写触发条件、可见反馈、label/description/ARIA 关系、恢复动作与可观察断言。实现语义 HTML：实时计数用于反馈，提交超限时给具体错误且可修复；无 JavaScript 仍保留输入、提交与静态限制说明。最后分别用 TalkBack、VoiceOver、键盘和窄屏测试，并标记平台差异。\n\n【复杂组件：规格契约与确定性闸门】\n请按“规格—实现—验证”三阶段处理【组件】。阶段 1 只输出 brief.md、component-rules.md、architecture.md，列明 variants/states、键盘与焦点契约、真实长短文案、tokens、ARIA/语义和依赖版本；缺资料标 [PENDING]，规则冲突就暂停提问，不猜 token。经我确认后才进入阶段 2 写实现。阶段 3 为每个状态生成可运行 story/测试，覆盖键盘、焦点、错误恢复、读屏、320/768/1280 CSS px 与一个断点间宽度；给出 TypeScript、lint、format、axe/等价工具命令，并为每项标 PASS/FAIL/PENDING 及证据。故意制造 token 缺失时验证会暂停；同一错误重试一次仍失败就停止并报告复现步骤。此为社区实践，请按实际框架改写，不要声称工具已运行。\n\n【运行时 CSS 级联核验】\n打开 http://localhost:【端口】。在 320、768、1280 CSS px 和一个断点间宽度，检查【组件】的 default/focus/error/disabled/expanded 状态。使用 Chrome DevTools MCP 的 get_css_styles 读取 matched、inherited、inline、custom properties 与 overridden declarations；把实际 winning declaration、来源文件/行、token、media query/cascade layer/specificity 原因与 ui-spec.json 逐项对照。先只输出 PASS/FAIL/PENDING 和证据，不修改文件、不自动删除 !important。失败时给出最小修复建议；修复后仍须运行键盘、焦点、axe/等价工具和读屏复测。\n\n【现代网页代码库预检（由有 CLI 的 coding agent 执行）】先不要改代码。确认仓库和目标浏览器；运行 Modern Web Guidance install/update 与 `legacy-scan <path> --json` 后，逐条读取周边 HTML/CSS/JS/TS，按 keepWhen/dropWhen 核验，标出误匹配和需要保留的 fallback；输出文件/行号、指南 ID、Baseline 目标、兼容风险与回归测试计划。确认后再逐项 retrieve 指南、人工重构、重跑扫描和项目测试。不要用 --fix；不要声称 ChatGPT 已运行本地工具；不要把约 20% 高置信覆盖说成全量扫描。\n\n【ChatGPT MCP App：数据与渲染分层】\n为【聊天内工具】先列 data tools 的输入/输出 schema 与 structuredContent，再规划空、加载、错误、完成状态和 render tool。只有 render tool 绑定 _meta.ui.resourceUri；data tool 需能脱离 UI 使用，render tool 只呈现已确认数据，并在说明中写清前置工具。列出 UI→tools/call→server→UI 的验证步骤；本次未运行的 MCP server、Playground、键盘和焦点测试标 PENDING。",
+      "prompt": "你是网页产品设计师和前端设计系统顾问。请基于资料，为【产品 / 页面：[填写]】产出可交付的网页 UI 规格；不要编造未提供的业务事实，不确定处标成待确认。\n目标用户与任务：[填写]；真实内容样本（标题、正文、字段、长短文案、图片、空数据、错误文案）：[粘贴]；页面范围、入口和权限：[填写]；品牌与技术约束：[填写]。\n请依次输出：1）设计目标和验收标准；2）页面树与导航标签；3）使用真实内容的页面结构；4）视觉 tokens（语义色、字号 / 行高、间距、圆角、边框、阴影、容器、断点）；5）组件及变体；6）页面状态矩阵（加载、空、成功、焦点、禁用、错误、权限、离线按适用项覆盖）；7）按紧凑 / 中等 / 扩展可用窗口空间规划重排（不要只列设备名称），说明内容何时显示、隐藏、堆叠、分栏或改序；网页在 320 CSS px 检查普通正文是否横向溢出，确需二维浏览的表格 / 地图等只让局部容器滚动；检查最长中文文案与大字号是否截断；8）可执行 QA 清单。每条建议说明理由；把待确认项单独列出。另先建立 5–7 项 UI 验收 rubric（清晰度、任务完成、响应式、状态、无障碍、一致性、内容完整性），完成后逐项附实测证据；每轮只修最低的一项。\n【截图批注迭代】\n请再附一张最长文案 / 展开 / 错误状态截图；我已圈出修改区并标注必须保持不变的区域。沿用现有设计系统，只做最小调整；在 1440px、768px、390px 分别截默认态与最糟状态，列出差异和待验项。\n【机器可读 UI 规格契约】\n先输出 ui-spec.json，再实现：列页面信息层级、组件 anatomy / props / variants / states、token 引用、按内容变化的响应式规则、无障碍要求，以及逐项可观察验收。至少覆盖 320/768/1280px 和一个断点间宽度、长标题、焦点、加载/空/错误。最后只修失败项并重跑同一矩阵。把 W3C 社区组草案、WCAG 要求和项目建议分栏。\n【可访问组件状态矩阵】\n先列 default/near-limit/over-limit/submit-error/focus/screen-reader/no-JS 状态；每一行写触发条件、可见反馈、label/description/ARIA 关系、恢复动作与可观察断言。实现语义 HTML：实时计数用于反馈，提交超限时给具体错误且可修复；无 JavaScript 仍保留输入、提交与静态限制说明。最后分别用 TalkBack、VoiceOver、键盘和窄屏测试，并标记平台差异。\n\n【复杂组件：规格契约与确定性闸门】\n请按“规格—实现—验证”三阶段处理【组件】。阶段 1 只输出 brief.md、component-rules.md、architecture.md，列明 variants/states、键盘与焦点契约、真实长短文案、tokens、ARIA/语义和依赖版本；缺资料标 [PENDING]，规则冲突就暂停提问，不猜 token。经我确认后才进入阶段 2 写实现。阶段 3 为每个状态生成可运行 story/测试，覆盖键盘、焦点、错误恢复、读屏、320/768/1280 CSS px 与一个断点间宽度；给出 TypeScript、lint、format、axe/等价工具命令，并为每项标 PASS/FAIL/PENDING 及证据。故意制造 token 缺失时验证会暂停；同一错误重试一次仍失败就停止并报告复现步骤。此为社区实践，请按实际框架改写，不要声称工具已运行。\n\n【运行时 CSS 级联核验】\n打开 http://localhost:【端口】。在 320、768、1280 CSS px 和一个断点间宽度，检查【组件】的 default/focus/error/disabled/expanded 状态。使用 Chrome DevTools MCP 的 get_css_styles 读取 matched、inherited、inline、custom properties 与 overridden declarations；把实际 winning declaration、来源文件/行、token、media query/cascade layer/specificity 原因与 ui-spec.json 逐项对照。先只输出 PASS/FAIL/PENDING 和证据，不修改文件、不自动删除 !important。失败时给出最小修复建议；修复后仍须运行键盘、焦点、axe/等价工具和读屏复测。\n\n【现代网页代码库预检（由有 CLI 的 coding agent 执行）】先不要改代码。确认仓库和目标浏览器；运行 Modern Web Guidance install/update 与 `legacy-scan <path> --json` 后，逐条读取周边 HTML/CSS/JS/TS，按 keepWhen/dropWhen 核验，标出误匹配和需要保留的 fallback；输出文件/行号、指南 ID、Baseline 目标、兼容风险与回归测试计划。确认后再逐项 retrieve 指南、人工重构、重跑扫描和项目测试。不要用 --fix；不要声称 ChatGPT 已运行本地工具；不要把约 20% 高置信覆盖说成全量扫描。\n\n【ChatGPT MCP App：数据与渲染分层】\n为【聊天内工具】先列 data tools 的输入/输出 schema 与 structuredContent，再规划空、加载、错误、完成状态和 render tool。只有 render tool 绑定 _meta.ui.resourceUri；data tool 需能脱离 UI 使用，render tool 只呈现已确认数据，并在说明中写清前置工具。列出 UI→tools/call→server→UI 的验证步骤；本次未运行的 MCP server、Playground、键盘和焦点测试标 PENDING。\n\n【MCP App 资源契约发布闸门｜2026-11-22】\n逐个列出 UI 工具的 _meta.ui.resourceUri、对应 ui:// 资源及 resources/read 响应；核对资源真实存在、MIME 精确为 text/html;profile=mcp-app、内容是完整 HTML5 文档而非 body 片段。若兼容 OpenAI Apps SDK/旧 ChatGPT 格式，分别列出两类资源、MIME 和指针。计划用 MCP Inspector 或等价客户端核对 ui/initialize→initialized→tool-result 生命周期，并通过不渲染 Apps 的客户端检查文本 fallback。每项给 PASS/FAIL/PENDING、复现步骤和证据；没有真实 server 响应时必须标 PENDING。不要把 MCP Inspector、第三方 host 或 API 能力说成 ChatGPT 内置测试。",
       "checklist": [
         "核心任务、导航和返回是否清楚？每个链接或按钮的文案是否能预告点击后的内容？",
         "用最长标题、真实数字、空数据、错误文案和真实图片测试；字号、行高、对比度和截断规则是否可读？",
@@ -365,12 +369,17 @@
         {
           "title": "OpenAI Developers：Add UI to your MCP server",
           "url": "https://developers.openai.com/plugins/build/chatgpt-ui",
-          "supports": "OpenAI 官方开发文档（页面未显示可核实发布日期）：新 UI 使用 MCP Apps 共享标准；数据工具返回 structuredContent，render tool 接收最终数据并单独绑定 _meta.ui.resourceUri；注明依赖顺序、保持数据工具可独立使用，局部交互避免无谓重挂载。"
+          "supports": "OpenAI 官方开发文档（页面未显示可核实发布日期）：新 UI 使用 MCP Apps 共享标准；数据工具返回 structuredContent，render tool 接收最终数据并单独绑定 _meta.ui.resourceUri；注明依赖顺序、保持数据工具可独立使用，局部交互避免无谓重挂载。 2026-11-21 已登记；作为既有数据工具/渲染工具分层的官方依据。"
         },
         {
           "title": "OpenAI Developers：UI guidelines",
           "url": "https://developers.openai.com/plugins/concepts/ui-guidelines",
           "supports": "OpenAI 官方 ChatGPT Apps UI 指南（页面日期未核实）：补充嵌入式组件在 ChatGPT 宿主环境中的界面与交互约束；需结合实际宿主、屏幕尺寸和可访问性测试。"
+        },
+        {
+          "title": "MCP Apps：Overview",
+          "url": "https://modelcontextprotocol.github.io/ext-apps/api/documents/Overview.html",
+          "supports": "官方协议概览（页面未显示发布日期）：说明 UI 资源使用 ui:// URI，host 通过 resources/read 获取资源，以 _meta.ui.resourceUri 关联到工具，并描述 ui/initialize、ui/notifications/initialized、tool result 与 teardown 生命周期。"
         }
       ],
       "community_sources": [
@@ -403,9 +412,14 @@
           "title": "MCPJam：Build, Test & Debug ChatGPT Apps Locally in MCPJam",
           "url": "https://www.mcpjam.com/blog/build-test-debug-chatgpt-apps-locally-mcpjam",
           "supports": "开发者社区实操指南（2026-10-20）：展示本地 ChatGPT App 代码、GitHub、Playground 和 Trace 的构建/调试步骤。可作为复现路线，不是官方标准；本次未运行 MCPJam 或示例代码。"
+        },
+        {
+          "title": "MCP Apps in the registry: 869 servers, and the five ways their UIs break",
+          "url": "https://dev.to/mcpscore/mcp-apps-in-the-registry-869-servers-and-the-five-ways-their-uis-break-1kb8",
+          "supports": "社区审计文章，原文显示 2026-11-09 发布（审计日 11-06）：对 869 个 registry server 抽查后归纳出资源不存在、HTML 片段、错误/旧 MIME 和双格式兼容等常见故障，并给出原始 resources/read 检查。作者说明这不是实际 host 渲染验证；单日快照不应外推。"
         }
       ],
-      "caveat": "断点、token 数值和状态覆盖需要按真实内容、组件库与目标浏览器验证。WAI-ARIA 是辅助技术语义的规范，不等于用 ARIA 替代原生 HTML 控件。\n\nModern Web Guidance 是网页代码库/编码代理的前置规范工具，不是 ChatGPT 原生浏览器或本地执行能力；扫描只覆盖高置信子集，CI 自动集成仍在开发。H5 可复用该流程并增加 iOS Safari/Android Chrome/目标 WebView 矩阵，不重复建条目。\n11/21 更新：工具/渲染分层只适用于 ChatGPT MCP Apps/嵌入式组件；本次未搭建 server 或执行调用，端到端=PENDING。"
+      "caveat": "断点、token 数值和状态覆盖需要按真实内容、组件库与目标浏览器验证。WAI-ARIA 是辅助技术语义的规范，不等于用 ARIA 替代原生 HTML 控件。\n\nModern Web Guidance 是网页代码库/编码代理的前置规范工具，不是 ChatGPT 原生浏览器或本地执行能力；扫描只覆盖高置信子集，CI 自动集成仍在开发。H5 可复用该流程并增加 iOS Safari/Android Chrome/目标 WebView 矩阵，不重复建条目。\n11/21 更新：工具/渲染分层只适用于 ChatGPT MCP Apps/嵌入式组件；本次未搭建 server 或执行调用，端到端=PENDING。\n2026-11-22 更新：MCP App 资源 MIME、完整 HTML、初始化握手、跨宿主渲染与文本 fallback 均未运行验证，PENDING；社区 869 个 registry server 的审计是单日样本，不代表所有 host 或服务。"
     },
     {
       "id": "icons",
@@ -452,9 +466,13 @@
         {
           "title": "从单一 SVG 源文件生成平台专属图标产物",
           "body": "把 SVG 作为共享几何源，而非强行作为所有平台的运行时格式：按平台分别生成 Web SVG、Android VectorDrawable、iOS PDF vector asset，custom SF Symbol 仅在符合其模板条件时使用。记录转换器不支持的特性；每次源改动后重新生成各平台产物，并在真实控件、多个尺寸与浅/深色背景做视觉回归，检查缩放、笔画、视觉面积、填充/颜色和语义映射。此为跨平台交付扩展，不重复既有 Web SVGO/inline/sprite 流程。"
+        },
+        {
+          "title": "用稳定 wrapper 区分图标资产与组件偏移",
+          "body": "2026-11-22 增量：先把图标放进尺寸固定的 wrapper（如 24×24），保持按钮、触控目标和外间距不变；比较几何居中与小幅光学校正版。若同一图标在多处都偏，修 SVG 的 viewBox/path；若只在一个按钮里偏，修父组件关系，不把补偿 margin 散落到各调用点。把 default/active/disabled、真实尺寸、长短标签和最终导出 SVG 纳入共享组件回归，检查裁切与越界。此法细化既有光学校正原则，目的是先定位资产还是布局问题；本次未运行设计工具、浏览器或读屏测试，结果为 PENDING。"
         }
       ],
-      "prompt": "你是 UI 图标设计师。为【产品 / 功能：[填写]】设计一组【数量：[填写]】个图标，目标平台【iOS / Android / Web / 其他：[填写]】，实际尺寸【填写】，使用场景与用户【填写】。先列每个图标的单一概念、推荐隐喻和可能歧义；再定义这组图标共用的画布、live area、网格、keyline、笔画、端点、圆角、填充 / 描边、视角、颜色和状态规则。要求同组视觉重量与细节级别一致；对非对称形状做有依据的光学对齐；为最小尺寸删除不可辨细节。最后给出可编辑 SVG（真实 path / shape，不嵌入位图）、viewBox / width / height、命名规则、浅 / 深背景预览、实际尺寸 QA，以及可访问名称 / aria 处理建议。所有坐标与尺寸按目标图标系统验收；若参考 IBM 32px 规范，明确它仅适用于 IBM 资产，不泛化到其他平台。把平台要求和可讨论建议分开；信息不足时先列假设。\n【资产版本与退役】\n请为每个图标生成 stable_id、语义、状态（current / retired）、版本、canonical_url、replacement_id 和变更说明；列出旧下载包、文档与邮件模板中需迁移的引用。禁止静默替换旧 URL；把平台专属 aria 规则单列。\n【语义—渲染—平台契约】\n先为每个图标列 action_label、隐喻、decorative/informative/functional、无文字时 accessible name、目标平台和 16/24/32px 风险；再输出统一 viewBox、width、height 的可缩放 SVG，并检查小尺寸。内联 Web SVG 可按 W3C Design System 指引评估 em 缩放；文字伴随的装饰图标与无文字功能按钮使用不同无障碍标记。把草案建议、平台要求和设计判断分开。\n【本地化名称与 SVG 分层】\n先判断图标是装饰、图标按钮还是独立信息图。装饰 SVG 隐藏；无文字按钮由外层控件从应用翻译资源注入 aria-label，SVG 不重复播报；独立信息 SVG 只给一个可定位的 title/name。不要在同一 SVG 塞多个语言 title/desc；给出 en/zh 切换后的 DOM 和可访问性树检查步骤，并注明浏览器/读屏范围。\n【尺寸—用途—复杂度验收】\n请为【图标/功能】生成真实 path/shape 的 SVG，并建立【12/16/20/24/32/48px】尺寸矩阵。明确 12px 仅作信息提示/概念强化，交互版本分别说明视觉尺寸与触控目标；低于 48px 制作专门简化稿并列出删改细节。若用 modifier，说明其语义与复杂度，仅在必要时放右下角并采用填充形态。输出统一 viewBox，并在浅/深色、实际像素、缩略图和目标设备中验收；把 Fluent 2 建议与目标平台要求分栏。\n\n【Web SVG 交付流水线】\n请整理【icons/】中的 Web SVG：保留真实 path/shape、必要 viewBox、尺寸与 currentColor；给出 SVGO 单文件和目录批处理命令；按图标数量、缓存与请求需求比较 inline、sprite、外部引用，并注明目标浏览器限制。区分装饰图标、图标按钮和信息图标的语义；检查 gzip/Brotli 后大小、请求数、bundle、目标浏览器、读屏与 axe/Lighthouse。输出优化前后字节数和截图/渲染回归；不得删除必要语义，也不要把压缩变小写成已验证的加载收益。仅适用于 Web SVG。\n\n【跨平台图标生成与回归】\n将 SVG 作为共享源文件，按【Web/Android/iOS】分别交付可用格式；先列转换器支持范围及 path/fill/透明度/颜色/viewBox/filter/pattern 风险。保留 stable_id、语义名称、旧引用和迁移映射；每次源文件改动重新生成所有平台产物。请输出 12/16/24/32px 实际控件预览，在浅色/深色背景比较缩放、笔画重量、视觉面积、对齐、填充与透明度；不支持特性或异常必须标 FAIL，不可只报导出成功。custom SF Symbol 若不符合模板要求请明确拒绝。",
+      "prompt": "你是 UI 图标设计师。为【产品 / 功能：[填写]】设计一组【数量：[填写]】个图标，目标平台【iOS / Android / Web / 其他：[填写]】，实际尺寸【填写】，使用场景与用户【填写】。先列每个图标的单一概念、推荐隐喻和可能歧义；再定义这组图标共用的画布、live area、网格、keyline、笔画、端点、圆角、填充 / 描边、视角、颜色和状态规则。要求同组视觉重量与细节级别一致；对非对称形状做有依据的光学对齐；为最小尺寸删除不可辨细节。最后给出可编辑 SVG（真实 path / shape，不嵌入位图）、viewBox / width / height、命名规则、浅 / 深背景预览、实际尺寸 QA，以及可访问名称 / aria 处理建议。所有坐标与尺寸按目标图标系统验收；若参考 IBM 32px 规范，明确它仅适用于 IBM 资产，不泛化到其他平台。把平台要求和可讨论建议分开；信息不足时先列假设。\n【资产版本与退役】\n请为每个图标生成 stable_id、语义、状态（current / retired）、版本、canonical_url、replacement_id 和变更说明；列出旧下载包、文档与邮件模板中需迁移的引用。禁止静默替换旧 URL；把平台专属 aria 规则单列。\n【语义—渲染—平台契约】\n先为每个图标列 action_label、隐喻、decorative/informative/functional、无文字时 accessible name、目标平台和 16/24/32px 风险；再输出统一 viewBox、width、height 的可缩放 SVG，并检查小尺寸。内联 Web SVG 可按 W3C Design System 指引评估 em 缩放；文字伴随的装饰图标与无文字功能按钮使用不同无障碍标记。把草案建议、平台要求和设计判断分开。\n【本地化名称与 SVG 分层】\n先判断图标是装饰、图标按钮还是独立信息图。装饰 SVG 隐藏；无文字按钮由外层控件从应用翻译资源注入 aria-label，SVG 不重复播报；独立信息 SVG 只给一个可定位的 title/name。不要在同一 SVG 塞多个语言 title/desc；给出 en/zh 切换后的 DOM 和可访问性树检查步骤，并注明浏览器/读屏范围。\n【尺寸—用途—复杂度验收】\n请为【图标/功能】生成真实 path/shape 的 SVG，并建立【12/16/20/24/32/48px】尺寸矩阵。明确 12px 仅作信息提示/概念强化，交互版本分别说明视觉尺寸与触控目标；低于 48px 制作专门简化稿并列出删改细节。若用 modifier，说明其语义与复杂度，仅在必要时放右下角并采用填充形态。输出统一 viewBox，并在浅/深色、实际像素、缩略图和目标设备中验收；把 Fluent 2 建议与目标平台要求分栏。\n\n【Web SVG 交付流水线】\n请整理【icons/】中的 Web SVG：保留真实 path/shape、必要 viewBox、尺寸与 currentColor；给出 SVGO 单文件和目录批处理命令；按图标数量、缓存与请求需求比较 inline、sprite、外部引用，并注明目标浏览器限制。区分装饰图标、图标按钮和信息图标的语义；检查 gzip/Brotli 后大小、请求数、bundle、目标浏览器、读屏与 axe/Lighthouse。输出优化前后字节数和截图/渲染回归；不得删除必要语义，也不要把压缩变小写成已验证的加载收益。仅适用于 Web SVG。\n\n【跨平台图标生成与回归】\n将 SVG 作为共享源文件，按【Web/Android/iOS】分别交付可用格式；先列转换器支持范围及 path/fill/透明度/颜色/viewBox/filter/pattern 风险。保留 stable_id、语义名称、旧引用和迁移映射；每次源文件改动重新生成所有平台产物。请输出 12/16/24/32px 实际控件预览，在浅色/深色背景比较缩放、笔画重量、视觉面积、对齐、填充与透明度；不支持特性或异常必须标 FAIL，不可只报导出成功。custom SF Symbol 若不符合模板要求请明确拒绝。\n\n【图标光学校正故障分诊｜2026-11-22】\n按“固定 wrapper—可见 artwork—父组件关系”三层检查【图标名】。保持 wrapper 24×24、按钮尺寸、触控区域与外间距不变，先并排比较几何居中与轻微光学校正版；再覆盖 default/active/disabled、16/24/32px、无文字按钮及长短标签。所有场景同向偏移时检查 SVG viewBox/path；仅单个组件偏移时只修该组件关系，不复制补偿 margin。交付前核对实际使用的 SVG 与设计源的尺寸、viewBox、裁切和意外越界对象，并输出 PASS/FAIL/PENDING；未在浏览器和辅助技术验证的项目标 PENDING。",
       "checklist": [
         "只看图标不看文字时，目标用户能否说出大致动作 / 对象？概念不清先改隐喻，不先加装饰。",
         "检查画布、live area、keyline、网格对齐、笔画、圆角和端点；是否和同组保持一致？",
@@ -517,12 +535,12 @@
         {
           "title": "GitLab Pajamas Design System：Release notes 19.6",
           "url": "https://design.gitlab.com/get-started/uik-release-notes",
-          "supports": "官方发布记录（2026-11-13）：新增 7 个产品图标，同时更新 ellipsis 描述、调整 table 图标密度以改善 optical alignment、调整 appearance 图标隐喻；支持把新增、语义与视觉对齐作为同一发布记录。"
+          "supports": "官方发布记录（2026-11-13）：新增 7 个产品图标，同时更新 ellipsis 描述、调整 table 图标密度以改善 optical alignment、调整 appearance 图标隐喻；支持把新增、语义与视觉对齐作为同一发布记录。 官方发布记录（2026-11-13）：19.6 更新 table 图标以改善 optical alignment，并调整图标描述与隐喻；用作近期维护实践的官方背景依据。"
         },
         {
           "title": "GitLab Pajamas Design System：Iconography",
           "url": "https://design.gitlab.com/product-foundations/iconography",
-          "supports": "官方设计系统页面（最后更新 2026-11-02）：按用途分组并保持语义映射一致；新图标用 kebab-case、在组件描述记录关键词和用途，图标按钮提供可访问名称。"
+          "supports": "官方设计系统页面（最后更新 2026-11-02）：按用途分组并保持语义映射一致；新图标用 kebab-case、在组件描述记录关键词和用途，图标按钮提供可访问名称。 官方图标规范页面（最后更新 2026-11-02）：补充作为 24×24 wrapper 与真实使用语境检查的背景；其网格、keyline 和语义规范仍按 GitLab 体系适用。"
         }
       ],
       "community_sources": [
@@ -555,9 +573,14 @@
           "title": "SVG Is the Source, Not Necessarily the Runtime Format",
           "url": "https://dev.to/svgicons/svg-is-the-source-not-necessarily-the-runtime-format-1879",
           "supports": "DEV 社区工程经验（2026-10-13）：提出 Shared SVG source → platform-specific assets → native rendering；列出 Android VectorDrawable、iOS PDF vector asset、SVG 特性转换风险、浅深色和实际 UI 预览/visual regression。日期在近 90 天但非近 30 天；不是跨平台标准。"
+        },
+        {
+          "title": "Optical Alignment in UI Design: Fix Off-Center Icons",
+          "url": "https://pixso.net/articles/alignment-icon/",
+          "supports": "社区文章，原文标注 Published 2026-05-30、Updated 2026-11-19：建议使用固定 24×24 wrapper，区分父布局整体偏移与单个非对称图标偏移，在真实尺寸、状态和最终 SVG 中核对并把修正沉淀到共享组件。属于实践经验，非通用标准。"
         }
       ],
-      "caveat": "Material、Apple 与 IBM 的数值和绘制建议均适用于各自体系；不能不加判断地跨平台套用。AI 草图仍需检查 SVG 路径、渲染、导出和辅助技术语义。Reddit 社区帖的确切发布日期未核实。"
+      "caveat": "Material、Apple 与 IBM 的数值和绘制建议均适用于各自体系；不能不加判断地跨平台套用。AI 草图仍需检查 SVG 路径、渲染、导出和辅助技术语义。Reddit 社区帖的确切发布日期未核实。\n2026-11-22 更新：wrapper 诊断、状态/尺寸回归和导出文件均未实测，PENDING；Pixso 文章为社区经验，不是跨平台规范。"
     },
     {
       "id": "mini-program",
@@ -592,9 +615,13 @@
         {
           "title": "用 max-fling-items 控制 Skyline swiper 快速跨页",
           "body": "微信小程序 Skyline 的 swiper 可用 `max-fling-items` 控制一次快速滑动跨过的 item 数。以 1 页为基线，再在真机对比 2 页；检查慢滑、快速甩动、指示器、首尾边界、低端设备和是否跳过关键卡片。`bind:change` 可记录 current/source，但不要无条件 setData 回写 current，以免循环。属性最低基础库 3.17.6，且文档列为 Skyline 特有；不可外推至普通 WebView。"
+        },
+        {
+          "title": "glass-easel / Skyline 迁移先过静态兼容闸门",
+          "body": "2026-11-22 增量：切换渲染框架前，先确认基础库与目标引擎，再按需配置 lazyCodeLoading=requiredComponents；需要同时覆盖 WebView 与 Skyline 时核对 componentFramework=glass-easel、glassEaselWebview=true。静态扫描重复属性、WXS 与 wx:for 临时变量重名、旧 wx-if/wx-for、include 变量传递、数字开头选择器和 SelectorQuery 写法；随后分别在 WebView 与 Skyline 回归组件渲染、查询、路由和退出/重入。WebView 的 glass-easel 支持门槛为基础库 3.8.12，Skyline 仅支持 glass-easel；未做双路径和真机验证前不得称迁移完成。本次未运行微信工具链，全部 PENDING。"
         }
       ],
-      "prompt": "请把下列微信小程序需求转成可交付设计验收清单。页面 / 核心任务：[填写]；用户：[填写]；入口、层级与完成去向：[填写]；组件范围：[填写]；设备范围（iOS / Android / 微信 PC）与最小基础库：[填写]；品牌和真实内容：[填写]。\n请输出：1）页面结构与组件层级；2）当前层级、返回方式、Tab 数量与微信右上角菜单避让；3）安全区和状态栏策略，不要写死机型像素，说明 safeArea 字段缺失时的方案；4）首次加载、局部加载、空数据、错误、表单错误、成功、无权限状态矩阵；5）平台版本限制和兼容风险；窗口变宽时按实际可用空间规划显示、隐藏、换行或分栏，不要只列设备型号；分别列手机竖屏、手机横屏、平板与 PC 窄/宽窗口矩阵，并记录基础库版本；说明 onResize / wx.onWindowResize、媒体查询、Flex / Grid、match-media 或 row / col 的适用场景；6）5 条可执行 QA。每条标为“微信官方规范”“实现建议”或“待真机验证”；不要把社区文章当规范。\n【API 能力与版本门槛】\n对每个 API 先标最低基础库版本；优先用 wx.canIUse / API 存在判断，或把版本号按数字分段比较，禁止直接比较版本字符串。对 wx.getWindowInfo().safeArea 缺省的环境给出兜底，并在最低支持版本以下验证降级。\n【自定义导航运行时契约】\n若采用 navigationStyle=custom，先列目标微信客户端和基础库的官方支持门槛；测量 statusBarHeight 与 menuButton/capsule 几何，给出测量缺失/异常时可用的降级布局。分别覆盖 iOS、Android、Windows/Mac 与低版本，并写真机验收步骤。不要把社区固定像素当通用规范；基础库版本用数值分段比较或 API 能力判断。\n【Skyline 运行时回归】\n若页面启用 Skyline，先记录 wx.getSkylineInfo() 版本。为长列表+嵌套滚动+swiper 输出状态矩阵：快速滚动、内外层交接、窗口缩放/旋转、swiper 切换、页面退出重入。每个状态给可观察断言和错误日志字段，检查白屏/卡死、跳动/锚定、布局溢出与资源释放；按目标微信客户端/基础库真机复测，不把单版修复推广到未测平台。\n\n【Skyline swiper 快速甩动实验】保留内容和样式，只对 max-fling-items 生成 1 与 2 两个配置；记录基础库、微信客户端、Android/iOS、Skyline/WebView。实测慢滑、快速左右甩动、首尾、指示器、一次手势跨过的 item 数与是否跳过关键卡片；检查 bind:change 中不无条件 setData(current)。非 Skyline 或基础库低于 3.17.6 标不适用/待测，不要猜兼容性。",
+      "prompt": "请把下列微信小程序需求转成可交付设计验收清单。页面 / 核心任务：[填写]；用户：[填写]；入口、层级与完成去向：[填写]；组件范围：[填写]；设备范围（iOS / Android / 微信 PC）与最小基础库：[填写]；品牌和真实内容：[填写]。\n请输出：1）页面结构与组件层级；2）当前层级、返回方式、Tab 数量与微信右上角菜单避让；3）安全区和状态栏策略，不要写死机型像素，说明 safeArea 字段缺失时的方案；4）首次加载、局部加载、空数据、错误、表单错误、成功、无权限状态矩阵；5）平台版本限制和兼容风险；窗口变宽时按实际可用空间规划显示、隐藏、换行或分栏，不要只列设备型号；分别列手机竖屏、手机横屏、平板与 PC 窄/宽窗口矩阵，并记录基础库版本；说明 onResize / wx.onWindowResize、媒体查询、Flex / Grid、match-media 或 row / col 的适用场景；6）5 条可执行 QA。每条标为“微信官方规范”“实现建议”或“待真机验证”；不要把社区文章当规范。\n【API 能力与版本门槛】\n对每个 API 先标最低基础库版本；优先用 wx.canIUse / API 存在判断，或把版本号按数字分段比较，禁止直接比较版本字符串。对 wx.getWindowInfo().safeArea 缺省的环境给出兜底，并在最低支持版本以下验证降级。\n【自定义导航运行时契约】\n若采用 navigationStyle=custom，先列目标微信客户端和基础库的官方支持门槛；测量 statusBarHeight 与 menuButton/capsule 几何，给出测量缺失/异常时可用的降级布局。分别覆盖 iOS、Android、Windows/Mac 与低版本，并写真机验收步骤。不要把社区固定像素当通用规范；基础库版本用数值分段比较或 API 能力判断。\n【Skyline 运行时回归】\n若页面启用 Skyline，先记录 wx.getSkylineInfo() 版本。为长列表+嵌套滚动+swiper 输出状态矩阵：快速滚动、内外层交接、窗口缩放/旋转、swiper 切换、页面退出重入。每个状态给可观察断言和错误日志字段，检查白屏/卡死、跳动/锚定、布局溢出与资源释放；按目标微信客户端/基础库真机复测，不把单版修复推广到未测平台。\n\n【Skyline swiper 快速甩动实验】保留内容和样式，只对 max-fling-items 生成 1 与 2 两个配置；记录基础库、微信客户端、Android/iOS、Skyline/WebView。实测慢滑、快速左右甩动、首尾、指示器、一次手势跨过的 item 数与是否跳过关键卡片；检查 bind:change 中不无条件 setData(current)。非 Skyline 或基础库低于 3.17.6 标不适用/待测，不要猜兼容性。\n\n【glass-easel / Skyline 迁移闸门｜2026-11-22】\n先不要改代码。确认目标基础库、渲染引擎和 WebView 降级路径；按需检查 app.json 的 lazyCodeLoading=requiredComponents，以及页面/插件 JSON 中 componentFramework=glass-easel 与 glassEaselWebview=true。逐文件扫描重复属性、WXS 与 wx:for-item/index 重名、旧 wx-if/wx-for、let/wx:for 的 include 变量传递、数字开头选择器及 SelectorQuery 写法，列出修复建议和风险。分别给 WebView 与 Skyline 的回归矩阵，覆盖组件渲染、查询尺寸、路由和页面退出重入；记录最低基础库与工具/客户端版本。未在微信开发者工具、双渲染路径和真机执行的项目全部标 PENDING。",
       "checklist": [
         "在有刘海 / 打孔屏和无安全区概念的设备上检查状态栏、底部操作和弹窗；safeArea 不存在时页面是否仍能使用？",
         "核对次级页返回、系统返回键 / 手势、微信右上角菜单与 Tab；是否有控件重叠或不一致？",
@@ -645,12 +672,17 @@
         {
           "title": "微信小程序：Skyline 更新日志",
           "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/runtime/skyline/changelog.html",
-          "supports": "2026-10-16 页面 / Skyline 1.4.24 更新记录列出 scroll-view 自动撑高、swiper transformer 卡死、list-view scroll anchoring、nested-scroll-body offset-top、页面销毁内存与布局性能修复；可通过 wx.getSkylineInfo 查询运行时版本。修复范围限于日志所列版本和场景，仍需目标设备回归。"
+          "supports": "2026-10-16 页面 / Skyline 1.4.24 更新记录列出 scroll-view 自动撑高、swiper transformer 卡死、list-view scroll anchoring、nested-scroll-body offset-top、页面销毁内存与布局性能修复；可通过 wx.getSkylineInfo 查询运行时版本。修复范围限于日志所列版本和场景，仍需目标设备回归。 官方 Skyline 更新日志：已登记的 1.4.24 背景外，2026-11-12 的 1.4.25 条目提及引擎启动、内存、nested-scroll-body、scrollOffset 与 CSS animation 修复；可作为双路径回归的版本输入，不代表目标设备已通过。"
         },
         {
           "title": "微信开放文档：swiper 组件",
           "url": "https://developers.weixin.qq.com/miniprogram/dev/component/swiper.html",
           "supports": "官方组件页（未显示发布日期）：max-fling-items 定义快速滑动一次可滑动的 swiper-item 数，默认 1、最低基础库 3.17.6，列为 Skyline 特有；change.detail 含 current/source，并提示 change 回调无条件 setData current 可能造成持续调用。"
+        },
+        {
+          "title": "微信开放文档：迁移到 glass-easel",
+          "url": "https://developers.weixin.qq.com/miniprogram/dev/framework/custom-component/glass-easel/migration.html",
+          "supports": "官方迁移指南，最后编辑于 2026-11-12：说明 WebView 从基础库 3.8.12 支持 glass-easel、Skyline 只支持 glass-easel，列出 lazyCodeLoading 与 componentFramework/glassEaselWebview 配置及 WXML/WXS/SelectorQuery 兼容差异。"
         }
       ],
       "community_sources": [
@@ -670,7 +702,7 @@
           "supports": "CSDN 社区实操（2026-09-22 12:17:05）：用 safe-area padding 处理底部固定按钮与 Home Indicator 的遮挡/点击问题；属于社区做法，需按微信客户端和真机验证。"
         }
       ],
-      "caveat": "微信文档会更新；基础库、客户端和渲染框架可能影响组件行为。版本和安全区相关内容应以目标设备实测为准，尤其不要直接照搬旧社区文章中的固定像素或 CSS 方案。\n\nmax-fling-items 为 Skyline 特有属性，基础库最低 3.17.6；属性页面未显示发布日期。真机与客户端版本应分别记录。"
+      "caveat": "微信文档会更新；基础库、客户端和渲染框架可能影响组件行为。版本和安全区相关内容应以目标设备实测为准，尤其不要直接照搬旧社区文章中的固定像素或 CSS 方案。\n\nmax-fling-items 为 Skyline 特有属性，基础库最低 3.17.6；属性页面未显示发布日期。真机与客户端版本应分别记录。\n2026-11-22 更新：glass-easel 静态扫描、配置、WebView/Skyline 双路径和设备回归均未运行，PENDING；必须依据目标基础库与客户端版本复核。"
     },
     {
       "id": "h5",
@@ -725,9 +757,17 @@
         {
           "title": "让 H5 导航按实际内容宽度切换布局",
           "body": "让一棵语义化 nav/link 树同时服务窄屏折叠与宽屏行内导航；用 ResizeObserver 观察可用容器，并比较内容 scrollWidth 与 clientWidth，内容装不下时再切换为 disclosure/popover，而不是只按手机/桌面断点猜测。字体加载、文案本地化或容器尺寸变化后重新测量；保留普通链接的 Tab 顺序，不把导航链接伪装成 menu/menuitem。为不支持的 API 留可用回退。它与既有 safe-area、IME 和视口条目不同；本次未跑浏览器/WebView，布局阈值与兼容性=PENDING。"
+        },
+        {
+          "title": "移动 H5 弹层优先用原生 dialog",
+          "body": "2026-11-22 增量：对确认、登录、删除或灯箱等阻断页面的覆盖层优先用语义化 <dialog> 与 showModal()，让浏览器处理背景 inert、焦点收容、顶层渲染、Esc/Android 返回手势关闭及焦点回到触发器；避免手写 role=dialog、aria-modal、focus trap、inert 切换、Esc 监听或 html/body 锁滚动。为 dialog 与 backdrop 设置 overscroll-behavior:contain，减少触控滚动串到背景。非模态面板按需求选 dialog/popover，提供有名称的关闭按钮；closedby 不支持时只做渐进降级。目标 Safari、Chrome 和 WebView 行为未在本次实测，PENDING。"
+        },
+        {
+          "title": "把 Baseline 浏览器支持策略写进 H5 交付提示",
+          "body": "2026-11-24 研究增量（官方方法，未发现合格社媒实操）：先把目标浏览器集合和 Baseline 年份写成项目约束，再逐项审查新 CSS / HTML / Web API。每项注明支持状态、缺失时的具体破坏、回退类别和最小验收步骤；只在确有需要时从无代码渐进增强、CSS @supports、轻量零依赖 JavaScript、按需 polyfill 中选回退。输出支持/不支持浏览器两条验收路径，并把迭代限制为一次只改一个变量。该方法来自 Chrome 2026-11-12 官方文章；不代表 ChatGPT 内置 Baseline 查询或 Modern Web Guidance，也不替代真实浏览器测试。旧浏览器方案是否需要回退须以项目支持目标为准。"
         }
       ],
-      "prompt": "你是移动 Web / H5 设计评审专家。项目页面：[填写]；用户和网络场景：[填写]；目标浏览器（iOS Safari、Android Chrome、微信 WebView 等）及版本：[填写]；页面线框 / 截图 / 代码：[粘贴]；品牌、性能和无障碍约束：[填写]。\n请输出：1）移动端默认布局与扩展规则；2）viewport、横向溢出、图片和横竖屏检查；至少在 320 CSS px 验证普通内容重排，确需二维浏览的内容限制在自身容器；3）刘海 / 底部手势区 / 地址栏安全区策略；4）触控目标、焦点顺序、输入方式与软键盘出现后的布局；若 Android 原生宿主嵌入 WebView，另记录宿主的 IME 可见性与 bottom inset（WindowInsetsCompat），不要把原生 API 当作纯 H5 通用接口；5）首屏、局部加载、慢请求和失败 / 重试状态；6）分别针对 iOS Safari、Android Chrome 和 [内嵌浏览器] 的适配风险、降级方案与实机测试步骤；7）8 条按优先级排序的 QA（前置条件、操作、预期结果、严重度）。把官方规范、项目偏好和待实测能力分开；不要猜测浏览器支持。\n【iOS 独立 PWA 键盘分支】\n若目标包含 iOS 独立 PWA，请单独在真机比较 innerHeight、documentElement.clientHeight、visualViewport.height / offsetTop；验证键盘打开时输入框与提交区是否可见、收起后是否留空。把 100dvh / interactive-widget 作为待测分支，不默认保证；避免未经验证的 scrollIntoView 或 fixed 键盘偏移。\n【环境变量与 fallback 矩阵】\n先列 safe-area-inset、keyboard-inset、preferred-text-scale 等可能的 CSS env() 输入及浏览器支持风险；每项都给不支持时的 fallback，不假设固定栏会自动避开键盘。输出可重排布局和测试矩阵：320 CSS px、200% 文本、横竖屏、键盘打开/关闭、触控、Tab/Shift+Tab；至少记录 iOS Safari、Android Chrome、Firefox/目标 WebView 的实测与降级。把 WCAG 3.0 Developing 草案和现行规范分开。\n【复杂手势的替代路径】\n列出页面中的 swipe/drag/double-tap/pinch/多指手势；每项保留原交互并给出无需速度、压力或多指的替代路径，优先单指 tap 或连续 tap。为两种路径分别写触控、键盘/辅助技术、取消/失败和可见反馈验收；说明 W3C WCAG 3.0 是 Working Draft/Developing，哪些还需目标设备实测。\n【IME 安全的自定义 Enter 提交】\n为这个 H5 聊天/搜索/快速重命名输入框实现 IME 安全提交：保留原生 form 提交和显式“发送”按钮；textarea 中 Enter 发送、Shift+Enter 换行；keydown 时先 preventDefault，再检查 event.isComposing；为 Safari 兼容同时检查 event.keyCode === 229，命中任一条件只结束本次处理、不提交；否则调用 form.requestSubmit()。给输入框加匹配 label。请输出 HTML/JS 和中文、日文、韩文 IME 的 Android Chrome、iOS Safari、桌面浏览器测试步骤，并标出 keyCode 已废弃及待实测项。\n\n【短信验证码 WebOTP 渐进增强】\n请将验证码页实现为语义化 form 和一个 type=text 输入框：inputmode=numeric、autocomplete=one-time-code、pattern=\\d{6}、maxlength=6、required，并保留显式“验证”按钮。短信最后一行使用 @example.com #123456。支持时用 AbortController 管理 OTPCredential；手动提交、重发、路由离开或卸载时 abort；自动取得验证码后调用 form.requestSubmit()，不要调用 form.submit() 绕过校验。提示和格式说明放在输入框上方。输出 HTTPS/跨源 iframe 权限说明，以及 Android Chrome、iOS Safari、桌面和目标 WebView 的降级矩阵与真机测试步骤；不得假设所有浏览器支持 WebOTP。\n\n【Scroll Snap 单动作滑动删除】\n请把【列表】改造成 H5 单动作滑动删除：每行采用“左占位｜内容｜右占位”横向 track，使用 CSS Scroll Snap 与 overscroll-behavior-x:none，不用 pointermove 手写 transform。用 IntersectionObserver 管理反馈/提交阈值，仅初始化视口附近行；动态新增行用 MutationObserver 接入。保留带行名的删除按钮，按钮、键盘 Enter、滑动共用同一 commit；提供 role=status 播报和撤销。加入 prefers-reduced-motion、forced-colors，并给出 Android Chrome、iOS Safari、目标 WebView 在 320 CSS px、横竖屏、键盘开关和过度滚动下的实机验收步骤；注明原指南发布日期未显示，不要声称所有浏览器行为相同。\n\n【H5 地址栏/键盘/safe-area 分层】请先分清浏览器地址栏、软键盘、safe-area、必须保持可见的 composer。不要用 100dvh 解决软键盘；safe-area 用 env(safe-area-inset-bottom)。只有确需悬浮在键盘上的 composer 才在 visualViewport resize/scroll 中计算 `Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop)` 写入 `--keyboard-inset`，bottom 使用该变量；文档主区优先自然滚动，避免全页双重偏移。若 visualViewport 不可用，降级自然滚动/显式提交。列出 iOS Safari、Android Chrome、目标微信 WebView 的实机步骤，未测试标 PENDING。\n\n【H5：IME-safe 回车提交与 Safari 回退】\n为【聊天/搜索/重命名】输入流程先写行为契约：中文/日文/韩文输入法合成中按 Enter、合成结束按 Enter、Shift+Enter、点击提交按钮、空值、重复提交和网络失败分别发生什么。使用语义 form、与 input/textarea 匹配的 label、button type=submit 和 form.requestSubmit()。若必须自定义 Enter：先 preventDefault，再检查 key=Enter、textarea 的 !shiftKey 与 !event.isComposing；对 Safari 目标环境补 keyCode===229，或若项目禁用废弃 API，则用 compositionend 的 event.timeStamp 建立 50ms 保护窗。保留显式按钮，不对已由 IME 正常处理的原生隐式提交重复加逻辑。输出代码与逐项测试矩阵；未在目标浏览器/WebView/设备运行的测试标 PENDING。\n\n【H5 语义导航按内容宽度适配】\n保持一棵语义化 <nav> 与普通链接：在容器实际宽度能容纳所有导航项时显示行内导航，否则用按钮折叠到可键盘操作的列表。用 ResizeObserver 观察容器并比较 scrollWidth/clientWidth；字体加载、翻译文案和旋转/resize 后重测。不要按手机/桌面角色猜宽度，也不要给普通导航链接加 menu/menuitem 语义。说明无 ResizeObserver/Popover 时的回退和测试矩阵；未在目标浏览器/WebView测试的项标 PENDING。",
+      "prompt": "你是移动 Web / H5 设计评审专家。项目页面：[填写]；用户和网络场景：[填写]；目标浏览器（iOS Safari、Android Chrome、微信 WebView 等）及版本：[填写]；页面线框 / 截图 / 代码：[粘贴]；品牌、性能和无障碍约束：[填写]。\n请输出：1）移动端默认布局与扩展规则；2）viewport、横向溢出、图片和横竖屏检查；至少在 320 CSS px 验证普通内容重排，确需二维浏览的内容限制在自身容器；3）刘海 / 底部手势区 / 地址栏安全区策略；4）触控目标、焦点顺序、输入方式与软键盘出现后的布局；若 Android 原生宿主嵌入 WebView，另记录宿主的 IME 可见性与 bottom inset（WindowInsetsCompat），不要把原生 API 当作纯 H5 通用接口；5）首屏、局部加载、慢请求和失败 / 重试状态；6）分别针对 iOS Safari、Android Chrome 和 [内嵌浏览器] 的适配风险、降级方案与实机测试步骤；7）8 条按优先级排序的 QA（前置条件、操作、预期结果、严重度）。把官方规范、项目偏好和待实测能力分开；不要猜测浏览器支持。\n【iOS 独立 PWA 键盘分支】\n若目标包含 iOS 独立 PWA，请单独在真机比较 innerHeight、documentElement.clientHeight、visualViewport.height / offsetTop；验证键盘打开时输入框与提交区是否可见、收起后是否留空。把 100dvh / interactive-widget 作为待测分支，不默认保证；避免未经验证的 scrollIntoView 或 fixed 键盘偏移。\n【环境变量与 fallback 矩阵】\n先列 safe-area-inset、keyboard-inset、preferred-text-scale 等可能的 CSS env() 输入及浏览器支持风险；每项都给不支持时的 fallback，不假设固定栏会自动避开键盘。输出可重排布局和测试矩阵：320 CSS px、200% 文本、横竖屏、键盘打开/关闭、触控、Tab/Shift+Tab；至少记录 iOS Safari、Android Chrome、Firefox/目标 WebView 的实测与降级。把 WCAG 3.0 Developing 草案和现行规范分开。\n【复杂手势的替代路径】\n列出页面中的 swipe/drag/double-tap/pinch/多指手势；每项保留原交互并给出无需速度、压力或多指的替代路径，优先单指 tap 或连续 tap。为两种路径分别写触控、键盘/辅助技术、取消/失败和可见反馈验收；说明 W3C WCAG 3.0 是 Working Draft/Developing，哪些还需目标设备实测。\n【IME 安全的自定义 Enter 提交】\n为这个 H5 聊天/搜索/快速重命名输入框实现 IME 安全提交：保留原生 form 提交和显式“发送”按钮；textarea 中 Enter 发送、Shift+Enter 换行；keydown 时先 preventDefault，再检查 event.isComposing；为 Safari 兼容同时检查 event.keyCode === 229，命中任一条件只结束本次处理、不提交；否则调用 form.requestSubmit()。给输入框加匹配 label。请输出 HTML/JS 和中文、日文、韩文 IME 的 Android Chrome、iOS Safari、桌面浏览器测试步骤，并标出 keyCode 已废弃及待实测项。\n\n【短信验证码 WebOTP 渐进增强】\n请将验证码页实现为语义化 form 和一个 type=text 输入框：inputmode=numeric、autocomplete=one-time-code、pattern=\\d{6}、maxlength=6、required，并保留显式“验证”按钮。短信最后一行使用 @example.com #123456。支持时用 AbortController 管理 OTPCredential；手动提交、重发、路由离开或卸载时 abort；自动取得验证码后调用 form.requestSubmit()，不要调用 form.submit() 绕过校验。提示和格式说明放在输入框上方。输出 HTTPS/跨源 iframe 权限说明，以及 Android Chrome、iOS Safari、桌面和目标 WebView 的降级矩阵与真机测试步骤；不得假设所有浏览器支持 WebOTP。\n\n【Scroll Snap 单动作滑动删除】\n请把【列表】改造成 H5 单动作滑动删除：每行采用“左占位｜内容｜右占位”横向 track，使用 CSS Scroll Snap 与 overscroll-behavior-x:none，不用 pointermove 手写 transform。用 IntersectionObserver 管理反馈/提交阈值，仅初始化视口附近行；动态新增行用 MutationObserver 接入。保留带行名的删除按钮，按钮、键盘 Enter、滑动共用同一 commit；提供 role=status 播报和撤销。加入 prefers-reduced-motion、forced-colors，并给出 Android Chrome、iOS Safari、目标 WebView 在 320 CSS px、横竖屏、键盘开关和过度滚动下的实机验收步骤；注明原指南发布日期未显示，不要声称所有浏览器行为相同。\n\n【H5 地址栏/键盘/safe-area 分层】请先分清浏览器地址栏、软键盘、safe-area、必须保持可见的 composer。不要用 100dvh 解决软键盘；safe-area 用 env(safe-area-inset-bottom)。只有确需悬浮在键盘上的 composer 才在 visualViewport resize/scroll 中计算 `Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop)` 写入 `--keyboard-inset`，bottom 使用该变量；文档主区优先自然滚动，避免全页双重偏移。若 visualViewport 不可用，降级自然滚动/显式提交。列出 iOS Safari、Android Chrome、目标微信 WebView 的实机步骤，未测试标 PENDING。\n\n【H5：IME-safe 回车提交与 Safari 回退】\n为【聊天/搜索/重命名】输入流程先写行为契约：中文/日文/韩文输入法合成中按 Enter、合成结束按 Enter、Shift+Enter、点击提交按钮、空值、重复提交和网络失败分别发生什么。使用语义 form、与 input/textarea 匹配的 label、button type=submit 和 form.requestSubmit()。若必须自定义 Enter：先 preventDefault，再检查 key=Enter、textarea 的 !shiftKey 与 !event.isComposing；对 Safari 目标环境补 keyCode===229，或若项目禁用废弃 API，则用 compositionend 的 event.timeStamp 建立 50ms 保护窗。保留显式按钮，不对已由 IME 正常处理的原生隐式提交重复加逻辑。输出代码与逐项测试矩阵；未在目标浏览器/WebView/设备运行的测试标 PENDING。\n\n【H5 语义导航按内容宽度适配】\n保持一棵语义化 <nav> 与普通链接：在容器实际宽度能容纳所有导航项时显示行内导航，否则用按钮折叠到可键盘操作的列表。用 ResizeObserver 观察容器并比较 scrollWidth/clientWidth；字体加载、翻译文案和旋转/resize 后重测。不要按手机/桌面角色猜宽度，也不要给普通导航链接加 menu/menuitem 语义。说明无 ResizeObserver/Popover 时的回退和测试矩阵；未在目标浏览器/WebView测试的项标 PENDING。\n\n【移动 H5 原生 dialog 覆盖层｜2026-11-22】\n先区分 modal、非 modal、菜单与 tooltip，不要把菜单做成 dialog。对阻断页面的 modal 使用语义化 <dialog> 与 showModal()（或注明 command=show-modal 的兼容性）；不要手写 role=dialog、aria-modal、焦点陷阱、inert 切换、Esc 监听或 html/body 锁滚动。提供 aria-labelledby 标题和有名称的操作按钮，对 dialog:modal 与 ::backdrop 设置 overscroll-behavior:contain。列出 Tab/Shift+Tab、读屏、Esc、Android 返回手势、背景不可操作、滚动隔离、短屏/软键盘及焦点返回测试；说明 closedby 不支持时的安全降级。iOS Safari、Android Chrome 和目标 WebView 未实测项标 PENDING。\n【H5：Baseline 浏览器支持与渐进增强交付闸门｜2026-11-24】\n先写明目标浏览器、最低支持版本及 Baseline 年份；逐项列出新 CSS / HTML / Web API 的支持状态、无支持时的具体破坏、回退类型（无代码增强、@supports、轻量零依赖 JS、按需 polyfill）和最小验收步骤。分别输出支持与不支持浏览器的手测路径，再提出一次只改一个变量的迭代。不要声称 ChatGPT 能自动读取最新 Baseline 或已运行兼容性测试；未核实来源、未运行的代码、浏览器、WebView 和设备均标 PENDING。",
       "checklist": [
         "在窄 / 宽视口、横竖屏打开：至少在 320 CSS px 检查普通正文重排；viewport 是否正确，是否整页意外横向滚动，图片是否溢出？确需二维浏览的表格 / 图表是否只在自身容器内滚动？",
         "检查安全区、地址栏变化、底部手势区和固定操作条；关键文字 / 按钮是否被遮挡？",
@@ -741,7 +781,8 @@
         "验证码表单用一个输入框回归：Android Chrome HTTPS 下检查来源匹配短信只填充一次；错误域名、HTTP 或格式错误时退回手动输入；iOS 检查 one-time-code 建议及前导零；测试粘贴、错误长度、重复提交和提示被键盘遮挡；重发/卸载后确认旧请求 abort；自动填入后仍触发表单校验。跨源 iframe 与目标 WebView 单独记录支持边界。",
         "对滑动删除真机回归：Scroll Snap 不停半开；Android Chrome/iOS Safari 不触发整页横移或后退；滑动与带行名按钮/键盘共用同一操作；误触可撤销；role=status 能播报；reduced-motion/forced-colors 仍可理解；动态行不重复提交。覆盖 320px、地址栏/键盘变化、横竖屏和目标 WebView。Chrome 指南原文未显示日期，不称近期发布。",
         "地址栏收放不造成 shell 错跳；键盘出现时仅 composer 有必要地上移，正文不双重滚动；输入框/提交按钮可见；键盘关闭后 inset 清零；safe-area 仍单独处理；旋转、短/长内容、缩放均检查；视觉/键盘 fallback 不阻断提交；记录 iOS Safari/Android Chrome/微信 WebView 版本与证据；未实测 PENDING。",
-        "对输入组件记录 IME 行为矩阵：拼音候选确认/中文合成、日文转换、韩文组合中 Enter 不提交也不丢字；合成结束 Enter 只提交一次；Shift+Enter 在 textarea 换行；显式按钮可提交；检查 Safari 回退、label 与重复提交。Android Chrome、iOS Safari 和目标 WebView 分开验证；未实测项标 PENDING。"
+        "对输入组件记录 IME 行为矩阵：拼音候选确认/中文合成、日文转换、韩文组合中 Enter 不提交也不丢字；合成结束 Enter 只提交一次；Shift+Enter 在 textarea 换行；显式按钮可提交；检查 Safari 回退、label 与重复提交。Android Chrome、iOS Safari 和目标 WebView 分开验证；未实测项标 PENDING。",
+        "列出项目目标浏览器/最低版本与 Baseline 年份；每个新 CSS、HTML 或 Web API 都记录支持边界、失败表现、选用的回退类别及复现步骤。检查支持与不支持路径；兼容矩阵、真实浏览器/WebView 与设备未运行时标 PENDING。"
       ],
       "official_sources": [
         {
@@ -812,7 +853,7 @@
         {
           "title": "Google Chrome：Top 10 things AI gets wrong in web development",
           "url": "https://developer.chrome.com/blog/top-10-things-ai-gets-wrong-in-web-dev",
-          "supports": "Chrome Developers 官方文章（2026-11-11）：移动键盘可能遮挡格式说明，建议把提示置于输入框上方，并在真实移动浏览器检查验证、autofill 和键盘交互；作为 H5 验收补充。"
+          "supports": "Chrome Developers 官方文章（2026-11-11）：移动键盘可能遮挡格式说明，建议把提示置于输入框上方，并在真实移动浏览器检查验证、autofill 和键盘交互；作为 H5 验收补充。 Chrome 官方文章，2026-11-11：除已登记的表单/键盘注意事项外，文章也建议用原生 dialog/popover、平台顶层转场与焦点进出管理，避免手写 fixed overlay、click-outside、JS 状态机和 html overflow 锁定。"
         },
         {
           "title": "Google Chrome Modern Web Guidance：Swipe to remove",
@@ -838,6 +879,16 @@
           "title": "Chrome Developers：Responsive Site Navigation",
           "url": "https://developer.chrome.com/docs/modern-web-guidance/guides/ui-components/navbar",
           "supports": "Chrome Modern Web Guidance 官方导航组件指南（页面未显示可核实发布日期）：说明按可用内容空间调整导航布局，复用语义化导航结构与普通链接；紧凑布局应保留键盘可操作性。属于网页/H5指导，需按目标 WebView 验证；本次未运行浏览器测试。"
+        },
+        {
+          "title": "Chrome Modern Web Guidance：Dialog",
+          "url": "https://developer.chrome.com/docs/modern-web-guidance/guides/ui-components/dialog",
+          "supports": "Chrome Modern Web Guidance（具体页面未显示日期；指南体系于 2026-11-10 发布）：建议 modal 使用原生 <dialog>/showModal()，由平台提供 inert、焦点收容、顶层、Esc/返回手势与焦点返回；不建议手写焦点陷阱/inert/页面锁滚动，并说明 overscroll-behavior 与 closedby 降级。"
+        },
+        {
+          "title": "Chrome for Developers：Cross-browser by default: How Baseline fallbacks work in Modern Web Guidance",
+          "url": "https://developer.chrome.com/blog/cross-browser-by-default",
+          "supports": "Chrome 官方文章（2026-11-12）：建议先明确项目浏览器目标，以 Baseline 支持状态决定是否采用渐进增强，并按特性列支持边界、失败表现和回退策略。文中讨论无代码增强、CSS 特性检测、轻量 JavaScript 与按需 polyfill 等选择。它是 Web 工程指导，不证明 ChatGPT 已内置 Baseline 数据或执行兼容性测试。"
         }
       ],
       "community_sources": [
@@ -857,7 +908,7 @@
           "supports": "社区工程实测（2026-11-13）：区分 browser chrome、软键盘、safe area、overlay；给出 visualViewport resize/scroll 与 innerHeight-height-offsetTop 算法、仅对底部 toolbar 设置 CSS inset 的代码和真机检查项。文章含作者项目披露/AI辅助声明；这是社区经验，不是统一跨浏览器标准。"
         }
       ],
-      "caveat": "iOS Safari、Android Chrome、微信内嵌浏览器和其他 WebView 的视口、键盘与固定定位行为可能不同。Chrome 的 VirtualKeyboard API 不是所有浏览器通用能力；关键路径要在目标设备上实测。\n\n11/19 社区来源给出 visualViewport 实现示例；VirtualKeyboard API limited availability/experimental/secure context，不能外推到 Safari 或微信 WebView。视觉视口在键盘动画/缩放/PWA 中可能为近似值，需实机验证。\n11/21 更新：新增导航宽度测量方法尚未在 iOS Safari、Android Chrome 或目标 WebView 实测；PENDING。"
+      "caveat": "iOS Safari、Android Chrome、微信内嵌浏览器和其他 WebView 的视口、键盘与固定定位行为可能不同。Chrome 的 VirtualKeyboard API 不是所有浏览器通用能力；关键路径要在目标设备上实测。\n\n11/19 社区来源给出 visualViewport 实现示例；VirtualKeyboard API limited availability/experimental/secure context，不能外推到 Safari 或微信 WebView。视觉视口在键盘动画/缩放/PWA 中可能为近似值，需实机验证。\n11/21 更新：新增导航宽度测量方法尚未在 iOS Safari、Android Chrome 或目标 WebView 实测；PENDING。\n2026-11-22 更新：原生 dialog、返回手势、焦点回返、滚动隔离和 closedby 浏览器兼容均未运行验证，PENDING；Chrome 指南不等于本项目测试结果。\n2026-11-24 更新：Baseline 浏览器支持策略来自 Chrome 官方指导；未验证 ChatGPT 是否可读取 Baseline 数据，代码、浏览器兼容性、WebView 与设备回归均未运行，PENDING。"
     },
     {
       "id": "app",
@@ -920,9 +971,17 @@
         {
           "title": "把 Android 16 / API 36 拆成 Insets、预测返回与大屏三组验收",
           "body": "当项目 targetSdk 升至 36 时，按目标版本核对 edge-to-edge 行为并用 WindowInsets 处理 system bars、safe drawing/gestures 与 IME；为预测性返回记录 Start/Progress/Cancel/Commit 状态，取消时恢复当前界面、提交时只导航一次，按 Views/Compose 选对应 API；在大屏/折叠设备检查方向、窗口缩放、多窗口与状态保留。移除旧式全局拦截的 onBackPressed()/KEYCODE_BACK 依赖前先盘点页面导航。此条只针对 Android 16/API 36，不外推到 iOS/macOS。本次未运行代码、模拟器或真机；目标设备验收=PENDING。"
+        },
+        {
+          "title": "把 Google Play 折叠屏 Tier 3 拆成功能与商店素材闸门",
+          "body": "2026-11-22 增量（仅 Android 原生/Jetpack Compose）：把大屏适配拆成功能验收和商店素材两条线。按 Google Play Adaptive app quality Tier 3，在 1:1 与 4:3 折叠模拟器/设备覆盖旋转、折叠/展开、分屏缩放和桌面窗口恢复，检查内容填满可用区，并保留滚动位置、输入、键盘及媒体状态；核对多窗口/multi-resume 与摄像头、麦克风资源让渡。另规划手机截图和折叠屏截图素材（官方公告提供 1:1、4:3 内屏及 10:16 外屏等类别）；新要求将于 2027 年 4 月生效。ChatGPT 只能规划检查项，本次未运行模拟器、真机或 Play Console，均为 PENDING。"
+        },
+        {
+          "title": "以 Home—专属高频入口—Explore 梳理原生 App 导航",
+          "body": "2026-11-24 研究增量（ChatGPT 移动端导航案例）：可把 Home 用于新建/继续任务，把一个独立 tab 留给高频、持续会话型核心对象，并用 Explore 承载工具目录；先只验证职责、层级、进入/返回路径和空状态，再单独测试“长按工具→固定到 tab bar”及“取消固定/替换”，确认可发现、可逆且不破坏返回路径。此为参考 ChatGPT 移动端 rollout 的信息架构案例，不是所有 App 都必须采用三 tab 的通用规范。官方功能对账号、地区和设备分批开放；未获功能的项目不应将其当作默认能力。原生编译、真机、可访问性和发布均未验证，PENDING。"
         }
       ],
-      "prompt": "你是原生 App 设计评审员。平台【iOS / Android / 双平台：[填写]】；技术栈：[填写]；产品场景和核心任务：[填写]；现有页面树 / 线框：[粘贴]；数据、网络、权限、登录情况：[填写]；用户与无障碍要求：[填写]。\n请输出：1）导航层级、返回、深链和状态保留，并区分 iOS / Android 惯例；2）各页面状态矩阵，覆盖初始加载、刷新、成功、首次为空、无搜索结果、错误、权限不足、离线；每个状态写触发条件、文案、操作、是否保留内容；3）控件名称 / 角色 / 状态、阅读顺序、动态字体、对比度、触控区域、非颜色提示和 VoiceOver / TalkBack 播报建议；按实际可用尺寸类而非设备名规划布局，并检查最大辅助文字尺寸下并排内容是否需要改为堆叠；4）5 条可执行 QA，至少覆盖返回、深链、重复重试、断网、空结果、读屏和大字体；5）风险和待查证平台规则。不要编造 API 或规范数字。分别依据 iOS size class 与 Android window width class 给出 compact / medium / expanded 布局；说明 reflow / reveal / presentation change 与旋转、折叠、分屏后的状态保持。\n【Android 17 自定义输入】\n若页面使用自定义 Android InputConnection，补充 Android 17 CJKV 组合输入与 TalkBack 验收：候选组合阶段与最终提交阶段是否能被读屏区分？若使用标准 TextView，标注“默认支持、无需额外适配”；不要将此 API 假设为 iOS 规则。\n【动态字号压力测试交付单】\n为每个关键组件输出默认、iOS small/medium/large/extra large（含 AX3/AX5）与 Android 系统放大/最大字号矩阵；标注哪些文字可换行、并排元素何时转纵向、什么信息不可截断、读屏名称与失败回退。若 Compose Material 3 支持 Text autoSize，可列为实现选项并注明库版本；不可用缩小正文来掩盖布局问题。每个状态给截图/录屏和可观察验收。\n【Compose 缩放策略决策卡】\n仅针对 Android Jetpack Compose。根据页面是阅读密集还是视觉结构化，在 density scaling 与 font scaling 中二选一并说明理由，不要叠加；说明 Modifier.transformable 只检测手势而非自动缩放。交付最小/默认/最大比例、非手势调节与重置入口、设置保存、组件重排规则；分别测试应用内缩放与系统 font/display scale，并记录横移、截断、重叠、焦点与 TalkBack。\n【Compose PlaceholderSpan 字体缩放回归】\n请为 Jetpack Compose 生成“非线性字体缩放回归矩阵”，分别覆盖 Compose UI 1.12.1 与 1.13.0-rc01。测试普通 Text、AnnotatedString、InlineTextContent/PlaceholderSpan、按钮标签、长中文、英文和 CJKV 混排；系统字体比例至少默认、200%、最大无障碍档。用 Compose UI test 或截图测试验收：占位符尺寸随字体规则变化、无重叠/裁切、换行可读、按钮可操作、TalkBack 节点名称与顺序不变。不要把 RC 行为写成稳定平台保证。\n\n【Compose Material 3 组件无障碍版本回归】\n只针对 Android Jetpack Compose Material 3，为 ExposedDropdownMenuBox（editable field）、带 prefix/suffix 的 TextField/OutlinedTextField、ScrollField、RichTooltip/PlainTooltip 生成升级前后回归用例。分别使用 TalkBack 与 Switch Access，列出最小状态、操作步骤、期望焦点/播报/可激活动作；在小屏和最大系统字体下检查 Tooltip 是否裁切。记录 Material3/Compose、Android、字体比例与窗口尺寸；只有项目版本包含对应修复时才期待通过，不外推到 iOS、原生 Views 或其他框架。\n\n【原生 App 扫描漏屏 CI 闸门】\n平台：【Android Compose/Android Views/iOS XCUITest】；关键路径：【登录、首页、搜索、详情、编辑、错误、空状态】；字号：【默认、最大系统/辅助字号】。逐屏运行无障碍扫描并输出 screen_id、路径、扫描状态、规则失败、截图与 HTML 报告。iOS 若报告提供 skippedScanCount，CI 在其大于 0 时失败；Android Compose 列出预期 screen_id 并与实际扫描结果对照，漏屏或结果为空时失败；不要假定各平台都有同名覆盖字段。对每个失败给出原生控件/语义树定位、复现步骤和修复后重跑方式；标明哪些仍需 TalkBack/VoiceOver、Switch Access 或真实设备人工验证。固定库版本，不要声称自动扫描覆盖全部问题。\n\n【macOS beta 权限 onboarding 状态矩阵】只针对 macOS 27.3 beta 2。先按功能列出实际需要控制的 App/文件夹，区分 System & App Protection Override、Accessibility、Full Disk Access 的必需与可选；只请求当前任务最小范围。分别设计首次解释、部分授权、ask each time、取消、拒绝、撤销后的状态，保证无权限的无关功能仍可用，并为跨 App 控制显示对象、范围、失败原因和重试入口。标明 beta/系统版本，不声称已获权或实测。\n\n【macOS 触控屏：悬停隐藏控件状态矩阵】\n目标：【macOS 版本、设备是否有触控显示屏、AppKit/SwiftUI、页面与用户任务】。扫描仅在 pointer hover 出现的控件，表格列出区域、作用、是否 essential、已有触控等价路径、selection/焦点影响、是否放入 context menu。对 essential 隐藏控件设计状态：默认隐藏→触摸大致区域只显现不执行→再次触摸执行→操作后或数秒后隐藏→touch-and-hold 提供短 context menu；定义取消、点外、切回键盘/指针行为。侧栏标题/行和标签页关闭按钮分别规定显现与执行规则。保持当前选择，不让控件显现改变 selection；键盘、trackpad、touch 三条路径结果等价，鼠标/键盘控件密度不变。输出线框标注、状态转移和可观察验收项；未在目标 macOS 触控设备运行的项目标 PENDING。\n\n【Android 16 / API 36 UI 适配矩阵】\n先问清 targetSdk、Views/Compose、导航栈和目标设备；逐屏列出状态栏/导航栏/IME Insets、系统返回 Start/Progress/Cancel/Commit、旋转/折叠/分屏/窗口缩放与状态恢复。分别给出适用的 WindowInsets 与预测性返回 API，并标出需移除的旧式返回拦截；不要在未确认项目架构时直接替换代码。输出可执行验收矩阵；未在 Android 16/API 36 模拟器或目标设备跑过的项全部标 PENDING。",
+      "prompt": "你是原生 App 设计评审员。平台【iOS / Android / 双平台：[填写]】；技术栈：[填写]；产品场景和核心任务：[填写]；现有页面树 / 线框：[粘贴]；数据、网络、权限、登录情况：[填写]；用户与无障碍要求：[填写]。\n请输出：1）导航层级、返回、深链和状态保留，并区分 iOS / Android 惯例；2）各页面状态矩阵，覆盖初始加载、刷新、成功、首次为空、无搜索结果、错误、权限不足、离线；每个状态写触发条件、文案、操作、是否保留内容；3）控件名称 / 角色 / 状态、阅读顺序、动态字体、对比度、触控区域、非颜色提示和 VoiceOver / TalkBack 播报建议；按实际可用尺寸类而非设备名规划布局，并检查最大辅助文字尺寸下并排内容是否需要改为堆叠；4）5 条可执行 QA，至少覆盖返回、深链、重复重试、断网、空结果、读屏和大字体；5）风险和待查证平台规则。不要编造 API 或规范数字。分别依据 iOS size class 与 Android window width class 给出 compact / medium / expanded 布局；说明 reflow / reveal / presentation change 与旋转、折叠、分屏后的状态保持。\n【Android 17 自定义输入】\n若页面使用自定义 Android InputConnection，补充 Android 17 CJKV 组合输入与 TalkBack 验收：候选组合阶段与最终提交阶段是否能被读屏区分？若使用标准 TextView，标注“默认支持、无需额外适配”；不要将此 API 假设为 iOS 规则。\n【动态字号压力测试交付单】\n为每个关键组件输出默认、iOS small/medium/large/extra large（含 AX3/AX5）与 Android 系统放大/最大字号矩阵；标注哪些文字可换行、并排元素何时转纵向、什么信息不可截断、读屏名称与失败回退。若 Compose Material 3 支持 Text autoSize，可列为实现选项并注明库版本；不可用缩小正文来掩盖布局问题。每个状态给截图/录屏和可观察验收。\n【Compose 缩放策略决策卡】\n仅针对 Android Jetpack Compose。根据页面是阅读密集还是视觉结构化，在 density scaling 与 font scaling 中二选一并说明理由，不要叠加；说明 Modifier.transformable 只检测手势而非自动缩放。交付最小/默认/最大比例、非手势调节与重置入口、设置保存、组件重排规则；分别测试应用内缩放与系统 font/display scale，并记录横移、截断、重叠、焦点与 TalkBack。\n【Compose PlaceholderSpan 字体缩放回归】\n请为 Jetpack Compose 生成“非线性字体缩放回归矩阵”，分别覆盖 Compose UI 1.12.1 与 1.13.0-rc01。测试普通 Text、AnnotatedString、InlineTextContent/PlaceholderSpan、按钮标签、长中文、英文和 CJKV 混排；系统字体比例至少默认、200%、最大无障碍档。用 Compose UI test 或截图测试验收：占位符尺寸随字体规则变化、无重叠/裁切、换行可读、按钮可操作、TalkBack 节点名称与顺序不变。不要把 RC 行为写成稳定平台保证。\n\n【Compose Material 3 组件无障碍版本回归】\n只针对 Android Jetpack Compose Material 3，为 ExposedDropdownMenuBox（editable field）、带 prefix/suffix 的 TextField/OutlinedTextField、ScrollField、RichTooltip/PlainTooltip 生成升级前后回归用例。分别使用 TalkBack 与 Switch Access，列出最小状态、操作步骤、期望焦点/播报/可激活动作；在小屏和最大系统字体下检查 Tooltip 是否裁切。记录 Material3/Compose、Android、字体比例与窗口尺寸；只有项目版本包含对应修复时才期待通过，不外推到 iOS、原生 Views 或其他框架。\n\n【原生 App 扫描漏屏 CI 闸门】\n平台：【Android Compose/Android Views/iOS XCUITest】；关键路径：【登录、首页、搜索、详情、编辑、错误、空状态】；字号：【默认、最大系统/辅助字号】。逐屏运行无障碍扫描并输出 screen_id、路径、扫描状态、规则失败、截图与 HTML 报告。iOS 若报告提供 skippedScanCount，CI 在其大于 0 时失败；Android Compose 列出预期 screen_id 并与实际扫描结果对照，漏屏或结果为空时失败；不要假定各平台都有同名覆盖字段。对每个失败给出原生控件/语义树定位、复现步骤和修复后重跑方式；标明哪些仍需 TalkBack/VoiceOver、Switch Access 或真实设备人工验证。固定库版本，不要声称自动扫描覆盖全部问题。\n\n【macOS beta 权限 onboarding 状态矩阵】只针对 macOS 27.3 beta 2。先按功能列出实际需要控制的 App/文件夹，区分 System & App Protection Override、Accessibility、Full Disk Access 的必需与可选；只请求当前任务最小范围。分别设计首次解释、部分授权、ask each time、取消、拒绝、撤销后的状态，保证无权限的无关功能仍可用，并为跨 App 控制显示对象、范围、失败原因和重试入口。标明 beta/系统版本，不声称已获权或实测。\n\n【macOS 触控屏：悬停隐藏控件状态矩阵】\n目标：【macOS 版本、设备是否有触控显示屏、AppKit/SwiftUI、页面与用户任务】。扫描仅在 pointer hover 出现的控件，表格列出区域、作用、是否 essential、已有触控等价路径、selection/焦点影响、是否放入 context menu。对 essential 隐藏控件设计状态：默认隐藏→触摸大致区域只显现不执行→再次触摸执行→操作后或数秒后隐藏→touch-and-hold 提供短 context menu；定义取消、点外、切回键盘/指针行为。侧栏标题/行和标签页关闭按钮分别规定显现与执行规则。保持当前选择，不让控件显现改变 selection；键盘、trackpad、touch 三条路径结果等价，鼠标/键盘控件密度不变。输出线框标注、状态转移和可观察验收项；未在目标 macOS 触控设备运行的项目标 PENDING。\n\n【Android 16 / API 36 UI 适配矩阵】\n先问清 targetSdk、Views/Compose、导航栈和目标设备；逐屏列出状态栏/导航栏/IME Insets、系统返回 Start/Progress/Cancel/Commit、旋转/折叠/分屏/窗口缩放与状态恢复。分别给出适用的 WindowInsets 与预测性返回 API，并标出需移除的旧式返回拦截；不要在未确认项目架构时直接替换代码。输出可执行验收矩阵；未在 Android 16/API 36 模拟器或目标设备跑过的项全部标 PENDING。\n\n【Google Play 折叠屏 Tier 3 发布闸门｜2026-11-22】\n仅针对 Android 原生/Jetpack Compose。按 Adaptive app quality Tier 3 列出逐项 PASS/FAIL/PENDING：在 1:1 与 4:3 折叠设备/模拟器覆盖旋转、折叠/展开、分屏调整、桌面窗口最小化/恢复；检查内容不留 letterbox/溢出，滚动位置、文本输入、键盘和媒体播放状态保持，多窗口/multi-resume 可用，非焦点窗口更新且摄像头/麦克风正确让渡。另规划手机及折叠屏商店截图，明确 1:1、4:3 内屏和 10:16 外屏所需展示的适配能力。标注新要求 2027 年 4 月生效；不要声称已跑模拟器、真机或上传 Play Console。\n【原生 App：Home—专属入口—Explore 导航分层｜2026-11-24】\n为【App / 用户任务】设计底部导航：Home 负责新建和继续任务；第二个独立 tab 只承载【一个高频、持续会话型核心对象】；Explore 作为工具/功能目录。先只输出各 tab 职责、页面层级、进入/返回路径和空状态，不改变配色、图标、卡片或动效。下一轮再只测试“长按目录项→固定到 tab bar”与“长按已固定项→取消/替换”，列出可发现性、可逆性和返回路径验收项。区分官方已发布的 ChatGPT 移动端操作与本项目设计建议；不声称所有账号、地区、设备都可用，未运行的原生代码、真机、读屏和发布测试标 PENDING。",
       "checklist": [
         "分别验证 iOS 与 Android 的顶层导航、系统返回、手势返回、深链和返回后的滚动 / 选中状态。",
         "在 compact phone、medium、expanded tablet/foldable 完成同一任务；旋转、折叠或分屏后检查导航、筛选、滚动和状态保持，确认内容重排而非拉伸或裁切。",
@@ -937,7 +996,8 @@
         "Material 3 升级后分别用 Switch Access 和 TalkBack 验证可编辑下拉框可激活、prefix/suffix 不打乱字段播报、ScrollField 焦点顺序正确；小屏和最大系统字号下 Tooltip 不裁切。保存升级前后录屏/语义快照与 Material3、Compose、Android 版本，先确认库版本确实含修复。",
         "移动无障碍 CI 逐屏扫描关键路径：iOS 若报告提供 skippedScanCount，要求为 0；Android Compose 用预期 screen_id 清单核对实际扫描，漏屏/空结果必须失败并归档未扫描列表、截图和 HTML。不要假定各平台都有同名字段；自动扫描仍需配合 TalkBack/VoiceOver、Switch Access、最大字号与真实设备复核。",
         "记录 macOS 版本/build；首次请求只列当前流程最小范围；部分授权/ask each time/取消/拒绝/撤销不崩溃、不泄漏、不错误阻塞无关功能；跨 App 对象与范围清楚并对应透明度提示；区分 Full Disk Access 与 Accessibility 的必需/可选；未在 beta 设备实测标 PENDING。",
-        "仅对 macOS 触控显示屏回归 hover-hidden 控件：首次触摸只显现、不误执行；selection/焦点/内容保持；操作后或数秒后隐藏；essential 操作可由 context menu 到达；侧栏/标签页规则正确；keyboard、trackpad、touch 结果等价。记录设备、系统版本、输入方式和证据，未在目标设备验证标 PENDING。"
+        "仅对 macOS 触控显示屏回归 hover-hidden 控件：首次触摸只显现、不误执行；selection/焦点/内容保持；操作后或数秒后隐藏；essential 操作可由 context menu 到达；侧栏/标签页规则正确；keyboard、trackpad、touch 结果等价。记录设备、系统版本、输入方式和证据，未在目标设备验证标 PENDING。",
+        "对主导航先验收 tab 职责、进入/返回、空状态；再单独验证工具固定、取消固定和替换是否可发现、可逆且不丢状态。ChatGPT 新导航有分批 rollout 限制；未在目标账号/设备及辅助技术验证的项目标 PENDING。"
       ],
       "official_sources": [
         {
@@ -1049,6 +1109,26 @@
           "title": "Android Developers：Window insets in Compose",
           "url": "https://developer.android.com/develop/ui/compose/layouts/insets",
           "supports": "Android 官方 Compose Insets 指南：使用 WindowInsets 处理安全绘制区域、系统手势和软件键盘；必须在应用真实窗口与目标版本验收，发布页日期未核实。"
+        },
+        {
+          "title": "Android Developers：Elevating apps: New adaptive quality standards on Google Play",
+          "url": "https://developer.android.com/blog/posts/google-play-adaptive-quality-standards",
+          "supports": "Android 官方公告，发布日期 2026-11-18：说明 Google Play 自适应质量新要求于 2027 年 4 月生效；Tier 3 涵盖显示区填充、旋转/折叠/调整窗口时的状态保留和多窗口，并从 2026 年 11 月起开放折叠屏截图上传指引。"
+        },
+        {
+          "title": "Android Developers：Tier 3: Adaptive ready",
+          "url": "https://developer.android.com/docs/quality-guidelines/adaptive-app-quality/tier-3",
+          "supports": "官方验收指南（页面未显示发布日期）：列出 Config_Changes、Config_Combinations、Multi-Window_Functionality 与 Multi-Resume 测试；覆盖 1:1/4:3 折叠设备、窗口变更、滚动/输入保持及摄像头麦克风资源让渡。"
+        },
+        {
+          "title": "OpenAI Help Center：ChatGPT release notes — New mobile experience for ChatGPT",
+          "url": "https://help.openai.com/en/articles/6825453-chatgpt-release-notes",
+          "supports": "OpenAI 官方更新日志条目日期为 2026-11-19：介绍 ChatGPT 移动端新体验，包括独立 Dot tab、将 Codex / Projects / Images 等固定到 tab bar，以及部分符合条件用户可见的 New ChatGPT design 设置。Rollout 有账号和地区/设备限制；这是产品案例，不是通用平台规范。"
+        },
+        {
+          "title": "OpenAI Help Center：Using the new experience in the ChatGPT mobile app",
+          "url": "https://help.openai.com/en/articles/20001723-using-the-new-experience-in-the-chatgpt-mobile-app",
+          "supports": "官方操作说明逐步描述 Home 与 Explore、长按 Projects 或其他工具选择 Pin to tab bar、长按已固定项进行 Unpin/替换，以及通过 Settings 切换新体验。页面未显示绝对日历发布日期；访问时只显示相对更新时间，因此仅作为操作路径补充，不独立证明发布时间。"
         }
       ],
       "community_sources": [
@@ -1071,9 +1151,24 @@
           "title": "DEV Community：TargetSdk 36: edge-to-edge, back button and tablet fixes",
           "url": "https://dev.to/extensionbooster/targetsdk-36-edge-to-edge-back-button-and-tablet-fixes-59jj",
           "supports": "开发者社区迁移记录（2026-11-20）：给出 API 36 edge-to-edge/返回/平板问题的 Kotlin 代码、检索项和 Tablet/Fold、多窗口检查。属于单项目经验，不是官方规范；本次未运行。"
+        },
+        {
+          "title": "OpenAI Community：ChatGPT Android navigation layout changed unexpectedly",
+          "url": "https://community.openai.com/t/chatgpt-android-navigation-layout-changed-unexpectedly/1418482",
+          "supports": "社区原帖日期为 2026-11-20 00:12 UTC，附 Android app 标签与截图；只佐证真实用户端出现导航变化，不作为完整设计规范或官方操作指引。"
+        },
+        {
+          "title": "Instagram：iThinkDifferent 关于 ChatGPT 新移动设计的原帖",
+          "url": "https://www.instagram.com/p/DgCE1VylxTR/",
+          "supports": "社交媒体原帖标注日期 2026-11-21，描述独立 Dot tab 与工具固定测试；作为 rollout 观察，不替代官方操作说明。"
+        },
+        {
+          "title": "Android Authority：OpenAI’s ChatGPT app redesign adds a dedicated Dots tab",
+          "url": "https://www.androidauthority.com/chatgpt-app-redesign-rollout-3737931/",
+          "supports": "媒体原文日期 2026-11-20，记录 Home / Dot / Explore 底部导航与长按工具重新排序或固定的观察；属第三方媒体报道，不是平台规范。"
         }
       ],
-      "caveat": "Apple、Android 文档针对各自平台；WCAG 移动应用说明页面包含解释性指导。控件与读屏播报仍要在目标系统版本、组件库和真实设备上复核。\n\n仅针对 macOS 27.3 beta 2 权限 onboarding；不是 iOS/Android 设计规范或稳定版承诺。\n隐藏控件触控规则仅针对 macOS 触控显示屏，需按目标设备和 macOS 版本实测；不外推至 iOS/Android。\n11/21 更新：Android API 36 新增验收矩阵未运行模拟器或真机；目标设备行为=PENDING。"
+      "caveat": "Apple、Android 文档针对各自平台；WCAG 移动应用说明页面包含解释性指导。控件与读屏播报仍要在目标系统版本、组件库和真实设备上复核。\n\n仅针对 macOS 27.3 beta 2 权限 onboarding；不是 iOS/Android 设计规范或稳定版承诺。\n隐藏控件触控规则仅针对 macOS 触控显示屏，需按目标设备和 macOS 版本实测；不外推至 iOS/Android。\n11/21 更新：Android API 36 新增验收矩阵未运行模拟器或真机；目标设备行为=PENDING。\n2026-11-22 更新：Google Play Tier 3 模拟器/真机验收和商店截图准备均未执行，PENDING；新自适应质量要求公告称 2027 年 4 月生效。\n2026-11-24 更新：ChatGPT 移动端新导航仅作 IA 案例参考；官方说明存在分批开放及地区/设备限制。未运行原生编译、真机、VoiceOver/TalkBack、深链、返回、性能或发布测试，均 PENDING。"
     },
     {
       "id": "motion",
@@ -1128,9 +1223,17 @@
         {
           "title": "降低动态偏好时，end 事件可能永远不触发",
           "body": "若 prefers-reduced-motion 让动画完全不创建（例如只在 no-preference 下声明、设为 none，或时长与延迟都为零），animationend/transitionend 不会触发。若清理/显隐逻辑等待该事件，需在 getAnimations() 为空时立即进入可见、可操作的最终状态，避免内容留在 opacity:0 或焦点消失。需要识别具体动画时优先使用 event.animation，并 feature-detect；不支持时再用受保护的名称/属性匹配。它补充既有 reduce-motion 规则，不替代逐项回归。本次未跑代码或浏览器，事件与状态转换测试=PENDING。"
+        },
+        {
+          "title": "用声明式 CSS 管理顶层弹层进出场",
+          "body": "2026-11-22 增量（仅 Web/H5）：对于 dialog、popover 等顶层元素，优先用 @starting-style 声明进入起点、transition-behavior:allow-discrete 过渡 display，并把 overlay 纳入 transition；退出切换到隐藏态后等待 getAnimations().finished（加超时兜底）再移除，避免手写 requestAnimationFrame/transitionend 状态机。尊重 prefers-reduced-motion，去掉位移/缩放并确保内容直接到可操作终态；对不支持 display 离散转场的浏览器提供 data-closing/hidden 降级。进入/退出、焦点、取消关闭和跨浏览器行为本次未运行验证，均为 PENDING。"
+        },
+        {
+          "title": "用 interpolate-size / calc-size() 做可变内容高度的原生展开收起",
+          "body": "2026-11-25 研究增量：针对 FAQ、Show More、手风琴、可展开卡片等高度由内容决定的组件，可在组件范围启用 `interpolate-size: allow-keywords`，让固定的 `block-size: 0` 平滑过渡到 `block-size: auto`；需要在 intrinsic 尺寸上计算时评估 `calc-size()`。相较 `max-height:9999px`，无需猜一个很大的上限；也无需用 JavaScript 测量 `scrollHeight`。至少一端须为固定长度/百分比，不能假设任意两个 intrinsic 关键字都可互相插值。用 `@supports` 做特性检测；不支持时保持内容可展开但可瞬时跳变。只改 block-size 动画，其他视觉变量保持不变。此为 CSS/Web 动效方法，不是 ChatGPT 内置功能；浏览器兼容性、代码、读屏、性能与设备实测均 PENDING。"
         }
       ],
-      "prompt": "你是交互动效设计师。项目 / 页面：[填写]；用户任务和使用频率：[填写]；平台、框架和组件约束：[填写]；触发场景：[点击 / 拖拽 / 滚动 / 加载等]；起始状态：[填写]；目标状态：[填写]；动效目的：[反馈 / 状态 / 空间导航 / 确认]；品牌规范和减少动态要求：[填写]。\n请输出：1）动效目的以及不应使用动效的理由；2）触发→进行中→成功 / 失败 / 取消 / 超时的状态机；3）动效规格（元素、起点、终点、时长、延迟、缓动、方向、触发 / 中断和结束状态）；4）普通动态与低动态两套方案；5）设计标注、开发参数与验收边界；6）若生成 GIF sprite sheet，说明帧数、等尺寸网格、固定机位、连续动作与首尾循环关系（Images 2.6 示例为 6 帧，不是跨项目硬规范）；7）QA 清单。缺少信息时标为待确认；每个时长说明选择理由，优先短、克制、可取消。\n【Web 动效交付分层】\n若目标是 Web，请同时交付可运行 HTML/CSS 和只供评审的短 GIF / 帧表；在 HTML/CSS 中实现 prefers-reduced-motion，真实文字做成命名槽位，报告翻译溢出、性能、可访问名称及状态链接。不要把 GIF 当作线上减少动态方案。\n【CSS 与 JS 动效双通道审计】\n请审计代码中的 CSS 动画、Web Animations/JS 和第三方 motion 库。逐项列出触发状态、是否循环、reduce 下是否停止/替换、是否绕过 prefers-reduced-motion、是否触发 layout/paint、依赖包对首屏包体的影响。若使用 Motion/Framer Motion，核对并显式设置 reducedMotion=user，审计 repeat:Infinity；为每个效果输出 normal/reduced 两套实现，并给出 DevTools Rendering 与 Performance 验收。不要把一个库的默认行为外推到其他库或原生 App。\n\n【动效四轴性能诊断】\n请审计这个 Web/React 动效：【粘贴组件与 CSS】。分开检查：1）帧间隔稳定性；2）输入事件到视觉更新的延迟；3）每帧是否触发 React 重渲染、layout/paint；4）duration/easing/插值是否造成主观拖沓。requestAnimationFrame 必须用 callback timestamp/elapsed time 计算进度，不按固定帧数推进。对指针/拖拽等瞬态值给出 ref + transform 或等价实现，并说明何时仍应使用 React state。请在正常设备与 CPU slowdown 下给出 Performance 录制步骤，记录 INP、长任务、Main track、帧时序和 layout/paint；再 A/B 缩短 duration/平滑系数，区分代码瓶颈和动效参数。另列 prefers-reduced-motion 验收。注明 React/Web/浏览器范围，不声称已经运行测试。\n\n【动效状态与轨迹双轨回归】\n请把这个 Web/React 动效交付成双轨回归包。先列出可见状态和不可丢失的语义反馈，再标注起始帧、关键状态帧、结束帧。轨道 A：逐帧核对文字、布局、focus/press、loading/success/error/cancel/timeout 和 prefers-reduced-motion 替代。轨道 B：对每个运动组件记录归一化位置、宽高、方向/速度、外观，并标出偏差发生的时间段；不能只写“看起来顺滑”。同时报告 INP 的 inputDelay、processingDuration、presentationDelay 与 Long Animation Frames 的 script/style/layout 归因；优先只动画 transform/opacity。列出浏览器/设备、采样率、重现步骤和已知边界，不要把论文分数当产品阈值或声称未运行测试已通过。\n\n【CSS View Timeline entry/exit】请先区分滚动轴 block/inline，输出 `@keyframes`、`animation-timeline:view([轴])`、`animation-range:entry, exit`；用 @supports 同时检测 timeline/range，优先 transform/opacity；默认内容静态可见，只在 prefers-reduced-motion:no-preference 启用；不支持时给 IntersectionObserver fallback，且 reduce 下不执行装饰动效。说明浏览器实测矩阵，不要声称已运行测试。\n\n【实验性 CSS Animation Triggers】把滚动设计成触发器而非进度条：稳定测量元素 `.card`，动画子元素 `.card-content`；用 `timeline-trigger` 的 entry/exit activation range 触发 400ms 时间动画，使用 play-forwards/play-backwards 或 play-once；通过 @supports feature-detect，非支持浏览器保持内容可见并给渐进增强降级。加 prefers-reduced-motion、键盘焦点和重复进入测试。明确 W3C 是草案、社区报告 Chromium-only；不要把它写成跨浏览器标准或声称已测试。\n\n【Web 动效：现代 reduced-motion 漏项回归】\n为【组件/页面】列出 smooth scrolling、scroll-driven animation、View Transition、轮播、CSS transition/keyframes、JS/动画库和无限循环装饰。为 prefers-reduced-motion: reduce 写具体降级：移除非必要位移/缩放/连续滚动/循环，内容直接到可理解的最终状态；必要状态反馈单独说明。不要只删轮播 duration 而保留会跳变的 transform，不用全局 0.01ms，不使用 transition: all。CSS 与 JS 共用项目的 reduce 策略。输出 no-preference/reduce 差异表和验收矩阵，逐项记录 PASS/FAIL/PENDING；未运行的浏览器/Playwright/Storybook 测试标 PENDING。\n\n【reduced-motion 终态与事件检查】\n逐个检查动画/过渡是否有 JS 逻辑等待 animationend/transitionend。为 reduce 分支确保内容直接到可理解的静态终态；如果 getAnimations() 为空，立即完成状态切换，不等永远不会发出的事件。监听时 feature-detect event.animation；否则用 animationName/propertyName 过滤并处理多个同名动画、WAAPI、伪元素。输出 no-preference/reduce 的可操作状态与焦点验收表；未跑浏览器/Playwright 的项目标 PENDING。",
+      "prompt": "你是交互动效设计师。项目 / 页面：[填写]；用户任务和使用频率：[填写]；平台、框架和组件约束：[填写]；触发场景：[点击 / 拖拽 / 滚动 / 加载等]；起始状态：[填写]；目标状态：[填写]；动效目的：[反馈 / 状态 / 空间导航 / 确认]；品牌规范和减少动态要求：[填写]。\n请输出：1）动效目的以及不应使用动效的理由；2）触发→进行中→成功 / 失败 / 取消 / 超时的状态机；3）动效规格（元素、起点、终点、时长、延迟、缓动、方向、触发 / 中断和结束状态）；4）普通动态与低动态两套方案；5）设计标注、开发参数与验收边界；6）若生成 GIF sprite sheet，说明帧数、等尺寸网格、固定机位、连续动作与首尾循环关系（Images 2.6 示例为 6 帧，不是跨项目硬规范）；7）QA 清单。缺少信息时标为待确认；每个时长说明选择理由，优先短、克制、可取消。\n【Web 动效交付分层】\n若目标是 Web，请同时交付可运行 HTML/CSS 和只供评审的短 GIF / 帧表；在 HTML/CSS 中实现 prefers-reduced-motion，真实文字做成命名槽位，报告翻译溢出、性能、可访问名称及状态链接。不要把 GIF 当作线上减少动态方案。\n【CSS 与 JS 动效双通道审计】\n请审计代码中的 CSS 动画、Web Animations/JS 和第三方 motion 库。逐项列出触发状态、是否循环、reduce 下是否停止/替换、是否绕过 prefers-reduced-motion、是否触发 layout/paint、依赖包对首屏包体的影响。若使用 Motion/Framer Motion，核对并显式设置 reducedMotion=user，审计 repeat:Infinity；为每个效果输出 normal/reduced 两套实现，并给出 DevTools Rendering 与 Performance 验收。不要把一个库的默认行为外推到其他库或原生 App。\n\n【动效四轴性能诊断】\n请审计这个 Web/React 动效：【粘贴组件与 CSS】。分开检查：1）帧间隔稳定性；2）输入事件到视觉更新的延迟；3）每帧是否触发 React 重渲染、layout/paint；4）duration/easing/插值是否造成主观拖沓。requestAnimationFrame 必须用 callback timestamp/elapsed time 计算进度，不按固定帧数推进。对指针/拖拽等瞬态值给出 ref + transform 或等价实现，并说明何时仍应使用 React state。请在正常设备与 CPU slowdown 下给出 Performance 录制步骤，记录 INP、长任务、Main track、帧时序和 layout/paint；再 A/B 缩短 duration/平滑系数，区分代码瓶颈和动效参数。另列 prefers-reduced-motion 验收。注明 React/Web/浏览器范围，不声称已经运行测试。\n\n【动效状态与轨迹双轨回归】\n请把这个 Web/React 动效交付成双轨回归包。先列出可见状态和不可丢失的语义反馈，再标注起始帧、关键状态帧、结束帧。轨道 A：逐帧核对文字、布局、focus/press、loading/success/error/cancel/timeout 和 prefers-reduced-motion 替代。轨道 B：对每个运动组件记录归一化位置、宽高、方向/速度、外观，并标出偏差发生的时间段；不能只写“看起来顺滑”。同时报告 INP 的 inputDelay、processingDuration、presentationDelay 与 Long Animation Frames 的 script/style/layout 归因；优先只动画 transform/opacity。列出浏览器/设备、采样率、重现步骤和已知边界，不要把论文分数当产品阈值或声称未运行测试已通过。\n\n【CSS View Timeline entry/exit】请先区分滚动轴 block/inline，输出 `@keyframes`、`animation-timeline:view([轴])`、`animation-range:entry, exit`；用 @supports 同时检测 timeline/range，优先 transform/opacity；默认内容静态可见，只在 prefers-reduced-motion:no-preference 启用；不支持时给 IntersectionObserver fallback，且 reduce 下不执行装饰动效。说明浏览器实测矩阵，不要声称已运行测试。\n\n【实验性 CSS Animation Triggers】把滚动设计成触发器而非进度条：稳定测量元素 `.card`，动画子元素 `.card-content`；用 `timeline-trigger` 的 entry/exit activation range 触发 400ms 时间动画，使用 play-forwards/play-backwards 或 play-once；通过 @supports feature-detect，非支持浏览器保持内容可见并给渐进增强降级。加 prefers-reduced-motion、键盘焦点和重复进入测试。明确 W3C 是草案、社区报告 Chromium-only；不要把它写成跨浏览器标准或声称已测试。\n\n【Web 动效：现代 reduced-motion 漏项回归】\n为【组件/页面】列出 smooth scrolling、scroll-driven animation、View Transition、轮播、CSS transition/keyframes、JS/动画库和无限循环装饰。为 prefers-reduced-motion: reduce 写具体降级：移除非必要位移/缩放/连续滚动/循环，内容直接到可理解的最终状态；必要状态反馈单独说明。不要只删轮播 duration 而保留会跳变的 transform，不用全局 0.01ms，不使用 transition: all。CSS 与 JS 共用项目的 reduce 策略。输出 no-preference/reduce 差异表和验收矩阵，逐项记录 PASS/FAIL/PENDING；未运行的浏览器/Playwright/Storybook 测试标 PENDING。\n\n【reduced-motion 终态与事件检查】\n逐个检查动画/过渡是否有 JS 逻辑等待 animationend/transitionend。为 reduce 分支确保内容直接到可理解的静态终态；如果 getAnimations() 为空，立即完成状态切换，不等永远不会发出的事件。监听时 feature-detect event.animation；否则用 animationName/propertyName 过滤并处理多个同名动画、WAAPI、伪元素。输出 no-preference/reduce 的可操作状态与焦点验收表；未跑浏览器/Playwright 的项目标 PENDING。\n\n【顶层元素声明式进出场｜2026-11-22】\n把这个 Web dialog/popover 的进出场从手写 JS 状态机改为声明式 CSS。先列可见、进入、退出、取消关闭、移除五个状态及焦点规则；用 @starting-style 定义进入起点，用 transition-behavior:allow-discrete 处理 display，并将 overlay 纳入顶层 transition；transition-behavior 单独声明。退出时先进入隐藏态，再等待 getAnimations().map(a=>a.finished) 并加超时兜底后移除；无动画时直接完成终态。按 prefers-reduced-motion 去掉位移/缩放，提供 display 离散过渡不支持时的 data-closing/hidden 降级。输出浏览器兼容矩阵与可观察验收表；未运行 Chrome/Edge/Safari/Firefox 测试项标 PENDING。\n【Web 动效：内容高度不固定时使用 intrinsic size 插值｜2026-11-25】\n为【FAQ / Show More / 可展开卡片】设计展开收起动效。只改 block-size 从 0 到 auto 的插值；优先评估 `interpolate-size: allow-keywords`，需要尺寸计算时再评估 `calc-size()`。不要使用 `max-height:9999px`、JS 测量 `scrollHeight`，也不要同时改 opacity、位移、色彩或 easing。输出状态表、最小 CSS、短/长内容验收、键盘焦点与旧浏览器回退；明确至少一端须为固定长度/百分比。未运行的代码、浏览器、设备、读屏、性能与发布步骤全部标 PENDING。",
       "checklist": [
         "动效是否明确反馈、状态、空间关系或确认？删除后是否仍可理解？",
         "是否定义起点、终点、成功 / 失败 / 取消 / 超时状态？动画过程是否阻塞其他操作？",
@@ -1144,7 +1247,8 @@
         "动效交付双轨复核：固定起始/关键/结束帧检查语义状态和 reduce 替代；沿运动轨迹比较位置、尺寸、方向/速度和外观，定位时间段；记录 INP 三段与 Long Animation Frames 归因。为每个结果标明浏览器、设备和采样方式；学术指标不当作通用产品阈值。",
         "检查 view()/view(inline)、animation-range entry/exit、@supports 同时检测、animation shorthand 后 timeline/range 声明次序；reduce 下无非必要位移且内容可见；不支持时 fallback 有效；真实浏览器、窄屏、横向滚动和焦点回归，未执行标 PENDING。",
         "区分 activation range 与 active range；触发器/测量元素不随动画移动；快速滚动不改变时间动画 duration；测试首次进入、离开反向、再次进入、play-once、reduce、键盘焦点；Chrome/Edge/Firefox/Safari 分别记录；W3C 草案与 Chromium-only 边界必须注明。",
-        "reduced-motion 逐项覆盖 smooth scrolling、scroll-driven animation、View Transition、轮播 transform、循环装饰及 CSS/JS 动画；拒绝 transition:all、全局 0.01ms、仅移除 duration 却保留 transform 的方案。分别实测 no-preference 与 reduce；保留的状态反馈须可解释，未运行的浏览器/自动化检查标 PENDING。"
+        "reduced-motion 逐项覆盖 smooth scrolling、scroll-driven animation、View Transition、轮播 transform、循环装饰及 CSS/JS 动画；拒绝 transition:all、全局 0.01ms、仅移除 duration 却保留 transform 的方案。分别实测 no-preference 与 reduce；保留的状态反馈须可解释，未运行的浏览器/自动化检查标 PENDING。",
+        "对短/中/长内容分别测试展开与收起、连续开关、无裁切和焦点保持；不支持 intrinsic size 插值时内容仍可打开，允许瞬时跳变。核对 prefers-reduced-motion、键盘与读屏；浏览器/设备支持矩阵、性能和视觉回归未运行时标 PENDING。"
       ],
       "official_sources": [
         {
@@ -1235,12 +1339,27 @@
         {
           "title": "Chrome for Developers：Top 10 things AI gets wrong in web development",
           "url": "https://developer.chrome.com/blog/top-10-things-ai-gets-wrong-in-web-dev",
-          "supports": "原文日期 2026-11-11。在 reduced-motion 相关章节指出 AI 常漏掉 smooth scrolling、scroll-driven animations 与 View Transitions；轮播只移除 transition duration 仍可能因 transform 跳变；全局 0.01ms 可能误伤传达状态的必要过渡。Chrome Web 指导不是原生 App 规范，文章提醒不替代目标浏览器验证。"
+          "supports": "原文日期 2026-11-11。在 reduced-motion 相关章节指出 AI 常漏掉 smooth scrolling、scroll-driven animations 与 View Transitions；轮播只移除 transition duration 仍可能因 transform 跳变；全局 0.01ms 可能误伤传达状态的必要过渡。Chrome Web 指导不是原生 App 规范，文章提醒不替代目标浏览器验证。 Chrome 官方文章，2026-11-11：除 reduced-motion 检查外，Dialogs/popovers/top-layer transitions 部分明确建议 @starting-style 与 transition-behavior，避免用 class+rAF+transitionend/setTimeout 手搓进出场。"
         },
         {
           "title": "Chrome Developers：Motion",
           "url": "https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/motion",
           "supports": "Chrome Modern Web Guidance 官方动效指南（页面未显示可核实发布日期）：明确无动画运行时不会触发 animationend/transitionend，建议 getAnimations() 为空则继续到终态；event.animation 可用于定位具体 Animation，需 feature-detect。并要求尊重 reduced motion、确保最终状态。本次未跑代码/浏览器。"
+        },
+        {
+          "title": "Chrome Modern Web Guidance：Animate element entry and exit",
+          "url": "https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/animate-element-entry-exit",
+          "supports": "Chrome 官方指南（页面未显示发布日期）：提供 @starting-style、transition-behavior:allow-discrete、overlay、getAnimations().finished 与超时处理；说明 Firefox display 离散过渡的降级边界，并要求尊重 prefers-reduced-motion。"
+        },
+        {
+          "title": "Chrome for Developers：Beyond code generation: Using Modern Web Guidance for better web development",
+          "url": "https://developer.chrome.com/blog/beyond-code-generation",
+          "supports": "Chrome 官方文章（2026-11-11）：明确建议用 `interpolate-size: allow-keywords` 或 `calc-size()` 在固定尺寸与 `height:auto` 之间做原生尺寸过渡，避免手动测量 `scrollHeight` 或依赖脆弱的 `max-height:999px`。这是 Web 平台指导，不代表 ChatGPT 已运行该代码。"
+        },
+        {
+          "title": "Chrome Modern Web Guidance：Animate to Intrinsic Sizes",
+          "url": "https://developer.chrome.com/docs/modern-web-guidance/guides/css/animate-to-intrinsic-sizes.md.txt",
+          "supports": "官方指南由 2026-11-11 的 Chrome 文章链接；指南本身未单独显示发布日期。步骤为启用 `interpolate-size: allow-keywords`、声明 sizing transition、在状态变化时切换到 `auto` / `min-content` / `max-content` / `fit-content`，必要时用 `calc-size()`；至少一端需为固定长度或百分比，旧浏览器可退回非动画但可用状态。"
         }
       ],
       "community_sources": [
@@ -1288,9 +1407,14 @@
           "title": "OpenReplay：Triggering CSS Animations on Scroll With No JavaScript",
           "url": "https://blog.openreplay.com/css-scroll-animations-no-javascript/",
           "supports": "社区前端实测（2026-10-18）：给出 timeline-trigger、trigger-scope、animation-trigger、play-forwards/backwards/play-once、activation/active range、@supports 与 IntersectionObserver fallback 示例；区分 scroll-driven 与 scroll-triggered，并说明其测试边界为 Chromium-only。"
+        },
+        {
+          "title": "SEO-Kreativ：Modern Web Guidance put to the test on my WordPress site",
+          "url": "https://www.seo-kreativ.de/en/blog/modern-web-guidance-test/",
+          "supports": "社区实测文章（2026-11-12）：作者在一个 WordPress 页面扫描到 6 处 `max-height:0` 与 `overflow:hidden` 的 FAQ 展开实现，并记录改用 `interpolate-size:allow-keywords` 或 `calc-size()` 的迁移建议。单站观察，不是跨浏览器兼容性证明或通用阈值。"
         }
       ],
-      "caveat": "没有适用于所有平台的统一时长或缓动。Material 的数值是平台实践并处于更新中；项目应按目标组件、频率和设备测试，减少动态需求不可只靠静态说明。\n\nView Timeline 页面无原文发布日期，来源日期不称近期；Animation Triggers 是 W3C First Public Working Draft（2026-10-20），社区文章指 Chromium-only；不得外推到原生 App，也不要声称已运行代码测试。\n2026-11-11 Chrome 文章提示的是常见实现漏项，不等于运行时测试结果；需在目标浏览器实测 reduce 与 no-preference。\n11/21 更新：新增事件生命周期建议尚未在目标浏览器或组件状态中运行验证；PENDING。"
+      "caveat": "没有适用于所有平台的统一时长或缓动。Material 的数值是平台实践并处于更新中；项目应按目标组件、频率和设备测试，减少动态需求不可只靠静态说明。\n\nView Timeline 页面无原文发布日期，来源日期不称近期；Animation Triggers 是 W3C First Public Working Draft（2026-10-20），社区文章指 Chromium-only；不得外推到原生 App，也不要声称已运行代码测试。\n2026-11-11 Chrome 文章提示的是常见实现漏项，不等于运行时测试结果；需在目标浏览器实测 reduce 与 no-preference。\n11/21 更新：新增事件生命周期建议尚未在目标浏览器或组件状态中运行验证；PENDING。\n2026-11-22 更新：CSS 声明式进出场、顶层保持、Firefox/Safari 降级与 reduced-motion 行为未在目标浏览器验证，PENDING；示例时长不是通用标准。\n2026-11-25 更新：intrinsic-size 动画依赖浏览器 CSS 支持；指南和单站社区扫描不是跨浏览器验证。目标浏览器、fallback、reduced-motion、键盘/读屏、性能、视觉和真机回归均未运行，PENDING。"
     },
     {
       "id": "charts",
@@ -1333,9 +1457,13 @@
         {
           "title": "先区分对话可视化快照与持续托管 Site",
           "body": "ChatGPT 官方说明：对话中的可视化一般是创建时可用信息的快照，不是会自动同步连接数据的 live dashboard。一次性解释、比较或探索适合留在对话中，并附时间范围、来源和可复核表格；需要可分享的持久 URL、权限或持久化数据时再考虑 Site。明确数据源是复制还是刷新、连接方式、更新频率/负责人、最后更新时间、储存与访问权限，并实测刷新和访客权限；Site 本身不代表已配置自动同步。它补充既有图表证据包和计算复核。本次未发布 Site 或连接实时数据；刷新、权限与可访问性验收=PENDING。"
+        },
+        {
+          "title": "让图表动效解释变化，而不是遮住数据关系",
+          "body": "2026-11-22 增量：交互图表只在数据、筛选状态或坐标轴真的变化时使用进入、退出或重排动效；动效应帮助追踪元素对应、轴方向和变化原因。若过渡让系列连接短暂消失、把不同状态混成同一叙事，改用静态对照或更直接的短过渡。分别检查静态首帧、过渡中帧、终帧与无动效版本；无动效仍须保留同样的数据、标签、单位和等价表。未运行网页图表、减少动效或辅助技术测试，本条所有实现结论为 PENDING。"
         }
       ],
-      "prompt": "请基于我提供的结构化数据制作一张可交付中文图表。数据来源 / 文件：[填写]；数据日期：[填写]；统计口径和单位：[填写]；要回答的问题 / 主结论：[填写]；比较维度、指标、筛选和计算方法：[填写]。\n阶段一只审计、不出图：核验每列数据类型、缺失值、重复行、异常值、重复计数与合计关系，输出问题、影响和处理建议；未获确认不要擅自修数。待我确认口径后再进入阶段二，比较趋势、条形、散点、构成等候选并说明所选图表为何合适；不得为了美观改变比例或用截断坐标轴误导比较。\n图表应有表达主结论与时间范围的标题、完整轴标题 / 单位 / 时间粒度 / 标签 / 图例 / 舍入规则；颜色不能是唯一编码，关键图形与邻近颜色对比目标至少 3:1。最后附数据摘要、关键计算、方法 / 代码、假设、限制和逐项 QA，并列出 3 个可回查的原表单元格/数值。来源无法验证时明确写“无法确认”，不要猜。\n【筛选与等价数据同步】\n若有筛选器，请让图、指标卡、文字摘要和数据表读取同一筛选结果并同步更新。列出总计、一个分组值、筛选后总计三个可手算样例；约 375px 窄屏检查标签可读与无整页横向溢出。\n【图表证据包】\n只使用我给的原始数据。交付一个中心结论的图表（类别/系列按需要控制），并同时提供来源 URL、更新时间、可下载 CSV/Excel、等价数据表、纯文本摘要和不超过 250 字的 alt text（图表类型/范围/主结论）。做 360px 窄屏截图，检查标题/轴/标签不重叠；从原数据抽查至少 5 个点，核对摘要与表格；用键盘操作并人工检查屏幕阅读器语境。无法验证项标为未验证。标清 CFPB/USWDS 的设计建议与 WCAG 适用要求。\n\n【交互图表三层信息架构】请把【真实数据/图表需求】先设计为 Overview（首屏主结论、单位、时间范围、比较基准、必要标签）→ zoom/filter（列出控件影响哪些图形、摘要和字段）→ details on demand（明细、上下文、方法和来源）。无操作时就必须能读懂主结论；不能把关键信息藏在 hover/click/filter 后。同步每个筛选状态的摘要、指标卡和等价可读数据表；另给无交互静态导出方案。\n\n【图表：规则规格→生成→独立审计】\n先不要出图。阶段1只返回 JSON：chart_type、sort_order、color_scheme、highlight、zero_baseline、rule_ids、reason、assumptions，并写清数据来源、更新时间、字段定义、单位和样本量；针对自然顺序类别保留顺序，条形图显式指定零基线和轴类别次序。阶段2根据我确认的规格生成图表和等价数据表，标题回答真实问题，颜色不作为唯一线索，提供来源与文字摘要。阶段3独立比较“模型声称的规则”和“最终绘制的数据/编码”，逐项输出 PASS/FAIL/NOT_APPLICABLE/NOT_CHECKED：排序、自然顺序、图表/类别数、零基线、diverging 中点、highlight、源数据对账、时间序列缺期/重复和 caption。标题叙事准确、标签重叠、视觉杂乱和完整无障碍标人工待验。不要声称已运行代码；无执行证据的项标 NOT_CHECKED。\n\n【图表交付：聊天快照还是 Site】\n先选择交付形态：一次性分析用 ChatGPT 对话可视化，标注来源/时间范围/单位并附摘要和等价表；若需要持久 URL、访客权限或跨会话记录，才设计 Site。Site 需求写清数据源、复制或刷新、更新频率和负责人、最后更新时间、认证/权限、存储、空/错误状态；除非刷新已实现并实测，不称为 live dashboard。给出更新与权限验收步骤；未部署或未验证的项标 PENDING。",
+      "prompt": "请基于我提供的结构化数据制作一张可交付中文图表。数据来源 / 文件：[填写]；数据日期：[填写]；统计口径和单位：[填写]；要回答的问题 / 主结论：[填写]；比较维度、指标、筛选和计算方法：[填写]。\n阶段一只审计、不出图：核验每列数据类型、缺失值、重复行、异常值、重复计数与合计关系，输出问题、影响和处理建议；未获确认不要擅自修数。待我确认口径后再进入阶段二，比较趋势、条形、散点、构成等候选并说明所选图表为何合适；不得为了美观改变比例或用截断坐标轴误导比较。\n图表应有表达主结论与时间范围的标题、完整轴标题 / 单位 / 时间粒度 / 标签 / 图例 / 舍入规则；颜色不能是唯一编码，关键图形与邻近颜色对比目标至少 3:1。最后附数据摘要、关键计算、方法 / 代码、假设、限制和逐项 QA，并列出 3 个可回查的原表单元格/数值。来源无法验证时明确写“无法确认”，不要猜。\n【筛选与等价数据同步】\n若有筛选器，请让图、指标卡、文字摘要和数据表读取同一筛选结果并同步更新。列出总计、一个分组值、筛选后总计三个可手算样例；约 375px 窄屏检查标签可读与无整页横向溢出。\n【图表证据包】\n只使用我给的原始数据。交付一个中心结论的图表（类别/系列按需要控制），并同时提供来源 URL、更新时间、可下载 CSV/Excel、等价数据表、纯文本摘要和不超过 250 字的 alt text（图表类型/范围/主结论）。做 360px 窄屏截图，检查标题/轴/标签不重叠；从原数据抽查至少 5 个点，核对摘要与表格；用键盘操作并人工检查屏幕阅读器语境。无法验证项标为未验证。标清 CFPB/USWDS 的设计建议与 WCAG 适用要求。\n\n【交互图表三层信息架构】请把【真实数据/图表需求】先设计为 Overview（首屏主结论、单位、时间范围、比较基准、必要标签）→ zoom/filter（列出控件影响哪些图形、摘要和字段）→ details on demand（明细、上下文、方法和来源）。无操作时就必须能读懂主结论；不能把关键信息藏在 hover/click/filter 后。同步每个筛选状态的摘要、指标卡和等价可读数据表；另给无交互静态导出方案。\n\n【图表：规则规格→生成→独立审计】\n先不要出图。阶段1只返回 JSON：chart_type、sort_order、color_scheme、highlight、zero_baseline、rule_ids、reason、assumptions，并写清数据来源、更新时间、字段定义、单位和样本量；针对自然顺序类别保留顺序，条形图显式指定零基线和轴类别次序。阶段2根据我确认的规格生成图表和等价数据表，标题回答真实问题，颜色不作为唯一线索，提供来源与文字摘要。阶段3独立比较“模型声称的规则”和“最终绘制的数据/编码”，逐项输出 PASS/FAIL/NOT_APPLICABLE/NOT_CHECKED：排序、自然顺序、图表/类别数、零基线、diverging 中点、highlight、源数据对账、时间序列缺期/重复和 caption。标题叙事准确、标签重叠、视觉杂乱和完整无障碍标人工待验。不要声称已运行代码；无执行证据的项标 NOT_CHECKED。\n\n【图表交付：聊天快照还是 Site】\n先选择交付形态：一次性分析用 ChatGPT 对话可视化，标注来源/时间范围/单位并附摘要和等价表；若需要持久 URL、访客权限或跨会话记录，才设计 Site。Site 需求写清数据源、复制或刷新、更新频率和负责人、最后更新时间、认证/权限、存储、空/错误状态；除非刷新已实现并实测，不称为 live dashboard。给出更新与权限验收步骤；未部署或未验证的项标 PENDING。\n\n【交互图表动效关系闸门｜2026-11-22】\n为【真实数据/图表】设计动效，不改变数据、排序、单位或主结论。先输出每个动画的 trigger、before_state、after_state、intended_relationship、duration、reduced_motion_fallback、static_export_behavior。仅在真实数据/筛选/坐标变化时动画，帮助追踪系列对应、轴方向与变化原因；禁止制造趋势、因果或排名。分别审查静态首帧、过渡中帧、终帧与无动效版本，逐项输出 PASS/FAIL/PENDING：轴与单位、系列对应、排序/重点、筛选上下文、标签可读性、键盘操作及等价数据表。不要声称已运行浏览器或读屏测试；未验证行为均标 PENDING。",
       "checklist": [
         "每个指标能否追溯到来源、日期、筛选条件和单位？是否存在未说明的合并、换算、缺失值处理或重复计数？",
         "抽查至少 3 个关键数据点和一个汇总值能否由原始数据复算？百分比、增长率、舍入和轴范围是否一致？",
@@ -1391,7 +1519,7 @@
         {
           "title": "IBM Design Language：Data visualization — Design basics",
           "url": "https://www.ibm.com/design/language/data-visualization/design/basics",
-          "supports": "IBM 官方设计基础页，Last updated 2026-11-17：明确 Overview first, zoom and filter, then details on demand；先展示关键洞察，且不要把重要信息藏在交互行为后。"
+          "supports": "IBM 官方设计基础页，Last updated 2026-11-17：明确 Overview first, zoom and filter, then details on demand；先展示关键洞察，且不要把重要信息藏在交互行为后。 IBM 官方设计基础页，Last updated 2026-11-17：除既有交互层级外，Motion 部分说明动画可强调数据/环境变化、层级和轴方向，同时警告过渡可能隐藏连接或传达矛盾信息；重要信息不应藏在交互之后。"
         },
         {
           "title": "OpenAI / ChatGPT Learn：Visualizations",
@@ -1421,7 +1549,7 @@
           "supports": "Snowflake 技术实践页脚标注 Updated Nov 5, 2026；公开 companion repository、15 条规则、机器可读 chart_type/sort_order/color_scheme/highlight/rule_ids 等字段及渲染后 Evaluation。文章展示模型声称降序但 Vega-Lite 实际按字母序的错误，建议先 stable-sort 数据，再显式设置轴类别顺序和零基线。评估覆盖排序、图表结构、类别数、基线、色标中点、重点系列、源数据对账及时间序列缺期/重复；不能证明标题、标签重叠和完整无障碍。本次未运行仓库代码或测试。"
         }
       ],
-      "caveat": "ChatGPT 可能选错图表、推断不完整或无法准确读取扫描表格。W3C 的 Understanding 页面是解释性指导；关键数据和计算必须回到原始来源人工核对。\n\n适用于网页仪表盘、交互式报告和可探索图表；静态印刷图不能依赖交互。IBM Design Language/Carbon 是官方设计指导，不是跨平台强制规范。\nSnowflake 方法属于社区技术实践，不是跨平台强制规范；ChatGPT Visualizations 页面未显示发布日期；评估脚本只能检查明确编码规则，无法自动证明标题准确、排版清晰或完整无障碍。\n11/21 更新：对话快照、Site 与数据刷新边界已补充；本次未部署站点或连接实时数据，更新/权限=PENDING。"
+      "caveat": "ChatGPT 可能选错图表、推断不完整或无法准确读取扫描表格。W3C 的 Understanding 页面是解释性指导；关键数据和计算必须回到原始来源人工核对。\n\n适用于网页仪表盘、交互式报告和可探索图表；静态印刷图不能依赖交互。IBM Design Language/Carbon 是官方设计指导，不是跨平台强制规范。\nSnowflake 方法属于社区技术实践，不是跨平台强制规范；ChatGPT Visualizations 页面未显示发布日期；评估脚本只能检查明确编码规则，无法自动证明标题准确、排版清晰或完整无障碍。\n11/21 更新：对话快照、Site 与数据刷新边界已补充；本次未部署站点或连接实时数据，更新/权限=PENDING。\n2026-11-22 更新：图表过渡中的系列对应、静态导出与减少动效行为未测试，PENDING。IBM 页面为设计指导，不是强制标准或项目验收结果。"
     }
   ],
   "sources": {
@@ -1487,6 +1615,18 @@
       {
         "date": "2026-11-21",
         "text": "11/21 新增/补强：海报加入 GPT-Image-2.6 API/Foundry 的 Flare→Sunburst 草案到定稿路由（与 11/20 complexity/quality 双轴实验不同；官方 OpenAI 11/04、Microsoft Foundry 11/18，社区四 brief 比较 11/19）；网页 UI 新增 ChatGPT MCP Apps 数据工具与渲染工具分离（OpenAI 官方文档；MCPJam 社区本地调试指南 10/20）；H5 增加基于实际导航内容宽度的语义布局切换（Chrome 官方指南，未显示发布日期）；Android 原生 App 增加 API 36 Insets/预测性返回/大屏验收（Android 官方文档与 DEV 社区迁移例 11/20）；网页动效新增 reduced-motion 下 end 事件不触发的终态处理（Chrome 官方指南，未显示发布日期）；图表区分创建时快照与持续托管 Site，并明确数据刷新/权限需另行配置（OpenAI 官方文档）。直接社交媒体内容若为推广、日期不明或不可复现则未采纳；本日 Icon、小程序无合格增量。未运行图片模型/API、MCP server、浏览器/WebView、Android 模拟器/真机、Site/数据刷新；所有相应实测均标 PENDING。官方建议与社区经验继续分栏。"
+      },
+      {
+        "date": "2026-11-22",
+        "text": "11/22 新增：网页 UI 加入 MCP App 资源契约发布闸门；Icon 增加固定 wrapper 与 SVG/父组件偏移故障分诊；小程序增加 glass-easel/Skyline 迁移双路径回归；H5 加入原生 dialog 弹层；Android App 补 Google Play 折叠屏 Tier 3 功能与商店素材闸门；动效增加 @starting-style / transition-behavior / overlay 顶层元素声明式转场；图表补充动效需保持数据关系。海报无合格新增。代码、设备与平台验证均按各条边界标 PENDING。"
+      },
+      {
+        "date": "2026-11-24",
+        "text": "11/24 研究增量：H5 将 Baseline 浏览器目标、支持状态、失败表现和四类渐进回退写入交付提示，并要求支持/不支持路径验收（Chrome 官方 2026-11-12；未发现合格社媒帖）；原生 App 以 ChatGPT 移动端 Home / Dot / Explore 导航和工具 Pin / Unpin 作为 IA 案例，先验收层级再验收可逆固定（OpenAI 官方 2026-11-19，社区与媒体观察 11/20–21）。其他主题无满足日期、可复现、去重和非推广要求的新增。未运行浏览器、原生设备或账号 rollout 验证，均 PENDING。"
+      },
+      {
+        "date": "2026-11-25",
+        "text": "11/25 新增：动效加入用 CSS `interpolate-size: allow-keywords` / `calc-size()` 在固定尺寸与内容 intrinsic size 间过渡，替代猜测 max-height 上限或 JS 测量；配套短/长内容、旧浏览器、键盘与 reduced-motion 验收（Chrome 官方 2026-11-11，社区单站复现 11/12）。海报、网页 UI、Icon、小程序、H5、App、图表均无符合明确日期、非推广、ChatGPT 归属与去重门槛的当日新增。模型、代码、浏览器、设备和发布测试未运行，PENDING。"
       },
       {
         "date": "持续更新",
